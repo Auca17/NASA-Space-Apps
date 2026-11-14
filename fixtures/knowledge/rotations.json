@@ -1,0 +1,58 @@
+{
+  "version": "0.1",
+  "rotations": [
+    {
+      "id": "soja-soja",
+      "name": {
+        "es": "Soja – soja",
+        "en": "Soy – soy"
+      },
+      "years": 2,
+      "sequence": [
+        {
+          "crop": "soja",
+          "start": "11-01",
+          "end": "04-30"
+        },
+        {
+          "crop": "soja",
+          "start": "11-01",
+          "end": "04-30"
+        }
+      ],
+      "bare_soil_days": 180,
+      "sources": [
+        "MAGyP Estimaciones Agrícolas"
+      ]
+    },
+    {
+      "id": "maiz-soja-vicia",
+      "name": {
+        "es": "Maíz – soja + vicia",
+        "en": "Maize – soy + vetch"
+      },
+      "years": 2,
+      "sequence": [
+        {
+          "crop": "maiz",
+          "start": "09-15",
+          "end": "03-15"
+        },
+        {
+          "crop": "vicia",
+          "start": "04-01",
+          "end": "10-15"
+        },
+        {
+          "crop": "soja",
+          "start": "11-01",
+          "end": "04-30"
+        }
+      ],
+      "bare_soil_days": 40,
+      "sources": [
+        "INTA Cultivos de cobertura 2019"
+      ]
+    }
+  ]
+}

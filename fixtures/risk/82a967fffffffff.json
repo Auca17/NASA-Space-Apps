@@ -1,0 +1,31 @@
+{
+  "generated_at": "2026-11-15T06:00:00Z",
+  "horizon_days": 7,
+  "cells": {
+    "85a963c3fffffff": {
+      "p": 0.31,
+      "clim": 0.12,
+      "ratio": 2.6,
+      "cat": "alto",
+      "level": "clima",
+      "model_version": "ar-lgbm-0.1",
+      "reasons": [
+        "23 días sin lluvia",
+        "humedad relativa 28 %",
+        "temporada de quemas"
+      ]
+    },
+    "85a963dbfffffff": {
+      "p": 0.09,
+      "clim": 0.1,
+      "ratio": 0.9,
+      "cat": "moderado",
+      "level": "historial",
+      "model_version": "clim-persist-0.1",
+      "reasons": [
+        "históricamente 10 % de las semanas con fuego",
+        "sin focos en los últimos 7 días"
+      ]
+    }
+  }
+}

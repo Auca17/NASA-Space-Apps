@@ -1,0 +1,71 @@
+{
+  "version": "v1",
+  "generated_at": "2026-11-15T03:00:00Z",
+  "units": {
+    "n": "harmonized fire detections, VIIRS NOAA-20 equivalent"
+  },
+  "range": {
+    "start": "2000-11",
+    "end": "2026-11"
+  },
+  "baseline": {
+    "start": "2003-01",
+    "end": "2022-12"
+  },
+  "h3": {
+    "globe": 3,
+    "panel": 5,
+    "shard": 2,
+    "cache": 6
+  },
+  "harmonization": {
+    "unit": "VIIRS_NOAA20",
+    "method": "log(VIIRS+1) = a + b*log(MODIS+1), strata = latitude band 10deg x month",
+    "overlap": [
+      "2012-01",
+      "2025-12"
+    ],
+    "holdout": [
+      "2023-01",
+      "2024-12"
+    ],
+    "validation": {
+      "r2": 0.91,
+      "bias_pct": -3.2,
+      "r2_cells_day": 0.93
+    }
+  },
+  "low_confidence_periods": [
+    [
+      "2000-11",
+      "2011-12"
+    ]
+  ],
+  "sp_until": {
+    "MODIS": "2026-08-31",
+    "VIIRS_SNPP": "2026-07-31",
+    "VIIRS_NOAA20": "2026-07-31"
+  },
+  "semaphore": {
+    "window_days": 30,
+    "categories": {
+      "normal": [
+        0,
+        50
+      ],
+      "sobre_lo_normal": [
+        50,
+        80
+      ],
+      "alto": [
+        80,
+        95
+      ],
+      "extremo": [
+        95,
+        100
+      ]
+    },
+    "ratio_min_median": 5
+  }
+}

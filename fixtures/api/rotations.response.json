@@ -1,0 +1,93 @@
+{
+  "diagnosis_id": "dx_7f3a",
+  "strategies": [
+    {
+      "id": "soja-soja",
+      "name": "Soja – soja",
+      "is_current": true,
+      "score": 0.42,
+      "sequence": [
+        {
+          "crop": "soja",
+          "start": "11-01",
+          "end": "04-30"
+        }
+      ],
+      "why": "Es tu rotación actual; sirve de referencia.",
+      "evidence": [
+        {
+          "text": "180 días/año de suelo desnudo (may–oct)",
+          "indicator": "bare_soil_days",
+          "source": "MODIS NDVI 250 m"
+        }
+      ],
+      "benefits": {
+        "water_balance": 0,
+        "carbon": 0,
+        "nitrogen": 0,
+        "bare_soil_days": 180,
+        "erosion_risk": "medio",
+        "pest_break": 0,
+        "burns_avoided": 0
+      },
+      "gaps": [
+        "SMAP tiene 9 km de resolución: no distingue diferencias dentro del lote"
+      ],
+      "risks": [
+        "Monocultivo: presión de malezas resistentes; validar con tu agrónomo"
+      ]
+    },
+    {
+      "id": "maiz-soja-vicia",
+      "name": "Maíz – soja + vicia",
+      "is_current": false,
+      "score": 0.78,
+      "sequence": [
+        {
+          "crop": "maiz",
+          "start": "09-15",
+          "end": "03-15"
+        },
+        {
+          "crop": "vicia",
+          "start": "04-01",
+          "end": "10-15"
+        },
+        {
+          "crop": "soja",
+          "start": "11-01",
+          "end": "04-30"
+        }
+      ],
+      "why": "Atiende tus prioridades de mejorar suelo y reducir erosión; corta el ciclo de suelo desnudo de invierno.",
+      "evidence": [
+        {
+          "text": "IMERG: 5 días/año > 50 mm, concentrados en oct–mar",
+          "indicator": "heavy_days_yr",
+          "source": "GPM IMERG 0.1°"
+        },
+        {
+          "text": "Zonas análogas: 28 % maíz, 8.900 kg/ha",
+          "indicator": "analogs",
+          "source": "MAGyP 2023/24"
+        }
+      ],
+      "benefits": {
+        "water_balance": -1,
+        "carbon": 2,
+        "nitrogen": 2,
+        "bare_soil_days": 40,
+        "erosion_risk": "bajo",
+        "pest_break": 2,
+        "burns_avoided": 1
+      },
+      "gaps": [
+        "Sin dato de materia orgánica medido en el lote; se usa SoilGrids 250 m"
+      ],
+      "risks": [
+        "Vicia puede ser hospedante de plagas de soja; consultar disponibilidad de semilla"
+      ]
+    }
+  ],
+  "disclaimer": "Herramienta de apoyo: no reemplaza tu experiencia ni la de un agrónomo local."
+}

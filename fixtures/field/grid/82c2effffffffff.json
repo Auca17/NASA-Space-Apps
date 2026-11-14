@@ -1,0 +1,58 @@
+{
+  "shard": "82c2effffffffff",
+  "cells": {
+    "85c2e8bbfffffff": {
+      "rain_mm_yr": 980,
+      "rain_cv": 0.21,
+      "rain_p25_mm": 790,
+      "heavy_days_yr": 5,
+      "sm_anom_pct": -18,
+      "sm_updated": "2026-11-10",
+      "frost_free": {
+        "start": "10-15",
+        "end": "04-20"
+      },
+      "hot_days_gt35": 9,
+      "grace_trend": "down",
+      "gaez": {
+        "soja": "S1",
+        "maiz": "S1",
+        "trigo": "S2",
+        "sorgo": "S1"
+      },
+      "lc": "crop",
+      "src": {
+        "rain": {
+          "dataset": "GPM IMERG",
+          "resolution": "0.1°",
+          "period": "2001-2025"
+        },
+        "sm": {
+          "dataset": "SMAP L3",
+          "resolution": "9 km",
+          "period": "2015-2026"
+        },
+        "frost": {
+          "dataset": "NASA POWER T2M_MIN",
+          "resolution": "0.5°",
+          "period": "2001-2025"
+        },
+        "grace": {
+          "dataset": "GRACE-FO",
+          "resolution": "regional",
+          "period": "2002-2025"
+        },
+        "gaez": {
+          "dataset": "FAO GAEZ v4",
+          "resolution": "~9 km",
+          "period": "1981-2010"
+        },
+        "lc": {
+          "dataset": "MODIS MCD12C1",
+          "resolution": "0.05°",
+          "period": "2023"
+        }
+      }
+    }
+  }
+}

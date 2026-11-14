@@ -1,0 +1,25 @@
+{
+  "generated_at": "2026-11-15T20:00:00Z",
+  "model_version": "analogs-kmeans-0.1",
+  "cells": {
+    "85c2e8bbfffffff": {
+      "cluster": 17,
+      "label": "templado húmedo, suelo franco, sin heladas tardías",
+      "n_cells": 1240,
+      "ar_crops": [
+        {
+          "crop": "soja",
+          "share": 0.52,
+          "yield_kg_ha": 3100,
+          "src": "MAGyP 2023/24"
+        },
+        {
+          "crop": "maiz",
+          "share": 0.28,
+          "yield_kg_ha": 8900,
+          "src": "MAGyP 2023/24"
+        }
+      ]
+    }
+  }
+}

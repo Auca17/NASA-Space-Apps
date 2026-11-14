@@ -1,0 +1,72 @@
+{
+  "version": "0.1",
+  "crops": [
+    {
+      "id": "soja",
+      "name": {
+        "es": "Soja",
+        "en": "Soybean"
+      },
+      "family": "Fabaceae",
+      "sowing": {
+        "pampa_humeda": [
+          "10-15",
+          "12-15"
+        ]
+      },
+      "harvest": {
+        "pampa_humeda": [
+          "03-15",
+          "05-15"
+        ]
+      },
+      "gdd_base10": 1300,
+      "frost_tolerance": "low",
+      "drought_tolerance": "medium",
+      "heat_tolerance": "medium",
+      "water_mm_cycle": 500,
+      "root_depth_cm": 120,
+      "n_fixation": true,
+      "residue_t_ha": 2.5,
+      "forage": false,
+      "market_ar": "high",
+      "sources": [
+        "INTA Manual de soja 2020",
+        "FAO ECOCROP"
+      ]
+    },
+    {
+      "id": "vicia",
+      "name": {
+        "es": "Vicia (cobertura)",
+        "en": "Vetch (cover crop)"
+      },
+      "family": "Fabaceae",
+      "sowing": {
+        "pampa_humeda": [
+          "04-01",
+          "05-31"
+        ]
+      },
+      "harvest": {
+        "pampa_humeda": [
+          "09-15",
+          "10-31"
+        ]
+      },
+      "gdd_base10": 900,
+      "frost_tolerance": "high",
+      "drought_tolerance": "medium",
+      "heat_tolerance": "low",
+      "water_mm_cycle": 250,
+      "root_depth_cm": 60,
+      "n_fixation": true,
+      "residue_t_ha": 4.0,
+      "forage": true,
+      "market_ar": "low",
+      "sources": [
+        "INTA Cultivos de cobertura 2019"
+      ]
+    }
+  ]
+}
