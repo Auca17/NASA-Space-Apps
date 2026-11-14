@@ -41,6 +41,8 @@ Convención: `D<n>` es el identificador estable. Una decisión no se borra; si c
 | D29 | 2026-11-14 | Riesgo nivel historial sin focos recientes: `ratio = 1` y `cat = moderado`; el front lo muestra como **"normal para la época"** junto con la probabilidad histórica, y solo escala a "alto" o "muy alto" cuando hay focos recientes en la propia celda (el nivel historial no mira las vecinas; el modelo de Argentina sí, con `neigh_fires_30d`). Con `ratio = null`, la categoría sale de `p`: < 0,05 bajo, < 0,15 moderado, < 0,30 alto, resto muy alto. | Evitar que "moderado" se lea como alarma en plena temporada. | Vigente |
 | D30 | 2026-11-14 | La armonización usa 18 bandas de latitud de 10° (el brief decía 36 por error). El tramo de baja confianza va de 2000-11 a 2012-01. Mediados de 2001 es un hueco de Terra (15/06 al 03/07/2001): junio y julio de 2001 quedan en baja confianza. | Corrección de Ezequiel, verificada contra los datos. | Vigente |
 
+| D31 | 2026-11-14 | Validación satélite contra campo con datos de Orin: mientras no lleguen los datos reales, el front trabaja con ejemplos marcados `synthetic: true`, con cartel visible y la compilación de producción falla si algún archivo servido es inventado. Los lotes de Orin (viña, olivo) solo tienen diagnóstico y validación; el motor de rotaciones no los cubre. | Poder construir la pantalla sin mostrar nunca datos falsos como reales. | Vigente |
+
 ## Pendientes de decisión
 
 - Orden de construcción y asignación de la lente Campo (`crops.json`, `rotations.json`, `/api/field/*`): se define con el plan de acción.

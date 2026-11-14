@@ -200,6 +200,31 @@ Productor: Devin. Consumidor: `/api/field/rotations` (sección "Evidencia").
 
 Ejemplo: `fixtures/field/analogs/82c2effffffffff.json`.
 
+### 2.9 `orin/validation.json` y `orin/lots.geojson` (validación satélite contra campo, D31)
+
+Productor: Devin con los datos de Orin que entrega Ezequiel (B3). Consumidor: front (tarjeta "Qué tan bien ve el satélite tu lote" y lotes de demo de Mendoza). Hasta que existan los datos reales, el front usa ejemplos con `synthetic: true`.
+
+**Regla de seguridad:** todo archivo con datos inventados lleva `"synthetic": true` en el nivel superior (y en cada feature de `lots.geojson`). El front muestra un cartel visible "Datos de ejemplo, no reales" cuando lo encuentra, y la compilación de producción **falla** si algún archivo servido tiene `synthetic: true`.
+
+`orin/validation.json`:
+
+| Campo | Tipo | Significado |
+|---|---|---|
+| `version` | string | `v1` |
+| `synthetic` | bool | `true` en los ejemplos |
+| `generated_at` | instante | Fecha de cálculo |
+| `source` | string | Origen de los datos de campo (por ejemplo "Estaciones Orin DCC") |
+| `variables[]` | lista | Una entrada por variable comparada |
+| `variables[].id` | string | `temp_max`, `temp_min`, `ndvi`, `soil_moisture` |
+| `variables[].satellite` | objeto | `dataset`, `resolution`, `period` |
+| `variables[].field` | objeto | `source`, `n_sites` |
+| `variables[].n` | entero | Pares comparados |
+| `variables[].rmse`, `bias`, `r` | decimales | Error cuadrático medio, sesgo (satélite menos campo) y correlación |
+| `variables[].unit` | string | Unidad de `rmse` y `bias` |
+| `variables[].quality` | `good` \| `fair` \| `poor` | Juicio simple para el texto |
+
+`orin/lots.geojson`: FeatureCollection de polígonos de lotes de demo con `properties`: `id`, `name`, `crop_label`, `zone` (`cuyo`), `synthetic`, `real_data_available` (bool).
+
 ---
 
 ## 3. Conocimiento agronómico (en el repo)
