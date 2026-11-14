@@ -4,6 +4,7 @@ import type {
   MetaJson, GlobeShard, CalShard, DailyShard, RiskShard,
   LiveResponse, DiagnoseResponse, RotationsResponse,
   ExplainResponse, RotationEntry, CropEntry, RiskCell,
+  OrinValidation, OrinLots,
 } from "./types";
 
 export const meta = () => fetchJson<MetaJson>(dataUrl("meta.json"));
@@ -34,6 +35,12 @@ export const knowledgeRotations = () =>
 
 export const knowledgeCrops = () =>
   fetchJson<{ crops: CropEntry[] }>(dataUrl("knowledge/crops.json"));
+
+export const orinValidation = () =>
+  fetchJson<OrinValidation>(dataUrl("orin/validation.json"));
+
+export const orinLots = () =>
+  fetchJson<OrinLots>(dataUrl("orin/lots.geojson"));
 
 export function pointsCsvUrl(r2: string, year: number): string {
   return dataUrl(`fire/points/${r2}/${year}.csv.gz`);

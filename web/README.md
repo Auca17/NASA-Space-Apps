@@ -69,8 +69,19 @@ mimics this with gzip).
 | `npm test` | vitest unit/component tests |
 | `npm run lint` | eslint |
 | `npm run typecheck` | `tsc --noEmit` (strict) |
-| `npm run build` | typecheck + production build → `dist/` |
+| `npm run build` | synthetic-data guard + typecheck + production build → `dist/` |
 | `node scripts/screenshots.mjs` | playwright screenshots → `web/screenshots/` (git-ignored) |
+
+## Orin validation data (D31)
+
+`orin/validation.json` and `orin/lots.geojson` are served by the same
+`/data/v1/` middleware — no extra wiring. Until the real field data
+arrives both carry `synthetic: true`: the UI shows a "Datos de ejemplo,
+no reales" banner and mutes the numbers. `npm run build` runs
+`scripts/check-no-synthetic.mjs` first: with an http(s)
+`VITE_DATA_BASE_URL` the build **fails** if either served file is still
+synthetic; against a local `DATA_DIR` it only warns. Swap the files for
+real ones — no code change needed.
 
 ## Layout
 

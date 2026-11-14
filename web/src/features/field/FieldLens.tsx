@@ -5,11 +5,13 @@ import { Card, BottomSheet, Tooltip } from "../../components/ui";
 import { Glossary } from "../../components/Glossary";
 import {
   apiDiagnose, apiRotations, apiExplain, knowledgeRotations,
-  knowledgeCrops,
+  knowledgeCrops, orinValidation,
 } from "../../api";
 import type {
-  Card as DiagCard, DiagnoseResponse, RotationsResponse, Strategy,
+  Card as DiagCard, DiagnoseResponse, OrinValidation,
+  RotationsResponse, Strategy,
 } from "../../api/types";
+import { OrinCard, SyntheticBanner } from "./OrinCard";
 import {
   benefitValue, cardValueText, compareDeltas, groupVariants,
   groupedCards, indicatorLabelKey, irrigationNeedMm, measureReqPairs,
@@ -380,11 +382,21 @@ export function RotationResults({ rots, diag, explain, t }: {
     </>);
 }
 
-export function FieldPanel({ ring, open, onClose }: {
+/** A demo plot from orin/lots.geojson: rotations are not available for
+ * its crop, only diagnosis + validation card. */
+export interface DemoLot {
+  name: string;
+  crop_label: string;
+  synthetic?: boolean;
+}
+
+export function FieldPanel({ ring, open, onClose, lot }: {
   ring: LatLonRing | null; open: boolean; onClose: () => void;
+  lot?: DemoLot | null;
 }) {
   const { t, lang } = useT();
   const [diag, setDiag] = useState<DiagnoseResponse | null>(null);
+  const [orin, setOrin] = useState<OrinValidation | null>(null);
   const [rots, setRots] = useState<RotationsResponse | null>(null);
   const [explain, setExplain] = useState<Record<string, string>>({});
   const [rotList, setRotList] = useState<{ id: string; label: string }[]>([]);
@@ -421,9 +433,13 @@ export function FieldPanel({ ring, open, onClose }: {
     setStep(1);
     apiDiagnose(body).then((d) => {
       setDiag(d); setBusy(false);
-      if (d) savePlot("lote", body);
+      if (d) savePlot(lot?.name ?? "lote", body);
     });
-  }, [open, body]);
+  }, [open, body, lot]);
+
+  useEffect(() => {
+    if (open) orinValidation().then(setOrin);
+  }, [open]);
 
   const togglePrio = (p: string) => setPrioSel((sel) => {
     if (sel.includes(p)) return sel.filter((x) => x !== p);
@@ -467,6 +483,10 @@ export function FieldPanel({ ring, open, onClose }: {
         <h3 style={{ margin: 0 }}>{t("field.cta")}</h3>
         <button onClick={onClose} aria-label={t("ui.close")}>✕</button>
       </div>
+      {lot && (
+        <p className="muted">{lot.name}{lot.crop_label
+          ? ` · ${lot.crop_label}` : ""}</p>)}
+      {lot?.synthetic && <SyntheticBanner t={t} />}
       {busy && <p aria-live="polite">{t("field.diagnosing")}</p>}
       {!diag && !busy && <p className="muted">{t("panel.noData")}</p>}
 
@@ -490,6 +510,8 @@ export function FieldPanel({ ring, open, onClose }: {
                   <DiagTile key={c.id} c={c} t={t} fmt={fmt} />))}
               </div>
             </section>))}
+
+          <OrinCard data={orin} t={t} fmt={fmt} />
 
           <Card title={t("field.calendar")}>
             <div style={{ overflowX: "auto" }}>
@@ -535,7 +557,12 @@ export function FieldPanel({ ring, open, onClose }: {
             {t("gloss.gdd")}<Glossary term="gdd" />
           </p>
 
-          {step === 1 && !rots && (
+          {lot && (
+            <p className="notice" role="status">
+              {t("orin.rot.none", { crop: lot.crop_label })}
+            </p>)}
+
+          {step === 1 && !rots && !lot && (
             <button className="primary" onClick={() => setStep(2)}>
               {t("field.form.run")}</button>)}
 

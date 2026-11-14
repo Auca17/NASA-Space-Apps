@@ -5,6 +5,9 @@ import { Welcome } from "./features/welcome/Welcome";
 import { useGlobe, type GlobeHandle } from "./features/globe/GlobeView";
 import { HistoricControls } from "./features/fire/HistoricControls";
 import { cellsInCircle } from "./domain/h3area";
+import { orinLots } from "./api";
+import type { OrinLots } from "./api/types";
+import type { DemoLot } from "./features/field/FieldLens";
 
 const AreaPanel = lazy(() =>
   import("./features/fire/AreaPanel").then((m) => ({ default: m.AreaPanel })));
@@ -26,6 +29,8 @@ export default function App() {
   const [draft, setDraft] = useState<[number, number][]>([]);
   const [ring, setRing] = useState<[number, number][] | null>(null);
   const [fieldOpen, setFieldOpen] = useState(false);
+  const [lot, setLot] = useState<DemoLot | null>(null);
+  const [lots, setLots] = useState<OrinLots["features"]>([]);
   const [playingMonth, setPlayingMonth] = useState<string | null>(null);
   const country = useRef<string | null>(null);
   const globeRef = useRef<GlobeHandle | null>(null);
@@ -106,12 +111,35 @@ export default function App() {
 
   const demoPlot = () => {
     const r = circleApprox(DEMO_PLOT.lat, DEMO_PLOT.lon);
-    setMode("field"); setDraw("none");
+    setMode("field"); setDraw("none"); setLot(null);
     setRing(r); setFieldOpen(true);
     globeRef.current?.flyTo(DEMO_PLOT.lat, DEMO_PLOT.lon, 11);
     globeRef.current?.setDraft(r);
     country.current = "AR";
   };
+
+  // Orin demo lots (contract 2.9): ring straight from the geojson
+  // polygon; the panel knows rotations don't cover these crops
+  const orinLot = (f: OrinLots["features"][number]) => {
+    const ring = (f.geometry.coordinates[0] ?? [])
+      .slice(0, -1)
+      .map(([lo, la]) => [la, lo] as [number, number]);
+    if (ring.length < 3) return;
+    const clat = ring.reduce((s, p) => s + p[0], 0) / ring.length;
+    const clon = ring.reduce((s, p) => s + p[1], 0) / ring.length;
+    setMode("field"); setDraw("none");
+    setLot({ name: f.properties.name,
+             crop_label: f.properties.crop_label,
+             synthetic: f.properties.synthetic });
+    setRing(ring); setFieldOpen(true);
+    globeRef.current?.flyTo(clat, clon, 13);
+    globeRef.current?.setDraft(ring);
+    country.current = "AR";
+  };
+
+  useEffect(() => {
+    orinLots().then((d) => setLots(d?.features ?? []));
+  }, []);
 
   return (
     <div className="app">
@@ -162,6 +190,10 @@ export default function App() {
               <button onClick={() => startField("draw")}>{t("field.draw")}</button>
               <button onClick={() => startField("point")}>{t("field.point")}</button>
               <button onClick={demoPlot}>{t("field.demo")}</button>
+              {lots.map((f) => (
+                <button key={f.properties.id}
+                        onClick={() => orinLot(f)}>
+                  {f.properties.crop_label}</button>))}
             </div>
             {draw === "draw" && (
               <div className="row">
@@ -183,8 +215,9 @@ export default function App() {
         </Suspense>)}
       {mode === "field" && (
         <Suspense fallback={null}>
-          <FieldPanel ring={ring} open={fieldOpen}
+          <FieldPanel ring={ring} open={fieldOpen} lot={lot}
                       onClose={() => { setFieldOpen(false); setRing(null);
+                        setLot(null);
                         globeRef.current?.setDraft(null); }} />
         </Suspense>)}
     </div>
