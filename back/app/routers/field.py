@@ -675,9 +675,14 @@ async def diagnose(request: Request):
                     "calendar": calendar["rows"],
                     "risk_cat": (risk_cell or {}).get("cat")})
 
+    from ..services.georef import zone_at
+    geo = zone_at(clat, clon)
+
     return JSONResponse(
         {"diagnosis_id": f"dx_{dx}", "area_ha": round(area_ha, 1),
          "centroid": [round(clat, 4), round(clon, 4)],
+         "zone": geo["zone"], "province": geo["province"],
+         "country": geo["country"],
          "h3_r5": r5s, "h3_r6": r6s, "cards": cards, "calendar": calendar,
          **msr},
         headers={"Cache-Control": "no-store"})
@@ -700,7 +705,10 @@ async def rotations(request: Request):
             content={"error": "invalid_input",
                      "detail": "diagnosis must be the full diagnose response"})
     zone = body.get("zone")
-    if zone is not None and zone not in ROTATIONS_ZONES:
+    if zone is None:
+        dz = diag.get("zone")
+        zone = dz if dz in ROTATIONS_ZONES else None
+    elif zone not in ROTATIONS_ZONES:
         return JSONResponse(status_code=400, content={
             "error": "invalid_input",
             "detail": f"zone must be one of {sorted(ROTATIONS_ZONES)}"})

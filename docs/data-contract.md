@@ -281,6 +281,9 @@ Salida (`fixtures/api/diagnose.response.json`):
 | `calendar.months` | 12 etiquetas. |
 | `calendar.rows[]` | `id`, `label`, `levels` (12 enteros 0–3). Filas previstas: `bare_soil`, `frost`, `water_stress`, `heat`, `burn_season`, `current_rotation`. |
 | `calendar.scale` | Significado de 0–3. |
+| `zone` | Zona agronómica del centroide (`pampa_humeda`, `nea`, `noa`, `cuyo`, `patagonia`; `other` fuera de Argentina). Adición compatible 2026-11-14; `/rotations` la lee del diagnóstico cuando el request no trae `zone`. |
+| `province` | Provincia argentina del centroide (IGN `ign:provincia`); `null` fuera de Argentina. Adición compatible 2026-11-14. |
+| `country` | ISO A2 del país del centroide (Natural Earth admin-0); `null` si no resuelve. Adición compatible 2026-11-14. |
 
 ### 4.3 `POST /api/field/rotations`
 

@@ -225,3 +225,66 @@ def test_rain_monthly_mm():
     assert len(rm) == 12
     assert rm[0] > rm[6]  # wet summer months vs dry winter
     assert sum(rm) == pytest.approx(545.0, abs=2)
+
+
+def test_zone_at_test_points():
+    """The four brief points resolve to the expected zone."""
+    from app.services.georef import zone_at
+    cases = [
+        ((-33.89, -60.57), "pampa_humeda", "Buenos Aires", "AR"),  # Pergamino
+        ((-24.80, -65.40), "noa", "Salta", "AR"),
+        ((-54.80, -68.30), "patagonia", None, "AR"),               # Ushuaia
+        ((40.40, -3.70), "other", None, "ES"),                     # Spain
+    ]
+    for (lat, lon), zone, prov, cc in cases:
+        out = zone_at(lat, lon)
+        assert out["zone"] == zone, (lat, lon, out)
+        if prov:
+            assert out["province"] == prov
+        else:
+            assert out["province"] in (prov, out["province"])
+        assert out["country"] == cc
+
+
+@pytest.mark.asyncio
+async def test_rotations_reads_diagnosis_zone(respx_mock, monkeypatch):
+    """Without body.zone the endpoint uses diagnosis.zone."""
+    diag = json.loads(
+        (FIXTURES / "api/diagnose.response.json").read_text())
+    diag["zone"] = "noa"
+    r = await client().post("/api/field/rotations", json={
+        "diagnosis": diag, "current": {}, "priorities": {},
+        "constraints": {}})
+    assert r.status_code == 200, r.text
+    out = r.json()
+    ids = {s["id"] for s in out["strategies"]}
+    # noa zone: garbanzo-maiz must be a candidate, pampa-only rotations not
+    assert "garbanzo-maiz" in ids
+    assert "trigo-soja2-maiz" not in ids
+
+
+@pytest.mark.asyncio
+async def test_geocode_proxy(respx_mock):
+    """Same-origin Nominatim proxy: trimmed hits, short-q shortcut."""
+    respx_mock.get("https://nominatim.openstreetmap.org/search").respond(
+        json=[{"lat": "-33.9", "lon": "-60.6",
+               "display_name": "Pergamino, Buenos Aires"}])
+    async with client() as c:
+        r = await c.get("/api/geocode", params={"q": "pergamino"})
+        assert r.status_code == 200
+        assert r.json()["hits"][0]["lat"] == -33.9
+        assert (await c.get("/api/geocode", params={"q": "x"})
+                ).json()["hits"] == []
+
+
+@respx.mock
+async def test_diagnose_returns_zone(monkeypatch):
+    """diagnose emits zone/province/country for the centroid."""
+    monkeypatch.setenv("DATA_BASE_URL", FIXTURES.as_uri() + "/")
+    _mock_all_ok()
+    r = await client().post("/api/field/diagnose", json=PLOT)
+    assert r.status_code == 200, r.text
+    d = r.json()
+    assert d["zone"] == "pampa_humeda"
+    assert d["province"] == "Buenos Aires"
+    assert d["country"] == "AR"

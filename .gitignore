@@ -1,5 +1,6 @@
 # Datos y artefactos pesados (nunca al repo)
 data/
+!back/data/
 *.duckdb
 *.duckdb.wal
 *.parquet

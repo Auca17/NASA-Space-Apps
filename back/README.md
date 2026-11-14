@@ -34,7 +34,7 @@ Secrets are read only from env; nothing is logged.
 ```
 back/api/index.py     Vercel entry — exports `app` (ASGI)
 back/app/main.py      FastAPI app, routers, CORS, MissingEnv -> 503 handler
-back/app/routers/     live.py, risk.py
+back/app/routers/     live.py, risk.py, field.py, geocode.py
 back/app/services/    firms.py (FIRMS client), data.py (DATA_BASE_URL fetch + cache)
 back/app/cache.py     TTL cache, key = (h3_cell, utc_date, name)  [res-6 for field]
 back/app/h3util.py    lat/lon -> h3 r2/r5/r6
@@ -68,20 +68,24 @@ works too.
 `functions` cannot coexist and `maxDuration` can only be set via `functions`:
 
 ```json
-{ "functions": { "back/api/index.py": { "maxDuration": 60 } },
+{ "installCommand": "cd web && npm install",
+  "buildCommand": "cd web && npm run build",
+  "outputDirectory": "web/dist",
+  "functions": { "api/index.py": { "maxDuration": 60,
+                                   "includeFiles": "back/**" } },
   "rewrites": [{ "source": "/api/:path*",
-                 "destination": "/back/api/index.py" }] }
+                 "destination": "/api/index.py" },
+               { "source": "/(.*)", "destination": "/index.html" }] }
 ```
 
-For Python framework apps Vercel builds one function from the resolved
-entrypoint, so `functions` is keyed on `back/api/index.py` (not on `/api`
-routes). `maxDuration: 60` covers D22 and the diagnose budget
-(FIRMS ~10 s × 4 sources; diagnose's own budget is 10 s wall-clock);
-Hobby allows up to 300 s, so 60 is a conservative cap.
-
-The future `web/` front coexists cleanly: zero-config picks up its framework
-normally, and `rewrites` keep `/api/*` pointing at the Python function — no
-catch-all ordering conflict.
+One Vercel project now serves `web/` (static build) plus the Python
+backend: `api/index.py` at repo root inserts `back/` into `sys.path` and
+re-exports `app`; `includeFiles: "back/**"` ships the app code and
+`back/data/*.geojson` inside the function bundle (`back/api/index.py`
+stays as an alternate entry for back-only deployments). `maxDuration: 60`
+covers D22 and the diagnose budget; Hobby allows up to 300 s, so 60 is a
+conservative cap. The `/(.*)` rewrite gives the SPA its client-side
+routing. Dashboard setup: `docs/DEPLOY.md`.
 
 ## POST /api/field/diagnose
 
@@ -119,6 +123,22 @@ Environment: `back/app/config.py` loads the repo-root `.env` at import via
 `python-dotenv` (`override=False` — real env vars always win) and strips
 surrounding whitespace in `get_env`. `model/` entry scripts load it the
 same way.
+
+Response also carries `zone`/`province`/`country` for the plot centroid
+(`app/services/georef.py`, stdlib-only): province from IGN
+`ign:provincia` simplified to `back/data/ar_provinces.geojson` (~565 KB),
+mapped to the agronomic zones of contract 3.2; `country` from Natural
+Earth admin-0 `back/data/countries.geojson` (~406 KB). Outside Argentina:
+`zone: "other"`, `province: null`. Missing files degrade to
+`"other"`/`null` without failing the request. Regenerate with
+`back/tools/build_georef.py`. `/rotations` reads `diagnosis.zone` when
+the request omits `zone`.
+
+`GET /api/geocode?q=` proxies Nominatim `/search` (same-origin: the
+public endpoint sends no `Access-Control-Allow-Origin`, so the browser
+cannot call it directly). Trims hits to `{lat, lon, name}` ×5; `q` shorter
+than 3 chars returns `{hits: []}` without an upstream call; upstream
+errors degrade to `{hits: []}`.
 
 Calendar rows (levels 0–3; `null` row when no data):
 
