@@ -36,6 +36,11 @@ Convención: `D<n>` es el identificador estable. Una decisión no se borra; si c
 
 | D26 | 2026-11-14 | **Medidas de prevención de incendios**: `measures.json` (contenido de Augustus, fuente INTA) y motor de reglas determinístico que las activa con datos que ya tenemos (cosecha en temporada seca, clima de fuego, riesgo alto, suelo desnudo en temporada de quemas). Se muestran en el panel de riesgo, en el diagnóstico y por rotación. Fuera de alcance: directorio de contactos y daño post-incendio; el modo live solo agrega el aviso de que una detección no es un incendio confirmado. | Propuesta del equipo: convierte el riesgo en acción y cruza las dos lentes en la quema de rastrojos. | Vigente |
 
+| D27 | 2026-11-14 | Celda de control y de demo para Corrientes 2022: **`85a9441bfffffff`** (Esteros del Iberá, núcleo del incendio); `85a963c3fffffff` tiene su máximo en abril de 2023 y deja de ser la referencia. Los fixtures usan celdas inventadas y no cambian. | Verificado contra los CSV crudos por Ezequiel. | Vigente |
+| D28 | 2026-11-14 | `fire/daily`: se acepta que 60 de 2.307 shards (2,6 %, África, Sudeste Asiático y Siberia) superen 800 KB (máximo 1,76 MB); p95 = 484 KB. No se parte por década. Ningún shard de Argentina está en ese grupo. | El semáforo se carga bajo demanda y el costo se paga solo en esas regiones. | Vigente |
+| D29 | 2026-11-14 | Riesgo nivel historial sin focos recientes: `ratio = 1` y `cat = moderado`; el front lo muestra como **"normal para la época"** junto con la probabilidad histórica, y solo escala a "alto" o "muy alto" cuando hay focos recientes en la celda o las vecinas. Con `ratio = null`, la categoría sale de `p`: < 0,05 bajo, < 0,15 moderado, < 0,30 alto, resto muy alto. | Evitar que "moderado" se lea como alarma en plena temporada. | Vigente |
+| D30 | 2026-11-14 | La armonización usa 18 bandas de latitud de 10° (el brief decía 36 por error). El tramo de baja confianza va de 2000-11 a 2012-01. Mediados de 2001 es un hueco de Terra (15/06 al 03/07/2001): junio y julio de 2001 quedan en baja confianza. | Corrección de Ezequiel, verificada contra los datos. | Vigente |
+
 ## Pendientes de decisión
 
 - Orden de construcción y asignación de la lente Campo (`crops.json`, `rotations.json`, `/api/field/*`): se define con el plan de acción.
