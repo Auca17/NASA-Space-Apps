@@ -50,9 +50,9 @@ def test_priorities_reorder_avoid_burning():
     alts = [s for s in out["strategies"] if not s["is_current"]]
     covered = [s for s in alts if s["indicators"]["burns_avoided"] == 1]
     bare = [s for s in alts if s["indicators"]["burns_avoided"] == 0]
-    assert covered and bare
-    assert min(s["score"] for s in covered) > \
-        max(s["score"] for s in bare)
+    # the real catalogue has >= 3 viable covered rotations, so the
+    # avoid_burning priority must fill the top 3 with covered ones only
+    assert covered and not bare
 
 
 def test_irrigation_false_removes_crop(tmp_path, monkeypatch):

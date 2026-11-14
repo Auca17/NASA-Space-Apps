@@ -26,12 +26,12 @@ class Crop(BaseModel):
     family: str
     sowing: dict[str, list[str]] = {}
     harvest: dict[str, list[str]] = {}
-    gdd_base10: int = 0
+    gdd_base10: int | None = 0  # contract 1: null = no sourced value
     frost_tolerance: str = "medium"
     drought_tolerance: str = "medium"
     heat_tolerance: str = "medium"
     water_mm_cycle: int
-    root_depth_cm: int = 100
+    root_depth_cm: int | None = 100
     n_fixation: bool = False
     residue_t_ha: float = 0.0
     forage: bool = False
@@ -123,9 +123,9 @@ KNOWLEDGE = load()
 
 
 class MeasureReq(BaseModel):
-    people: int = 0
+    people: int | None = 0
     machinery: list[str] = []
-    downtime_h: float = 0
+    downtime_h: float | None = 0
     cost: str = "low"
 
 

@@ -10,6 +10,7 @@ from httpx import ASGITransport, AsyncClient
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from app.main import app  # noqa: E402
+from app.services.knowledge import MEASURES  # noqa: E402
 from app.services.measures import evaluate  # noqa: E402
 
 FIXTURES = Path(__file__).resolve().parents[2] / "fixtures"
@@ -31,14 +32,8 @@ def _fired(ctx):
                  _MEASURE_TRIGGERS[m["id"]]}
 
 
-_MEASURE_TRIGGERS = {
-    "clean_harvester": {"harvest_in_dry_season"},
-    "water_and_extinguisher": {"harvest_in_dry_season"},
-    "maintain_firebreak": {"fire_weather_high", "risk_high"},
-    "no_residue_burning": {"bare_soil_in_burn_season",
-                           "burn_season_now"},
-    "harvest_timing": {"fire_weather_high"},
-}
+# derived from the catalogue so new measures do not break _fired
+_MEASURE_TRIGGERS = {m.id: set(m.triggers) for m in MEASURES}
 
 
 def test_trigger_harvest_in_dry_season():
