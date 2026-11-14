@@ -1,0 +1,329 @@
+{
+  "unit": "VIIRS_NOAA20",
+  "method": "log(VIIRS+1) = a + b*log(MODIS+1) per stratum (10deg latitude band x month), total-preserving factor k per stratum; res 5 = res 3 prediction split by MODIS res 5 share",
+  "train": [
+    "2012-02",
+    "2022-12"
+  ],
+  "holdout": [
+    "2023-01",
+    "2024-12"
+  ],
+  "r2": 0.654,
+  "r2_scale": "log1p, cell res 3 x month",
+  "r2_linear": 0.926,
+  "r2_global_monthly": 0.979,
+  "bias_pct": -0.8,
+  "r2_cells_day": 0.61,
+  "bias_pct_cells_day": 1.4,
+  "strata_total": 208,
+  "strata_low": 71,
+  "detail": {
+    "det": {
+      "r2_linear": 0.9260331997368558,
+      "r2_log1p": 0.6541932538884305,
+      "bias_pct": -0.8255243671875859,
+      "pairs": 169424,
+      "r2_global_monthly": 0.9785906182195232,
+      "by_band": [
+        {
+          "band_lat": "-90..-80",
+          "pairs": 18,
+          "obs": 18.0,
+          "pred": 0.0,
+          "bias_pct": -100.0,
+          "r2_log1p": -3.897897929439167e+31
+        },
+        {
+          "band_lat": "-80..-70",
+          "pairs": 30,
+          "obs": 46.0,
+          "pred": 0.0,
+          "bias_pct": -100.0,
+          "r2_log1p": -6.154
+        },
+        {
+          "band_lat": "-70..-60",
+          "pairs": 8,
+          "obs": 43.0,
+          "pred": 0.0,
+          "bias_pct": -100.0,
+          "r2_log1p": -1.621
+        },
+        {
+          "band_lat": "-60..-50",
+          "pairs": 119,
+          "obs": 604.0,
+          "pred": 268.0,
+          "bias_pct": -55.6,
+          "r2_log1p": -2.111
+        },
+        {
+          "band_lat": "-50..-40",
+          "pairs": 1033,
+          "obs": 15543.0,
+          "pred": 14048.0,
+          "bias_pct": -9.6,
+          "r2_log1p": 0.005
+        },
+        {
+          "band_lat": "-40..-30",
+          "pairs": 7535,
+          "obs": 443259.0,
+          "pred": 455399.0,
+          "bias_pct": 2.7,
+          "r2_log1p": 0.462
+        },
+        {
+          "band_lat": "-30..-20",
+          "pairs": 13096,
+          "obs": 2280636.0,
+          "pred": 2290500.0,
+          "bias_pct": 0.4,
+          "r2_log1p": 0.761
+        },
+        {
+          "band_lat": "-20..-10",
+          "pairs": 16489,
+          "obs": 9253394.0,
+          "pred": 9324057.0,
+          "bias_pct": 0.8,
+          "r2_log1p": 0.818
+        },
+        {
+          "band_lat": "-10..0",
+          "pairs": 17995,
+          "obs": 6496206.0,
+          "pred": 6739540.0,
+          "bias_pct": 3.7,
+          "r2_log1p": 0.768
+        },
+        {
+          "band_lat": "0..10",
+          "pairs": 17972,
+          "obs": 5901896.0,
+          "pred": 5607119.0,
+          "bias_pct": -5.0,
+          "r2_log1p": 0.754
+        },
+        {
+          "band_lat": "10..20",
+          "pairs": 16433,
+          "obs": 4091720.0,
+          "pred": 4067559.0,
+          "bias_pct": -0.6,
+          "r2_log1p": 0.723
+        },
+        {
+          "band_lat": "20..30",
+          "pairs": 17532,
+          "obs": 1688502.0,
+          "pred": 1670028.0,
+          "bias_pct": -1.1,
+          "r2_log1p": 0.407
+        },
+        {
+          "band_lat": "30..40",
+          "pairs": 22789,
+          "obs": 978146.0,
+          "pred": 983818.0,
+          "bias_pct": 0.6,
+          "r2_log1p": 0.185
+        },
+        {
+          "band_lat": "40..50",
+          "pairs": 20055,
+          "obs": 1029039.0,
+          "pred": 955301.0,
+          "bias_pct": -7.2,
+          "r2_log1p": 0.314
+        },
+        {
+          "band_lat": "50..60",
+          "pairs": 13946,
+          "obs": 2589007.0,
+          "pred": 2475058.0,
+          "bias_pct": -4.4,
+          "r2_log1p": 0.537
+        },
+        {
+          "band_lat": "60..70",
+          "pairs": 4203,
+          "obs": 1377653.0,
+          "pred": 1269307.0,
+          "bias_pct": -7.9,
+          "r2_log1p": 0.5
+        },
+        {
+          "band_lat": "70..80",
+          "pairs": 167,
+          "obs": 11853.0,
+          "pred": 7057.0,
+          "bias_pct": -40.5,
+          "r2_log1p": -0.749
+        },
+        {
+          "band_lat": "80..90",
+          "pairs": 4,
+          "obs": 0.0,
+          "pred": 17.0,
+          "bias_pct": null,
+          "r2_log1p": null
+        }
+      ]
+    },
+    "cd": {
+      "r2_linear": 0.878190237720129,
+      "r2_log1p": 0.6096142102255908,
+      "bias_pct": 1.3962903801851227,
+      "pairs": 169424,
+      "r2_global_monthly": 0.9199136423129104,
+      "by_band": [
+        {
+          "band_lat": "-90..-80",
+          "pairs": 18,
+          "obs": 18.0,
+          "pred": 0.0,
+          "bias_pct": -100.0,
+          "r2_log1p": null
+        },
+        {
+          "band_lat": "-80..-70",
+          "pairs": 30,
+          "obs": 40.0,
+          "pred": 0.0,
+          "bias_pct": -100.0,
+          "r2_log1p": -9.984
+        },
+        {
+          "band_lat": "-70..-60",
+          "pairs": 8,
+          "obs": 12.0,
+          "pred": 0.0,
+          "bias_pct": -100.0,
+          "r2_log1p": -7.503
+        },
+        {
+          "band_lat": "-60..-50",
+          "pairs": 119,
+          "obs": 276.0,
+          "pred": 98.0,
+          "bias_pct": -64.6,
+          "r2_log1p": -4.485
+        },
+        {
+          "band_lat": "-50..-40",
+          "pairs": 1033,
+          "obs": 6060.0,
+          "pred": 5559.0,
+          "bias_pct": -8.3,
+          "r2_log1p": -0.303
+        },
+        {
+          "band_lat": "-40..-30",
+          "pairs": 7535,
+          "obs": 146610.0,
+          "pred": 143996.0,
+          "bias_pct": -1.8,
+          "r2_log1p": 0.37
+        },
+        {
+          "band_lat": "-30..-20",
+          "pairs": 13096,
+          "obs": 679095.0,
+          "pred": 722490.0,
+          "bias_pct": 6.4,
+          "r2_log1p": 0.706
+        },
+        {
+          "band_lat": "-20..-10",
+          "pairs": 16489,
+          "obs": 2921564.0,
+          "pred": 3046419.0,
+          "bias_pct": 4.3,
+          "r2_log1p": 0.774
+        },
+        {
+          "band_lat": "-10..0",
+          "pairs": 17995,
+          "obs": 2632052.0,
+          "pred": 2752310.0,
+          "bias_pct": 4.6,
+          "r2_log1p": 0.743
+        },
+        {
+          "band_lat": "0..10",
+          "pairs": 17972,
+          "obs": 2630738.0,
+          "pred": 2501239.0,
+          "bias_pct": -4.9,
+          "r2_log1p": 0.729
+        },
+        {
+          "band_lat": "10..20",
+          "pairs": 16433,
+          "obs": 1863248.0,
+          "pred": 1894904.0,
+          "bias_pct": 1.7,
+          "r2_log1p": 0.709
+        },
+        {
+          "band_lat": "20..30",
+          "pairs": 17532,
+          "obs": 839315.0,
+          "pred": 842399.0,
+          "bias_pct": 0.4,
+          "r2_log1p": 0.39
+        },
+        {
+          "band_lat": "30..40",
+          "pairs": 22789,
+          "obs": 534707.0,
+          "pred": 511905.0,
+          "bias_pct": -4.3,
+          "r2_log1p": 0.119
+        },
+        {
+          "band_lat": "40..50",
+          "pairs": 20055,
+          "obs": 351118.0,
+          "pred": 351923.0,
+          "bias_pct": 0.2,
+          "r2_log1p": 0.159
+        },
+        {
+          "band_lat": "50..60",
+          "pairs": 13946,
+          "obs": 278478.0,
+          "pred": 298717.0,
+          "bias_pct": 7.3,
+          "r2_log1p": 0.261
+        },
+        {
+          "band_lat": "60..70",
+          "pairs": 4203,
+          "obs": 97786.0,
+          "pred": 90994.0,
+          "bias_pct": -6.9,
+          "r2_log1p": 0.167
+        },
+        {
+          "band_lat": "70..80",
+          "pairs": 167,
+          "obs": 2465.0,
+          "pred": 1905.0,
+          "bias_pct": -22.7,
+          "r2_log1p": -1.161
+        },
+        {
+          "band_lat": "80..90",
+          "pairs": 4,
+          "obs": 0.0,
+          "pred": 14.0,
+          "bias_pct": null,
+          "r2_log1p": null
+        }
+      ]
+    }
+  }
+}
