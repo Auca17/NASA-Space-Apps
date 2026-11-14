@@ -4,8 +4,10 @@ write risk/{h3_r2}.json shards in the contract shape (section 2.6).
 Inputs:
   - model/fire_risk/model.txt (LightGBM, ar-lgbm-0.1)
   - fires: last 30 days from the FIRMS area API (VIIRS NRT + SP);
-    the 365-day lookback uses the Parquet, which ends 2025-12-31 —
-    Jan-Oct 2026 fires are missing from that feature (documented gap)
+    the 365-day lookback uses the base Parquet plus any
+    fires_ar_r5_daily_2026*.parquet files present; when the data
+    does not reach 30 days before today the shards are flagged
+    fires_365d_complete: false
   - POWER: existing parquet (through 2026-11-12; recent enough)
   - clim: share of 2012-2025 years with fire in this week-of-year
 """
@@ -156,8 +158,16 @@ def main() -> int:
     cell_days = fetch_fires(key, today) if key else {}
     print(f"firms cells with recent fire: {len(cell_days)}", flush=True)
 
-    fires = pd.read_parquet(FIRES_PQ)
+    pq_files = [FIRES_PQ] + sorted(
+        FIRES_PQ.parent.glob("fires_ar_r5_daily_2026*.parquet"))
+    fires = pd.concat([pd.read_parquet(f) for f in pq_files
+                       if f.exists()], ignore_index=True)
     fires["date"] = pd.to_datetime(fires["date"])
+    fires_complete = fires["date"].max().date() >= today - timedelta(days=30)
+    if not fires_complete:
+        print(f"WARNING: fire history ends {fires['date'].max().date()} "
+              "(>30d before today); shards flagged fires_365d_complete",
+              flush=True)
     day0 = pd.Timestamp("2012-01-01")
     pend = pd.Timestamp(today)
     n_days = (pend - day0).days + 1
@@ -203,7 +213,8 @@ def main() -> int:
     clim_s = pd.Series(0.0, index=cells)
     if woy_now in week_cols:
         clim_s = (fire_years[woy_now]
-                  .reindex(cells, fill_value=0) / 14.0)
+                  .reindex(cells, fill_value=0)
+                  / max(fires["wyear"].nunique(), 1))
     feats["clim"] = clim_s.to_numpy(np.float32)
 
     # POWER features over the last days
@@ -285,9 +296,10 @@ def main() -> int:
                "model_version": MODEL_VERSION,
                "reasons": reasons}
         r2 = h3.cell_to_parent(c, 2)
-        shards.setdefault(r2, {"generated_at": gen,
-                               "horizon_days": 7,
-                               "cells": {}})["cells"][c] = obj
+        shard = shards.setdefault(
+            r2, {"generated_at": gen, "horizon_days": 7,
+                 "fires_365d_complete": fires_complete, "cells": {}})
+        shard["cells"][c] = obj
 
     OUT_DIR.mkdir(parents=True, exist_ok=True)
     for r2, s in shards.items():

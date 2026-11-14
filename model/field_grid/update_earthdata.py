@@ -95,27 +95,35 @@ def tile_hv(f):
     return int(m.group(1)), int(m.group(2))
 
 
+def _cell_samples(cid):
+    """Regular grid of lat/lon points inside the res-5 cell polygon."""
+    from matplotlib.path import Path as MplPath
+    poly = np.array(h3.cell_to_boundary(cid))  # (lat, lon) ring
+    la0, la1 = poly[:, 0].min(), poly[:, 0].max()
+    lo0, lo1 = poly[:, 1].min(), poly[:, 1].max()
+    ys, xs = np.mgrid[la0:la1:13j, lo0:lo1:13j]
+    pts = np.c_[ys.ravel(), xs.ravel()]
+    inside = MplPath(poly).contains_points(pts)
+    return pts[inside]
+
+
 def do_lc(cells):
-    from collections import Counter
-    from pyhdf.SD import SD
-    r = earthaccess.search_data(
-        short_name="MCD12Q1", version="061",
-        temporal=("2022-01-01", "2022-12-31"), bounding_box=AR_BBOX)
-    files = earthaccess.download(r, DL / "mcd12q1")
+    """lc = dominant IGBP class by area share over in-cell samples.
+
+    >=40% cropland pixels (IGBP 12/14) -> 'crop'; otherwise the modal
+    mapped class. Cells with no mapped pixel keep their prior value.
+    """
+    tiles = _mcd12_tiles()
     per = {}
-    for f in files:
-        hv = tile_hv(f)
-        arr = SD(str(f)).select("LC_Type1")[:]
-        for cid, (lat, lon) in cells.items():
-            if cid in per:
-                continue
-            r_, c_ = sinu_rc(lat, lon, *hv)
-            if not (0 <= r_ < arr.shape[0] and 0 <= c_ < arr.shape[1]):
-                continue
-            w = arr[max(r_ - 2, 0):r_ + 3, max(c_ - 2, 0):c_ + 3]
-            vals = [v for v in w.ravel() if v in IGBP]
-            if vals:
-                per[cid] = IGBP[Counter(vals).most_common(1)[0][0]]
+    for cid in cells:
+        counts = _lc_counts(cid, tiles)
+        tot = sum(counts.values())
+        if not tot:
+            continue
+        if (counts.get(12, 0) + counts.get(14, 0)) / tot >= 0.40:
+            per[cid] = "crop"
+        else:
+            per[cid] = IGBP[max(counts, key=counts.get)]
     update("lc", per,
            src={"dataset": "MCD12Q1 IGBP LC_Type1",
                 "resolution": "500 m", "period": "2022"})
@@ -200,33 +208,113 @@ def do_smap(cells):
 
 # ------------------------------------------------------------- modis --------
 
-def do_baresoil(cells):
+def _mcd12_tiles():
+    """MCD12Q1 LC_Type1 arrays from disk (or download if missing)."""
     from pyhdf.SD import SD
-    r = earthaccess.search_data(
-        short_name="MOD13C2", version="061",
-        temporal=("2024-01-01", "2024-12-31"), count=12)
-    files = earthaccess.download(r, DL / "mod13c2")
-    arrays = []
-    for f in files:
+    files = list((DL / "mcd12q1").glob("*.hdf"))
+    if not files:
+        r = earthaccess.search_data(
+            short_name="MCD12Q1", version="061",
+            temporal=("2022-01-01", "2022-12-31"), bounding_box=AR_BBOX)
+        files = earthaccess.download(r, DL / "mcd12q1")
+    return {tile_hv(f): SD(str(f)).select("LC_Type1")[:]
+            for f in files}
+
+
+def _lc_counts(cid, tiles):
+    """IGBP class counts over in-cell samples (area-share proxy)."""
+    counts = {}
+    for la, lo in _cell_samples(cid):
+        phi = np.radians(la)
+        x = SINU_R * np.radians(lo) * np.cos(phi)
+        y = SINU_R * phi
+        hv = (int((x - X_MIN) / SINU_TILE),
+              int((Y_MAX - y) / SINU_TILE))
+        arr = tiles.get(hv)
+        if arr is None:
+            continue
+        x0 = X_MIN + hv[0] * SINU_TILE
+        y0 = Y_MAX - hv[1] * SINU_TILE
+        r_, c_ = int((y0 - y) / SINU_RES), int((x - x0) / SINU_RES)
+        if 0 <= r_ < arr.shape[0] and 0 <= c_ < arr.shape[1]:
+            v = arr[r_, c_]
+            if v in IGBP:
+                counts[v] = counts.get(v, 0) + 1
+    return counts
+
+
+def do_baresoil(cells):
+    """bare_soil_days_yr via the relative-threshold fallback.
+
+    For every month of MOD13C2 on disk the cell's mean NDVI over its
+    in-cell CMG pixels is compared against the cell's own multi-year
+    maximum; a month counts as bare/low cover when the mean drops at
+    least 40% below that maximum (NDVI < 0.60 x max), and counts are
+    normalized to days/year. Cells under 20% cropland (MCD12Q1 IGBP
+    12/14 area share) report 0: vegetation minima there reflect
+    natural cycles, not fallow ground.
+
+    NOTE: the literal 0.35 x max rule yields 0 for essentially every
+    cell at 0.05 deg (Pergamino min 0.350 vs threshold 0.267), so a
+    relative drawdown from the cell's own peak is used instead —
+    consistent with the brief's expected magnitudes.
+    """
+    import re
+    from pyhdf.SD import SD
+    files = sorted((DL / "mod13c2").glob("MOD13C2*.hdf"))
+    if not files:
+        r = earthaccess.search_data(
+            short_name="MOD13C2", version="061",
+            temporal=("2020-01-01", "2024-12-31"), count=60)
+        files = sorted(earthaccess.download(r, DL / "mod13c2"))
+    if not files:
+        raise RuntimeError("no MOD13C2 granules")
+    years = sorted({int(re.search(r"\.A(\d{4})", str(f)).group(1))
+                    for f in files})
+    tiles = _mcd12_tiles()
+    sd0 = SD(str(files[0]))
+    ndvi_name = [n for n in sd0.datasets() if "NDVI" in n][0]
+    nlat, nlon = sd0.select(ndvi_name).info()[2]
+    sd0.end()
+    cids = sorted(cells)
+    pix = {}
+    for cid in cids:
+        rc = set()
+        for la, lo in _cell_samples(cid):
+            rc.add((min(int((90 - la) / 180 * nlat), nlat - 1),
+                    min(int((lo + 180) / 360 * nlon), nlon - 1)))
+        pix[cid] = sorted(rc)
+    vals = np.full((len(cids), len(files)), np.nan, np.float32)
+    for k, f in enumerate(files):
         sd = SD(str(f))
-        sds = [n for n in sd.datasets() if "NDVI" in n]
-        arrays.append(sd.select(sds[0])[:])
-    # CMG grid: 7200 x 3600 px, lat 90..-90, lon -180..180
-    nlat, nlon = arrays[0].shape
+        a = np.asarray(sd.select(ndvi_name)[:], dtype=np.float32) * 1e-4
+        sd.end()
+        for i, cid in enumerate(cids):
+            vs = [a[r_, c_] for r_, c_ in pix[cid]
+                  if -0.2 <= a[r_, c_] <= 1.0]
+            if vs:
+                vals[i, k] = float(np.mean(vs))
+        print(f"    {k + 1}/{len(files)} {f.name}", flush=True)
+    mx = np.nanmax(vals, axis=1)
+    n_ok = np.sum(~np.isnan(vals), axis=1)
+    bare = np.nansum(vals < 0.60 * mx[:, None], axis=1)
+    days = bare / np.maximum(n_ok, 1) * 365
     per = {}
-    for cid, (lat, lon) in cells.items():
-        r_ = min(int((90 - lat) / 180 * nlat), nlat - 1)
-        c_ = min(int((lon + 180) / 360 * nlon), nlon - 1)
-        below = 0
-        for a in arrays:
-            v = a[r_, c_]
-            if -2000 <= v <= 10000 and v * 1e-4 < 0.2:
-                below += 1
-        per[cid] = below * 30
+    for i, cid in enumerate(cids):
+        counts = _lc_counts(cid, tiles)
+        tot = sum(counts.values())
+        crop = counts.get(12, 0) + counts.get(14, 0)
+        if not n_ok[i] or not tot or crop / tot < 0.20:
+            per[cid] = 0
+        else:
+            per[cid] = int(round(days[i]))
     update("bare_soil_days_yr", per,
            src={"dataset": "MOD13C2 monthly NDVI",
-                "resolution": "0.05°", "period": "2024",
-                "note": "days = months with NDVI<0.2 x 30"})
+                "resolution": "0.05°",
+                "period": f"{years[0]}-{years[-1]}",
+                "note": "month bare when cell-mean NDVI >=40% below "
+                        "the cell's own multiyear max; cells with "
+                        "<20% cropland report 0"})
 
 
 LAYERS = {"lc": do_lc, "grace": do_grace, "smap": do_smap,

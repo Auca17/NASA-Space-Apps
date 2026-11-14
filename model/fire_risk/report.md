@@ -27,3 +27,14 @@ Probabilities are Platt-calibrated on the 2022 validation split
 
 Artifacts: `model.txt`, `platt.json`, `calibration.png`, `shap.png`.
 Trained in 72s.
+
+## Known limitation
+
+`predict.py` builds `fires_365d` (and `clim`) from
+`data/processed/model_input/fires_ar_r5_daily.parquet` plus any
+`fires_ar_r5_daily_2026*.parquet` files present, and appends the last
+30 days of live FIRMS detections. The base Parquet ends 2025-12-31 and
+FIRMS covers only the last ~30 days, so until a 2026 Parquet is added
+the 365-day lookback misses Jan-Oct 2026 fires. Every generated shard
+carries `fires_365d_complete`; it is `false` when the fire history
+does not reach 30 days before the run date.
