@@ -1,3 +1,4 @@
+import json
 import sys
 from datetime import date, timedelta
 from pathlib import Path
@@ -166,3 +167,26 @@ async def test_failed_source_retried_after_negative_ttl(monkeypatch):
     retried = {str(c.request.url) for c in respx.calls[n:]}
     assert any("isric.org" in u for u in retried)
     assert any("elevation-tiles" in u for u in retried)
+
+
+@respx.mock
+async def test_diagnose_grid_fallback_cards(monkeypatch, tmp_path):
+    """With ORNL/SoilGrids down, soil and vigor cards come from field/grid."""
+    import h3
+    plot = {"point": [-32.5, -62.0], "ha": 50}  # fresh r6 cache keys
+    r5 = h3.latlng_to_cell(plot["point"][0], plot["point"][1], 5)
+    r2 = h3.cell_to_parent(r5, 2)
+    (tmp_path / "field" / "grid").mkdir(parents=True)
+    cell = {"soil": {"texture": "Franco", "soc_g_kg": 22.4},
+            "bare_soil_days_yr": 90, "grace_trend": "down"}
+    (tmp_path / "field" / "grid" / f"{r2}.json").write_text(
+        json.dumps({"shard": r2, "cells": {r5: cell}}))
+    monkeypatch.setenv("DATA_BASE_URL", tmp_path.as_uri() + "/")
+    _mock_all_ok()
+    r = await client().post("/api/field/diagnose", json=plot)
+    assert r.status_code == 200
+    cards = {c["id"]: c for c in r.json()["cards"]}
+    assert cards["soil"]["value"] == 22.4
+    assert "field/grid" in cards["soil"]["source"]
+    assert cards["vigor_bare_soil"]["value"] == 90
+    assert cards["water_trend"]["value"] == "down"

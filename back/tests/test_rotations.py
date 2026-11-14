@@ -37,7 +37,15 @@ def test_engine_returns_four_strategies():
 
 
 def test_priorities_reorder_avoid_burning():
-    out = eng.run(DIAG, {"rotation_id": "soja-soja"},
+    import copy
+    diag = copy.deepcopy(DIAG)
+    # fixture has no fire calendar; inject jun-oct burn months so
+    # burns_avoided can distinguish covered from bare rotations
+    for row in diag["calendar"]["rows"]:
+        if row["id"] == "burn_season":
+            row["levels"] = [2 if 6 <= m <= 10 else 0
+                             for m in range(1, 13)]
+    out = eng.run(diag, {"rotation_id": "soja-soja"},
                   {"avoid_burning": 5}, {}, ZONE)
     alts = [s for s in out["strategies"] if not s["is_current"]]
     covered = [s for s in alts if s["indicators"]["burns_avoided"] == 1]

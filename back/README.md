@@ -107,9 +107,18 @@ vigor_bare_soil ← ORNL MODIS MOD13Q1 NDVI (250 m, last 3 y — usually null:
 the service exceeds the 3 s budget).
 
 Note (03b): SoilGrids and ORNL time out even at 15 s from our test machine —
-not usable on demand right now, so the 3 s budget stays. `soil` and
-`vigor_bare_soil` will instead come from the precomputed `field/grid` shard
-(task 05), not from these APIs.
+not usable on demand right now, so the 3 s budget stays.
+
+Note (06): `soil` and `vigor_bare_soil` now fall back to the precomputed
+`field/grid` shard when the live APIs time out — `field/grid.soil`
+(SoilGrids WCS 0–30 cm, `{texture, soc_g_kg}`) and
+`field/grid.bare_soil_days_yr` (MOD13C2 monthly NDVI, 0.05°, months with
+NDVI<0.2 × 30, confidence `low`).
+
+Environment: `back/app/config.py` loads the repo-root `.env` at import via
+`python-dotenv` (`override=False` — real env vars always win) and strips
+surrounding whitespace in `get_env`. `model/` entry scripts load it the
+same way.
 
 Calendar rows (levels 0–3; `null` row when no data):
 

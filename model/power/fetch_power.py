@@ -22,6 +22,9 @@ import pandas as pd
 import pyarrow as pa
 import pyarrow.parquet as pq
 import xarray as xr
+from dotenv import load_dotenv
+
+load_dotenv(Path(__file__).resolve().parents[2] / ".env", override=False)
 
 # ---------------------------------------------------------------- stores ----
 

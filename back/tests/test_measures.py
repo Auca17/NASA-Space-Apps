@@ -128,6 +128,12 @@ async def test_rotation_measures_fewer_when_covered():
     import json as j
     diag = j.loads(
         (FIXTURES / "api" / "diagnose.response.json").read_text())
+    # the fixture has no fire calendar (burn_season all null); inject a
+    # jun-oct burn season so the trigger can evaluate coverage
+    for row in diag["calendar"]["rows"]:
+        if row["id"] == "burn_season":
+            row["levels"] = [2 if 6 <= m <= 10 else 0
+                             for m in range(1, 13)]
     r = await client().post("/api/field/rotations", json={
         "diagnosis": diag, "current": {"rotation_id": "soja-soja"},
         "priorities": {}, "constraints": {}, "zone": "pampa_humeda"})
@@ -135,7 +141,12 @@ async def test_rotation_measures_fewer_when_covered():
     cur = next(s for s in b["strategies"] if s["is_current"])
     vicia = next(s for s in b["strategies"]
                  if s["id"] == "maiz-soja-vicia")
-    assert len(vicia["measures"]) < len(cur["measures"])
+    cur_ids = {m["id"] for m in cur["measures"]}
+    vicia_ids = {m["id"] for m in vicia["measures"]}
+    # uncovered soil in burn months -> residue-burning caution on current
+    assert "no_residue_burning" in cur_ids
+    # vicia covers the burn months -> trigger does not fire for it
+    assert "no_residue_burning" not in vicia_ids
 
 
 async def test_risk_endpoint_measures(monkeypatch):

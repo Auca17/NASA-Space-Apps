@@ -204,3 +204,18 @@ def test_cache_helper_ttl_and_date_key():
     assert c.get("86abc", "risk_shard", utc_date=today) == {"x": 1}
     yesterday = (date.today() - timedelta(days=1)).isoformat()
     assert c.get("86abc", "risk_shard", utc_date=yesterday) is None
+
+
+def test_dotenv_loaded_without_override(tmp_path, monkeypatch):
+    """A repo .env is picked up; a real env var always wins."""
+    import importlib
+    from dotenv import load_dotenv
+    env = tmp_path / ".env"
+    env.write_text("DOTENV_TEST_KEY=  from_file  \n")
+    monkeypatch.delenv("DOTENV_TEST_KEY", raising=False)
+    load_dotenv(env, override=False)
+    from app.config import get_env
+    assert get_env("DOTENV_TEST_KEY") == "from_file"
+    monkeypatch.setenv("DOTENV_TEST_KEY", "real_env")
+    load_dotenv(env, override=False)
+    assert get_env("DOTENV_TEST_KEY") == "real_env"

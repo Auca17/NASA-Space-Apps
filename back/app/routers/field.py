@@ -363,6 +363,7 @@ def build_cards(power, soilg, slope, ndvi, grid_cell, fire_cal,
     else:
         cards.append(_null_card("crop_water", "NASA POWER", POWER_RES))
 
+    grid_bare = (grid_cell or {}).get("bare_soil_days_yr")
     if ndvi:
         bare = days_per_year({d: v for d, v in ndvi},
                              lambda v: v < NDVI_BARE)
@@ -371,6 +372,12 @@ def build_cards(power, soilg, slope, ndvi, grid_cell, fire_cal,
                            "MODIS MOD13Q1", "250 m", "medium")
                      if bare is not None else
                      _null_card("vigor_bare_soil", "MODIS MOD13Q1", "250 m"))
+    elif grid_bare is not None:
+        cards.append(_card(
+            "vigor_bare_soil", grid_bare, "días/año",
+            f"~{grid_bare:g} días/año con suelo desnudo "
+            "(NDVI mensual <0.2, precalculado)",
+            "MODIS MOD13C2 (field/grid)", "0.05°", "low"))
     else:
         cards.append(_null_card("vigor_bare_soil", "MODIS MOD13Q1", "250 m"))
 
@@ -380,6 +387,7 @@ def build_cards(power, soilg, slope, ndvi, grid_cell, fire_cal,
         if slope is not None
         else _null_card("slope", "AWS Terrain Tiles (SRTM)", "~30 m"))
 
+    grid_soil = (grid_cell or {}).get("soil") or {}
     if soilg:
         tex = texture_class(soilg)
         soc = soilg.get("soc")
@@ -387,6 +395,14 @@ def build_cards(power, soilg, slope, ndvi, grid_cell, fire_cal,
         cards.append(_card("soil", round(soc, 1) if soc else None, "g/kg",
                            "; ".join(parts) or "Sin datos",
                            "ISRIC SoilGrids v2", "250 m", "medium"))
+    elif grid_soil.get("texture") or grid_soil.get("soc_g_kg") is not None:
+        soc = grid_soil.get("soc_g_kg")
+        parts = [t for t in (grid_soil.get("texture"),
+                             f"MO {soc:.1f} g/kg" if soc else None) if t]
+        cards.append(_card("soil", soc, "g/kg",
+                           "; ".join(parts) or "Sin datos",
+                           "ISRIC SoilGrids v2 (field/grid)", "250 m",
+                           "medium"))
     else:
         cards.append(_null_card("soil", "ISRIC SoilGrids v2", "250 m"))
 
