@@ -160,3 +160,30 @@ def test_validator_flags_missing_key(tmp_path):
     del bad["version"]
     err = _check("meta.json", json.dumps(bad).encode())
     assert err and "version" in err
+
+
+# ------------------------------------------------------------- task 12 ----
+
+def test_trigger_harvest_stop_conditions():
+    """A single INTA stop condition fires harvest_timing even when the
+    weekly score stays below 'alto' (the 36 C afternoon case)."""
+    ctx = {"cards": {"fire_weather": {
+        "value": "bajo",
+        "stop_conditions": ["temp_gt_35"],
+        "stop_detail": {"temp_gt_35": "temperatura 36 °C (>35 °C)"}}}}
+    out = evaluate(ctx)
+    m = next(m for m in out["measures"] if m["id"] == "harvest_timing")
+    assert "36 °C" in m["why"]
+
+    for cond in ("wind_gt_40kmh", "temp_gt_35", "rh_lt_30"):
+        ids = {m["id"] for m in evaluate(
+            {"cards": {"fire_weather": {"value": "bajo",
+                                        "stop_conditions": [cond],
+                                        "stop_detail": {cond: "x"}}}})
+            ["measures"]}
+        assert "harvest_timing" in ids, cond
+
+    ids = {m["id"] for m in evaluate(
+        {"cards": {"fire_weather": {"value": "bajo",
+                                    "stop_conditions": []}}})["measures"]}
+    assert "harvest_timing" not in ids

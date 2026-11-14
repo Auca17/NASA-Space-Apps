@@ -190,3 +190,38 @@ async def test_diagnose_grid_fallback_cards(monkeypatch, tmp_path):
     assert "field/grid" in cards["soil"]["source"]
     assert cards["vigor_bare_soil"]["value"] == 90
     assert cards["water_trend"]["value"] == "down"
+
+
+# ------------------------------------------------------------- task 12 ----
+
+def test_stop_conditions_each_and_none():
+    from app.routers.field import _stop_conditions
+    end = date(2025, 1, 10)
+    base = {"RH2M": {end: 50.0}, "WS2M": {end: 5.0},
+            "T2M_MAX": {end: 30.0}}
+    conds, _ = _stop_conditions({**base, "WS2M": {end: 12.0}}, end)
+    assert conds == ["wind_gt_40kmh"]
+    conds, _ = _stop_conditions({**base, "T2M_MAX": {end: 36.0}}, end)
+    assert conds == ["temp_gt_35"]
+    conds, det = _stop_conditions({**base, "RH2M": {end: 25.0}}, end)
+    assert conds == ["rh_lt_30"]
+    assert "por confirmar" in det["rh_lt_30"]
+    conds, _ = _stop_conditions(base, end)
+    assert conds == []
+    # older day inside the 3-day window also counts
+    old = {**base, "T2M_MAX": {end - timedelta(days=2): 37.0}}
+    conds, _ = _stop_conditions(old, end)
+    assert conds == ["temp_gt_35"]
+
+
+def test_rain_monthly_mm():
+    from app.routers.field import rain_monthly_mm
+    days = {}
+    d = date(2001, 1, 1)
+    while d <= date(2024, 12, 31):
+        days[d] = 3.0 if d.month in (1, 2, 3) else 1.0
+        d += timedelta(days=1)
+    rm = rain_monthly_mm(days)
+    assert len(rm) == 12
+    assert rm[0] > rm[6]  # wet summer months vs dry winter
+    assert sum(rm) == pytest.approx(545.0, abs=2)

@@ -4,7 +4,8 @@ Every number in the output traces to a diagnosis card or a knowledge entry.
 Priority -> indicator weight mapping (contract 4.3):
 
   water         -> water_balance   (lower deficit is better)
-  soil          -> carbon          (residue t/ha/yr, higher better)
+  soil          -> residue_t_ha_yr (t/ha/yr of stubble, higher better;
+                                    `carbon` kept as deprecated alias)
   erosion       -> erosion_risk    (lower level is better)
   income        -> income          (market_ar bucket, higher better)
   forage        -> forage          (has forage crop)
@@ -15,13 +16,27 @@ Priority -> indicator weight mapping (contract 4.3):
 Viability thresholds (documented choices):
   - frost: non frost-tolerant crops must keep their whole cycle inside the
     diagnosis frost-free window; `frost_tolerance: high` skips the check.
-  - water: rain available in the crop's cycle = annual rain x cycle
-    fraction, deflated 10 % when the soil_moisture card is negative.
+  - water: rain available in the crop's sowing->harvest days from the
+    monthly climatology (`rain_monthly_mm` on the rain card), day-weighted
+    inside each month. Each calendar day's rain is allocated once: when
+    several crops of the rotation cover the same day it is split in
+    proportion to their daily demand (water_mm_cycle / cycle days).
+    Perennial items (cycles of >=330 days, e.g. alfalfa years) compare
+    their annual demand against the full annual rain instead of the
+    window. Rain is deflated 10 % when the soil_moisture card is negative.
     Viable when availability >= 70 % of `water_mm_cycle`.
-  - `irrigation: false` additionally drops crops needing > 110 % of
+  - `irrigation: true` removes the water viability filter; the indicator
+    reports "con riego" plus `irrigation_need_mm` (demand - rain).
+    `irrigation: false` additionally drops crops needing > 110 % of
     availability (they would need irrigation to close the gap).
   - `livestock: false` drops forage-only crops; a non-empty `markets` list
     drops crops with `market_ar: low` unless the crop id is listed.
+  - zones: when the plot zone is known, candidate rotations must list it
+    in `zones` (knowledge file). The "no sé" current rotation comes from
+    `typical_for`; a zone with no valid rotation returns confidence low
+    and "sin rotaciones validadas para esta zona". Sequence dates are
+    snapped into each crop's zone sowing/harvest windows and the shift is
+    reported in `gaps`.
   - erosion_risk = bare_soil_days/yr x heavy_rain_days/yr x slope %, as a
     score: < 30 bajo, < 120 medio, else alto.
 """
@@ -46,16 +61,38 @@ PRIORITY_LABEL = {"water": "cuidar el agua", "soil": "mejorar el suelo",
                   "erosion": "reducir la erosión", "income": "el ingreso",
                   "forage": "producir forraje", "nitrogen": "el nitrógeno",
                   "pests": "cortar plagas", "avoid_burning": "evitar quemas"}
-PRIORITY_MAP = {"water": "water_balance", "soil": "carbon",
+PRIORITY_MAP = {"water": "water_balance", "soil": "residue_t_ha_yr",
                 "erosion": "erosion_risk", "income": "income",
                 "forage": "forage", "nitrogen": "nitrogen",
                 "pests": "pest_break", "avoid_burning": "burns_avoided"}
+INDICATOR_LABEL = {
+    "water_balance": "balance hídrico (mm/año)",
+    "residue_t_ha_yr": "t/ha por año de rastrojo",
+    "carbon": "t/ha por año de rastrojo",  # deprecated alias
+    "irrigation_need_mm": "mm de riego suplementario por año",
+    "nitrogen": "cultivos fijadores de N",
+    "bare_soil_days": "días sin cultivo vivo",
+    "erosion_risk": "riesgo de erosión",
+    "pest_break": "familias en el ciclo",
+    "income": "ingreso",
+    "forage": "forraje",
+    "burns_avoided": "quemas evitadas",
+}
 ZONE_CROPS = {"pampa_humeda", "nea", "noa", "cuyo", "patagonia"}
+
+
+def _zone_valid(rot: "Rotation", zone: str) -> bool:
+    """True when the rotation is allowed in `zone` (empty list = all)."""
+    return not rot.zones or zone in rot.zones
+
+
 MONTHS_ES = ["ene", "feb", "mar", "abr", "may", "jun",
              "jul", "ago", "sep", "oct", "nov", "dic"]
+MONTH_DAYS = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
 WATER_MIN_FRAC = 0.70      # availability must cover 70 % of crop demand
 IRRIGATION_MARGIN = 1.10   # >110 % of availability => needs irrigation
 FROST_GRACE_DAYS = 14      # cycle days allowed outside the frost-free window
+PERENNIAL_MIN_DAYS = 330   # cycles this long compare annual demand vs rain
 EROSION_MED, EROSION_HIGH = 30, 120
 
 
@@ -122,44 +159,160 @@ def _rain_annual(diag: dict) -> float | None:
     return float(v) if isinstance(v, (int, float)) else None
 
 
-def _crop_rain(diag: dict, crop: Crop, zone: str | None) -> float | None:
-    """mm available during the crop cycle (uniform rain assumption)."""
+def _rain_monthly(diag: dict) -> list[float] | None:
+    rm = (_card(diag, "rain") or {}).get("rain_monthly_mm")
+    if isinstance(rm, list) and len(rm) == 12 and \
+            all(isinstance(v, (int, float)) for v in rm):
+        return [float(v) for v in rm]
+    return None
+
+
+def _doy_month(doy: int) -> int:
+    acc = 0
+    for m, nd in enumerate(MONTH_DAYS):
+        if doy < acc + nd:
+            return m
+        acc += nd
+    return 11
+
+
+def _daily_rain_mm(diag: dict) -> list[float] | None:
+    """mm of rain per day-of-year (365 entries).
+
+    Monthly climatology from `rain_monthly_mm` spread uniformly inside
+    each month; uniform annual/365 when the monthly series is missing.
+    """
+    monthly = _rain_monthly(diag)
+    if monthly is not None:
+        return [monthly[_doy_month(d)] / MONTH_DAYS[_doy_month(d)]
+                for d in range(365)]
     rain = _rain_annual(diag)
+    return [rain / 365.0] * 365 if rain is not None else None
+
+
+def _crop_rain(diag: dict, crop: Crop, zone: str | None) -> float | None:
+    """mm available during the crop cycle (standalone estimate)."""
     win = crop.window(zone)
-    if rain is None or not win:
+    if not win:
         return None
-    days = len(_cycle_doys(win[0], win[2]))
-    avail = rain * days / 365
+    return _window_rain(diag, _cycle_doys(win[0], win[2]))
+
+
+def _window_rain(diag: dict, doys: set[int]) -> float | None:
+    daily = _daily_rain_mm(diag)
+    if daily is None:
+        return None
+    avail = sum(daily[d] for d in doys)
     sm = (_card(diag, "soil_moisture") or {}).get("value")
     if isinstance(sm, (int, float)) and sm < 0:
         avail *= 0.9
     return avail
 
 
+def _abs_windows(rot: Rotation) -> list[tuple[int, int]]:
+    """Absolute cycle-time [start, end] day span per sequence item.
+
+    Catalog sequences are chronological laps: each item starts on the
+    first day after the previous item's end whose day-of-year matches
+    (maiz year 1 -> soja year 2 in `maiz-soja`; the last item may spill
+    past years x 365, which is normal for the closing crop). A
+    producer-declared `custom` sequence is taken literally: all items
+    live in the same year, so declared same-season overlaps stay real
+    for the rain split.
+    """
+    spans = []
+    for s in rot.sequence:
+        sd = _doy(s.start)
+        spans.append((sd, sd + (_doy(s.end) - sd) % 365))
+    if rot.id == "custom":
+        return spans
+    out, prev_end = [], -1
+    for sd, ed in spans:
+        start = sd + 365 * max(0, -(-(prev_end + 1 - sd) // 365))
+        end = start + (ed - sd)
+        out.append((start, end))
+        prev_end = end
+    return out
+
+
+def _seq_rain(diag: dict, rot: Rotation) -> \
+        tuple[list[float] | None, list[float] | None]:
+    """(allocated rain mm per item, demand mm per item); None if no rain.
+
+    Each absolute cycle day is credited once: items whose absolute
+    windows overlap share the day's rain in proportion to their daily
+    demand (water_mm_cycle / cycle days). Perennial items (cycles of
+    >=PERENNIAL_MIN_DAYS days, e.g. alfalfa years) stay out of the
+    split and get the full annual rain against their annual demand.
+    """
+    daily = _daily_rain_mm(diag)
+    if daily is None:
+        return None, None
+    sm = (_card(diag, "soil_moisture") or {}).get("value")
+    deflate = 0.9 if isinstance(sm, (int, float)) and sm < 0 else 1.0
+    wins = _abs_windows(rot)
+    seq = rot.sequence
+    demands = [KNOWLEDGE.crops[s.crop].water_mm_cycle for s in seq]
+    peren = [b - a + 1 >= PERENNIAL_MIN_DAYS for a, b in wins]
+    per_day = [demands[i] / (wins[i][1] - wins[i][0] + 1)
+               for i in range(len(seq))]
+    cover = {}
+    for i, (a, b) in enumerate(wins):
+        if peren[i]:
+            continue
+        for t in range(a, b + 1):
+            cover.setdefault(t, []).append(i)
+    avails = [0.0] * len(seq)
+    for t, idx in cover.items():
+        tot = sum(per_day[i] for i in idx)
+        for i in idx:
+            avails[i] += daily[t % 365] * per_day[i] / tot
+    annual = sum(daily)
+    for i in range(len(seq)):
+        if peren[i]:
+            avails[i] = annual
+    return [a * deflate for a in avails], demands
+
+
 # ------------------------------------------------------------- viability ---
 
 def crop_viable(crop: Crop, diag: dict, constraints: dict,
-                zone: str | None, ff: set[int] | None) -> list[str]:
-    """Reasons the crop is NOT viable (empty list = viable)."""
+                zone: str | None, ff: set[int] | None,
+                item: SeqItem | None = None,
+                avail: float | None = None) -> list[str]:
+    """Reasons the crop is NOT viable (empty list = viable).
+
+    `item` is the rotation's own sequence entry (its dates are used);
+    `avail` is its allocated rain. Without them the crop's zone window
+    and a standalone rain estimate are used.
+    """
     reasons = []
     win = crop.window(zone)
     if not win:
         return [f"sin ventana de siembra para la zona {zone or 'desconocida'}"]
+    cyc = _cycle_doys(item.start, item.end) if item is not None \
+        else _cycle_doys(win[0], win[2])
     if ff is not None and crop.frost_tolerance != "high":
-        outside = _cycle_doys(win[0], win[2]) - ff
+        outside = cyc - ff
         if len(outside) > FROST_GRACE_DAYS:
             reasons.append("ciclo fuera de la ventana libre de heladas")
-    avail = _crop_rain(diag, crop, zone)
-    if avail is not None:
-        if avail < crop.water_mm_cycle * WATER_MIN_FRAC:
-            reasons.append(
-                f"agua disponible ~{avail:.0f} mm < "
-                f"{crop.water_mm_cycle} mm del ciclo")
-        elif constraints.get("irrigation") is False and \
-                crop.water_mm_cycle > avail * IRRIGATION_MARGIN:
-            reasons.append("necesitaría riego para cubrir su demanda")
-    else:
-        if crop.water_mm_cycle >= 500:
+    if constraints.get("irrigation") is not True:
+        if avail is None:
+            if item is not None:
+                avail = _window_rain(
+                    diag, set(range(365))
+                    if len(cyc) >= PERENNIAL_MIN_DAYS else cyc)
+            else:
+                avail = _crop_rain(diag, crop, zone)
+        if avail is not None:
+            if avail < crop.water_mm_cycle * WATER_MIN_FRAC:
+                reasons.append(
+                    f"agua disponible ~{avail:.0f} mm < "
+                    f"{crop.water_mm_cycle} mm del ciclo")
+            elif constraints.get("irrigation") is False and \
+                    crop.water_mm_cycle > avail * IRRIGATION_MARGIN:
+                reasons.append("necesitaría riego para cubrir su demanda")
+        elif crop.water_mm_cycle >= 500:
             reasons.append("demanda hídrica alta sin dato de lluvia")
     if constraints.get("livestock") is False and crop.forage:
         reasons.append("cultivo exclusivamente forrajero")
@@ -170,25 +323,35 @@ def crop_viable(crop: Crop, diag: dict, constraints: dict,
 
 
 def rotation_viable(rot: Rotation, diag, constraints, zone, ff):
-    bad = {s.crop: crop_viable(KNOWLEDGE.crops[s.crop], diag, constraints,
-                               zone, ff)
-           for s in rot.sequence}
-    bad = {k: v for k, v in bad.items() if v}
+    avails, _ = _seq_rain(diag, rot)
+    bad = {}
+    for i, s in enumerate(rot.sequence):
+        r = crop_viable(KNOWLEDGE.crops[s.crop], diag, constraints,
+                        zone, ff, item=s,
+                        avail=avails[i] if avails is not None else None)
+        if r:
+            bad[f"{s.crop}#{i}"] = r
     return bad
 
 
 # ------------------------------------------------------------- indicators --
 
-def indicators(rot: Rotation, diag: dict, zone: str | None) -> dict:
+def indicators(rot: Rotation, diag: dict, zone: str | None,
+               constraints: dict | None = None) -> dict:
     crops = [KNOWLEDGE.crops[s.crop] for s in rot.sequence]
     years = max(rot.years, 1)
 
-    uses, avails = [], []
-    for c in crops:
-        uses.append(c.water_mm_cycle)
-        avails.append(_crop_rain(diag, c, zone))
-    if all(a is not None for a in avails):
-        wb = round(sum(u - a for u, a in zip(uses, avails)) / years)
+    avails, demands = _seq_rain(diag, rot)
+    need_mm = None
+    if avails is not None and \
+            (constraints or {}).get("irrigation") is True:
+        # irrigated: water does not constrain viability; the indicator
+        # reports "con riego" plus the supplemental mm the strategy needs
+        wb = "con riego"
+        need_mm = round(sum(max(0.0, d - a)
+                            for d, a in zip(demands, avails)) / years)
+    elif avails is not None:
+        wb = round(sum(d - a for d, a in zip(demands, avails)) / years)
     else:
         wb = None  # cannot compute -> null, surfaced in gaps
 
@@ -215,9 +378,10 @@ def indicators(rot: Rotation, diag: dict, zone: str | None) -> dict:
     income_lvl = statistics.fmean({"low": 1, "medium": 2, "high": 3}
                                   [c.market_ar] for c in crops)
 
-    return {
+    out = {
         "water_balance": wb,
-        "carbon": round(sum(c.residue_t_ha for c in crops) / years, 1),
+        "residue_t_ha_yr":
+            round(sum(c.residue_t_ha for c in crops) / years, 1),
         "nitrogen": sum(1 for c in crops if c.n_fixation),
         "bare_soil_days": bare,
         "erosion_risk": erosion,
@@ -226,6 +390,10 @@ def indicators(rot: Rotation, diag: dict, zone: str | None) -> dict:
         "forage": any(c.forage for c in crops),
         "burns_avoided": burns,
     }
+    out["carbon"] = out["residue_t_ha_yr"]  # deprecated alias, one release
+    if need_mm is not None:
+        out["irrigation_need_mm"] = need_mm
+    return out
 
 
 # ----------------------------------------------------------------- score ---
@@ -245,7 +413,7 @@ def _metric_value(ind: dict, key: str):
         return {"low": 1, "medium": 2, "high": 3}.get(v)
     if isinstance(v, bool):
         return 1 if v else 0
-    return v
+    return v if isinstance(v, (int, float)) else None
 
 
 def score(alt: dict, cur: dict, priorities: dict) -> float:
@@ -303,8 +471,14 @@ def _analog_evidence(rot: Rotation, analog: dict | None) -> dict | None:
             "source": tgt.get("src") or "field/analogs"}
 
 
-def _gaps(diag: dict, analog_missing: bool = False) -> list[str]:
-    out = []
+def _gaps(diag: dict, analog_missing: bool = False,
+          extra: list[str] | None = None) -> list[str]:
+    out = list(extra or [])
+    rain = _card(diag, "rain") or {}
+    if rain.get("value") is not None and \
+            not isinstance(rain.get("rain_monthly_mm"), list):
+        out.append("Sin climatología mensual de lluvia: el balance "
+                   "hídrico usa el promedio anual")
     for c in diag.get("cards", []):
         if c.get("value") is None:
             out.append(f"Sin dato de {c['id']} ({c.get('source')})")
@@ -334,14 +508,15 @@ def _risks(rot: Rotation, viable: bool, reasons: list[str]) -> list[str]:
 
 
 def _why(rot: Rotation, is_current: bool, priorities: dict,
-         diag: dict) -> str:
+         diag: dict, constraints: dict) -> str:
     if is_current:
         return "Es tu rotación actual; sirve de referencia."
     top = sorted(priorities.items(), key=lambda kv: -kv[1])[:2]
     goals = " y ".join(PRIORITY_LABEL.get(p, p) for p, _ in top) \
         or "diversificar"
-    problem = "ataca los días de suelo desnudo" \
-        if (indicators(rot, diag, None).get("bare_soil_days") or 0) < 100 \
+    problem = "ataca los días sin cultivo vivo" \
+        if (indicators(rot, diag, None, constraints)
+            .get("bare_soil_days") or 0) < 100 \
         else "suma un cultivo de invierno al ciclo"
     return f"Atiende tus prioridades de {goals}; {problem}."
 
@@ -349,7 +524,9 @@ def _why(rot: Rotation, is_current: bool, priorities: dict,
 def _sections(rot: Rotation, ind: dict, cur_ind: dict,
               is_current: bool, priorities: dict, diag: dict,
               viable: bool, reasons: list[str],
-              analog: dict | None = None) -> dict:
+              analog: dict | None = None,
+              constraints: dict | None = None,
+              extra_gaps: list[str] | None = None) -> dict:
     benefits = {}
     for k, v in ind.items():
         c = cur_ind.get(k)
@@ -362,10 +539,10 @@ def _sections(rot: Rotation, ind: dict, cur_ind: dict,
     if ev_analog:
         evidence = evidence[:3] + [ev_analog]
     return {
-        "why": _why(rot, is_current, priorities, diag),
+        "why": _why(rot, is_current, priorities, diag, constraints or {}),
         "evidence": evidence[:4],
         "benefits": benefits,
-        "gaps": _gaps(diag, analog is None)
+        "gaps": _gaps(diag, analog is None, extra_gaps)
         or ["Sin vacíos relevantes en el diagnóstico"],
         "risks": _risks(rot, viable, reasons),
         "sequence": [{"crop": s.crop, "start": s.start, "end": s.end,
@@ -375,8 +552,13 @@ def _sections(rot: Rotation, ind: dict, cur_ind: dict,
 
 # ---------------------------------------------------------------- engine ---
 
-def _current_rotation(current: dict | None, zone: str | None) -> Rotation:
-    """Resolve 'current': id, ad-hoc sequence, or the zone's typical one."""
+def _current_rotation(current: dict | None,
+                      zone: str | None) -> Rotation | None:
+    """Resolve 'current': id, ad-hoc sequence, or the zone's typical one.
+
+    With a known zone the "no sé" default comes from `typical_for` —
+    never file order; None when the zone has no typical rotation.
+    """
     if current and current.get("rotation_id"):
         rid = current["rotation_id"]
         for r in KNOWLEDGE.rotations:
@@ -391,39 +573,96 @@ def _current_rotation(current: dict | None, zone: str | None) -> Rotation:
         return Rotation(id="custom", name={"es": "Tu rotación", "en": "Custom"},
                         years=1, sequence=seq,
                         sources=["declarada por el productor"])
-    # null -> "no sé": first rotation whose crops all have a window for
-    # the zone (file order = agronomic typicality for now)
+    if zone in ZONE_CROPS:
+        for r in KNOWLEDGE.rotations:
+            if zone in r.typical_for:
+                return r
+        return None
+    # unknown zone (non-AR plots): first rotation with a usable window
     for r in KNOWLEDGE.rotations:
         if all(KNOWLEDGE.crops[s.crop].window(zone) for s in r.sequence):
             return r
     return KNOWLEDGE.rotations[0]
 
 
+def _in_window(doy: int, a: str, b: str) -> bool:
+    a, b = _doy(a), _doy(b)
+    return a <= doy <= b if a <= b else (doy >= a or doy <= b)
+
+
+def _shift_for_zone(rot: Rotation,
+                    zone: str | None) -> tuple[Rotation, list[str]]:
+    """Snap sequence dates inside each crop's zone sowing/harvest windows.
+
+    Dates already inside the zone windows are kept; a start outside the
+    zone sowing window moves to its opening day and an end past the zone
+    harvest end moves to the window's close. Returns the (possibly new)
+    rotation plus human-readable notes for `gaps`.
+    """
+    if zone not in ZONE_CROPS:
+        return rot, []
+    items, notes = [], []
+    for s in rot.sequence:
+        crop = KNOWLEDGE.crops[s.crop]
+        win = crop.window(zone)
+        if not win:
+            items.append(s)
+            continue
+        start, end = s.start, s.end
+        if not _in_window(_doy(start), win[0], win[1]):
+            start = win[0]
+        sd = _doy(start)
+        if (_doy(end) - sd) % 365 > (_doy(win[2]) - sd) % 365:
+            end = win[2]
+        if (start, end) != (s.start, s.end):
+            notes.append(f"{crop.id}: fechas ajustadas a la ventana de "
+                         f"{zone} ({s.start}–{s.end} → {start}–{end})")
+        items.append(SeqItem(crop=s.crop, start=start, end=end,
+                             cover=s.cover))
+    if not notes:
+        return rot, []
+    return rot.model_copy(update={"sequence": items}), notes
+
+
 def run(diagnosis: dict, current: dict | None, priorities: dict,
         constraints: dict, zone: str | None,
         analog: dict | None = None) -> dict:
     zone = zone if zone in ZONE_CROPS else ("other" if zone else None)
+    known = zone in ZONE_CROPS
     ff = _frost_free_doys(diagnosis)
-    confidence = "high" if zone else "low"
+
+    cand_pool = [r for r in KNOWLEDGE.rotations
+                 if not known or _zone_valid(r, zone)]
+    no_zone_rots = known and not cand_pool
+    zone_gaps = ["sin rotaciones validadas para esta zona"] \
+        if no_zone_rots else []
+    confidence = "low" if (not zone or no_zone_rots) else "high"
 
     cur_rot = _current_rotation(current, zone)
-    cur_ind = indicators(cur_rot, diagnosis, zone)
-    cur_bad = rotation_viable(cur_rot, diagnosis, constraints, zone, ff)
+    cur_notes = []
+    if cur_rot is not None:
+        cur_rot, cur_notes = _shift_for_zone(cur_rot, zone)
+        cur_ind = indicators(cur_rot, diagnosis, zone, constraints)
+        cur_bad = rotation_viable(cur_rot, diagnosis, constraints,
+                                  zone, ff)
+    else:
+        cur_ind, cur_bad = {}, {}
 
     cand = []
-    for rot in KNOWLEDGE.rotations:
-        if rot.id == cur_rot.id:
+    for rot in cand_pool:
+        if cur_rot is not None and rot.id == cur_rot.id:
             continue
-        bad = rotation_viable(rot, diagnosis, constraints, zone, ff)
-        ind = indicators(rot, diagnosis, zone)
+        rot2, notes = _shift_for_zone(rot, zone)
+        bad = rotation_viable(rot2, diagnosis, constraints, zone, ff)
+        ind = indicators(rot2, diagnosis, zone, constraints)
         sc = score(ind, cur_ind, priorities)
-        cand.append({"rot": rot, "ind": ind, "score": sc,
-                     "bad": bad, "viable": not bad})
+        cand.append({"rot": rot2, "ind": ind, "score": sc,
+                     "bad": bad, "viable": not bad, "notes": notes})
     viable = [c for c in cand if c["viable"]]
     notviable = sorted((c for c in cand if not c["viable"]),
                        key=lambda c: -c["score"])
     top = sorted(viable, key=lambda c: -c["score"])[:3]
-    top += notviable[:3 - len(top)]  # least-bad fill; always 3 alternatives
+    top += notviable[:3 - len(top)]  # least-bad fill; up to 3 alternatives
 
     def _measures(rot: Rotation) -> dict:
         cat = None
@@ -437,18 +676,22 @@ def run(diagnosis: dict, current: dict | None, priorities: dict,
             "risk_cat": cat,
             "sequence": [s.model_dump() for s in rot.sequence]})
 
-    strategies = [{
-        "id": cur_rot.id,
-        "name": cur_rot.name.get("es", cur_rot.id),
-        "is_current": True,
-        "score": score(cur_ind, cur_ind, priorities),
-        "confidence": confidence,
-        "indicators": cur_ind,
-        **_sections(cur_rot, cur_ind, cur_ind, True, priorities,
-                    diagnosis, not cur_bad,
-                    [r for v in cur_bad.values() for r in v], analog),
-        **_measures(cur_rot),
-    }]
+    strategies = []
+    if cur_rot is not None:
+        strategies.append({
+            "id": cur_rot.id,
+            "name": cur_rot.name.get("es", cur_rot.id),
+            "is_current": True,
+            "score": score(cur_ind, cur_ind, priorities),
+            "confidence": confidence,
+            "indicators": cur_ind,
+            **_sections(cur_rot, cur_ind, cur_ind, True, priorities,
+                        diagnosis, not cur_bad,
+                        [r for v in cur_bad.values() for r in v], analog,
+                        constraints,
+                        zone_gaps + cur_notes),
+            **_measures(cur_rot),
+        })
     for c in top:
         reasons = [r for v in c["bad"].values() for r in v]
         strategies.append({
@@ -459,11 +702,17 @@ def run(diagnosis: dict, current: dict | None, priorities: dict,
             "confidence": confidence,
             "indicators": c["ind"],
             **_sections(c["rot"], c["ind"], cur_ind, False, priorities,
-                        diagnosis, c["viable"], reasons, analog),
+                        diagnosis, c["viable"], reasons, analog,
+                        constraints, zone_gaps + c["notes"]),
             **_measures(c["rot"]),
         })
-    return {"diagnosis_id": diagnosis.get("diagnosis_id"),
-            "strategies": strategies, "disclaimer": DISCLAIMER}
+    out = {"diagnosis_id": diagnosis.get("diagnosis_id"),
+           "strategies": strategies, "disclaimer": DISCLAIMER,
+           "confidence": confidence}
+    if zone_gaps or not strategies:
+        out["gaps"] = zone_gaps or \
+            ["sin rotaciones validadas para esta zona"]
+    return out
 
 
 def explain(rotations_response: dict) -> dict:
@@ -476,7 +725,8 @@ def explain(rotations_response: dict) -> dict:
                     f"miden contra ella.")
         else:
             b = s.get("benefits", {})
-            deltas = [f"{k} {v:+g}" for k, v in b.items()
+            deltas = [f"{INDICATOR_LABEL.get(k, k)} {v:+g}"
+                      for k, v in b.items()
                       if isinstance(v, (int, float)) and v]
             why = s.get("why", "")
             risk = (s.get("risks") or [""])[0]

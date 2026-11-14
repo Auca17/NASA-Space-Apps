@@ -43,7 +43,8 @@
         "cost": "low"
       },
       "triggers": [
-        "fire_weather_high"
+        "fire_weather_high",
+        "harvest_stop_conditions"
       ],
       "sources": [
         "INTA / UIB Balcarce (S. Tourn) + Bomberos Tandil (D. Ibáñez), 'Pautas para evitar incendios durante la cosecha' (2023-12-28), https://www.argentina.gob.ar/node/413622"
@@ -131,7 +132,7 @@
       },
       "factor": "residue_burning",
       "addresses": "quema de rastrojo en época de alta propagación",
-      "benefit": "conserva la cobertura del suelo y elimina un foco de ignición evitable; quemar sin autorización está prohibido",
+      "benefit": "conserva la cobertura del suelo y elimina un foco de ignición evitable; quemar sin autorización está prohibido. La Ley 26.562 exige autorización de la autoridad local competente para quemar, durante todo el año",
       "requires": {
         "people": 0,
         "machinery": [],

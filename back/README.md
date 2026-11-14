@@ -133,12 +133,26 @@ Calendar rows (levels 0–3; `null` row when no data):
 ## POST /api/field/rotations + /explain
 
 Body: `{diagnosis: <full diagnose response>, current: {rotation_id|sequence|null}, priorities: {water|soil|erosion|income|forage|nitrogen|pests|avoid_burning: 0-5}, constraints: {irrigation, machinery, livestock, markets}, zone?}`.
-`current: null` = "no sé" -> the first zone-valid rotation in file order
-(placeholder typicality). Always returns the current strategy
-(`is_current: true`) + exactly 3 alternatives; when fewer than 3 are
-viable, the least-bad non-viable ones fill in with their reasons in `risks`.
+`current: null` = "no sé" -> the rotation whose `typical_for` lists the
+zone (knowledge `zones`/`typical_for`, contract 3.2). Candidates are
+filtered by `zones` when the zone is known; sequence dates are snapped
+into each crop's zone windows and the shift is noted in `gaps`. A zone
+with no valid rotation (Patagonia today) returns `confidence: "low"`,
+no soja-soja fallback and "sin rotaciones validadas para esta zona".
+Always returns the current strategy (`is_current: true`) + up to 3
+alternatives; when fewer than 3 are viable, the least-bad non-viable
+ones fill in with their reasons in `risks`.
 `Cache-Control: no-store`. `POST /api/field/explain` takes that response and
 returns one template paragraph per strategy (`{strategies:[{id,text}]}`).
+
+Water balance (task 12): the `rain` card carries `rain_monthly_mm` (12
+means, 2001 → last full year). Crop water = day-weighted monthly rain over
+the item's own sowing→harvest dates; overlapping sequence items split each
+day's rain in proportion to daily demand; perennial items (cycles ≥330
+days, e.g. alfalfa years) compare annual demand vs annual rain.
+`irrigation: true` drops the water filter and reports
+`water_balance: "con riego"` + `irrigation_need_mm`. Missing monthly
+rain → uniform annual fallback + a `gaps` note.
 
 Priority -> indicator weights, viability thresholds and engine constants are
 documented in `app/services/rotations.py` (module docstring). Knowledge
@@ -155,7 +169,10 @@ analog zones (MAGyP department data); when the shard is missing the gap
 `fire_weather` card (diagnose): last 7 valid POWER days — mean RH2M, max
 WS2M, max T2M_MAX, days since >1 mm rain. Score: +1 each for RH<30 %,
 wind>11 m/s (~40 km/h), T>35 °C, >10 dry days (INTA harvest stop-work
-thresholds). 3+ = alto, 2 = moderado, else bajo.
+thresholds). 3+ = alto, 2 = moderado, else bajo. `stop_conditions` +
+`stop_detail` list each single INTA stop condition met in the last 3
+days (`wind_gt_40kmh`, `temp_gt_35`, `rh_lt_30` — humidity threshold
+pending INTA confirmation).
 
 `measures` + `measures_gaps` on `/api/field/diagnose`, `/api/risk` and every
 rotation strategy, from `app/services/measures.py` (pure `evaluate(ctx)`).
@@ -165,6 +182,7 @@ Triggers:
 |---|---|
 | harvest_in_dry_season | a sequence `end` month has burn_season>=2 or water_stress>=2 |
 | fire_weather_high | `fire_weather` card = alto |
+| harvest_stop_conditions | `fire_weather.stop_conditions` non-empty (any single INTA stop rule met) |
 | risk_high | risk `cat` in {alto, muy_alto} |
 | bare_soil_in_burn_season | sequence leaves a burn_season>=2 month uncovered |
 | burn_season_now | today's month has burn_season>=2 |

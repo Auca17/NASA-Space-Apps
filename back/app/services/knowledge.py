@@ -81,7 +81,17 @@ class Rotation(BaseModel):
     years: int = 1
     sequence: list[SeqItem]
     bare_soil_days: int | None = None
+    zones: list[str] = []        # zones where the rotation is valid (3.2)
+    typical_for: list[str] = []  # zones where it is the default current one
     sources: list[str] = Field(min_length=1)
+
+    @field_validator("zones", "typical_for")
+    @classmethod
+    def _zone_ids(cls, v):
+        for z in v:
+            if z not in ZONES:
+                raise ValueError(f"unknown zone {z}")
+        return v
 
 
 class Knowledge(BaseModel):

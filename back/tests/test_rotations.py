@@ -45,6 +45,11 @@ def test_priorities_reorder_avoid_burning():
         if row["id"] == "burn_season":
             row["levels"] = [2 if 6 <= m <= 10 else 0
                              for m in range(1, 13)]
+    # neutralize the negative soil-moisture deflation so water is not
+    # the limiting factor for the covered rotations
+    for c in diag["cards"]:
+        if c["id"] == "soil_moisture":
+            c["value"] = 5
     out = eng.run(diag, {"rotation_id": "soja-soja"},
                   {"avoid_burning": 5}, {}, ZONE)
     alts = [s for s in out["strategies"] if not s["is_current"]]
@@ -77,8 +82,10 @@ def test_irrigation_false_removes_crop(tmp_path, monkeypatch):
     diag = dict(DIAG)
     assert eng.crop_viable(eng.KNOWLEDGE.crops["secante"], diag,
                            {"irrigation": False}, ZONE, None)
-    assert eng.crop_viable(eng.KNOWLEDGE.crops["secante"], diag,
-                           {"irrigation": True}, ZONE, None)
+    # irrigation:true removes the water filter entirely (task 12)
+    assert not any("agua" in r or "riego" in r for r in
+                   eng.crop_viable(eng.KNOWLEDGE.crops["secante"], diag,
+                                   {"irrigation": True}, ZONE, None))
 
 
 def test_unknown_crop_fails_load(tmp_path):
@@ -161,3 +168,110 @@ async def test_rotations_endpoint():
     ex = r.json()
     assert len(ex["strategies"]) == 4
     assert all(s["text"] for s in ex["strategies"])
+
+
+# ------------------------------------------------------------- task 12 ----
+
+def _diag_rain(annual, monthly=None):
+    card = {"id": "rain", "value": annual, "unit": "mm/año",
+            "text": f"{annual} mm/año", "source": "test",
+            "resolution": "x", "confidence": "high"}
+    if monthly is not None:
+        card["rain_monthly_mm"] = monthly
+    return {"cards": [card], "calendar": {"rows": []}}
+
+
+def test_dry_season_crop_gets_less_water():
+    """Same annual rain: a winter crop gets less than a summer crop
+    when rain is concentrated in summer."""
+    summer_wet = [100] * 6 + [20] * 6   # ene-jun wet, jul-dic dry
+    diag = _diag_rain(sum(summer_wet), summer_wet)
+    K = eng.KNOWLEDGE.crops
+    avail_maiz = eng._crop_rain(diag, K["maiz"], ZONE)
+    avail_trigo = eng._crop_rain(diag, K["trigo"], ZONE)
+    assert avail_trigo < avail_maiz
+
+
+def test_overlap_does_not_double_count():
+    """Two items covering the same days share the rain once."""
+    from app.services.knowledge import Rotation, SeqItem
+    diag = _diag_rain(730)
+    rot = Rotation(id="custom", name={"es": "x"},
+                   sequence=[SeqItem(crop="soja", start="11-01",
+                                     end="04-15"),
+                             SeqItem(crop="sorgo", start="11-01",
+                                     end="04-15")],
+                   sources=["t"])
+    avails, _ = eng._seq_rain(diag, rot)
+    total_window = sum(eng._daily_rain_mm(diag)[d]
+                       for d in eng._cycle_doys("11-01", "04-15"))
+    assert sum(avails) == pytest.approx(total_window, rel=1e-3)
+    assert avails[0] < total_window  # each got a share, not the whole
+
+
+def test_alfalfa_perennial_compares_annual():
+    """Alfalfa demand (1200 mm/yr) vs annual rain, not the cut window."""
+    from app.services.knowledge import SeqItem
+    K = eng.KNOWLEDGE.crops
+    item = SeqItem(crop="alfalfa", start="03-15", end="03-14")  # ~full yr
+    dry = _diag_rain(1000)
+    r1000 = eng.crop_viable(K["alfalfa"], dry,
+                            {"irrigation": False}, ZONE, None, item=item)
+    assert any("riego" in r for r in r1000)
+    wet = _diag_rain(1400)
+    r1400 = eng.crop_viable(K["alfalfa"], wet,
+                            {"irrigation": False}, ZONE, None, item=item)
+    assert not any("agua" in r or "riego" in r for r in r1400)
+
+
+def test_irrigation_true_reports_need():
+    """A water-hungry strategy is viable under riego and reports mm."""
+    rot = next(r for r in eng.KNOWLEDGE.rotations
+               if r.id == "alfalfa4-maiz")
+    ind = eng.indicators(rot, _diag_rain(700), "cuyo",
+                         {"irrigation": True})
+    assert ind["water_balance"] == "con riego"
+    assert ind["irrigation_need_mm"] > 0
+
+
+def test_missing_monthly_rain_goes_to_gaps():
+    out = eng.run(_diag_rain(800), None, {}, {}, ZONE)
+    assert any("climatología mensual" in g
+               for s in out["strategies"] for g in s["gaps"])
+
+
+def test_residue_key_renamed_with_alias():
+    rot = eng.KNOWLEDGE.rotations[0]
+    ind = eng.indicators(rot, DIAG, ZONE)
+    assert "residue_t_ha_yr" in ind
+    assert ind["carbon"] == ind["residue_t_ha_yr"]  # deprecated alias
+
+
+# ---------------------------------------------------------------- zones ---
+
+def test_noa_default_uses_zone_dates():
+    out = eng.run(DIAG, None, {}, {}, "noa")
+    cur = next(s for s in out["strategies"] if s["is_current"])
+    assert cur["id"] == "soja-soja"
+    assert cur["sequence"][0]["start"] == "12-01"  # NOA sowing opens Dec
+    assert any("ajustadas" in g for g in cur["gaps"])
+
+
+def test_patagonia_low_confidence_no_fallback():
+    out = eng.run(DIAG, None, {}, {}, "patagonia")
+    assert out["confidence"] == "low"
+    assert "sin rotaciones validadas para esta zona" in out["gaps"]
+    assert not any(s["id"] == "soja-soja" for s in out["strategies"])
+    # declared current still comes back even in a bare zone
+    out2 = eng.run(DIAG, {"rotation_id": "soja-soja"}, {}, {}, "patagonia")
+    assert [s["id"] for s in out2["strategies"]] == ["soja-soja"]
+    assert out2["confidence"] == "low"
+    assert any("sin rotaciones validadas" in g
+               for g in out2["strategies"][0]["gaps"])
+
+
+def test_pampa_only_rotation_not_offered_in_noa():
+    out = eng.run(DIAG, None, {}, {}, "noa")
+    ids = {s["id"] for s in out["strategies"]}
+    assert "trigo-soja2-maiz" not in ids
+    assert "garbanzo-maiz" in ids  # the NOA rotation

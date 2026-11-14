@@ -20,6 +20,16 @@
         "MAGyP, Estimaciones Agrícolas (área, rinde y avance de siembra/cosecha por delegación)",
         "Bolsa de Cereales de Buenos Aires, Panorama Agrícola Semanal (avance de siembra y cosecha por región)",
         "bare_soil_days = (años × 365 − días con cultivo vivo) / años, calculado sobre la secuencia; el rastrojo en pie no se descuenta — validar"
+      ],
+      "zones": [
+        "pampa_humeda",
+        "nea",
+        "noa"
+      ],
+      "typical_for": [
+        "pampa_humeda",
+        "nea",
+        "noa"
       ]
     },
     {
@@ -52,6 +62,9 @@
         "Bolsa de Cereales de Buenos Aires, Panorama Agrícola Semanal (avance de siembra y cosecha por región)",
         "INTA / AAPRESID, Red de Brechas de Carbono, informe 2023–2024: rotaciones con más gramíneas tienen balance de C positivo",
         "bare_soil_days = (años × 365 − días con cultivo vivo) / años, calculado sobre la secuencia; el rastrojo en pie no se descuenta — validar"
+      ],
+      "zones": [
+        "pampa_humeda"
       ]
     },
     {
@@ -83,6 +96,9 @@
         "INTA EEA General Villegas, ensayos de cultivos de cobertura vicia y centeno: uso consuntivo 110–241 mm según momento de secado",
         "MAGyP, Estimaciones Agrícolas (área, rinde y avance de siembra/cosecha por delegación)",
         "bare_soil_days = (años × 365 − días con cultivo vivo) / años, calculado sobre la secuencia; el rastrojo en pie no se descuenta — validar"
+      ],
+      "zones": [
+        "pampa_humeda"
       ]
     },
     {
@@ -120,6 +136,9 @@
         "Bolsa de Cereales de Buenos Aires, Panorama Agrícola Semanal (avance de siembra y cosecha por región)",
         "INTA / AAPRESID, Red de Brechas de Carbono, informe 2023–2024: rotaciones con más gramíneas tienen balance de C positivo",
         "bare_soil_days = (años × 365 − días con cultivo vivo) / años, calculado sobre la secuencia; el rastrojo en pie no se descuenta — validar"
+      ],
+      "zones": [
+        "pampa_humeda"
       ]
     },
     {
@@ -146,6 +165,11 @@
         "MAGyP, Estimaciones Agrícolas (área, rinde y avance de siembra/cosecha por delegación)",
         "Bolsa de Cereales de Buenos Aires, Panorama Agrícola Semanal (avance de siembra y cosecha por región)",
         "bare_soil_days = (años × 365 − días con cultivo vivo) / años, calculado sobre la secuencia; el rastrojo en pie no se descuenta — validar"
+      ],
+      "zones": [
+        "pampa_humeda",
+        "nea",
+        "noa"
       ]
     },
     {
@@ -183,6 +207,9 @@
         "Bolsa de Cereales de Buenos Aires, Panorama Agrícola Semanal (avance de siembra y cosecha por región)",
         "INTA / AAPRESID, Red de Brechas de Carbono, informe 2023–2024: rotaciones con más gramíneas tienen balance de C positivo",
         "bare_soil_days = (años × 365 − días con cultivo vivo) / años, calculado sobre la secuencia; el rastrojo en pie no se descuenta — validar"
+      ],
+      "zones": [
+        "pampa_humeda"
       ]
     },
     {
@@ -209,6 +236,9 @@
         "Scianca C., tesis UNS (repositoriodigital.uns.edu.ar, handle 123456789/2118): uso consuntivo de cultivos de cobertura (centeno, avena, raigrás) 88–299 mm hasta el secado",
         "INTA EEA General Villegas, ensayos de cultivos de cobertura vicia y centeno: uso consuntivo 110–241 mm según momento de secado",
         "bare_soil_days = (años × 365 − días con cultivo vivo) / años, calculado sobre la secuencia; el rastrojo en pie no se descuenta — validar"
+      ],
+      "zones": [
+        "pampa_humeda"
       ]
     },
     {
@@ -240,6 +270,9 @@
         "MAGyP, Estimaciones Agrícolas (área, rinde y avance de siembra/cosecha por delegación)",
         "Bolsa de Cereales de Buenos Aires, Panorama Agrícola Semanal (avance de siembra y cosecha por región)",
         "bare_soil_days = (años × 365 − días con cultivo vivo) / años, calculado sobre la secuencia; el rastrojo en pie no se descuenta — validar"
+      ],
+      "zones": [
+        "pampa_humeda"
       ]
     },
     {
@@ -271,6 +304,9 @@
         "MAGyP, Estimaciones Agrícolas (área, rinde y avance de siembra/cosecha por delegación)",
         "Bolsa de Cereales de Buenos Aires, Panorama Agrícola Semanal (avance de siembra y cosecha por región)",
         "bare_soil_days = (años × 365 − días con cultivo vivo) / años, calculado sobre la secuencia; el rastrojo en pie no se descuenta — validar"
+      ],
+      "zones": [
+        "pampa_humeda"
       ]
     },
     {
@@ -317,6 +353,9 @@
         "MAGyP, Estimaciones Agrícolas (área, rinde y avance de siembra/cosecha por delegación)",
         "INTA / AAPRESID, Red de Brechas de Carbono, informe 2023–2024: rotaciones con más gramíneas tienen balance de C positivo",
         "bare_soil_days = (años × 365 − días con cultivo vivo) / años, calculado sobre la secuencia; el rastrojo en pie no se descuenta — validar"
+      ],
+      "zones": [
+        "pampa_humeda"
       ]
     },
     {
@@ -343,6 +382,9 @@
         "MAGyP, Estimaciones Agrícolas (área, rinde y avance de siembra/cosecha por delegación)",
         "Zhang, Pala, Oweis & Harris (2000), Water use and water-use efficiency of chickpea and lentil in a Mediterranean environment, Aust. J. Agric. Res. 51: ET estacional media 268 mm",
         "bare_soil_days = (años × 365 − días con cultivo vivo) / años, calculado sobre la secuencia; el rastrojo en pie no se descuenta — validar"
+      ],
+      "zones": [
+        "noa"
       ]
     },
     {
@@ -383,6 +425,12 @@
       "sources": [
         "MAGyP, Estimaciones Agrícolas (área, rinde y avance de siembra/cosecha por delegación)",
         "bare_soil_days = (años × 365 − días con cultivo vivo) / años, calculado sobre la secuencia; el rastrojo en pie no se descuenta — validar"
+      ],
+      "zones": [
+        "cuyo"
+      ],
+      "typical_for": [
+        "cuyo"
       ]
     }
   ]

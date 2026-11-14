@@ -232,6 +232,8 @@ Ruta: `back/knowledge/`. Productor: responsable de la lente Campo. Consumidor: m
 | `years` | entero | Duración del ciclo. |
 | `sequence` | lista de `{crop, start, end}` | `crop` referencia a `crops.json`; `start`/`end` en `MM-DD`. |
 | `bare_soil_days` | entero | Días de suelo desnudo por año, estimados. |
+| `zones` | lista de ids de zona | Opcional. Zonas donde la rotación es agronómicamente válida; ausente o vacía = válida en todas. |
+| `typical_for` | lista de ids de zona | Opcional. Zonas donde es la rotación actual por defecto cuando el productor responde "no sé". |
 | `sources` | lista | Obligatorio. |
 
 Ejemplos: `fixtures/knowledge/crops.json`, `fixtures/knowledge/rotations.json`.

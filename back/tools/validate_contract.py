@@ -162,12 +162,20 @@ SCHEMAS = [
                                      "water_mm_cycle", "sources"]}}}}),
     (re.compile(r"^knowledge/rotations\.json$"), {
         "type": "object", "required": ["rotations"],
-        "properties": {"rotations": {"type": "array", "minItems": 1,
-                                     "items": {"type": "object",
-                                               "required": [
-                                                   "id", "name",
-                                                   "sequence",
-                                                   "sources"]}}}}),
+        "properties": {"rotations": {
+            "type": "array", "minItems": 1,
+            "items": {
+                "type": "object",
+                "required": ["id", "name", "sequence", "sources"],
+                "properties": {
+                    "zones": {"type": "array",
+                              "items": {"enum": [
+                                  "pampa_humeda", "nea", "noa", "cuyo",
+                                  "patagonia"]}},
+                    "typical_for": {"type": "array",
+                                    "items": {"enum": [
+                                        "pampa_humeda", "nea", "noa",
+                                        "cuyo", "patagonia"]}}}}}}}),
     (re.compile(r"^knowledge/measures\.json$"), {
         "type": "object", "required": ["measures"],
         "properties": {"measures": {"type": "array", "minItems": 1,

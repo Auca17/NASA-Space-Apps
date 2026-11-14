@@ -77,14 +77,26 @@ def _triggers(ctx) -> tuple[set, list[str]]:
     else:
         gaps.append("harvest_in_dry_season (falta rotación o calendario)")
 
-    fw = (cards.get("fire_weather") or {}).get("value")
+    fwc = cards.get("fire_weather") or {}
+    fw = fwc.get("value")
     if fw is not None:
         if fw == "alto":
             fired.add("fire_weather_high")
             ctx["_why"]["fire_weather_high"] = \
-                f"clima de fuego: {(cards['fire_weather'].get('text') or '')[:90]}"
+                f"clima de fuego: {(fwc.get('text') or '')[:90]}"
     else:
         gaps.append("fire_weather_high (sin tarjeta fire_weather)")
+
+    stop = fwc.get("stop_conditions")
+    if stop is not None:
+        if stop:
+            fired.add("harvest_stop_conditions")
+            det = fwc.get("stop_detail") or {}
+            ctx["_why"]["harvest_stop_conditions"] = \
+                "condición de parada: " + "; ".join(
+                    det.get(c, c) for c in stop)
+    else:
+        gaps.append("harvest_stop_conditions (sin tarjeta fire_weather)")
 
     cat = ctx.get("risk_cat")
     if cat is not None:

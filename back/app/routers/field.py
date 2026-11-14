@@ -119,6 +119,29 @@ def rain_stats(series: dict):
     return round(mean), round(cv, 2), round(p25)
 
 
+def rain_monthly_mm(series: dict) -> list[float] | None:
+    """Mean mm per calendar month, 2001 -> last fully-covered year."""
+    end = _last_valid_day(series)
+    if end is None:
+        return None
+    last_full = end.year if (end.month, end.day) >= (12, 31) \
+        else end.year - 1
+    years = [y for y in _years(series) if 2001 <= y <= last_full]
+    if not years:
+        return None
+    sums = {}
+    for d, v in series.items():
+        if v is not None and d.year in set(years):
+            sums[(d.year, d.month)] = sums.get((d.year, d.month), 0) + v
+    out = []
+    for m in range(1, 13):
+        vals = [sums[(y, m)] for y in years if (y, m) in sums]
+        if not vals:
+            return None
+        out.append(round(statistics.fmean(vals), 1))
+    return out
+
+
 def days_per_year(series: dict, cond, years=None):
     by = _years(series)
     if years:
@@ -299,11 +322,16 @@ def build_cards(power, soilg, slope, ndvi, grid_cell, fire_cal,
     cards = []
 
     rs = rain_stats(P("PRECTOTCORR") or {})
-    cards.append(
-        _card("rain", rs[0], "mm/año",
-              f"{rs[0]} mm/año; 1 de cada 4 años < {rs[2]} mm",
-              "NASA POWER", POWER_RES, "high")
-        if rs else _null_card("rain", "NASA POWER", POWER_RES))
+    if rs:
+        rain_card = _card("rain", rs[0], "mm/año",
+                          f"{rs[0]} mm/año; 1 de cada 4 años < {rs[2]} mm",
+                          "NASA POWER", POWER_RES, "high")
+        rm = rain_monthly_mm(P("PRECTOTCORR") or {})
+        if rm:
+            rain_card["rain_monthly_mm"] = rm
+        cards.append(rain_card)
+    else:
+        cards.append(_null_card("rain", "NASA POWER", POWER_RES))
 
     heavy = days_per_year(P("PRECTOTCORR") or {}, lambda v: v > 50)
     cards.append(
@@ -531,12 +559,37 @@ def build_calendar(power, ndvi, monthly_burn):
                       "2": "media", "3": "alta"}}
 
 
+def _stop_conditions(power, end: date, n_days: int = 3):
+    """INTA single-condition harvest stop rules over the last n days.
+
+    Any one condition alone stops work: wind > 40 km/h (WS2M > 11.1 m/s),
+    T > 35 °C, RH < 30 % (humidity threshold pending INTA confirmation).
+    """
+    P = (power or {}).get
+    rh, ws, tx = P("RH2M") or {}, P("WS2M") or {}, P("T2M_MAX") or {}
+    conds, detail = [], {}
+    for d in (end - timedelta(days=i) for i in range(n_days)):
+        if ws.get(d) is not None and ws[d] > 11.1:
+            conds.append("wind_gt_40kmh")
+            detail["wind_gt_40kmh"] = \
+                f"viento {ws[d]:.1f} m/s (>40 km/h)"
+        if tx.get(d) is not None and tx[d] > 35:
+            conds.append("temp_gt_35")
+            detail["temp_gt_35"] = f"temperatura {tx[d]:.0f} °C (>35 °C)"
+        if rh.get(d) is not None and rh[d] < 30:
+            conds.append("rh_lt_30")
+            detail["rh_lt_30"] = (f"humedad {rh[d]:.0f} % (<30 %, umbral "
+                                  "por confirmar con INTA)")
+    return sorted(set(conds)), detail
+
+
 def fire_weather_card(power, end: date | None):
     """Last 7 valid days: mean RH2M, max WS2M, max T2M_MAX + dry days.
 
     Level score (INTA harvest guidance: stop work at wind>40 km/h,
     T>35 °C, RH<30 %): +1 each for mean RH<30 %, max wind>11 m/s,
     max T>35 °C, >10 days since rain. 3+ alto, 2 moderado, else bajo.
+    `stop_conditions` lists each single condition met in the last 3 days.
     """
     P = (power or {}).get
     rh, ws, tx = P("RH2M") or {}, P("WS2M") or {}, P("T2M_MAX") or {}
@@ -560,9 +613,16 @@ def fire_weather_card(power, end: date | None):
              f"viento máx {wsm:.1f} m/s" if wsm is not None else None,
              f"T máx {txm:.0f} °C" if txm is not None else None,
              f"{since} días sin lluvia" if since is not None else None]
-    return _card("fire_weather", level, None,
+    conds, detail = _stop_conditions(power, end)
+    if conds:
+        parts.append("parar la cosecha: " + "; ".join(detail[c]
+                                                     for c in conds))
+    card = _card("fire_weather", level, None,
                  "; ".join(p for p in parts if p),
                  "NASA POWER", POWER_RES, "high")
+    card["stop_conditions"] = conds
+    card["stop_detail"] = detail
+    return card
 
 
 # -------------------------------------------------------------- endpoint ----
