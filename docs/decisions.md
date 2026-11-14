@@ -29,6 +29,9 @@ Convención: `D<n>` es el identificador estable. Una decisión no se borra; si c
 | D21 | 2026-11-14 | El contrato de datos vive en `docs/data-contract.md` y los ejemplos en `fixtures/`. Cada productor valida su salida contra el contrato antes de integrar. | Cuatro productores trabajan en paralelo sin verse. | Vigente |
 | D22 | 2026-11-14 | `/api/live`: bbox expandido a múltiplos de 5°; con área > 400 grados² responde celdas H3 res 3 agregadas (`mode: cells`) en vez de puntos; timeout a FIRMS de 10 s y duración máxima de la función ≥ 30 s. El timeout de 3 s de D18 queda para las APIs del lote. | Medido contra FIRMS real: un solo sensor, mundo, 24 h son 2,6 MB y 3,4 s. Cuatro sensores en 7 días superan el límite de respuesta de Vercel y el timeout de 3 s. | Vigente |
 
+| D23 | 2026-11-14 | `/api/field/rotations` recibe el **diagnóstico completo** en el cuerpo, no un `diagnosis_id`. El back es sin estado. | Las funciones serverless de Vercel no comparten memoria entre instancias. | Vigente |
+| D24 | 2026-11-14 | `/api/live`: duración máxima de la función 60 s y `stale-while-revalidate` de 1 día en respuestas completas, para que la vista mundial de 7 días se sirva al instante después del primer pedido. | Medido: mundo 7 días = 6.080 celdas, 173 KB, 41,6 s desde la laptop. | Vigente |
+
 ## Pendientes de decisión
 
 - Orden de construcción y asignación de la lente Campo (`crops.json`, `rotations.json`, `/api/field/*`): se define con el plan de acción.

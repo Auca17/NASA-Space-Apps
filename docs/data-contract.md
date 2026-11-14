@@ -278,7 +278,9 @@ Salida (`fixtures/api/diagnose.response.json`):
 
 ### 4.3 `POST /api/field/rotations`
 
-Entrada: `{ "diagnosis_id", "current": {"rotation_id" | "sequence": [...] | null}, "priorities": {<clave>: 0-5}, "constraints": {"irrigation": bool, "machinery": [...], "livestock": bool, "markets": [...]} }`.
+Entrada: `{ "diagnosis": <respuesta completa de /api/field/diagnose>, "current": {"rotation_id" | "sequence": [...] | null}, "priorities": {<clave>: 0-5}, "constraints": {"irrigation": bool, "machinery": [...], "livestock": bool, "markets": [...]} }`.
+
+Cambio 2026-11-14 (D23): se manda el diagnóstico completo y no solo `diagnosis_id`, porque las funciones serverless no comparten memoria entre instancias. `diagnosis_id` queda como identificador para logs y caché.
 
 Claves de `priorities`: `water`, `soil`, `erosion`, `income`, `forage`, `nitrogen`, `pests`, `avoid_burning`.
 
