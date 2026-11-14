@@ -22,6 +22,10 @@ python pipeline/02_clean.py      # filtros type = 0 y confianza
 python pipeline/03_grid.py       # celdas H3 + conteos mensuales y diarios
 python pipeline/04_harmonize.py  # E2: calibración MODIS → VIIRS + validación (docs/validation/)
 python pipeline/model_input.py   # E1/E2: fires_ar_r5_daily.parquet para Devin (n armonizado si ya corrió el 04)
+python pipeline/05_aggregate.py  # E3: series, climatología semanal, riesgo nivel historial
+python pipeline/06_export.py     # E3: data/processed/export/v1/ según el contrato
+python back/tools/validate_contract.py data/processed/export/v1
+python pipeline/07_firms_2026.py # E4: 2026 por la API de FIRMS; después repetir 02 → 06 y model_input
 ```
 
 Los pasos 01 y 03 son reanudables: si se cortan, al volver a correrlos saltean lo que ya está completo.
@@ -33,11 +37,11 @@ Los pasos 01 y 03 son reanudables: si se cortan, al volver a correrlos saltean l
 | 1. Ingesta | `01_ingest.py` | `data/processed/hotspots/sensor=*/year=*/<producto>.parquet` | ✅ |
 | 2. Limpieza | `02_clean.py` | `data/processed/hotspots_clean/` | ✅ |
 | 3. Grilla H3 | `03_grid.py` | `hotspots_h3/`, `counts_r3.parquet`, `counts_r5.parquet`, `daily_r5.parquet` | ✅ |
-| E1 | `model_input.py` | `data/processed/model_input/fires_ar_r5_daily.parquet` | ✅ script listo |
+| E1 | `model_input.py` | `data/processed/model_input/fires_ar_r5_daily.parquet` | ✅ |
 | 4. Armonización | `04_harmonize.py` | `harmonized_r3.parquet`, `harmonized_r5.parquet`, factores, `docs/validation/` | ✅ |
-| 5. Agregados | `05_aggregate.py` | series res 3 y res 5, climatología semanal, riesgo nivel historial | ⬜ falta |
-| 6. Export | `06_export.py` | `v1/` según el contrato (meta, globe, fire/cal, fire/daily, fire/points, risk) | ⬜ falta |
-| 2026 por API | `07_firms_2026.py` | SP hasta jul/ago 2026 y NRT hasta hoy | ⬜ falta |
+| 5. Agregados | `05_aggregate.py` | `data/processed/agg/`: globo, mensual y diario res 5, climatología semanal, riesgo nivel historial | ✅ |
+| 6. Export | `06_export.py` | `data/processed/export/v1/` (meta, globe, fire/cal, fire/daily, fire/points, risk) + `export/sizes.json` | ✅ |
+| 2026 por API | `07_firms_2026.py` | SP hasta jul/ago 2026 y NRT hasta hoy | 🔄 en curso |
 | Subida | `upload_r2.py` | `v1/` y `work/` en R2 | ⬜ falta (sin bucket todavía) |
 
 ## Decisiones de implementación
@@ -57,8 +61,34 @@ Los pasos 01 y 03 son reanudables: si se cortan, al volver a correrlos saltean l
 - **MODIS → VIIRS:** `log(V+1) = a + b·log(M+1)` por estrato sobre pares celda res 3 × mes con MODIS > 0, entrenamiento 2012-02 → 2022-12. Se agrega un **factor de totales `k`** por estrato para que la suma predicha iguale la observada en el entrenamiento: corrige el sesgo de volver del logaritmo y el fuego que VIIRS ve donde MODIS no ve nada. Estratos con < 200 pares usan los coeficientes globales del mes y quedan con `confidence = low`.
 - **Res 5:** la predicción se hace en res 3 y se reparte entre las hijas res 5 en proporción a sus detecciones MODIS. La suma de las res 5 coincide con la res 3.
 - **Serie final:** 2000-11 → 2012-01 MODIS convertido (S-NPP empieza el 2012-01-20, así que enero de 2012 está incompleto); 2012-02 → 2018-03 S-NPP × factor; 2018-04 en adelante NOAA-20.
-- **Hold-out 2023–2024** (`docs/validation/metrics.json`): sesgo total −0,8 %; R² lineal por celda-mes 0,926; R² en escala log1p por celda-mes 0,654 (las celdas con pocos focos son ruidosas); R² de la serie mundial mensual 0,979; celdas-día: R² log1p 0,61, sesgo +1,4 %. 71 de 208 estratos con baja confianza (bandas polares y meses con poco fuego).
-- **Tramo de baja confianza:** 2000-11 → 2012-01. En junio de 2001 Terra tuvo una interrupción y el mes queda bajo.
+- **Hold-out 2023–2024** (`docs/validation/metrics.json`), tres métricas:
+
+  | Métrica | Valor |
+  |---|---|
+  | R² de la serie mundial mensual | **0,979** |
+  | R² lineal por celda res 3 × mes | **0,926** |
+  | R² logarítmico (log1p) por celda res 3 × mes | **0,654** |
+  | Sesgo total | −0,8 % |
+  | Celdas-día: R² log1p / sesgo | 0,61 / +1,4 % |
+
+  El R² logarítmico es más bajo porque le da el mismo peso a cada celda, y la mayoría tiene pocos focos por mes: ahí la diferencia entre 1 y 3 focos es ruido de muestreo (pasadas del satélite, nubes, píxeles más chicos de VIIRS) y no un error de calibración. Las celdas con mucho fuego, que son las que mueven los totales, se predicen bien, como muestran el R² lineal y el mundial.
+- **Por banda de latitud:** las bandas 90°S–60°S, 60°S–50°S y 70°N–90°N tienen menos de 200 pares celda-mes y figuran en `metrics.json` como **"sin datos suficientes"**, no como error: con 4 a 167 pares el sesgo no es interpretable. 71 de 208 estratos usan los coeficientes globales del mes (`confidence = low`).
+- **Tramo de baja confianza:** 2000-11 → 2012-01 (`meta.json`).
+- **Mediados de 2001:** no es un pico falso sino un **hueco de datos**. Terra no tiene ninguna detección entre el 2001-06-15 y el 2001-07-03 (modo seguro del satélite), así que junio de 2001 queda en un tercio de lo normal (36.876 focos de Terra contra ~110.000 en junio de 2002–2005) y julio pierde 3 días. Agosto de 2001 (267.596) es real: es casi igual a agosto de 2002 (266.255). Junio y julio de 2001 quedan con `confidence = low` en toda la serie.
+
+## Agregados y export (pasos 5 y 6)
+
+- **Serie diaria armonizada** (`fire/daily`, desde 2003-01-01): conteo crudo del sensor del período × factor mensual de la celda (n / n_raw de la serie mensual). La suma diaria de un mes coincide con el valor mensual del calendario. Solo días con fuego; un día con muy pocos focos puede redondear a 0,0.
+- **Climatología semanal** (`clim`, 52 valores): fracción de los años ISO 2003–2022 con al menos un foco en esa semana ISO; la semana 53 se suma a la 52.
+- **Riesgo nivel historial** (`risk/`, regla `clim-persist-0.1` del brief), con fecha de referencia = hoy (UTC):
+  - `p = min(0,95, clim × (1 + 2·A + 1·B))`; A = focos en los últimos 7 días, B = en los últimos 30.
+  - `ratio = p / clim`, `null` si `clim < 0,01`. `cat` por ratio según el contrato 2.6.
+  - **Decisión propia:** cuando `ratio` es `null`, el contrato dice que `cat` "sale de p solo" pero no da umbrales. Uso p < 0,05 bajo · < 0,15 moderado · < 0,30 alto · resto muy_alto. Con `clim < 0,01` siempre da `bajo`.
+  - **Razones:** "históricamente X % de los años con fuego en esta semana de {mes} (2003–2022)" y "focos en los últimos 7 días" / "focos en los últimos 30 días" / "sin focos en los últimos 30 días". El texto del brief ("X % de las semanas de noviembre") describía otra cosa que la que mide `clim`; lo ajusté para que diga exactamente lo que se calcula.
+- **`fire/points`:** solo focos con país Argentina, todos los sensores y satélites, filtrados igual que el resto.
+- **`lc`:** `null` en esta versión (D3).
+- **Tamaños comprimidos** (gzip nivel 6) en `data/processed/export/sizes.json`.
+
 
 ## Números de la primera corrida
 

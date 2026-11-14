@@ -41,6 +41,8 @@ from common import PROCESSED, REPO, Timer, connect
 VALID = REPO / "docs" / "validation"
 # S-NPP empieza el 2012-01-20: enero de 2012 está incompleto y se toma de MODIS.
 VIIRS_START = "2012-02-01"
+# Terra sin datos del 2001-06-15 al 2001-07-03 (modo seguro): esos meses quedan bajos.
+TERRA_GAP_MONTHS = "(DATE '2001-06-01', DATE '2001-07-01')"
 N20_START = "2018-04-01"
 MIN_PAIRS = 200
 
@@ -180,7 +182,10 @@ def validate(con) -> dict:
         """).fetchall()[0][0]
         out[tag]["r2_global_monthly"] = r
         out[tag]["by_band"] = [
-            dict(zip(["band_lat", "pairs", "obs", "pred", "bias_pct", "r2_log1p"], row))
+            ({**dict(zip(["band_lat", "pairs", "obs", "pred", "bias_pct", "r2_log1p"], row)),
+              "status": "ok"} if row[1] >= MIN_PAIRS else
+             {"band_lat": row[0], "pairs": row[1], "obs": row[2], "pred": row[3],
+              "bias_pct": None, "r2_log1p": None, "status": "sin datos suficientes"})
             for row in con.sql(f"""
                 SELECT (band * 10 - 90) || '..' || (band * 10 - 80) AS band_lat, count(*),
                        round(sum(obs)), round(sum(pred)),
@@ -205,7 +210,8 @@ def build_series(con):
                  WHEN r.month < DATE '{N20_START}' THEN r.n ELSE r.n20 END AS n_raw,
             CASE WHEN r.month < DATE '{VIIRS_START}' THEN 'MODIS'
                  WHEN r.month < DATE '{N20_START}' THEN 'VIIRS_SNPP' ELSE 'VIIRS_NOAA20' END AS source,
-            CASE WHEN r.month < DATE '{VIIRS_START}' THEN c.confidence ELSE 'high' END AS confidence,
+            CASE WHEN r.month IN {TERRA_GAP_MONTHS} THEN 'low'
+                 WHEN r.month < DATE '{VIIRS_START}' THEN c.confidence ELSE 'high' END AS confidence,
             {predict_sql("r.m", "det")} AS n_modis_conv,
             r.m AS modis_raw
         FROM r3x r JOIN coef_det c USING (band, moy)
