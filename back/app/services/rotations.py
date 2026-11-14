@@ -282,7 +282,28 @@ def _fmt_evidence(diag: dict) -> list[dict]:
     return out
 
 
-def _gaps(diag: dict) -> list[str]:
+def _analog_evidence(rot: Rotation, analog: dict | None) -> dict | None:
+    """Evidence item: the strategy's crops in analog zones (2.8)."""
+    if not analog:
+        return None
+    crops = analog.get("ar_crops") or []
+    seq = [s.crop for s in rot.sequence]
+    tgt = next((c for c in crops if c.get("crop") in seq), None)
+    if tgt is None and crops:
+        tgt = crops[0]  # no strategy crop grown there -> dominant crop
+    if not tgt:
+        return None
+    zona = analog.get("label") or "zonas análogas"
+    if analog.get("n_cells"):
+        zona += f" ({analog['n_cells']} celdas)"
+    return {"text": f"En zonas análogas ({zona}), {tgt['crop']} ocupa "
+                    f"el {round(tgt['share'] * 100)} % del área sembrada "
+                    f"y rinde ~{tgt['yield_kg_ha']} kg/ha",
+            "indicator": "analogs",
+            "source": tgt.get("src") or "field/analogs"}
+
+
+def _gaps(diag: dict, analog_missing: bool = False) -> list[str]:
     out = []
     for c in diag.get("cards", []):
         if c.get("value") is None:
@@ -292,6 +313,8 @@ def _gaps(diag: dict) -> list[str]:
         if c.get("resolution") in ("9 km", "0.5°×0.625°"):
             out.append(f"{c['id']} tiene resolución {c['resolution']}: "
                        "no distingue diferencias dentro del lote")
+    if analog_missing:
+        return out[:3] + ["Sin datos de zonas análogas (field/analogs)"]
     return out[:4]
 
 
@@ -325,7 +348,8 @@ def _why(rot: Rotation, is_current: bool, priorities: dict,
 
 def _sections(rot: Rotation, ind: dict, cur_ind: dict,
               is_current: bool, priorities: dict, diag: dict,
-              viable: bool, reasons: list[str]) -> dict:
+              viable: bool, reasons: list[str],
+              analog: dict | None = None) -> dict:
     benefits = {}
     for k, v in ind.items():
         c = cur_ind.get(k)
@@ -333,11 +357,16 @@ def _sections(rot: Rotation, ind: dict, cur_ind: dict,
             benefits[k] = round(v - c, 1)
         else:
             benefits[k] = v
+    evidence = _fmt_evidence(diag)
+    ev_analog = _analog_evidence(rot, analog)
+    if ev_analog:
+        evidence = evidence[:3] + [ev_analog]
     return {
         "why": _why(rot, is_current, priorities, diag),
-        "evidence": _fmt_evidence(diag)[:4],
+        "evidence": evidence[:4],
         "benefits": benefits,
-        "gaps": _gaps(diag) or ["Sin vacíos relevantes en el diagnóstico"],
+        "gaps": _gaps(diag, analog is None)
+        or ["Sin vacíos relevantes en el diagnóstico"],
         "risks": _risks(rot, viable, reasons),
         "sequence": [{"crop": s.crop, "start": s.start, "end": s.end,
                       "cover": s.cover} for s in rot.sequence],
@@ -371,7 +400,8 @@ def _current_rotation(current: dict | None, zone: str | None) -> Rotation:
 
 
 def run(diagnosis: dict, current: dict | None, priorities: dict,
-        constraints: dict, zone: str | None) -> dict:
+        constraints: dict, zone: str | None,
+        analog: dict | None = None) -> dict:
     zone = zone if zone in ZONE_CROPS else ("other" if zone else None)
     ff = _frost_free_doys(diagnosis)
     confidence = "high" if zone else "low"
@@ -416,7 +446,7 @@ def run(diagnosis: dict, current: dict | None, priorities: dict,
         "indicators": cur_ind,
         **_sections(cur_rot, cur_ind, cur_ind, True, priorities,
                     diagnosis, not cur_bad,
-                    [r for v in cur_bad.values() for r in v]),
+                    [r for v in cur_bad.values() for r in v], analog),
         **_measures(cur_rot),
     }]
     for c in top:
@@ -429,7 +459,7 @@ def run(diagnosis: dict, current: dict | None, priorities: dict,
             "confidence": confidence,
             "indicators": c["ind"],
             **_sections(c["rot"], c["ind"], cur_ind, False, priorities,
-                        diagnosis, c["viable"], reasons),
+                        diagnosis, c["viable"], reasons, analog),
             **_measures(c["rot"]),
         })
     return {"diagnosis_id": diagnosis.get("diagnosis_id"),

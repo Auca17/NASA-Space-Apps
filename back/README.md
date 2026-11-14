@@ -144,6 +144,12 @@ Priority -> indicator weights, viability thresholds and engine constants are
 documented in `app/services/rotations.py` (module docstring). Knowledge
 (`back/knowledge/`) is validated at import; bad crop refs fail loudly.
 
+Analog zones (contract 2.8): when `field/analogs/{h3_r2}.json` exists for
+the plot's res-5 cell, every strategy gets an `indicator: "analogs"`
+evidence item with the strategy crop's planted-area share and yield in
+analog zones (MAGyP department data); when the shard is missing the gap
+"Sin datos de zonas análogas (field/analogs)" is listed instead.
+
 ## Fire prevention measures (D26, contract 4.6)
 
 `fire_weather` card (diagnose): last 7 valid POWER days — mean RH2M, max

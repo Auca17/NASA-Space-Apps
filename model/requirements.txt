@@ -18,3 +18,5 @@ shap==0.54.1
 h5py==3.16.0
 h5netcdf==1.8.3
 pyhdf==0.11.7
+boto3==1.43.117
+botocore==1.43.117

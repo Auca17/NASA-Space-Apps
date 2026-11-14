@@ -96,6 +96,54 @@ def test_unknown_crop_fails_load(tmp_path):
         load(tmp_path)
 
 
+ANALOG = {"cluster": 14,
+          "label": "subhúmedo, heladas cortas, suelo franco arcilloso",
+          "n_cells": 910,
+          "ar_crops": [
+              {"crop": "soja", "share": 0.54, "yield_kg_ha": 2571,
+               "src": "MAGyP 2024/2025"},
+              {"crop": "maiz", "share": 0.18, "yield_kg_ha": 4657,
+               "src": "MAGyP 2024/2025"}]}
+
+
+def test_analog_evidence_added():
+    out = eng.run(DIAG, None, {"soil": 5}, {}, ZONE, analog=ANALOG)
+    for s in out["strategies"]:
+        ev = [e for e in s["evidence"] if e["indicator"] == "analogs"]
+        assert ev, f"{s['id']} missing analogs evidence"
+        assert "MAGyP" in ev[0]["source"]
+        assert "kg/ha" in ev[0]["text"]
+        assert not any("análogas" in g for g in s["gaps"])
+
+
+def test_analog_missing_goes_to_gaps():
+    out = eng.run(DIAG, None, {"soil": 5}, {}, ZONE)
+    for s in out["strategies"]:
+        assert any("análogas" in g for g in s["gaps"])
+        assert not any(e["indicator"] == "analogs" for e in s["evidence"])
+
+
+async def test_rotations_endpoint_with_analog_shard(tmp_path, monkeypatch):
+    import h3
+    from app.cache import CACHE
+    CACHE._store.clear()  # drop negative cache from earlier tests
+    r5 = DIAG["h3_r5"][0]
+    r2 = h3.cell_to_parent(r5, 2)
+    shard = {"generated_at": "2026-01-01T00:00:00Z",
+             "model_version": "analogs-kmeans-0.1",
+             "cells": {r5: ANALOG}}
+    (tmp_path / "field" / "analogs").mkdir(parents=True)
+    (tmp_path / "field" / "analogs" / f"{r2}.json").write_text(
+        json.dumps(shard, ensure_ascii=False), encoding="utf-8")
+    monkeypatch.setenv("DATA_BASE_URL", tmp_path.as_uri() + "/")
+    r = await client().post("/api/field/rotations", json={
+        "diagnosis": DIAG, "current": None,
+        "priorities": {"soil": 5}, "constraints": {}, "zone": ZONE})
+    assert r.status_code == 200
+    for s in r.json()["strategies"]:
+        assert any(e["indicator"] == "analogs" for e in s["evidence"])
+
+
 async def test_rotations_endpoint():
     r = await client().post("/api/field/rotations", json={})
     assert r.status_code == 400

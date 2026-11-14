@@ -657,8 +657,19 @@ async def rotations(request: Request):
         return JSONResponse(status_code=400, content={
             "error": "invalid_input",
             "detail": "constraints must be an object"})
+    analog = None
+    r5s = diag.get("h3_r5") or []
+    cent = diag.get("centroid") or []
+    r6s = diag.get("h3_r6") or ["x"]
+    if r5s and len(cent) == 2:
+        r2a = h3.cell_to_parent(r5s[0], 2)
+        shard = await src.json_shard(
+            cent[0], cent[1], f"field/analogs/{r2a}.json",
+            r6s[0], "field_analogs")
+        analog = (shard or {}).get("cells", {}).get(r5s[0])
     try:
-        out = run(diag, body.get("current"), priorities, constraints, zone)
+        out = run(diag, body.get("current"), priorities, constraints,
+                  zone, analog=analog)
     except ValueError as exc:
         return JSONResponse(status_code=400, content={
             "error": "invalid_input", "detail": str(exc)})
