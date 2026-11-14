@@ -2,7 +2,7 @@
 
 **NASA Space Apps Challenge 2026**
 **Challenges:** Field Shift: Adapting Farms with NASA Data + Harmonization of MODIS and VIIRS Hot Spots
-Versión 2 · 14/11/2026 · *Nombre de trabajo, a definir*
+Versión 2 · 14/11/2026 · Equipo de 4 personas · *Nombre de trabajo, a definir*
 
 ---
 
@@ -405,26 +405,33 @@ El motor no es una caja negra: siempre se puede explicar por qué una estrategia
 
 ### 13.1 Roles
 
-| Rol | Responsable | Entrega principal |
-|---|---|---|
-| Datos Fuego + motor de armonización | Ezequiel + Claude | `pipeline/` FIRMS, calibración, validación |
-| Datos Campo + base de cultivos + motor de rotaciones | Compañero de Orin | `pipeline/` campo, `crops.json`, `rotations.json`, `/api/field/*`, export de Orin |
-| IA | Compañero con Devin | `model/fire_risk`, `model/analogs` |
-| Front Fuego (globo, histórico, live) | _(asignar)_ | `web/` globo + panel |
-| Front Campo + UX | _(asignar)_ | `web/` lote, diagnóstico, calendario agrícola, tarjetas |
-| Deploy + presentación | _(asignar)_ | Vercel, R2, Actions, video, slides, README |
+El equipo es de **4 personas**. Cada una es dueña de una parte y la presentación se reparte al final.
+
+| # | Persona | Es dueño/a de | Entrega principal |
+|---|---|---|---|
+| 1 | **Ezequiel** (+ Claude) | Lente Fuego: datos + motor de armonización + back de fuego + deploy | `pipeline/` FIRMS, calibración y validación, export a R2, `/api/live`, `/api/risk`, Vercel, R2, GitHub Actions |
+| 2 | **Compañero de Orin** | Lente Campo: datos + conocimiento agronómico | Export de Orin, capas de campo a la grilla, `crops.json`, `rotations.json`, motor de rotaciones, `/api/field/*` |
+| 3 | **Compañero con Devin** | IA | `model/fire_risk`, `model/analogs`; además usa Devin para tareas de front acotadas que le pase la persona 4 |
+| 4 | **Cuarto integrante** | Front + UX + presentación | `web/` (globo, paneles, lote, tarjetas), accesibilidad, guion, video, slides |
+
+Responsabilidades compartidas:
+- **README:** cada uno escribe la sección de su parte; la persona 4 la unifica.
+- **QA en celulares:** todos, en la ventana de las horas 32–40.
+- **Revisión agronómica** de las rotaciones: persona 2.
 
 ### 13.2 Cronograma
 
-| Horas | Fuego | Campo | IA (Devin) | Front | Deploy / presentación |
-|---|---|---|---|---|---|
-| 0–8 | Ingesta + limpieza + H3 | Export Orin; `crops.json`; prueba APIs POWER / ORNL / SoilGrids | Diseño de features | Esqueleto + globo + geolocalización | Repo, Vercel, R2; guion |
-| 8–16 | Armonización + validación | IMERG, SMAP y GAEZ a la grilla; `/api/field/diagnose` | Dataset de riesgo | Modo histórico (datos de prueba); pantalla de lote | `/api/live`, Actions |
-| 16–24 | Agregados + export a R2 | `rotations.json` + motor de rotaciones | Entrenamiento + línea base; clustering | Panel fuego; diagnóstico + calendario agrícola | Integración de datos reales |
-| 24–32 | Temporada jul–jun; 2026 por API | `/api/field/rotations` + `/explain`; validación con Orin | Evaluación, SHAP, `predict.py` | Tarjetas de rotación; modo live; riesgo | Job de riesgo diario; slides |
-| 32–40 | Dataset publicable | Ajuste de indicadores con el agrónomo del equipo | Reportes | Accesibilidad, mobile, glosario | QA en celulares; grabación |
-| 40–44 | README del método | README del motor | `report.md` | Bugs | Deploy final; edición del video |
-| 44–48 | **Buffer + entrega** | | | | |
+| Horas | 1. Fuego + deploy (Ezequiel) | 2. Campo (Orin) | 3. IA (Devin) | 4. Front + presentación |
+|---|---|---|---|---|
+| 0–8 | Ingesta + limpieza + H3; repo, Vercel y R2 | Export de Orin; `crops.json`; prueba de APIs POWER / ORNL / SoilGrids | Diseño de features; Devin arma el esqueleto de `web/` | Wireframes mobile; globo + geolocalización |
+| 8–16 | Armonización + validación; `/api/live` | IMERG, SMAP y GAEZ a la grilla; `/api/field/diagnose` | Dataset de riesgo | Modo histórico (datos de prueba); pantalla de lote |
+| 16–24 | Agregados + export a R2; Actions | `rotations.json` + motor de rotaciones | Entrenamiento + línea base; clustering | Panel fuego; diagnóstico + calendario agrícola |
+| 24–32 | Temporada jul–jun; 2026 por API; `/api/risk` + job diario | `/api/field/rotations` + `/explain`; validación con Orin | Evaluación, SHAP, `predict.py` | Tarjetas de rotación; modo live; riesgo; guion del video |
+| 32–40 | Dataset publicable; QA | Ajuste de indicadores; QA | Reportes; QA | Accesibilidad, glosario, mobile; slides; grabación |
+| 40–44 | README del método; deploy final | README del motor | `report.md` | Edición del video; README unificado |
+| 44–48 | **Buffer + entrega (todos)** | | | |
+
+Con 4 personas, los **Could** de la sección 5 (escenarios de clima, fuego agrícola vs. forestal, ECOSTRESS, inglés) solo se hacen si sobra tiempo después de la hora 32.
 
 ### 13.3 Puntos de corte
 - **Hora 12:** si la armonización mundial no está, Sudamérica primero y mundo después.
@@ -440,7 +447,7 @@ El motor no es una caja negra: siempre se puede explicar por qué una estrategia
 
 | Riesgo | Impacto | Mitigación |
 |---|---|---|
-| Alcance grande (dos lentes) | Alto | MoSCoW (sección 5), puntos de corte (13.3), equipo dividido por lente |
+| Alcance grande (dos lentes) con 4 personas | Alto | MoSCoW (sección 5), puntos de corte (13.3), un dueño por parte, Devin y Claude como apoyo de código |
 | La entrega exige elegir **un** challenge | Alto | Confirmar con la sede (sección 16). Elegir el que mejor cuente la historia y mencionar el otro |
 | Recomendaciones agronómicas incorrectas | Alto | Base de cultivos con fuentes; motor determinístico; "validar con agrónomo"; revisión del compañero de Orin |
 | LLM inventa datos | Alto | Solo recibe indicadores y debe citarlos; fallback a plantillas |
@@ -478,7 +485,7 @@ Evaluación virtual con lo entregado. Criterios de la sede, con el mismo peso: *
 
 ## 16. Preguntas abiertas
 - **¿En qué challenge presentamos?** Confirmar con la sede si se puede elegir más de uno. Recomendación: Field Shift como principal (el fuego entra como capa del campo), o Hot Spots si el equipo prefiere que el globo sea lo central.
-- ¿Quién toma cada rol de la sección 13.1?
+- ¿Quién es el cuarto integrante y confirma el rol de front + presentación (sección 13.1)?
 - ¿Qué lote pampeano usamos para la demo de rotaciones?
 - ¿Qué datos de Orin exportamos exactamente (lotes, muestreos, estaciones) y en qué formato?
 - ¿Qué LLM usamos (créditos disponibles)?

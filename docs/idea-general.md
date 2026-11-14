@@ -1,148 +1,163 @@
-# Proyecto Hot Spots – Space Apps 2026
+# Fuego y Campo – Space Apps 2026
 
-Nov 14, 2026 · @Ezequiel
+Nov 14, 2026 · Equipo de 4 · *Nombre de trabajo*
 
-Vamos con el challenge **Harmonization of MODIS and VIIRS Hot Spots**: una web mobile-first con un globo 3D que une 25 años de focos de calor de NASA en una sola serie comparable, la muestra como calendario de fuego y estima el riesgo de fuego cerca del usuario. El detalle completo está en el [PRD](PRD.md).
+Unimos dos challenges de NASA en un solo producto: **Harmonization of MODIS and VIIRS Hot Spots** y **Field Shift: Adapting Farms with NASA Data**. Es una web mobile-first, de alcance mundial y con un globo 3D, que convierte datos satelitales de NASA en decisiones para quien está en el territorio: **cuánto fuego hay y habrá cerca mío** y **qué rotación le conviene a mi campo**. El detalle técnico completo está en el [PRD](PRD.md).
 
-## La idea
+## La idea en una frase
 
-MODIS (Terra/Aqua) detecta focos de calor desde 2000 y se apaga en 2026; VIIRS lo reemplaza con píxeles de 375 m que ven muchos más focos. Si se juntan sin corregir, la serie salta y no se puede comparar un año con otro. Nosotros los armonizamos y construimos:
+Un **motor de armonización** que lleva datos de NASA de distintos sensores y resoluciones a una **grilla común**, mirado desde dos lentes: **Fuego** y **Campo**.
 
-- **Modo histórico** (lo que pide el challenge): el globo anima mes a mes desde 2000 y, mientras el usuario lo gira, el panel muestra el calendario de fuego de la región que tiene en el centro.
-- **Modo live**: focos de las últimas 24 h / 7 días sobre la imagen satelital del día.
-- **Riesgo de 7 días** (modelo de IA, Argentina): probabilidad de fuego cerca del usuario, para que sea útil a alguien en un campo y no solo informativo.
+```
+                   Motor de armonización (grilla común H3)
+   FIRMS MODIS+VIIRS · SMAP · IMERG · POWER · MODIS NDVI/ET · SRTM · ECOSTRESS · suelos
+                                    │
+              ┌─────────────────────┴─────────────────────┐
+         LENTE FUEGO (Hot Spots)                  LENTE CAMPO (Field Shift)
+   Globo 3D · histórico · live · calendario    Diagnóstico del lote · calendario agrícola
+   semáforo · riesgo 7 días · CSV              actual + 3 rotaciones comparadas
+              └─────────────── se cruzan en ───────────────┘
+     quema de rastrojos · riesgo de fuego del lote · períodos de suelo desnudo
+```
 
-Por qué este challenge:
+## Por qué unir los dos challenges
 
-- Entregable claro y medible: armonización + calendario + comparación con la mediana + CSV.
-- Poca competencia visible frente a Field Shift, que ya tiene muchos proyectos casi iguales.
-- Relevancia local: el challenge tiene foto de CONAE y Argentina tiene incendios grandes (Corrientes, Delta, Córdoba, Patagonia).
-- Es oportuno: MODIS deja de operar este año.
+- **Los dos piden lo mismo en el fondo:** armonizar datos de NASA de distintas resoluciones a una grilla común. Hot Spots lo pide para MODIS y VIIRS; Field Shift, para SMAP, IMERG, Landsat, MODIS y suelos.
+- **Fuego y campo son una sola historia.** En Argentina gran parte de los focos de calor son quemas agrícolas (rastrojos y pastizales), y una mejor rotación reduce la necesidad de quemar.
+- **Originalidad:** Hot Spots tiene muchos equipos y Field Shift tiene muchos proyectos casi iguales. La combinación es difícil de encontrar en otro equipo.
+- **Utilidad real:** deja de ser una herramienta solo informativa y le sirve a alguien en un campo.
 
-Los tres criterios del jurado de sede valen igual (presentación, originalidad, solidez, 1 a 5 cada uno). Nuestra fuerza es la solidez; la originalidad la ganamos con el globo, el riesgo de 7 días y los diferenciales.
+## Cómo funciona para el usuario
 
-## Armonización MODIS ↔ VIIRS
+1. Abre la app y toca **"Ver mi zona"**. La app pide la ubicación, el globo vuela hasta él y muestra **50 km a la redonda**, en cualquier lugar del mundo.
+2. **Lente Fuego:** riesgo de fuego en los próximos 7 días, cómo viene el mes contra la historia y el calendario de fuego de su zona desde 2000.
+3. Si es productor, toca **"Analizar mi campo"** y dibuja su lote.
+4. **Lente Campo:** diagnóstico del lote con datos de NASA, calendario agrícola, y su rotación actual comparada con 3 alternativas según sus prioridades.
 
-El objetivo es que al final "el sensor de origen no importe": una sola serie en **unidades equivalentes a VIIRS NOAA-20**, porque MODIS se apaga y todo dato nuevo (incluido el modo live) llega en VIIRS.
+Si no comparte la ubicación, usa un buscador. La ubicación y los lotes quedan solo en su navegador.
 
-| Período | Sensor disponible | Qué se usa en la serie |
+## Lente Fuego (Hot Spots)
+
+**El problema:** MODIS detecta focos desde 2000 y se apaga en 2026; VIIRS lo reemplaza con píxeles de 375 m que ven muchos más focos. Sin armonizar, la serie salta y no se pueden comparar los años.
+
+**La armonización:** una sola serie en **unidades equivalentes a VIIRS NOAA-20**, porque MODIS se apaga y todo dato nuevo llega en VIIRS.
+
+| Período | Sensor disponible | Qué se usa |
 | --- | --- | --- |
 | 2000 → 2011 | Solo MODIS | MODIS convertido a equivalente VIIRS |
-| 2012 → 2025 | MODIS + VIIRS | VIIRS tal cual; MODIS sirve para calcular la conversión |
-| 2026 → hoy | VIIRS | VIIRS tal cual |
+| 2012 → 2025 | MODIS + VIIRS | VIIRS; MODIS sirve para calcular la conversión (14 años de solapamiento) |
+| 2026 → hoy | VIIRS | VIIRS |
 
-1. Filtrar: solo `type = 0` (fuego de vegetación; fuera volcanes, industria y offshore). VIIRS sin confianza `low`; MODIS con confianza ≥ 30.
-2. Unidad común: celdas hexagonales **H3** (res 3 global, res 5 Argentina), conteo mensual de focos y de celdas-día con fuego.
-3. Calibrar S-NPP → NOAA-20 con el solapamiento 2018–2025.
-4. Calibrar MODIS → VIIRS con el solapamiento **2012–2025 (14 años)**: regresión log-log por cobertura del suelo × banda de latitud × mes.
-5. 2000–2002 es solo Terra: se calibra aparte y la línea base de anomalías arranca en 2003.
-6. Validar: dejar 2023–2024 afuera y medir R² y sesgo. Ese gráfico va a la presentación: es la prueba de solidez.
+Se calibra por cobertura del suelo, latitud y mes, y se **valida** dejando 2023–2024 afuera (R² y sesgo). Ese gráfico es la prueba de solidez.
 
-## La web app
+**Lo que ve el usuario:**
+- **Globo 3D** (MapLibre) con dos modos:
+  - **Histórico** (lo que pide el challenge): animación mes a mes desde 2000. Mientras gira el globo, el panel muestra el calendario de la región que tiene en el centro.
+  - **Live:** focos de las últimas 24 h / 7 días sobre la imagen satelital del día, donde se ve el humo.
+- **Calendario de fuego** año × mes, por año calendario o por temporada de fuego (julio–junio, clave en el hemisferio sur).
+- **Semáforo del mes:** "Noviembre 2026: 340 focos — 2,3× la mediana — percentil 95".
+- **Riesgo de fuego en 7 días** (IA): nivel base en todo el mundo y nivel con clima en Argentina, con 2–3 razones.
+- **Descarga en CSV.**
 
-| Lo que pide el brief | Cómo lo resolvemos |
+## Lente Campo (Field Shift)
+
+**El problema:** los productores enfrentan clima cambiante, falta de agua y suelos degradados, y elegir una rotación que cuide el suelo y el agua es difícil.
+
+**Lo que ve el usuario:**
+1. **Diagnóstico del lote**, cada número con su fuente y su resolución: lluvia y su variabilidad (IMERG), lluvias extremas, humedad del suelo y su anomalía (SMAP), heladas y grados-día (POWER), calor, evapotranspiración (MODIS / ECOSTRESS), vigor y días de suelo desnudo (MODIS NDVI / Landsat / Sentinel-2), pendiente (SRTM), suelo (SoilGrids), tendencia del agua (GRACE) y fuego (nuestra serie).
+2. **Calendario agrícola**, con el mismo diseño que el de fuego: suelo desnudo, heladas, estrés hídrico, calor y temporada de quemas, con la rotación actual superpuesta.
+3. **Rotación actual + prioridades + restricciones:** agua, suelo, erosión, ingreso, forraje, nitrógeno, plagas, evitar quemas; riego, maquinaria, ganadería.
+4. **Actual + 3 alternativas** en tarjetas, cada una con lo que pide el brief: **por qué, evidencia, beneficios, vacíos de información y riesgos a validar con un agrónomo**.
+5. Opcional: **escenarios de clima** (lluvia −20 %, +1 °C).
+
+**Cómo se generan las rotaciones:** un motor determinístico y explicable. Parte de una base de ~15 cultivos con fuentes (INTA, FAO) y ~12 rotaciones agronómicamente válidas; filtra por viabilidad según el diagnóstico y puntúa según las prioridades del productor. Un LLM **solo traduce** los resultados a lenguaje simple y tiene que citar los indicadores.
+
+**Validación satélite vs. campo:** con los **datos de campo de Orin** (lotes y muestreos en Mendoza) comparamos lo que ve el satélite con lo medido en el lote. Es lo que pide el brief y casi nadie lo va a tener fuera de EE. UU. Usamos solo los datos, no el código de Orin, y lo aclaramos en el README.
+
+## Inteligencia artificial
+
+| Componente | Qué hace |
 | --- | --- |
-| Elegir un área de interés | Globo 3D (MapLibre): retícula en el centro, ubicación del usuario, buscador o polígono |
-| Calendario de actividad desde 2000 | Calendario año × mes con focos armonizados de la región elegida |
-| Mes actual vs mediana histórica | Semáforo: "Nov 2026: 340 focos, 2,3× la mediana, percentil 95" |
-| Anomalías vs promedio plurianual | Percentil y ratio por mes contra la mediana 2003–2022 |
-| Escalas de color accesibles | Viridis/inferno para cantidades, RdBu para anomalías |
-| Descargar CSV | Serie del área (global) y focos crudos (Argentina) |
+| Riesgo de fuego en 7 días (Devin) | LightGBM con historial de fuego, estacionalidad, cobertura y clima (POWER). Tiene que superar a la línea base de climatología |
+| Zonas análogas | Agrupa celdas con clima, suelo y vegetación parecidos: "campos parecidos al tuyo". En Argentina se cruza con lo que se siembra en esas zonas (MAGyP) |
+| Patrones del calendario | Detecta suelo desnudo, transiciones y estrés en las series satelitales |
+| Explicación | LLM que convierte indicadores en texto para el productor, sin inventar datos |
 
-Alcance: global en celdas H3 res 3 mensual y Argentina en detalle (H3 res 5, puntos crudos). Si lo global no llega a tiempo, entregamos Argentina con la arquitectura lista para escalar.
+## Datos
 
-### Ubicación del usuario
+**Todos los satélites de NASA que usamos son globales**, así que funcionan en Argentina y en todo el mundo. Lo único que es solo de EE. UU. son los datos de campo de la lista del brief, y los reemplazamos:
 
-Al abrir, la app ubica al usuario y le muestra su zona; desde ahí puede girar el globo o elegir otra área.
-
-1. Pantalla inicial con un botón "Ver fuego cerca mío": el permiso se pide al tocarlo, no apenas carga.
-2. Con permiso: el globo vuela hasta el usuario y toma como área un círculo de 50 km, con riesgo de 7 días, semáforo y calendario de esa zona.
-3. Sin permiso o sin GPS: buscador de ciudad o provincia y vista inicial de Argentina. La app nunca queda bloqueada.
-4. La ubicación se usa solo en el navegador y no se guarda ni se envía a ningún servidor. Lo decimos en pantalla.
-5. La geolocalización exige HTTPS: Vercel lo cumple.
-
-### Mobile-first y accesibilidad
-
-| Requisito | Cómo lo resolvemos |
+| De EE. UU. (lista del brief) | Lo que usamos |
 | --- | --- |
-| Mobile-first | Se diseña primero a 360–400 px: globo arriba, panel deslizable abajo; en escritorio, panel lateral |
-| Rendimiento | Datos precalculados y bajo demanda; si el celular no aguanta el 3D, vista 2D con la misma librería |
-| Calendario en pantalla chica | Filas = años, columnas = 12 meses (entran a 400 px); toque en una celda para ver el número |
-| Objetivos táctiles | Botones y celdas de 44 × 44 px mínimo |
-| Lector de pantalla | El calendario es una tabla HTML real con encabezados y valores; resumen en texto ("Noviembre está 2,3 veces sobre la mediana") |
-| Teclado | Todo se usa sin mouse: flechas giran el globo, espacio = play/pausa, foco visible; el área se puede elegir por buscador |
-| Color | Paletas aptas para daltonismo, contraste WCAG 2.2 AA y nunca solo color: número o ícono al lado |
-| Movimiento | `prefers-reduced-motion`: sin auto-rotación ni animaciones de vuelo |
-| Idioma | Español e inglés (suma para Global Connection) |
+| SSURGO / Web Soil Survey | SoilGrids (global) + INTA |
+| NASS QuickStats / CDL | Estimaciones Agrícolas de MAGyP (por departamento) |
+| NLDAS / PRISM | POWER, GLDAS, ERA5 |
+| Mediciones de campo (CoCoRaHS, OpenET) | Datos de campo de Orin |
 
-## Riesgo de fuego en 7 días (modelo de IA con Devin)
+**Ya tenemos:**
+- [x] FIRMS MODIS 2000–2025, VIIRS S-NPP 2012–2025 y VIIRS NOAA-20 2018–2025, de todo el mundo (9,1 GB descargados).
+- [x] MAP\_KEY de FIRMS (para 2026 y el modo live). Va en `.env` y nunca se sube.
+- [x] Cuenta Earthdata (para SMAP, IMERG, MCD12C1 y AppEEARS).
 
-Para cada celda H3 res 5 (~250 km²) de Argentina, probabilidad de al menos un foco en los próximos 7 días.
+**Falta:** export de los datos de Orin, capas de campo (SMAP, IMERG, GAEZ) y lo de 2026 por la API.
 
-- Features: historial de fuego de la celda, estacionalidad, clima de NASA POWER (lluvia acumulada, días sin lluvia, humedad, temperatura, viento) y cobertura del suelo.
-- Modelo: LightGBM con partición temporal (train 2012–2021, validación 2022, test 2023–2025). Tiene que superar a la línea base de climatología.
-- Salida: categoría (Bajo / Moderado / Alto / Muy alto) relativa a lo normal para la época, con 2–3 razones (SHAP).
-- Aviso siempre visible: estimación experimental, no reemplaza alertas oficiales. Si el riesgo es alto, teléfonos: Bomberos 100, Emergencias 911.
-
-## Diferenciales
-
-Hacer solo lo que pide el brief da un 3 en originalidad. Estos nos llevan a 4–5:
-
-1. Globo 3D con modo histórico animado y modo live.
-2. Riesgo de 7 días cerca del usuario: pasa de información a herramienta útil.
-3. Calendario por temporada de fuego del hemisferio sur (julio–junio), no por año calendario: Patagonia arde de diciembre a marzo y el Chaco de agosto a octubre.
-4. Fuego agrícola vs forestal: cruzar focos con cobertura del suelo (MODIS MCD12C1).
-5. Casos de estudio argentinos en la presentación: Corrientes 2022, Delta 2020, Córdoba 2024.
-
-## Datos y cuentas
-
-| Dato | Para qué | Dónde |
-| --- | --- | --- |
-| MODIS, todos los países, 2000–2025 | Serie histórica larga | [FIRMS Country Yearly Summary](https://firms.modaps.eosdis.nasa.gov/country/) (zips anuales) |
-| VIIRS S-NPP, todos los países, 2012–2025 | Solapamiento largo con MODIS | FIRMS zips anuales |
-| VIIRS NOAA-20, todos los países, 2018–2025 | Referencia VIIRS | FIRMS zips anuales |
-| 2026 hasta julio/agosto (SP) y de ahí a hoy (NRT) | Mes actual y modo live | API de FIRMS (`*_SP` y `*_NRT`) |
-| MODIS MCD12C1 (cobertura del suelo) | Agrícola vs forestal, calibración por bioma | NASA AppEEARS (GeoTIFF), con cuenta Earthdata |
-| NASA POWER | Clima para el modelo de riesgo | API POWER |
-| NASA GIBS | Fondo del globo (Blue Marble, imagen del día) | WMTS, sin key |
-| Límites de provincias / ciudades | Buscador | IGN / Natural Earth |
-
-Cuentas (gratis):
-
-- [x] MAP\_KEY de FIRMS: [firms.modaps.eosdis.nasa.gov/api/map\_key](https://firms.modaps.eosdis.nasa.gov/api/map_key/)
-- [x] Cuenta Earthdata: [urs.earthdata.nasa.gov/users/new](https://urs.earthdata.nasa.gov/users/new)
-
-Los zips anuales son Standard Processing (calidad final) y llegan hasta 2025; lo de 2026 se baja por la API. Donde haya SP, se usa SP, para no duplicar focos. La MAP\_KEY va en `.env` y nunca se sube al repo.
-
-## Stack técnico
+## Stack
 
 | Capa | Herramienta |
 | --- | --- |
-| Procesamiento | Python + DuckDB (extensiones `h3` y `spatial`), salida en Parquet y JSON |
-| Modelo | LightGBM + SHAP (lo entrena Devin) |
-| Front-end | Vite + React + TypeScript |
-| Globo / mapa | MapLibre GL JS v5 (proyección globe) + NASA GIBS + `h3-js` |
-| Back | Funciones serverless de Vercel: `/api/live` (proxy FIRMS, esconde la key) y `/api/risk` |
+| Pipeline | Python + DuckDB (H3), pandas, xarray |
+| IA | LightGBM, scikit-learn, SHAP, LLM vía API |
+| Back | FastAPI (Python) en Vercel |
+| Front | Vite + React + TypeScript + MapLibre GL (globo 3D) + NASA GIBS |
+| Datos para la web | Cloudflare R2 (archivos por región) |
 | Jobs | GitHub Actions: live cada 3 h, riesgo diario |
-| Deploy | Vercel (HTTPS, necesario para la geolocalización) |
+| Deploy | Vercel (HTTPS, necesario para la ubicación) |
 
-## Plan de 48 horas y entrega
+## Mobile-first y accesibilidad
 
-| Horas | Tarea |
+- Diseño a 360–400 px primero: globo arriba y panel deslizable abajo; en desktop, panel lateral.
+- Si el celular no aguanta el 3D, mapa 2D con la misma librería.
+- Botones de 44 px, todo usable con teclado, calendarios como tablas reales para lectores de pantalla.
+- Colores aptos para daltonismo, contraste WCAG AA y el color nunca va solo.
+- Sin animaciones para quien las desactiva; lenguaje simple con glosario.
+
+## Equipo (4 personas)
+
+| # | Persona | Parte |
+| --- | --- | --- |
+| 1 | Ezequiel (+ Claude) | Lente Fuego: datos, armonización, back de fuego y deploy |
+| 2 | Compañero de Orin | Lente Campo: datos, base de cultivos, motor de rotaciones |
+| 3 | Compañero con Devin | IA: riesgo de fuego y zonas análogas; apoyo de front con Devin |
+| 4 | Cuarto integrante | Front, UX y presentación |
+
+## Plan de 48 horas
+
+| Horas | Hito |
 | --- | --- |
-| 0–8 | Datos: ingesta, filtrado, H3. Front: esqueleto + globo + geolocalización |
-| 8–16 | Armonización + validación. Modo histórico con datos de prueba. Devin arma el dataset |
-| 16–24 | Agregados + export. Panel: calendario + semáforo. Entrenamiento del modelo |
-| 24–32 | Modo live + riesgo. Temporada jul–jun. `/api/*` y jobs |
-| 32–40 | Accesibilidad, mobile, QA en celulares. Video y slides |
+| 0–8 | Datos de fuego limpios; export de Orin; esqueleto de la web con globo y ubicación |
+| 8–16 | Armonización validada; capas de campo en la grilla; modo histórico; pantalla de lote |
+| 16–24 | Datos en R2; motor de rotaciones; modelos entrenados; paneles de fuego y diagnóstico |
+| 24–32 | Rotaciones con explicación; modo live; riesgo; validación con Orin |
+| 32–40 | Accesibilidad, mobile, QA en celulares; slides y grabación |
 | 40–44 | README, deploy final, edición del video |
-| 44–48 | Buffer y entrega en la página del equipo |
+| 44–48 | Buffer y entrega |
 
-Puntos de corte: hora 12 (si lo global no está, Argentina + Sudamérica), hora 24 (si el 3D no rinde en celular, 2D por defecto), hora 30 (si el modelo no supera a la línea base, se muestra la climatología), hora 40 (congelar funcionalidades).
+**Puntos de corte:** hora 12 (si el mundo no está, Sudamérica primero), hora 24 (si el 3D no rinde, 2D por defecto), hora 30 (si el modelo no supera la línea base, se muestra la climatología), hora 32 (si el LLM no es confiable, texto con plantillas), hora 40 (congelar funcionalidades).
 
-El jurado evalúa virtualmente con lo que entregamos, así que la entrega es un tercio del puntaje:
+## Entrega
 
-- Video de 2–3 minutos: problema, armonización con el gráfico de validación, globo histórico, "cerca mío" + riesgo, caso Corrientes. Sin menores de 18.
-- Demo online que el jurado pueda abrir.
-- README con datos, método, validación y limitaciones.
-- Categorías: Best Use of Data (armonizar dos sensores de NASA) y Local Impact (riesgo para zonas rurales argentinas, CONAE).
+El jurado evalúa virtualmente con lo que entregamos. Los criterios valen igual: presentación, originalidad y solidez.
+
+- **Video de 2–3 minutos:** problema → armonización (gráfico de validación) → globo histórico → "mi zona" + riesgo → "mi campo" con 3 rotaciones → validación con datos reales de campo. Se muestra sobre un evento conocido y un lote real. Sin menores de 18.
+- **Demo online** que el jurado pueda abrir.
+- **README** con datos, método, validación, limitaciones y origen de los datos de Orin.
+- **Dataset armonizado** descargable.
+- **Categorías:** Best Use of Data, Local Impact y Galactic Impact.
+
+## Pendientes del equipo
+
+- [ ] **Confirmar con la sede si nos podemos presentar en los dos challenges** o en cuál.
+- [ ] Confirmar el rol del cuarto integrante.
+- [ ] Elegir un lote pampeano para la demo de rotaciones.
+- [ ] Exportar los datos de Orin (lotes, muestreos, estaciones).
+- [ ] Elegir el LLM y el nombre del proyecto.
