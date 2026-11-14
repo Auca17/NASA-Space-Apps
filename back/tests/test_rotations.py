@@ -275,3 +275,69 @@ def test_pampa_only_rotation_not_offered_in_noa():
     ids = {s["id"] for s in out["strategies"]}
     assert "trigo-soja2-maiz" not in ids
     assert "garbanzo-maiz" in ids  # the NOA rotation
+
+
+# ------------------------------------------------- task 15 regressions ----
+
+import copy  # noqa: E402
+
+
+def _diag_flat_rain(mm):
+    d = copy.deepcopy(DIAG)
+    for c in d["cards"]:
+        if c["id"] == "rain":
+            c["value"] = mm
+            c.pop("rain_monthly_mm", None)
+        if c["id"] == "soil_moisture":
+            c["value"] = 5  # neutralize the <0 moisture deflation
+    return d
+
+
+def test_perennial_not_shifted_by_zone_window():
+    """Alfalfa cycles (>=330 d / cut period) keep their full period."""
+    rot = next(r for r in eng.KNOWLEDGE.rotations
+               if r.id == "alfalfa4-maiz")
+    rot2, _ = eng._shift_for_zone(rot, "cuyo")
+    assert [(s.start, s.end) for s in rot2.sequence[:4]] == \
+        [("03-15", "03-14")] * 4
+
+
+def test_perennial_full_annual_demand_cuyo():
+    """Cuyo, 1400 mm annual rain: alfalfa items get the annual rain and
+    the rotation needs zero supplemental irrigation."""
+    rot = next(r for r in eng.KNOWLEDGE.rotations
+               if r.id == "alfalfa4-maiz")
+    rot2, _ = eng._shift_for_zone(rot, "cuyo")
+    diag = _diag_flat_rain(1400)
+    ind = eng.indicators(rot2, diag, "cuyo", {"irrigation": True})
+    assert ind["irrigation_need_mm"] == 0
+
+
+def test_bare_soil_recomputed_from_shifted_sequence():
+    """NOA soja-soja: soja moves to the 12-01 window, end stays 04-15 ->
+    136 covered days -> 229 bare days (catalog says 199)."""
+    rot = next(r for r in eng.KNOWLEDGE.rotations
+               if r.id == "soja-soja")
+    rot2, _ = eng._shift_for_zone(rot, "noa")
+    assert (rot2.sequence[0].start, rot2.sequence[0].end) == \
+        ("12-01", "04-15")
+    ind = eng.indicators(rot2, DIAG, "noa")
+    assert ind["bare_soil_days"] == 229
+
+
+def test_irrigation_water_scoring_numeric():
+    """With irrigation, `water_balance_mm` is the numeric metric used by
+    the water priority: lower irrigation need scores better."""
+    diag = _diag_flat_rain(920)
+    rots = {r.id: r for r in eng.KNOWLEDGE.rotations}
+    cur = eng.indicators(rots["soja-soja"], diag, "noa",
+                         {"irrigation": True})
+    low = eng.indicators(rots["soja-soja"], diag, "noa",
+                         {"irrigation": True})
+    high = eng.indicators(rots["garbanzo-maiz"], diag, "noa",
+                          {"irrigation": True})
+    assert high["water_balance"] == "con riego"
+    assert isinstance(high["water_balance_mm"], (int, float))
+    assert high["water_balance_mm"] == high["irrigation_need_mm"]
+    prio = {"water": 5}
+    assert eng.score(low, cur, prio) > eng.score(high, cur, prio)

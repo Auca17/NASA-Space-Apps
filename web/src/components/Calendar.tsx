@@ -1,6 +1,7 @@
 /** Year x month table — real <table>, 44px touch targets, never color alone. */
-import { css, viridis } from "../domain/colors";
+import { css, textOn, viridis } from "../domain/colors";
 import { monthlyBaseline } from "../domain/baseline";
+import { useT } from "../i18n";
 import type { MonthlySeries } from "../domain/fireSeries";
 
 const MONTHS = ["ene", "feb", "mar", "abr", "may", "jun",
@@ -13,6 +14,7 @@ export function Calendar({ matrix, mode, highlight, onPick, compact }: {
   onPick?: (year: number, month: number, v: number) => void;
   compact?: boolean;
 }) {
+  const { t } = useT();
   const years = [...matrix.keys()].sort((a, b) => b - a);
   // baseline for anomaly mode: median per month column across rows
   const series: MonthlySeries = { months: [], values: [] };
@@ -34,10 +36,10 @@ export function Calendar({ matrix, mode, highlight, onPick, compact }: {
              t: Math.sqrt(v / max) };
   };
   return (
-    <table className="cal" aria-label="calendario">
+    <table className="cal" aria-label={t("calendar.aria")}>
       <thead>
         <tr>
-          <th scope="col">Año</th>
+          <th scope="col">{t("calendar.year")}</th>
           {MONTHS.map((m) => <th key={m} scope="col">{compact ? m[0] : m}</th>)}
         </tr>
       </thead>
@@ -50,9 +52,11 @@ export function Calendar({ matrix, mode, highlight, onPick, compact }: {
               const ci = cellInfo(v, m);
               const playing = highlight?.year === y &&
                 highlight?.month === m;
+              const bg = viridis(ci.t);
               return (
                 <td key={m} className={playing ? "playing" : undefined}
-                    style={{ background: css(viridis(ci.t)) }}>
+                    style={{ background: css(bg),
+                             color: css(textOn(bg)) }}>
                   {onPick ? (
                     <button type="button"
                             aria-label={`${MONTHS[m]} ${y}: ${ci.v}`}

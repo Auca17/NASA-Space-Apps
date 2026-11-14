@@ -24,7 +24,7 @@ export interface RiskView {
 }
 
 export const CAT_ICON: Record<RiskCat, string> = {
-  bajo: "●", moderado: "▲", alto: "■", muy_alto: "◆",
+  bajo: "▼", moderado: "◆", alto: "▲", muy_alto: "▲▲",
 };
 
 export const CAT_ORDER: RiskCat[] =

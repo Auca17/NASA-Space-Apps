@@ -146,7 +146,7 @@ export function AreaPanel({ lat, lon, cells, open, onClose, country,
     <BottomSheet open={open}>
       <div style={{ display: "flex", justifyContent: "space-between" }}>
         <h3 style={{ margin: 0 }}>{lat.toFixed(2)}°, {lon.toFixed(2)}°</h3>
-        <button onClick={onClose} aria-label="cerrar">✕</button>
+        <button onClick={onClose} aria-label={t("ui.close")}>✕</button>
       </div>
 
       <Card title={t("panel.risk7d")}>
@@ -181,6 +181,8 @@ export function AreaPanel({ lat, lon, cells, open, onClose, country,
             <span className={`badge ${sem.category}`}>
               {t(`sem.${sem.category}`)}
             </span>
+            <span className="muted"> · {t("sem.median",
+              { n: sem.median })}</span>
           </div>
           <p>{t("sem.summary", {
             month: monthLabel(thisMonth),
@@ -224,8 +226,11 @@ export function AreaPanel({ lat, lon, cells, open, onClose, country,
                   setPicked(`${monthLabel(`${y}-${String(m + 1).padStart(2, "0")}`)}: ${v}`)} />
             </div>
             {picked && <p aria-live="polite">{picked}</p>}
-            <Legend from="0" to="max"
+            <Legend from="0"
+              to={String(Math.max(1,
+                ...[...calMatrix.values()].flat()))}
               colors={[css(viridis(0)), css(viridis(0.5)), css(viridis(1))]} />
+            <p className="muted">{t("legend.unit")}</p>
           </>
         ) : <p className="muted">{t("panel.noData")}</p>}
       </Card>

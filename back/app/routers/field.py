@@ -25,6 +25,9 @@ TIMEOUT = httpx.Timeout(6.0)
 MIN_HA, MAX_HA = 0.5, 5_000.0
 NDVI_BARE = 0.25          # NDVI below this counts as bare soil
 POWER_RES = "0.5°×0.625°"
+MONTH_FULL_ES = ["enero", "febrero", "marzo", "abril", "mayo", "junio",
+                 "julio", "agosto", "septiembre", "octubre", "noviembre",
+                 "diciembre"]
 MONTHS_ES = ["ene", "feb", "mar", "abr", "may", "jun",
              "jul", "ago", "sep", "oct", "nov", "dic"]
 
@@ -567,20 +570,32 @@ def _stop_conditions(power, end: date, n_days: int = 3):
     """
     P = (power or {}).get
     rh, ws, tx = P("RH2M") or {}, P("WS2M") or {}, P("T2M_MAX") or {}
+    checks = (
+        ("wind_gt_40kmh", ws, lambda v: v > 11.1,
+         lambda v: f"viento {v:.1f} m/s (>40 km/h)"),
+        ("temp_gt_35", tx, lambda v: v > 35,
+         lambda v: f"{v:.0f} °C (>35 °C)"),
+        ("rh_lt_30", rh, lambda v: v < 30,
+         lambda v: f"humedad {v:.0f} % (<30 %, umbral "
+                   "por confirmar con INTA)"),
+    )
     conds, detail = [], {}
-    for d in (end - timedelta(days=i) for i in range(n_days)):
-        if ws.get(d) is not None and ws[d] > 11.1:
-            conds.append("wind_gt_40kmh")
-            detail["wind_gt_40kmh"] = \
-                f"viento {ws[d]:.1f} m/s (>40 km/h)"
-        if tx.get(d) is not None and tx[d] > 35:
-            conds.append("temp_gt_35")
-            detail["temp_gt_35"] = f"temperatura {tx[d]:.0f} °C (>35 °C)"
-        if rh.get(d) is not None and rh[d] < 30:
-            conds.append("rh_lt_30")
-            detail["rh_lt_30"] = (f"humedad {rh[d]:.0f} % (<30 %, umbral "
-                                  "por confirmar con INTA)")
-    return sorted(set(conds)), detail
+    for name, series, pred, fmt in checks:
+        # most recent day the condition was met inside the window;
+        # only the last valid day raises the alert, earlier days are
+        # context with dated, age-aware wording
+        for i in range(n_days):
+            d = end - timedelta(days=i)
+            v = series.get(d)
+            if v is None or not pred(v):
+                continue
+            day = f"{d.day} de {MONTH_FULL_ES[d.month - 1]}"
+            detail[name] = (f"hay {fmt(v)} el {day}" if i == 0 else
+                            f"hubo {fmt(v)} el {day} (hace {i} días)")
+            if i == 0:
+                conds.append(name)
+            break
+    return sorted(conds), detail
 
 
 def fire_weather_card(power, end: date | None):
@@ -617,6 +632,9 @@ def fire_weather_card(power, end: date | None):
     if conds:
         parts.append("parar la cosecha: " + "; ".join(detail[c]
                                                      for c in conds))
+    ctx = [detail[c] for c in detail if c not in conds]
+    if ctx:
+        parts.append("días previos: " + "; ".join(ctx))
     card = _card("fire_weather", level, None,
                  "; ".join(p for p in parts if p),
                  "NASA POWER", POWER_RES, "high")

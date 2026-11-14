@@ -1,15 +1,21 @@
 /** Field lens: draw/tap plot -> diagnose -> rotations -> explain. */
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useT } from "../../i18n";
-import { Card, BottomSheet } from "../../components/ui";
+import { Card, BottomSheet, Tooltip } from "../../components/ui";
 import { Glossary } from "../../components/Glossary";
 import {
   apiDiagnose, apiRotations, apiExplain, knowledgeRotations,
   knowledgeCrops,
 } from "../../api";
 import type {
-  DiagnoseResponse, RotationsResponse, Strategy,
+  Card as DiagCard, DiagnoseResponse, RotationsResponse, Strategy,
 } from "../../api/types";
+import {
+  benefitValue, cardValueText, compareDeltas, groupVariants,
+  groupedCards, indicatorLabelKey, irrigationNeedMm, measureReqPairs,
+  prioWeights,
+  seqSegments, summaryFacts, verdictDelta, PRIORITY_IDS,
+} from "../../domain/rotations";
 
 type LatLonRing = [number, number][];
 /** Back contract: {polygon:{coordinates:[[[lon,lat],..closed]]}} or
@@ -19,8 +25,6 @@ type PlotBody = { polygon: { coordinates: [number,number][][] } } |
 
 const LS_PLOTS = "fs_plots";
 
-const PRIORITIES = ["water", "soil", "erosion", "income", "forage",
-                    "nitrogen", "pests", "avoid_burning"] as const;
 const CONSTRAINTS = ["irrigation", "livestock", "machinery", "markets"] as const;
 
 function savePlot(name: string, body: PlotBody) {
@@ -36,54 +40,344 @@ function levelText(lv: number | null): string {
   return ["○", "◔", "◑", "●"][Math.min(Math.max(lv, 0), 3)];
 }
 
-function StrategyCard({ s, t }: {
+/** Word-first confidence badge + small dot (never color alone). */
+export function ConfBadge({ level, t }: {
+    level: string;
+    t: (k: string, v?: Record<string, string | number>) => string }) {
+  return (
+    <span className={`badge conf-${level}`}>
+      <i className="cdot" aria-hidden="true" />
+      {t(`field.confidence.${level}`)}
+    </span>);
+}
+
+function RainChart({ card, t }: {
+    card: DiagCard;
+    t: (k: string, v?: Record<string, string | number>) => string }) {
+  const mm = card.rain_monthly_mm;
+  if (!mm || mm.length !== 12) return null;
+  const months = ["E", "F", "M", "A", "M", "J", "J", "A", "S", "O", "N", "D"];
+  const max = Math.max(...mm, 1);
+  return (
+    <div className="rain-chart">
+      <p className="muted">{t("field.rainMonthly",
+        { y0: 2001, y1: new Date().getFullYear() - 1 })}</p>
+      <div className="rain-bars" role="img"
+           aria-label={t("field.rainMonthly",
+             { y0: 2001, y1: new Date().getFullYear() - 1 })}>
+        {mm.map((v, i) => (
+          <div key={i} className="rain-bar-col" title={`${months[i]}: ${v} mm`}>
+            <div className="rain-bar"
+                 style={{ height: `${Math.max(4, (v / max) * 100)}%` }} />
+            <span className="rain-bar-label">{months[i]}</span>
+          </div>))}
+      </div>
+      <p className="muted">
+        {t("field.rainMinMax",
+          { min: Math.round(Math.min(...mm)),
+            max: Math.round(Math.max(...mm)) })}</p>
+      <details>
+        <summary>{t("field.rainTable")}</summary>
+        <table className="cal">
+          <tbody>
+            <tr>{months.map((m) => <th key={m} scope="col">{m}</th>)}</tr>
+            <tr>{mm.map((v, i) => <td key={i}>{v}</td>)}</tr>
+          </tbody>
+        </table>
+      </details>
+    </div>
+  );
+}
+
+function StopConditions({ card, t }: {
+    card: DiagCard;
+    t: (k: string, v?: Record<string, string | number>) => string }) {
+  if (!card.stop_conditions?.length) return null;
+  return (
+    <div className="stop-conditions">
+      <strong>{t("field.stopConditions")}</strong>
+      <ul>
+        {card.stop_conditions.map((c) => (
+          <li key={c}>{card.stop_detail?.[c] ?? c}</li>))}
+      </ul>
+    </div>
+  );
+}
+
+/** Compact diagnosis tile: label, value with unit, confidence badge. */
+function DiagTile({ c, t, fmt }: {
+    c: DiagCard;
+    t: (k: string, v?: Record<string, string | number>) => string;
+    fmt: Intl.NumberFormat }) {
+  const val = cardValueText(c, fmt);
+  return (
+    <div className="dtile">
+      <div className="dtile-head">
+        <span className="dtile-label">{t(`card.${c.id}`)}</span>
+        <ConfBadge level={c.confidence} t={t} />
+      </div>
+      <div className="dtile-value">
+        {val ?? <span className="muted">{t("field.noData")}</span>}
+      </div>
+      {c.text && <p className="muted">{c.text}</p>}
+      {c.id === "rain" && <RainChart card={c} t={t} />}
+      {c.id === "fire_weather" && <StopConditions card={c} t={t} />}
+      {(c.source || c.resolution) && (
+        <details className="dtile-src">
+          <summary>{t("field.source")}</summary>
+          <p className="muted">
+            {c.source}{c.resolution ? ` · ${c.resolution}` : ""}
+          </p>
+        </details>)}
+    </div>);
+}
+
+/** Afinidad bar 0-100 with a one-line scale tooltip. */
+function Afinity({ score, t }: {
+    score: number;
+    t: (k: string, v?: Record<string, string | number>) => string }) {
+  const pct = Math.round(Math.min(Math.max(score, 0), 1) * 100);
+  return (
+    <div className="affinity">
+      <span className="aff-label">
+        {t("rot.affinity")}: {pct}
+        <Tooltip text={t("rot.affinityTip")} />
+      </span>
+      <div className="aff-bar" role="img"
+           aria-label={`${t("rot.affinity")}: ${pct}/100`}>
+        <div className="aff-fill" style={{ width: `${pct}%` }} />
+      </div>
+    </div>);
+}
+
+/** Covered-vs-bare crop segments over a 12-month bar. */
+function SeqBar({ s, t }: {
     s: Strategy;
     t: (k: string, v?: Record<string, string | number>) => string }) {
+  const months = ["E", "F", "M", "A", "M", "J", "J", "A", "S", "O", "N", "D"];
+  return (
+    <div className="seqbars">
+      {s.sequence.map((seq, i) => {
+        const covered = seq.cover !== false;
+        return (
+          <div className="seqrow" key={i}>
+            <span className="seqcrop">{seq.crop}</span>
+            <span className="seqbar" role="img"
+                  aria-label={`${seq.crop}: ${seq.start}–${seq.end} · ` +
+                    (covered ? t("rot.covered") : t("rot.bare"))}>
+              {seqSegments(seq.start, seq.end).map((seg, j) => (
+                <span key={j}
+                      className={`seqfill ${covered ? "covered" : "bare"}`}
+                      style={{
+                        left: `${(seg.from / 12) * 100}%`,
+                        width: `${((seg.to - seg.from + 1) / 12) * 100}%`,
+                      }} />))}
+            </span>
+            <span className="seqcov">
+              {covered ? t("rot.covered") : t("rot.bare")}
+            </span>
+          </div>);
+      })}
+      <div className="seqrow seqmonths" aria-hidden="true">
+        <span className="seqcrop" />
+        <span className="seqbar seqscale">
+          {months.map((m, i) => <span key={i}>{m}</span>)}
+        </span>
+        <span className="seqcov" />
+      </div>
+    </div>);
+}
+
+function Section({ title, count, open = false, children }: {
+    title: string; count?: number; open?: boolean;
+    children: React.ReactNode }) {
+  return (
+    <details className="sec" open={open}>
+      <summary>{title}
+        {count != null && count > 0 &&
+          <span className="count"> {count}</span>}
+      </summary>
+      {children}
+    </details>);
+}
+
+function StrategyCard({ s, t, current, variants, explain }: {
+    s: Strategy;
+    t: (k: string, v?: Record<string, string | number>) => string;
+    current?: Strategy | null;
+    variants?: Strategy[];
+    explain?: string }) {
+  const irr = irrigationNeedMm(s);
+  const vd = verdictDelta(s, current);
+  const verdict = vd.key === "rot.verdict.parts"
+    ? t(vd.key, { parts: vd.parts.map((k) => t(k))
+                             .join(` ${t("ui.and")} `) })
+    : t(vd.key);
   return (
     <article className={`card strategy${s.is_current ? " current" : ""}`}>
       <h3>{s.name}
         {s.is_current && <span className="badge"> {t("rot.current")}</span>}
+        {variants?.map((v) => (
+          <span key={v.id} className="badge variante" title={v.why}>
+            {" "}{t("rot.variante")}: {v.name}</span>))}
       </h3>
-      <p className="muted">{t("rot.score", { s: s.score })} · {s.confidence}</p>
-      <p><strong>{t("rot.why")}:</strong> {s.why}</p>
-      {s.evidence.length > 0 && (
-        <div><strong>{t("rot.evidence")}</strong>
-          <ul>{s.evidence.map((e, i) => <li key={i}>{e.text}
-            {e.source && <span className="muted"> — {e.source}</span>}</li>)}
-          </ul></div>)}
-      {s.benefits && Object.keys(s.benefits).length > 0 && (
-        <div><strong>{t("rot.benefits")}</strong>
-          <ul>{Object.entries(s.benefits).map(([k, v]) => (
-            <li key={k}>{k}: {String(v)}</li>))}</ul></div>)}
-      {s.gaps.length > 0 && (
-        <div><strong>{t("rot.gaps")}</strong>
-          <ul>{s.gaps.map((g) => <li key={g}>{g}</li>)}</ul></div>)}
-      {s.risks.length > 0 && (
-        <div><strong>{t("rot.risks")}</strong>
-          <ul>{s.risks.map((r) => <li key={r}>{r}</li>)}</ul></div>)}
-      <div><strong>{t("rot.sequence")}</strong>
-        <div className="seq-timeline">
-          {s.sequence.map((seq, i) => (
-            <div className="seq-item" key={i}>
-              <span>{seq.crop} · {seq.start}→{seq.end}</span>
-              <span className={`cov ${seq.cover === false ? "bare" : "covered"}`}>
-                {seq.cover === false ? `▢ ${t("rot.bare")}` : `■ ${t("rot.covered")}`}
-              </span>
-            </div>))}
-        </div></div>
-      {s.measures && s.measures.length > 0 && (
-        <div><strong>{t("rot.measures")}</strong>
-          <ul>{s.measures.map((m) => (
-            <li key={m.id}><strong>{m.name}</strong>
-              {m.why && <> — {m.why}</>}
-              {m.requires && <div className="muted">
-                {Object.entries(m.requires).map(([k, v]) =>
-                  `${k}: ${v}`).join(" · ")}</div>}
-              {m.cost && <div className="muted">{m.cost}</div>}
-              {m.source && <div className="muted">{m.source}</div>}
-            </li>))}</ul></div>)}
+      <p className="verdict">{verdict}</p>
+      <Afinity score={s.score} t={t} />
+      <Section title={t("rot.why")} open>
+        <p>{s.why}</p>
+        {explain && <p className="muted">{explain}</p>}
+      </Section>
+      {(s.benefits && Object.keys(s.benefits).length > 0 || irr != null) && (
+        <Section title={t("rot.benefits")} open>
+          <ul>
+            {Object.entries(s.benefits).map(([k, v]) => {
+              const lk = indicatorLabelKey(k);
+              const bv = benefitValue(v);
+              return lk == null ? null : (
+                <li key={k}>{t(lk)}: {bv.startsWith("field.")
+                  ? t(bv) : bv}</li>);
+            })}
+            {irr != null && <li>{t("rot.irrigated", { mm: irr })}</li>}
+          </ul>
+        </Section>)}
+      {s.sequence.length > 0 && (
+        <Section title={t("rot.sequence")} open>
+          <SeqBar s={s} t={t} />
+        </Section>)}
+      <Section title={t("rot.evidence")} count={s.evidence.length}>
+        <ul>{s.evidence.map((e, i) => <li key={i}>{e.text}
+          {e.source && <span className="muted"> — {e.source}</span>}</li>)}
+        </ul>
+      </Section>
+      <Section title={t("rot.gaps")} count={s.gaps.length}>
+        <ul>{s.gaps.map((g) => <li key={g}>{g}</li>)}</ul>
+      </Section>
+      <Section title={t("rot.risks")} count={s.risks.length}>
+        <ul>{s.risks.map((r) => <li key={r}>{r}</li>)}</ul>
+      </Section>
+      <Section title={t("rot.measures")} count={s.measures?.length ?? 0}>
+        <ul>{(s.measures ?? []).map((m) => (
+          <li key={m.id}><strong>{m.name}</strong>
+            {m.why && <> — {m.why}</>}
+            {m.requires && <div className="muted">
+              {measureReqPairs(m.requires).map((p) =>
+                `${t(p.key)}: ${p.value.startsWith("field.")
+                  ? t(p.value) : p.value}`).join(" · ")}</div>}
+            {m.cost && <div className="muted">
+              {t("measure.req.cost")}: {
+                t(benefitValue(m.cost))}</div>}
+            {m.source && <div className="muted">{m.source}</div>}
+          </li>))}</ul>
+      </Section>
     </article>
   );
+}
+
+/** Comparison table: each alternative vs the current rotation on the
+ * four comparison indicators (arrows + words, never color alone). */
+function CmpTable({ strategies, t }: {
+    strategies: Strategy[];
+    t: (k: string, v?: Record<string, string | number>) => string }) {
+  const current = strategies.find((s) => s.is_current);
+  const alts = strategies.filter((s) => !s.is_current);
+  if (!current || alts.length === 0) return null;
+  const cells = (d: ReturnType<typeof compareDeltas>[number]) =>
+    d.delta == null ? t("rot.cmp.same")
+      : t(d.dir === "up" ? "rot.cmp.up" : "rot.cmp.down",
+          { d: Math.abs(d.delta) });
+  return (
+    <details className="sec cmp-wrap">
+      <summary>{t("rot.cmp.title")}
+        <span className="count"> {alts.length}</span></summary>
+      <div style={{ overflowX: "auto" }}>
+        <table className="cal cmp">
+          <thead><tr><th scope="col"></th>
+            {alts.map((a) => <th key={a.id} scope="col">{a.name}</th>)}
+          </tr></thead>
+          <tbody>
+            {compareDeltas(alts[0], current).map((_, ci) => (
+              <tr key={ci}>
+                <th scope="row">
+                  {t(indicatorLabelKey(
+                    compareDeltas(alts[0], current)[ci].id) ?? "")}
+                </th>
+                {alts.map((a) => {
+                  const d = compareDeltas(a, current)[ci];
+                  return <td key={a.id}>{cells(d)}</td>;
+                })}
+              </tr>))}
+          </tbody>
+        </table>
+      </div>
+    </details>);
+}
+
+/** Rotations results block — exported for tests (Patagonia zero-state). */
+export function RotationResults({ rots, diag, explain, t }: {
+    rots: RotationsResponse;
+    diag: DiagnoseResponse | null;
+    explain: Record<string, string>;
+    t: (k: string, v?: Record<string, string | number>) => string }) {
+  const current = rots.strategies.find((s) => s.is_current) ?? null;
+  const groups = groupVariants(rots.strategies);
+  const trackRef = useRef<HTMLDivElement>(null);
+  const [carIdx, setCarIdx] = useState(0);
+  const onScroll = () => {
+    const el = trackRef.current;
+    if (!el || el.children.length === 0) return;
+    const w = (el.children[0] as HTMLElement).offsetWidth + 12;
+    setCarIdx(Math.min(groups.length - 1,
+      Math.round(el.scrollLeft / w)));
+  };
+  return (
+    <>
+      {diag?.zone && (
+        <p className="zone-header">
+          <strong>{t("rot.zone", { z: t(`zone.${diag.zone}`) })}</strong>
+          {diag.province && <span className="muted"> · {diag.province}</span>}
+        </p>)}
+      {rots.confidence === "low" && (
+        <p className="notice" role="status">
+          {t("rot.lowConfidence",
+            { why: rots.gaps?.[0] ?? t("rot.noStrategies") })}
+        </p>)}
+      {rots.strategies.length === 0 ? (
+        <div className="notice" role="status">
+          <p>{t("rot.noStrategies")}</p>
+          <p className="muted">{t("rot.askAgronomist")}</p>
+        </div>
+      ) : (
+        <>
+          {rots.strategies.length === 1 &&
+            rots.strategies[0].is_current && (
+            <p className="muted">{t("rot.onlyCurrent")}</p>)}
+          <CmpTable strategies={rots.strategies} t={t} />
+          <div className="strategies" ref={trackRef} onScroll={onScroll}>
+            {groups.map((g) => (
+              <StrategyCard key={g.primary.id} s={g.primary} t={t}
+                            current={current} variants={g.variants}
+                            explain={explain[g.primary.id]} />))}
+          </div>
+          {groups.length > 1 && (
+            <div className="carousel-dots">
+              {groups.map((g, i) => (
+                <button key={g.primary.id} type="button"
+                        className={`dot${i === carIdx ? " on" : ""}`}
+                        aria-label={`${i + 1}`}
+                        onClick={() => {
+                          const el = trackRef.current;
+                          const w = el?.children[0] &&
+                            (el.children[0] as HTMLElement).offsetWidth + 12;
+                          el?.scrollTo({ left: (w ?? 0) * i,
+                                         behavior: "smooth" });
+                        }} />))}
+              <span className="muted">
+                {t("rot.carousel", { i: carIdx + 1, n: groups.length })}
+              </span>
+            </div>)}
+        </>)}
+      <p className="notice">{rots.disclaimer || t("rot.disclaimer")}</p>
+    </>);
 }
 
 export function FieldPanel({ ring, open, onClose }: {
@@ -95,9 +389,13 @@ export function FieldPanel({ ring, open, onClose }: {
   const [explain, setExplain] = useState<Record<string, string>>({});
   const [rotList, setRotList] = useState<{ id: string; label: string }[]>([]);
   const [current, setCurrent] = useState("unknown");
-  const [prios, setPrios] = useState<Record<string, number>>({});
+  const [prioSel, setPrioSel] = useState<string[]>([]);
   const [cons, setCons] = useState<Record<string, boolean>>({});
+  const [step, setStep] = useState<1 | 2>(1);
   const [busy, setBusy] = useState(false);
+  const fmt = useMemo(() =>
+    new Intl.NumberFormat(lang === "en" ? "en" : "es",
+      { maximumFractionDigits: 1 }), [lang]);
 
   useEffect(() => {
     knowledgeRotations().then((k) => {
@@ -120,11 +418,17 @@ export function FieldPanel({ ring, open, onClose }: {
   useEffect(() => {
     if (!open || !body) return;
     setBusy(true); setDiag(null); setRots(null); setExplain({});
+    setStep(1);
     apiDiagnose(body).then((d) => {
       setDiag(d); setBusy(false);
       if (d) savePlot("lote", body);
     });
   }, [open, body]);
+
+  const togglePrio = (p: string) => setPrioSel((sel) => {
+    if (sel.includes(p)) return sel.filter((x) => x !== p);
+    return sel.length < 3 ? [...sel, p] : sel;
+  });
 
   const runRotations = async () => {
     if (!diag) return;
@@ -134,9 +438,9 @@ export function FieldPanel({ ring, open, onClose }: {
       .catch(() => [] as string[]);
     const r = await apiRotations({
       diagnosis: diag,
+      zone: diag.zone,
       current: current === "unknown" ? null : { rotation_id: current },
-      priorities: Object.fromEntries(
-        PRIORITIES.map((p) => [p, prios[p] ?? 3])),
+      priorities: prioWeights(prioSel),
       constraints: {
         irrigation: Boolean(cons.irrigation),
         livestock: Boolean(cons.livestock),
@@ -155,43 +459,44 @@ export function FieldPanel({ ring, open, onClose }: {
     setBusy(false);
   };
 
+  const facts = diag ? summaryFacts(diag) : [];
+
   return (
     <BottomSheet open={open}>
       <div style={{ display: "flex", justifyContent: "space-between" }}>
         <h3 style={{ margin: 0 }}>{t("field.cta")}</h3>
-        <button onClick={onClose} aria-label="cerrar">✕</button>
+        <button onClick={onClose} aria-label={t("ui.close")}>✕</button>
       </div>
       {busy && <p aria-live="polite">{t("field.diagnosing")}</p>}
       {!diag && !busy && <p className="muted">{t("panel.noData")}</p>}
 
       {diag && (
         <>
-          <div className="chip-row">
-            {diag.cards.map((c) => (
-              <Card key={c.id}>
-                <strong>{c.id}</strong>
-                <div className="big">
-                  {c.value == null ? t("field.noData") : c.value}
-                </div>
-                <p className="muted">{c.text}</p>
-                <p className="muted">{c.source}{c.resolution && ` · ${c.resolution}`}</p>
-                <span className="badge">{t(`field.confidence.${c.confidence}`)}</span>
-              </Card>
-            ))}
-          </div>
-          <p className="muted">
-            NDVI<Glossary term="NDVI" /> · evapotranspiración
-            <Glossary term="evapotranspiración" /> · balance hídrico
-            <Glossary term="balance hídrico" /> · anomalía
-            <Glossary term="anomalía" /> · grados-día
-            <Glossary term="grados-día" />
+          <p className="diag-summary">
+            {diag.zone
+              ? t("field.sum.l1z",
+                  { zone: t(`zone.${diag.zone}`),
+                    ha: fmt.format(diag.area_ha) })
+              : t("field.sum.l1", { ha: fmt.format(diag.area_ha) })}
+            <br />
+            {facts.map((f) => t(f.key, f.vars)).join("; ")}.
           </p>
+
+          {groupedCards(diag.cards).map((g) => (
+            <section key={g.group} className="diag-group">
+              <h4>{t(`field.group.${g.group}`)}</h4>
+              <div className="diag-grid">
+                {g.cards.map((c) => (
+                  <DiagTile key={c.id} c={c} t={t} fmt={fmt} />))}
+              </div>
+            </section>))}
 
           <Card title={t("field.calendar")}>
             <div style={{ overflowX: "auto" }}>
-              <table className="cal" aria-label={t("field.calendar")}>
+              <table className="cal" aria-label={t("calendar.aria")}>
                 <thead><tr><th></th>
-                  {diag.calendar.months.map((m) => <th key={m} scope="col">{m}</th>)}
+                  {diag.calendar.months.map((m) =>
+                    <th key={m} scope="col">{m}</th>)}
                 </tr></thead>
                 <tbody>
                   {diag.calendar.rows.map((row) => (
@@ -213,62 +518,77 @@ export function FieldPanel({ ring, open, onClose }: {
               <ul>{diag.measures.map((m) => (
                 <li key={m.id}><strong>{m.name}</strong> — {m.why}
                   <div className="muted">
-                    {m.requires && Object.entries(m.requires)
-                      .map(([k, v]) => `${k}: ${v}`).join(" · ")}
-                    {m.cost && ` · ${m.cost}`}
+                    {m.requires && measureReqPairs(m.requires)
+                      .map((p) => `${t(p.key)}: ${p.value.startsWith("field.")
+                        ? t(p.value) : p.value}`).join(" · ")}
+                    {m.cost && ` · ${t("measure.req.cost")}: ${
+                      t(benefitValue(m.cost))}`}
                     {m.source && ` · ${m.source}`}</div>
                 </li>))}</ul>
             </Card>)}
 
-          <Card title={t("field.form.priorities")}>
-            <label>{t("field.form.current")}
-              <select value={current}
-                      onChange={(e) => setCurrent(e.target.value)}>
-                <option value="unknown">{t("field.form.dontKnow")}</option>
-                {rotList.map((r) =>
-                  <option key={r.id} value={r.id}>{r.label}</option>)}
-              </select>
-            </label>
-            {PRIORITIES.map((p) => (
-              <label key={p} style={{ display: "block" }}>
-                {t(`prio.${p}`)} — {prios[p] ?? 3}
-                <input type="range" min={0} max={5} step={1}
-                  value={prios[p] ?? 3}
-                  aria-label={t(`prio.${p}`)}
-                  onChange={(e) =>
-                    setPrios({ ...prios, [p]: Number(e.target.value) })} />
-              </label>))}
-            <fieldset style={{ border: 0, padding: 0 }}>
-              <legend>{t("field.form.constraints")}</legend>
-              {CONSTRAINTS.map((c) => (
-                <label key={c} style={{ display: "inline-flex",
-                  gap: 6, marginRight: 12, alignItems: "center" }}>
-                  <input type="checkbox"
-                    checked={cons[c] ?? false}
-                    onChange={(e) =>
-                      setCons({ ...cons, [c]: e.target.checked })} />
-                  {t(`field.form.${c}`)}
-                </label>))}
-            </fieldset>
-            <button className="primary" onClick={runRotations} disabled={busy}>
-              {t("field.form.run")}</button>
-          </Card>
+          <p className="muted">
+            {t("gloss.ndvi")}<Glossary term="ndvi" /> ·{" "}
+            {t("gloss.et")}<Glossary term="et" /> ·{" "}
+            {t("gloss.waterBalance")}<Glossary term="waterBalance" /> ·{" "}
+            {t("gloss.anomaly")}<Glossary term="anomaly" /> ·{" "}
+            {t("gloss.gdd")}<Glossary term="gdd" />
+          </p>
+
+          {step === 1 && !rots && (
+            <button className="primary" onClick={() => setStep(2)}>
+              {t("field.form.run")}</button>)}
+
+          {step === 2 && (
+            <Card title={t("field.form.run")}>
+              <label>{t("field.form.current")}
+                <select value={current}
+                        onChange={(e) => setCurrent(e.target.value)}>
+                  <option value="unknown">{t("field.form.dontKnow")}</option>
+                  {rotList.map((r) =>
+                    <option key={r.id} value={r.id}>{r.label}</option>)}
+                </select>
+              </label>
+              <fieldset className="prio-set">
+                <legend>{t("prio.choose")}</legend>
+                <div className="prio-chips" role="group"
+                     aria-label={t("prio.choose")}>
+                  {PRIORITY_IDS.map((p) => {
+                    const rank = prioSel.indexOf(p);
+                    return (
+                      <button key={p} type="button" className="chip"
+                              aria-pressed={rank >= 0}
+                              onClick={() => togglePrio(p)}>
+                        {t(`prio.${p}`)}
+                        {rank >= 0 &&
+                          <span className="rank"> {rank + 1}</span>}
+                      </button>);
+                  })}
+                </div>
+                <p className="muted">{t("prio.hint")}</p>
+              </fieldset>
+              <fieldset className="cons-set">
+                <legend>{t("field.form.constraints")}</legend>
+                <div className="cons-grid">
+                  {CONSTRAINTS.map((c) => (
+                    <label key={c}>
+                      <input type="checkbox"
+                        checked={cons[c] ?? false}
+                        onChange={(e) =>
+                          setCons({ ...cons, [c]: e.target.checked })} />
+                      {t(`field.form.${c}`)}
+                    </label>))}
+                </div>
+              </fieldset>
+              <button className="primary" onClick={runRotations}
+                      disabled={busy}>
+                {t("field.form.run")}</button>
+            </Card>)}
         </>
       )}
 
-      {rots && (
-        <>
-          <div className="strategies">
-            {rots.strategies.map((s) => (
-              <div key={s.id}>
-                <StrategyCard s={s} t={t} />
-                {explain[s.id] &&
-                  <p className="muted">{explain[s.id]}</p>}
-              </div>))}
-          </div>
-          <p className="notice">{rots.disclaimer || t("rot.disclaimer")}</p>
-        </>
-      )}
+      {rots && <RotationResults rots={rots} diag={diag}
+                                explain={explain} t={t} />}
       {!rots && diag && <p className="notice">{t("rot.disclaimer")}</p>}
     </BottomSheet>
   );

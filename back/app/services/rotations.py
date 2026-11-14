@@ -61,12 +61,13 @@ PRIORITY_LABEL = {"water": "cuidar el agua", "soil": "mejorar el suelo",
                   "erosion": "reducir la erosión", "income": "el ingreso",
                   "forage": "producir forraje", "nitrogen": "el nitrógeno",
                   "pests": "cortar plagas", "avoid_burning": "evitar quemas"}
-PRIORITY_MAP = {"water": "water_balance", "soil": "residue_t_ha_yr",
+PRIORITY_MAP = {"water": "water_balance_mm", "soil": "residue_t_ha_yr",
                 "erosion": "erosion_risk", "income": "income",
                 "forage": "forage", "nitrogen": "nitrogen",
                 "pests": "pest_break", "avoid_burning": "burns_avoided"}
 INDICATOR_LABEL = {
     "water_balance": "balance hídrico (mm/año)",
+    "water_balance_mm": "agua tomada del sistema (mm/año)",
     "residue_t_ha_yr": "t/ha por año de rastrojo",
     "carbon": "t/ha por año de rastrojo",  # deprecated alias
     "irrigation_need_mm": "mm de riego suplementario por año",
@@ -350,17 +351,20 @@ def indicators(rot: Rotation, diag: dict, zone: str | None,
         wb = "con riego"
         need_mm = round(sum(max(0.0, d - a)
                             for d, a in zip(demands, avails)) / years)
+        wb_mm = need_mm
     elif avails is not None:
-        wb = round(sum(d - a for d, a in zip(demands, avails)) / years)
+        wb = wb_mm = round(
+            sum(d - a for d, a in zip(demands, avails)) / years)
     else:
-        wb = None  # cannot compute -> null, surfaced in gaps
+        wb = wb_mm = None  # cannot compute -> null, surfaced in gaps
 
-    bare = rot.bare_soil_days
-    if bare is None:
-        covered = set()
-        for s in rot.sequence:
-            covered |= _cycle_doys(s.start, s.end)
-        bare = 365 - len(covered)
+    # bare_soil_days is recomputed from the RETURNED (possibly
+    # zone-shifted) sequence over absolute days; the catalog value stays
+    # a fixture-time cross-check only
+    covered = set()
+    for a, b in _abs_windows(rot):
+        covered.update(range(a, b + 1))
+    bare = max(0, round((years * 365 - len(covered)) / years))
 
     heavy = (_card(diag, "heavy_rain") or {}).get("value") or 0
     slope = (_card(diag, "slope") or {}).get("value") or 0
@@ -380,6 +384,7 @@ def indicators(rot: Rotation, diag: dict, zone: str | None,
 
     out = {
         "water_balance": wb,
+        "water_balance_mm": wb_mm,
         "residue_t_ha_yr":
             round(sum(c.residue_t_ha for c in crops) / years, 1),
         "nitrogen": sum(1 for c in crops if c.n_fixation),
@@ -427,7 +432,7 @@ def score(alt: dict, cur: dict, priorities: dict) -> float:
         key = PRIORITY_MAP[p]
         a = _metric_value(alt, key)
         b = _metric_value(cur, key)
-        invert = key in ("water_balance", "erosion_risk")
+        invert = key in ("water_balance_mm", "erosion_risk")
         num += w * _numeric_delta(a, b, invert)
     return round(0.5 + num / (2 * sum(used.values())), 3)
 
@@ -608,12 +613,22 @@ def _shift_for_zone(rot: Rotation,
         if not win:
             items.append(s)
             continue
+        # perennial / cut-period items (e.g. alfalfa years) keep their
+        # own dates and full annual water demand: the zone window bounds
+        # annual crops, not a standing pasture
+        length = (_doy(s.end) - _doy(s.start)) % 365
+        if length + 1 >= PERENNIAL_MIN_DAYS:
+            items.append(s)
+            continue
         start, end = s.start, s.end
         if not _in_window(_doy(start), win[0], win[1]):
             start = win[0]
         sd = _doy(start)
         if (_doy(end) - sd) % 365 > (_doy(win[2]) - sd) % 365:
-            end = win[2]
+            # end past the harvest close: slide the whole cycle earlier
+            # so it ends at the close with its own declared length
+            sd = (_doy(win[2]) - length) % 365
+            start, end = _md(sd), win[2]
         if (start, end) != (s.start, s.end):
             notes.append(f"{crop.id}: fechas ajustadas a la ventana de "
                          f"{zone} ({s.start}–{s.end} → {start}–{end})")

@@ -208,10 +208,13 @@ def test_stop_conditions_each_and_none():
     assert "por confirmar" in det["rh_lt_30"]
     conds, _ = _stop_conditions(base, end)
     assert conds == []
-    # older day inside the 3-day window also counts
+    # an older day inside the 3-day window stays as context only:
+    # no alert, but a dated "hubo ... hace N días" detail
     old = {**base, "T2M_MAX": {end - timedelta(days=2): 37.0}}
-    conds, _ = _stop_conditions(old, end)
-    assert conds == ["temp_gt_35"]
+    conds, det = _stop_conditions(old, end)
+    assert conds == []
+    assert det["temp_gt_35"].startswith("hubo")
+    assert "hace 2 días" in det["temp_gt_35"]
 
 
 def test_rain_monthly_mm():
@@ -288,3 +291,51 @@ async def test_diagnose_returns_zone(monkeypatch):
     assert d["zone"] == "pampa_humeda"
     assert d["province"] == "Buenos Aires"
     assert d["country"] == "AR"
+
+
+# ------------------------------------------------- task 15 regressions ----
+
+def test_stop_conditions_last_day_only_alert():
+    """Threshold met two days before the last valid day -> no alert, but
+    the detail keeps the dated, softer 'hubo ... hace 2 días' wording."""
+    from app.routers.field import _stop_conditions
+    from datetime import date, timedelta
+    end = date(2024, 11, 14)
+    power = {"RH2M": {}, "WS2M": {},
+             "T2M_MAX": {end: 25.0,
+                         end - timedelta(days=2): 36.5}}
+    conds, det = _stop_conditions(power, end)
+    assert "temp_gt_35" not in conds
+    assert "hubo" in det["temp_gt_35"]
+    assert "hace 2 días" in det["temp_gt_35"]
+    assert "12 de noviembre" in det["temp_gt_35"]
+
+
+def test_stop_conditions_last_day_alert():
+    from app.routers.field import _stop_conditions
+    from datetime import date
+    end = date(2024, 11, 14)
+    power = {"RH2M": {}, "WS2M": {end: 12.5}, "T2M_MAX": {}}
+    conds, det = _stop_conditions(power, end)
+    assert conds == ["wind_gt_40kmh"]
+    assert "hay" in det["wind_gt_40kmh"]
+    assert "14 de noviembre" in det["wind_gt_40kmh"]
+
+
+def test_stop_conditions_no_condition():
+    from app.routers.field import _stop_conditions
+    from datetime import date
+    end = date(2024, 11, 14)
+    power = {"RH2M": {end: 50}, "WS2M": {end: 5},
+             "T2M_MAX": {end: 25}}
+    conds, det = _stop_conditions(power, end)
+    assert conds == [] and det == {}
+
+
+def test_stop_conditions_humidity_inta_note():
+    from app.routers.field import _stop_conditions
+    from datetime import date
+    end = date(2024, 11, 14)
+    power = {"RH2M": {end: 25}, "WS2M": {}, "T2M_MAX": {}}
+    _, det = _stop_conditions(power, end)
+    assert "umbral por confirmar con INTA" in det["rh_lt_30"]

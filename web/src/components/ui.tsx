@@ -1,4 +1,5 @@
 import { useState, type ReactNode } from "react";
+import { useT } from "../i18n";
 
 export function Card({ title, children, className = "" }:
     { title?: ReactNode; children: ReactNode; className?: string }) {
@@ -13,9 +14,10 @@ export function Card({ title, children, className = "" }:
 /** Bottom sheet on mobile, side panel on desktop (CSS does the split). */
 export function BottomSheet({ children, open }: {
     children: ReactNode; open: boolean }) {
+  const { t } = useT();
   if (!open) return null;
   return (
-    <aside className="panel" aria-label="panel">
+    <aside className="panel" aria-label={t("ui.panel")}>
       <span className="grab" aria-hidden="true" />
       <div className="panel-inner">{children}</div>
     </aside>

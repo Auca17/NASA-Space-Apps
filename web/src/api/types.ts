@@ -42,11 +42,17 @@ export interface LiveResponse {
 
 export interface Card {
   id: string;
-  value: number | null;
+  value: number | string | null;
+  unit?: string | null;
   text: string;
   source: string;
   resolution?: string;
   confidence: "high" | "medium" | "low";
+  /** rain card: 12 monthly means mm/month (2001 -> last full year). */
+  rain_monthly_mm?: number[];
+  /** fire_weather card: single INTA stop conditions met (last 3 days). */
+  stop_conditions?: string[];
+  stop_detail?: Record<string, string>;
 }
 
 export interface CalendarRow {
@@ -70,6 +76,11 @@ export interface DiagnoseResponse {
   diagnosis_id: string;
   area_ha: number;
   centroid: [number, number];
+  /** Compatible additions 2026-11: agronomic zone/province/country of
+   * the plot centroid (`zone` is read by /api/field/rotations). */
+  zone?: string;
+  province?: string | null;
+  country?: string | null;
   h3_r5: string[];
   h3_r6: string[];
   cards: Card[];
@@ -99,6 +110,10 @@ export interface RotationsResponse {
   diagnosis_id?: string;
   strategies: Strategy[];
   disclaimer: string;
+  /** "low" when the zone has no validated rotation (e.g. Patagonia). */
+  confidence?: string;
+  /** Top-level gaps, e.g. "sin rotaciones validadas para esta zona". */
+  gaps?: string[];
 }
 
 export interface ExplainResponse {

@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useT } from "../../i18n";
 import { APP_NAME } from "../../config";
+import { apiUrl } from "../../api/client";
 
 type Hit = { lat: number; lon: number; name: string };
 
@@ -26,12 +27,12 @@ export function Welcome({ onLocate, onExplore }: {
     if (!q.trim()) return;
     setBusy(true);
     try {
+      // same-origin proxy: public Nominatim sends no CORS header
       const r = await fetch(
-        `https://nominatim.openstreetmap.org/search?format=json&limit=5&q=${encodeURIComponent(q)}`,
-        { headers: { "Accept-Language": "es" } });
-      const j = (await r.json()) as { lat: string; lon: string; display_name: string }[];
-      setHits(j.map((h) => ({
-        lat: Number(h.lat), lon: Number(h.lon), name: h.display_name })));
+        apiUrl(`/api/geocode?q=${encodeURIComponent(q)}`));
+      const j = (await r.json()) as
+        { hits: { lat: number; lon: number; name: string }[] };
+      setHits(j.hits ?? []);
     } catch { setHits([]); }
     setBusy(false);
   };

@@ -210,3 +210,21 @@ Triggers:
 Missing input -> trigger skipped, listed in `measures_gaps`. Order: most
 triggers fired first, then lowest cost. `burns_avoided` in the rotation
 engine uses the same `uncovered_burn_months` rule.
+
+## Engine notes (task 15)
+
+- Perennial / cut-period items (cycles >= 330 days, e.g. alfalfa years)
+  keep their own dates and full annual water demand; zone windows only
+  bound annual crops. Non-perennials whose shifted end passes the zone
+  harvest close slide the whole cycle earlier, keeping its length.
+- `bare_soil_days` is recomputed from the returned (possibly
+  zone-shifted) sequence; the catalog value is a fixture-time
+  cross-check only. Erosion buckets use the recomputed value.
+- `water_balance_mm` is the numeric metric used by the `water`
+  priority: rain-based balance when dry, `irrigation_need_mm` when
+  irrigated. `water_balance` stays the display value (`"con riego"` or
+  mm).
+- `stop_conditions` alert on the last valid day only; the previous two
+  days stay as dated context in `stop_detail`
+  (`hay ... el 14 de noviembre` / `hubo ... hace 2 días`). Humidity
+  keeps the "umbral por confirmar con INTA" note.

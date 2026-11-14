@@ -107,9 +107,15 @@ export function HistoricControls({ globe, onMonth }: {
              onChange={(e) => { setIdx(Number(e.target.value)); setPlaying(false); }}
              style={{ width: "100%" }} />
       {maxN > 0 && (
-        <Legend from="0" to={String(maxN)}
-          colors={[css(viridis(0.1)), css(viridis(0.55)), css(viridis(1))]} />
-      )}
+        <>
+          <Legend from="0" to={String(maxN)}
+            colors={[css(viridis(0.1)), css(viridis(0.55)),
+                     css(viridis(1))]} />
+          <p className="muted" style={{ margin: 0, fontSize: "0.72rem" }}>
+            {t("legend.unit")} · {t("legend.maxMonth",
+              { max: maxN, month: months.current[idx] })}
+          </p>
+        </>)}
     </div>
   );
 }

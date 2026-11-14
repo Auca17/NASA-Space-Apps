@@ -164,7 +164,7 @@ describe("risk presentation", () => {
     });
     expect(v.normalForSeason).toBe(false);
     expect(v.ratioText).toBe("2.6×");
-    expect(v.icon).toBe("■");
+    expect(v.icon).toBe("▲");
   });
 });
 

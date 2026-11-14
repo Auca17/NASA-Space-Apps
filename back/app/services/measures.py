@@ -89,12 +89,15 @@ def _triggers(ctx) -> tuple[set, list[str]]:
 
     stop = fwc.get("stop_conditions")
     if stop is not None:
-        if stop:
+        det = fwc.get("stop_detail") or {}
+        if stop or det:
             fired.add("harvest_stop_conditions")
-            det = fwc.get("stop_detail") or {}
+            # detail entries carry the observation date and age-aware
+            # wording ("hay ... el 14 de noviembre" on the last valid
+            # day, "hubo ... hace 2 días" for older hits)
             ctx["_why"]["harvest_stop_conditions"] = \
                 "condición de parada: " + "; ".join(
-                    det.get(c, c) for c in stop)
+                    det.get(c, c) for c in det or stop)
     else:
         gaps.append("harvest_stop_conditions (sin tarjeta fire_weather)")
 

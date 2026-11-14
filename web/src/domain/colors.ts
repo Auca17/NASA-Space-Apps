@@ -41,6 +41,32 @@ export function countT(v: number, max: number): number {
   return max <= 0 ? 0 : Math.min(Math.sqrt(v / max), 1);
 }
 
+/* --- WCAG contrast helpers (cell text on colored fills) --- */
+
+function chan(v: number): number {
+  const x = v / 255;
+  return x <= 0.03928 ? x / 12.92 : Math.pow((x + 0.055) / 1.055, 2.4);
+}
+
+/** Relative luminance (WCAG 2.x) of an sRGB color. */
+export function luminance(c: RGB): number {
+  return 0.2126 * chan(c[0]) + 0.7152 * chan(c[1]) + 0.0722 * chan(c[2]);
+}
+
+/** Contrast ratio a:b (order-independent), 1..21. */
+export function contrast(a: RGB, b: RGB): number {
+  const [hi, lo] = [luminance(a), luminance(b)].sort((x, y) => y - x);
+  return (hi + 0.05) / (lo + 0.05);
+}
+
+export const INK: RGB = [27, 27, 24];
+export const PAPER: RGB = [255, 255, 255];
+
+/** Legible text color (≥4.5:1) on a colored background. */
+export function textOn(bg: RGB): RGB {
+  return contrast(INK, bg) >= 4.5 ? INK : PAPER;
+}
+
 /** MapLibre fill-color expression for a set of cell->value colors. */
 export function fillColorExpr(colors: Map<string, RGB>, fallback: RGB) {
   const match: unknown[] = ["match", ["get", "h3"]];

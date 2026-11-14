@@ -1,8 +1,10 @@
 import { describe, it, expect, vi } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
 import { Calendar } from "./Calendar";
-import { Glossary, glossaryText } from "./Glossary";
+import { Glossary, GLOSS_TERMS } from "./Glossary";
 import { I18nProvider, useT } from "../i18n";
+import es from "../i18n/es.json";
+import en from "../i18n/en.json";
 import { Welcome } from "../features/welcome/Welcome";
 
 describe("Calendar", () => {
@@ -34,14 +36,16 @@ describe("Calendar", () => {
 });
 
 describe("Glossary", () => {
-  it("has text for the required terms", () => {
-    for (const term of ["NDVI", "anomalía", "evapotranspiración",
-                        "balance hídrico", "grados-día"]) {
-      expect(glossaryText(term).length).toBeGreaterThan(10);
+  it("has i18n text for every term in both languages", () => {
+    for (const term of GLOSS_TERMS) {
+      for (const lang of [es, en]) {
+        expect(lang[`gloss.${term}`]?.length).toBeGreaterThan(0);
+        expect(lang[`gloss.def.${term}`]?.length).toBeGreaterThan(10);
+      }
     }
   });
   it("opens a tooltip with the term text", () => {
-    render(<Glossary term="NDVI" />);
+    render(<I18nProvider><Glossary term="ndvi" /></I18nProvider>);
     fireEvent.click(screen.getByRole("button", { name: "NDVI?" }));
     expect(screen.getByRole("tooltip")).toHaveTextContent(/verdor/);
   });
