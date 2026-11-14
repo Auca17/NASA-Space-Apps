@@ -1,6 +1,6 @@
 # Pipeline de fuego (Frente A)
 
-Convierte los zips anuales de FIRMS en los archivos del contrato de datos (`docs/data-contract.md`) y en la entrega para el modelo de riesgo. Brief: `docs/briefs/ezequiel-datos-fuego.md`.
+Convierte los zips anuales de FIRMS en los archivos del contrato de datos (`docs/data-contract.md`) y en la entrega para el modelo de riesgo. Brief: `docs/briefs/ezequiel-datos-fuego.md`. **Método y limitaciones para el jurado:** `docs/metodo-fuego.md`.
 
 ## Requisitos
 
@@ -43,6 +43,7 @@ Los pasos 01 y 03 son reanudables: si se cortan, al volver a correrlos saltean l
 | 6. Export | `06_export.py` | `data/processed/export/v1/` (meta, globe, fire/cal, fire/daily, fire/points, risk) + `export/sizes.json` | ✅ |
 | 2026 por API | `07_firms_2026.py` | SP hasta jul/ago 2026 y NRT hasta hoy | ✅ |
 | Validación | `validate_export.py` | `_check` de `back/tools/validate_contract.py` en paralelo | ✅ |
+| Dataset publicable | `08_release.py` | `data/processed/release/`: serie mensual H3 res 5 en Parquet y CSV, metadatos, CITATION.cff, SHA256SUMS | ✅ |
 | Subida | `upload_r2.py` | `v1/` y `work/` en R2 | ⬜ falta (sin bucket todavía) |
 
 ## Decisiones de implementación
