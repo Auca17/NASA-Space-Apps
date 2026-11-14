@@ -1,41 +1,70 @@
 {
-  "version": "0.1",
+  "version": "0.2",
   "rotations": [
     {
       "id": "soja-soja",
       "name": {
-        "es": "Soja â€“ soja",
-        "en": "Soy â€“ soy"
+        "es": "Soja – soja",
+        "en": "Soy – soy"
       },
-      "years": 2,
+      "years": 1,
       "sequence": [
         {
           "crop": "soja",
           "start": "11-01",
-          "end": "04-30"
+          "end": "04-15"
+        }
+      ],
+      "bare_soil_days": 199,
+      "sources": [
+        "MAGyP, Estimaciones Agrícolas (área, rinde y avance de siembra/cosecha por delegación)",
+        "Bolsa de Cereales de Buenos Aires, Panorama Agrícola Semanal (avance de siembra y cosecha por región)",
+        "bare_soil_days = (años × 365 − días con cultivo vivo) / años, calculado sobre la secuencia; el rastrojo en pie no se descuenta — validar"
+      ]
+    },
+    {
+      "id": "trigo-soja2-maiz",
+      "name": {
+        "es": "Trigo / soja 2ª – maíz",
+        "en": "Wheat / 2nd soy – maize"
+      },
+      "years": 2,
+      "sequence": [
+        {
+          "crop": "trigo",
+          "start": "06-01",
+          "end": "12-10"
         },
         {
           "crop": "soja",
-          "start": "11-01",
+          "start": "12-15",
           "end": "04-30"
+        },
+        {
+          "crop": "maiz",
+          "start": "09-25",
+          "end": "03-15"
         }
       ],
-      "bare_soil_days": 180,
+      "bare_soil_days": 114,
       "sources": [
-        "MAGyP Estimaciones AgrÃ­colas"
+        "MAGyP, Estimaciones Agrícolas (área, rinde y avance de siembra/cosecha por delegación)",
+        "Bolsa de Cereales de Buenos Aires, Panorama Agrícola Semanal (avance de siembra y cosecha por región)",
+        "INTA / AAPRESID, Red de Brechas de Carbono, informe 2023–2024: rotaciones con más gramíneas tienen balance de C positivo",
+        "bare_soil_days = (años × 365 − días con cultivo vivo) / años, calculado sobre la secuencia; el rastrojo en pie no se descuenta — validar"
       ]
     },
     {
       "id": "maiz-soja-vicia",
       "name": {
-        "es": "MaÃ­z â€“ soja + vicia",
-        "en": "Maize â€“ soy + vetch"
+        "es": "Maíz – vicia – soja",
+        "en": "Maize – vetch – soy"
       },
       "years": 2,
       "sequence": [
         {
           "crop": "maiz",
-          "start": "09-15",
+          "start": "09-25",
           "end": "03-15"
         },
         {
@@ -46,41 +75,51 @@
         {
           "crop": "soja",
           "start": "11-01",
-          "end": "04-30"
+          "end": "04-15"
         }
       ],
-      "bare_soil_days": 40,
+      "bare_soil_days": 97,
       "sources": [
-        "INTA Cultivos de cobertura 2019"
+        "INTA EEA General Villegas, ensayos de cultivos de cobertura vicia y centeno: uso consuntivo 110–241 mm según momento de secado",
+        "MAGyP, Estimaciones Agrícolas (área, rinde y avance de siembra/cosecha por delegación)",
+        "bare_soil_days = (años × 365 − días con cultivo vivo) / años, calculado sobre la secuencia; el rastrojo en pie no se descuenta — validar"
       ]
     },
     {
-      "id": "trigo-soja2-maiz",
+      "id": "sorgo-soja-trigo-soja2",
       "name": {
-        "es": "Trigo – soja 2ª – maíz",
-        "en": "Wheat – 2nd soy – maize"
+        "es": "Sorgo – soja – trigo / soja 2ª",
+        "en": "Sorghum – soy – wheat / 2nd soy"
       },
-      "years": 2,
+      "years": 3,
       "sequence": [
         {
-          "crop": "trigo",
-          "start": "06-15",
-          "end": "12-15"
+          "crop": "sorgo",
+          "start": "10-20",
+          "end": "04-15"
         },
         {
           "crop": "soja",
-          "start": "12-20",
-          "end": "04-30"
+          "start": "11-01",
+          "end": "04-15"
         },
         {
-          "crop": "maiz",
-          "start": "09-20",
-          "end": "03-20"
+          "crop": "trigo",
+          "start": "06-01",
+          "end": "12-10"
+        },
+        {
+          "crop": "soja",
+          "start": "12-15",
+          "end": "04-30"
         }
       ],
-      "bare_soil_days": 70,
+      "bare_soil_days": 140,
       "sources": [
-        "INTA Rotaciones pampa húmeda 2022"
+        "MAGyP, Estimaciones Agrícolas (área, rinde y avance de siembra/cosecha por delegación)",
+        "Bolsa de Cereales de Buenos Aires, Panorama Agrícola Semanal (avance de siembra y cosecha por región)",
+        "INTA / AAPRESID, Red de Brechas de Carbono, informe 2023–2024: rotaciones con más gramíneas tienen balance de C positivo",
+        "bare_soil_days = (años × 365 − días con cultivo vivo) / años, calculado sobre la secuencia; el rastrojo en pie no se descuenta — validar"
       ]
     },
     {
@@ -93,42 +132,257 @@
       "sequence": [
         {
           "crop": "maiz",
-          "start": "09-20",
-          "end": "03-20"
+          "start": "09-25",
+          "end": "03-15"
         },
         {
           "crop": "soja",
           "start": "11-01",
-          "end": "04-30"
+          "end": "04-15"
         }
       ],
-      "bare_soil_days": 120,
+      "bare_soil_days": 196,
       "sources": [
-        "MAGyP Estimaciones Agrícolas"
+        "MAGyP, Estimaciones Agrícolas (área, rinde y avance de siembra/cosecha por delegación)",
+        "Bolsa de Cereales de Buenos Aires, Panorama Agrícola Semanal (avance de siembra y cosecha por región)",
+        "bare_soil_days = (años × 365 − días con cultivo vivo) / años, calculado sobre la secuencia; el rastrojo en pie no se descuenta — validar"
       ]
     },
     {
-      "id": "sorgo-soja",
+      "id": "trigo-soja2-maiz-soja",
       "name": {
-        "es": "Sorgo – soja",
-        "en": "Sorghum – soy"
+        "es": "Trigo / soja 2ª – maíz – soja",
+        "en": "Wheat / 2nd soy – maize – soy"
+      },
+      "years": 3,
+      "sequence": [
+        {
+          "crop": "trigo",
+          "start": "06-01",
+          "end": "12-10"
+        },
+        {
+          "crop": "soja",
+          "start": "12-15",
+          "end": "04-30"
+        },
+        {
+          "crop": "maiz",
+          "start": "09-25",
+          "end": "03-15"
+        },
+        {
+          "crop": "soja",
+          "start": "11-01",
+          "end": "04-15"
+        }
+      ],
+      "bare_soil_days": 142,
+      "sources": [
+        "MAGyP, Estimaciones Agrícolas (área, rinde y avance de siembra/cosecha por delegación)",
+        "Bolsa de Cereales de Buenos Aires, Panorama Agrícola Semanal (avance de siembra y cosecha por región)",
+        "INTA / AAPRESID, Red de Brechas de Carbono, informe 2023–2024: rotaciones con más gramíneas tienen balance de C positivo",
+        "bare_soil_days = (años × 365 − días con cultivo vivo) / años, calculado sobre la secuencia; el rastrojo en pie no se descuenta — validar"
+      ]
+    },
+    {
+      "id": "soja-centeno",
+      "name": {
+        "es": "Soja + centeno de cobertura",
+        "en": "Soy + cereal rye cover"
+      },
+      "years": 1,
+      "sequence": [
+        {
+          "crop": "centeno",
+          "start": "04-15",
+          "end": "09-30"
+        },
+        {
+          "crop": "soja",
+          "start": "11-01",
+          "end": "04-10"
+        }
+      ],
+      "bare_soil_days": 35,
+      "sources": [
+        "Scianca C., tesis UNS (repositoriodigital.uns.edu.ar, handle 123456789/2118): uso consuntivo de cultivos de cobertura (centeno, avena, raigrás) 88–299 mm hasta el secado",
+        "INTA EEA General Villegas, ensayos de cultivos de cobertura vicia y centeno: uso consuntivo 110–241 mm según momento de secado",
+        "bare_soil_days = (años × 365 − días con cultivo vivo) / años, calculado sobre la secuencia; el rastrojo en pie no se descuenta — validar"
+      ]
+    },
+    {
+      "id": "girasol-trigo-soja2",
+      "name": {
+        "es": "Girasol – trigo / soja 2ª",
+        "en": "Sunflower – wheat / 2nd soy"
       },
       "years": 2,
       "sequence": [
         {
-          "crop": "sorgo",
-          "start": "10-15",
-          "end": "04-15"
+          "crop": "girasol",
+          "start": "09-20",
+          "end": "02-15"
+        },
+        {
+          "crop": "trigo",
+          "start": "06-01",
+          "end": "12-10"
         },
         {
           "crop": "soja",
-          "start": "11-01",
+          "start": "12-15",
           "end": "04-30"
         }
       ],
-      "bare_soil_days": 150,
+      "bare_soil_days": 126,
       "sources": [
-        "INTA Sorgo granífero 2017"
+        "MAGyP, Estimaciones Agrícolas (área, rinde y avance de siembra/cosecha por delegación)",
+        "Bolsa de Cereales de Buenos Aires, Panorama Agrícola Semanal (avance de siembra y cosecha por región)",
+        "bare_soil_days = (años × 365 − días con cultivo vivo) / años, calculado sobre la secuencia; el rastrojo en pie no se descuenta — validar"
+      ]
+    },
+    {
+      "id": "cebada-soja2-maiz",
+      "name": {
+        "es": "Cebada / soja 2ª – maíz",
+        "en": "Barley / 2nd soy – maize"
+      },
+      "years": 2,
+      "sequence": [
+        {
+          "crop": "cebada",
+          "start": "06-15",
+          "end": "12-01"
+        },
+        {
+          "crop": "soja",
+          "start": "12-05",
+          "end": "04-30"
+        },
+        {
+          "crop": "maiz",
+          "start": "09-25",
+          "end": "03-15"
+        }
+      ],
+      "bare_soil_days": 120,
+      "sources": [
+        "MAGyP, Estimaciones Agrícolas (área, rinde y avance de siembra/cosecha por delegación)",
+        "Bolsa de Cereales de Buenos Aires, Panorama Agrícola Semanal (avance de siembra y cosecha por región)",
+        "bare_soil_days = (años × 365 − días con cultivo vivo) / años, calculado sobre la secuencia; el rastrojo en pie no se descuenta — validar"
+      ]
+    },
+    {
+      "id": "alfalfa3-maiz-trigo-soja2",
+      "name": {
+        "es": "Pastura de alfalfa 3 años – maíz – trigo / soja 2ª",
+        "en": "3-yr alfalfa pasture – maize – wheat / 2nd soy"
+      },
+      "years": 5,
+      "sequence": [
+        {
+          "crop": "alfalfa",
+          "start": "03-15",
+          "end": "03-14"
+        },
+        {
+          "crop": "alfalfa",
+          "start": "03-15",
+          "end": "03-14"
+        },
+        {
+          "crop": "alfalfa",
+          "start": "03-15",
+          "end": "03-14"
+        },
+        {
+          "crop": "maiz",
+          "start": "09-25",
+          "end": "03-15"
+        },
+        {
+          "crop": "trigo",
+          "start": "06-01",
+          "end": "12-10"
+        },
+        {
+          "crop": "soja",
+          "start": "12-15",
+          "end": "04-30"
+        }
+      ],
+      "bare_soil_days": 46,
+      "sources": [
+        "MAGyP, Estimaciones Agrícolas (área, rinde y avance de siembra/cosecha por delegación)",
+        "INTA / AAPRESID, Red de Brechas de Carbono, informe 2023–2024: rotaciones con más gramíneas tienen balance de C positivo",
+        "bare_soil_days = (años × 365 − días con cultivo vivo) / años, calculado sobre la secuencia; el rastrojo en pie no se descuenta — validar"
+      ]
+    },
+    {
+      "id": "garbanzo-maiz",
+      "name": {
+        "es": "Garbanzo / maíz",
+        "en": "Chickpea / maize"
+      },
+      "years": 1,
+      "sequence": [
+        {
+          "crop": "garbanzo",
+          "start": "05-15",
+          "end": "10-31"
+        },
+        {
+          "crop": "maiz",
+          "start": "12-15",
+          "end": "05-10"
+        }
+      ],
+      "bare_soil_days": 48,
+      "sources": [
+        "MAGyP, Estimaciones Agrícolas (área, rinde y avance de siembra/cosecha por delegación)",
+        "Zhang, Pala, Oweis & Harris (2000), Water use and water-use efficiency of chickpea and lentil in a Mediterranean environment, Aust. J. Agric. Res. 51: ET estacional media 268 mm",
+        "bare_soil_days = (años × 365 − días con cultivo vivo) / años, calculado sobre la secuencia; el rastrojo en pie no se descuenta — validar"
+      ]
+    },
+    {
+      "id": "alfalfa4-maiz",
+      "name": {
+        "es": "Pastura de alfalfa 4 años – maíz (bajo riego)",
+        "en": "4-yr alfalfa pasture – maize (irrigated)"
+      },
+      "years": 5,
+      "sequence": [
+        {
+          "crop": "alfalfa",
+          "start": "03-15",
+          "end": "03-14"
+        },
+        {
+          "crop": "alfalfa",
+          "start": "03-15",
+          "end": "03-14"
+        },
+        {
+          "crop": "alfalfa",
+          "start": "03-15",
+          "end": "03-14"
+        },
+        {
+          "crop": "alfalfa",
+          "start": "03-15",
+          "end": "03-14"
+        },
+        {
+          "crop": "maiz",
+          "start": "10-15",
+          "end": "04-15"
+        }
+      ],
+      "bare_soil_days": 36,
+      "sources": [
+        "MAGyP, Estimaciones Agrícolas (área, rinde y avance de siembra/cosecha por delegación)",
+        "bare_soil_days = (años × 365 − días con cultivo vivo) / años, calculado sobre la secuencia; el rastrojo en pie no se descuenta — validar"
       ]
     }
   ]

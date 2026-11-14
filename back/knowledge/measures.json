@@ -1,66 +1,150 @@
 {
-  "version": "0.1",
+  "version": "0.2",
   "measures": [
     {
       "id": "clean_harvester",
-      "name": {"es": "Limpiar la cosechadora",
-               "en": "Clean the harvester"},
+      "name": {
+        "es": "Limpiar la cosechadora",
+        "en": "Clean the harvester"
+      },
       "factor": "machine_ignition",
-      "addresses": "ignición por residuo seco acumulado en el motor y partes calientes",
-      "benefit": "elimina el foco de ignición más frecuente en cosecha (el motor trabaja a más de 600 °C)",
-      "requires": {"people": 1, "machinery": ["soplador o aire comprimido"],
-                   "downtime_h": 0.5, "cost": "low"},
-      "triggers": ["harvest_in_dry_season"],
-      "sources": ["INTA/UIB Balcarce + Bomberos Tandil, 'Pautas para evitar incendios durante la cosecha' (2023), https://www.argentina.gob.ar/node/413622"]
-    },
-    {
-      "id": "maintain_firebreak",
-      "name": {"es": "Revisar y mantener cortafuegos",
-               "en": "Maintain firebreaks"},
-      "factor": "spread_boundary",
-      "addresses": "propagación desde o hacia lotes vecinos con vegetación seca continua",
-      "benefit": "sectoriza el incendio: quema solo una parte del lote",
-      "requires": {"people": 2, "machinery": ["tractor con rastra o bordeadora"],
-                   "downtime_h": 4, "cost": "medium"},
-      "triggers": ["fire_weather_high", "risk_high"],
-      "sources": ["INTA/UIB Balcarce + Bomberos Tandil, 'Pautas para evitar incendios durante la cosecha' (2023), https://www.argentina.gob.ar/node/413622"]
-    },
-    {
-      "id": "no_residue_burning",
-      "name": {"es": "No quemar rastrojos",
-               "en": "Do not burn stubble"},
-      "factor": "residue_burning",
-      "addresses": "quema de rastrojo en época de alta propagación",
-      "benefit": "conserva la cobertura del suelo y elimina el foco de ignición más controlable",
-      "requires": {"people": 0, "machinery": [],
-                   "downtime_h": 0, "cost": "low"},
-      "triggers": ["bare_soil_in_burn_season", "burn_season_now"],
-      "sources": ["INTA/UIB Balcarce + Bomberos Tandil, 'Pautas para evitar incendios durante la cosecha' (2023), https://www.argentina.gob.ar/node/413622"]
+      "addresses": "ignición por residuo seco (restos de trigo, cebada u otro material) acumulado sobre el motor y partes calientes",
+      "benefit": "elimina el foco más frecuente: cerca del 80 % de los incendios de cosecha empiezan en el motor, que trabaja a más de 600 °C",
+      "requires": {
+        "people": 1,
+        "machinery": [
+          "soplador o aire comprimido"
+        ],
+        "downtime_h": 0.5,
+        "cost": "low"
+      },
+      "triggers": [
+        "harvest_in_dry_season"
+      ],
+      "sources": [
+        "INTA / UIB Balcarce (S. Tourn) + Bomberos Tandil (D. Ibáñez), 'Pautas para evitar incendios durante la cosecha' (2023-12-28), https://www.argentina.gob.ar/node/413622"
+      ]
     },
     {
       "id": "harvest_timing",
-      "name": {"es": "Elegir el horario de cosecha",
-               "en": "Choose harvest hours"},
+      "name": {
+        "es": "Parar la cosecha con clima de fuego",
+        "en": "Stop harvesting in fire weather"
+      },
       "factor": "machine_ignition",
       "addresses": "cosechar en las horas más calientes, secas y ventosas",
-      "benefit": "si el viento supera 40 km/h, la temperatura 35 °C o la humedad baja de 30 %, hay que parar el trabajo",
-      "requires": {"people": 0, "machinery": ["estación meteorológica o app"],
-                   "downtime_h": 0, "cost": "low"},
-      "triggers": ["fire_weather_high"],
-      "sources": ["INTA/UIB Balcarce + Bomberos Tandil, 'Pautas para evitar incendios durante la cosecha' (2023), https://www.argentina.gob.ar/node/413622"]
+      "benefit": "si el viento supera 40 km/h, la temperatura 35 °C o la humedad baja de 30 %, se para el trabajo hasta que mejoren las condiciones",
+      "requires": {
+        "people": 0,
+        "machinery": [
+          "estación meteorológica o app de pronóstico"
+        ],
+        "downtime_h": null,
+        "cost": "low"
+      },
+      "triggers": [
+        "fire_weather_high"
+      ],
+      "sources": [
+        "INTA / UIB Balcarce (S. Tourn) + Bomberos Tandil (D. Ibáñez), 'Pautas para evitar incendios durante la cosecha' (2023-12-28), https://www.argentina.gob.ar/node/413622"
+      ]
     },
     {
       "id": "water_and_extinguisher",
-      "name": {"es": "Agua y matafuegos a mano",
-               "en": "Water and extinguishers at hand"},
+      "name": {
+        "es": "Agua y matafuegos a mano",
+        "en": "Water and extinguishers at hand"
+      },
       "factor": "initial_attack",
       "addresses": "ataque inicial del foco antes de que lleguen los bomberos",
-      "benefit": "matafuegos tipo A/B/C dimensionados a cada máquina y tanque de al menos 500 l con bombeo para controlar rápido",
-      "requires": {"people": 1, "machinery": ["tanque 500 l con bomba",
-                                            "matafuegos ABC"],
-                   "downtime_h": 0, "cost": "medium"},
-      "triggers": ["harvest_in_dry_season"],
-      "sources": ["INTA/UIB Balcarce + Bomberos Tandil, 'Pautas para evitar incendios durante la cosecha' (2023), https://www.argentina.gob.ar/node/413622"]
+      "benefit": "matafuegos tipo A, B y C dimensionados a cada cosechadora y tanque montado de al menos 500 l con bomba para controlar rápido",
+      "requires": {
+        "people": 1,
+        "machinery": [
+          "tanque de 500 l con bomba",
+          "matafuegos ABC"
+        ],
+        "downtime_h": 0,
+        "cost": "medium"
+      },
+      "triggers": [
+        "harvest_in_dry_season",
+        "fire_weather_high"
+      ],
+      "sources": [
+        "INTA / UIB Balcarce (S. Tourn) + Bomberos Tandil (D. Ibáñez), 'Pautas para evitar incendios durante la cosecha' (2023-12-28), https://www.argentina.gob.ar/node/413622"
+      ]
+    },
+    {
+      "id": "maintain_firebreak",
+      "name": {
+        "es": "Hacer cortafuegos dentro y fuera del lote",
+        "en": "Build firebreaks inside and around the field"
+      },
+      "factor": "spread_boundary",
+      "addresses": "propagación desde o hacia lotes vecinos con vegetación seca continua",
+      "benefit": "sectoriza el incendio: se quema solo una parte del cultivo",
+      "requires": {
+        "people": 2,
+        "machinery": [
+          "tractor con rastra o disco"
+        ],
+        "downtime_h": null,
+        "cost": "medium"
+      },
+      "triggers": [
+        "fire_weather_high",
+        "risk_high"
+      ],
+      "sources": [
+        "INTA / UIB Balcarce (S. Tourn) + Bomberos Tandil (D. Ibáñez), 'Pautas para evitar incendios durante la cosecha' (2023-12-28), https://www.argentina.gob.ar/node/413622"
+      ]
+    },
+    {
+      "id": "fire_response_protocol",
+      "name": {
+        "es": "Protocolo de incendio para cada cosecha",
+        "en": "Fire response protocol for each harvest"
+      },
+      "factor": "initial_attack",
+      "addresses": "demora y confusión en los primeros minutos de un incendio",
+      "benefit": "cada persona sabe qué hacer mientras llegan los bomberos: dar la ubicación exacta y alejar a la gente de la máquina",
+      "requires": {
+        "people": null,
+        "machinery": [],
+        "downtime_h": 0,
+        "cost": "low"
+      },
+      "triggers": [
+        "risk_high",
+        "burn_season_now"
+      ],
+      "sources": [
+        "INTA / UIB Balcarce (S. Tourn) + Bomberos Tandil (D. Ibáñez), 'Pautas para evitar incendios durante la cosecha' (2023-12-28), https://www.argentina.gob.ar/node/413622"
+      ]
+    },
+    {
+      "id": "no_residue_burning",
+      "name": {
+        "es": "No quemar rastrojos",
+        "en": "Do not burn stubble"
+      },
+      "factor": "residue_burning",
+      "addresses": "quema de rastrojo en época de alta propagación",
+      "benefit": "conserva la cobertura del suelo y elimina un foco de ignición evitable; quemar sin autorización está prohibido",
+      "requires": {
+        "people": 0,
+        "machinery": [],
+        "downtime_h": 0,
+        "cost": "low"
+      },
+      "triggers": [
+        "bare_soil_in_burn_season",
+        "burn_season_now"
+      ],
+      "sources": [
+        "Ley 26.562 (2009), presupuestos mínimos de protección ambiental para el control de actividades de quema: toda quema requiere autorización previa de la autoridad local"
+      ]
     }
   ]
 }
