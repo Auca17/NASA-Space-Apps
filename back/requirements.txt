@@ -6,3 +6,5 @@ pydantic==2.14.3
 pytest==9.2.0
 pytest-asyncio==1.5.0
 respx==0.23.1
+pillow==13.0.0
+numpy==2.5.4

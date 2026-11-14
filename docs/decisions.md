@@ -32,10 +32,13 @@ Convención: `D<n>` es el identificador estable. Una decisión no se borra; si c
 | D23 | 2026-11-14 | `/api/field/rotations` recibe el **diagnóstico completo** en el cuerpo, no un `diagnosis_id`. El back es sin estado. | Las funciones serverless de Vercel no comparten memoria entre instancias. | Vigente |
 | D24 | 2026-11-14 | `/api/live`: duración máxima de la función 60 s y `stale-while-revalidate` de 1 día en respuestas completas, para que la vista mundial de 7 días se sirva al instante después del primer pedido. | Medido: mundo 7 días = 6.080 celdas, 173 KB, 41,6 s desde la laptop. | Vigente |
 
+| D25 | 2026-11-14 | Consultas de clima a demanda (lote, "mi zona"): **API diaria por punto de NASA POWER**, una sola llamada 2001 → ayer por lote, caché por celda res 6 + día, timeout 5 s. De esa serie salen lluvia, lluvias extremas, heladas, calor, condiciones recientes y, si sirve, humedad del suelo (`GWETTOP`/`GWETROOT`). | Pedido del equipo. Medido: 25 años de un punto en 2,0 s; los últimos 2 días vienen como `-999`. | Vigente |
+
 ## Pendientes de decisión
 
 - Orden de construcción y asignación de la lente Campo (`crops.json`, `rotations.json`, `/api/field/*`): se define con el plan de acción.
 - Orden de las tareas de Devin: se define con el plan de acción.
 - Explicación en lenguaje simple: plantillas desde los indicadores primero; LLM solo si sobra tiempo (propuesta, no decidido).
 - Tamaño de los archivos diarios de fuego por shard (ver contrato, sección `fire/daily`): si superan el presupuesto, D9 pasa a percentiles mensuales y se registra acá.
+- SoilGrids y las series MODIS de ORNL no responden a demanda (medido 2026-11-14: más de 15 s, tres intentos). `soil`, `vigor_bare_soil` y la fila `bare_soil` del calendario deben salir del precálculo `field/grid` (tarea 05 de Devin), primero Argentina y los lotes de demo. Hasta entonces esas tarjetas muestran "Sin datos disponibles".
 - POWER: MERRA-2 diario termina el 2026-10-01; la cola hasta hoy sale de GEOS-IT (misma grilla de 0,5° × 0,625°, otro producto). El modelo de riesgo entrena con MERRA-2 y predice con GEOS-IT en las últimas semanas; el `report.md` del modelo debe mencionarlo y, si hace falta, agregar una columna `source` compatible al Parquet (tarea 01 de Devin, 2026-11-14).

@@ -16,7 +16,7 @@ router = APIRouter()
 WINDOW_DAYS = {"24h": 1, "48h": 2, "7d": 7}
 WINDOW_H = {"24h": 24, "48h": 48, "7d": 168}
 WORLD_BBOX = (-180.0, -90.0, 180.0, 90.0)
-CACHE_CONTROL = "public, s-maxage=10800, stale-while-revalidate=3600"
+CACHE_CONTROL = "public, s-maxage=10800, stale-while-revalidate=86400"  # D24
 CELLS_AREA_THRESHOLD = 400.0  # square degrees (D22)
 MAX_BODY_BYTES = 4 * 1024 * 1024
 GRID_DEG = 5.0

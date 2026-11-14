@@ -68,16 +68,55 @@ works too.
 `functions` cannot coexist and `maxDuration` can only be set via `functions`:
 
 ```json
-{ "functions": { "back/api/index.py": { "maxDuration": 30 } },
+{ "functions": { "back/api/index.py": { "maxDuration": 60 } },
   "rewrites": [{ "source": "/api/:path*",
                  "destination": "/back/api/index.py" }] }
 ```
 
 For Python framework apps Vercel builds one function from the resolved
 entrypoint, so `functions` is keyed on `back/api/index.py` (not on `/api`
-routes). `maxDuration: 30` covers D22 (FIRMS needs up to ~10 s × 4 sources +
-aggregation); Hobby allows up to 300 s, so 30 is a conservative cap.
+routes). `maxDuration: 60` covers D22 and the diagnose budget
+(FIRMS ~10 s × 4 sources; diagnose's own budget is 10 s wall-clock);
+Hobby allows up to 300 s, so 60 is a conservative cap.
 
 The future `web/` front coexists cleanly: zero-config picks up its framework
 normally, and `rewrites` keep `/api/*` pointing at the Python function — no
 catch-all ordering conflict.
+
+## POST /api/field/diagnose
+
+Body: `{"polygon": <GeoJSON Polygon>}` xor `{"point": [lat, lon], "ha": 50}`.
+Validated: closed ring, 3–500 vertices, 0.5–5000 ha (geodesic), lat/lon ranges.
+Returns `diagnosis_id` (sha256 of sorted res-6 cells + UTC date), `area_ha`,
+`centroid`, `h3_r5`, `h3_r6`, 12 `cards`, `calendar`. Header `Cache-Control:
+no-store`. One failed source never fails the request — its card goes
+`value: null`, `confidence: "low"`.
+
+Upstream calls run concurrently, each cached under
+`(h3_r6 centroid, utc_date, source)` including negative results. Timeouts:
+3 s everywhere, except POWER daily point API (5 s, D25) — one request,
+`PRECTOTCORR,T2M_MAX,T2M_MIN,RH2M,WS2M,GWETTOP,GWETROOT,GWETPROF,EVPTRNS`,
+2001-01-01 → yesterday; `-999` → null.
+
+Card sources: weather cards (rain, heavy_rain, frost, heat, crop_water,
+recent_weather, soil_moisture fallback) ← POWER daily; soil_moisture prefers
+`field/grid` SMAP `sm_anom_pct` (9 km); water_trend ← `field/grid.grace_trend`;
+fire ← `fire/cal/{r2}` + `risk/{r2}` shards; slope ← AWS Terrain Tiles
+(Terrarium, SRTM ~30 m); soil ← ISRIC SoilGrids v2 (0–30 cm weighted);
+vigor_bare_soil ← ORNL MODIS MOD13Q1 NDVI (250 m, last 3 y — usually null:
+the service exceeds the 3 s budget).
+
+Note (03b): SoilGrids and ORNL time out even at 15 s from our test machine —
+not usable on demand right now, so the 3 s budget stays. `soil` and
+`vigor_bare_soil` will instead come from the precomputed `field/grid` shard
+(task 05), not from these APIs.
+
+Calendar rows (levels 0–3; `null` row when no data):
+
+| row | level thresholds |
+|-----|------------------|
+| bare_soil | monthly fraction of MOD13Q1 composites with NDVI<0.25: ≥0.1→1, ≥0.3→2, ≥0.6→3 |
+| frost | fraction of month days T2M_MIN≤0 °C: ≥2%→1, ≥10%→2, ≥30%→3 |
+| water_stress | monthly precip/potential-ET ratio: <0.5→3, <0.8→2, <1.0→1, else 0 |
+| heat | fraction of month days T2M_MAX>35 °C: ≥2%→1, ≥10%→2, ≥25%→3 |
+| burn_season | month mean of the 52-week fire climatology, fraction of the peak: ≥0.15→1, ≥0.4→2, ≥0.7→3 |
