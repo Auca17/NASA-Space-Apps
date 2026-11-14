@@ -1,0 +1,3 @@
+# Vercel installs this file for the Python function under api/.
+# The real list lives next to the backend code.
+-r back/requirements.txt
