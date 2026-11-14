@@ -130,9 +130,13 @@ def normalize():
                                                              hive_partitioning = true)
                       WHERE country = 'Argentina') TO '{ar_cells}' (FORMAT parquet)
             """)
+    # ST_Read (GDAL) no puede con el GeoJSON del IGN de 140 MB en DuckDB 2.0:
+    # se lee como JSON y se simplifica (~500 m) para que el ST_Contains sea rápido.
     con.sql(f"""
         CREATE OR REPLACE TEMP TABLE ar_poly AS
-        SELECT geom FROM ST_Read('{IGN_DEPTS}')
+        SELECT ST_SimplifyPreserveTopology(ST_GeomFromGeoJSON(to_json(f.geometry)), 0.005) AS geom
+        FROM (SELECT unnest(features) AS f
+              FROM read_json('{IGN_DEPTS}', maximum_object_size = 500000000))
     """)
 
     sp_until = {}
@@ -150,7 +154,7 @@ def normalize():
         with Timer(f"normalizar {src} ({len(files)} archivos)"):
             con.sql(f"""
                 CREATE OR REPLACE TEMP TABLE api AS
-                SELECT *, h3_latlng_to_cell(latitude, longitude, 6) AS h3_r6
+                SELECT *, h3_latlng_to_cell(CAST(latitude AS DOUBLE), CAST(longitude AS DOUBLE), 6) AS h3_r6
                 FROM read_csv({[str(f) for f in files]}, header = true, all_varchar = true,
                               union_by_name = true)
             """)

@@ -41,7 +41,8 @@ Los pasos 01 y 03 son reanudables: si se cortan, al volver a correrlos saltean l
 | 4. Armonización | `04_harmonize.py` | `harmonized_r3.parquet`, `harmonized_r5.parquet`, factores, `docs/validation/` | ✅ |
 | 5. Agregados | `05_aggregate.py` | `data/processed/agg/`: globo, mensual y diario res 5, climatología semanal, riesgo nivel historial | ✅ |
 | 6. Export | `06_export.py` | `data/processed/export/v1/` (meta, globe, fire/cal, fire/daily, fire/points, risk) + `export/sizes.json` | ✅ |
-| 2026 por API | `07_firms_2026.py` | SP hasta jul/ago 2026 y NRT hasta hoy | 🔄 en curso |
+| 2026 por API | `07_firms_2026.py` | SP hasta jul/ago 2026 y NRT hasta hoy | ✅ |
+| Validación | `validate_export.py` | `_check` de `back/tools/validate_contract.py` en paralelo | ✅ |
 | Subida | `upload_r2.py` | `v1/` y `work/` en R2 | ⬜ falta (sin bucket todavía) |
 
 ## Decisiones de implementación
@@ -88,6 +89,16 @@ Los pasos 01 y 03 son reanudables: si se cortan, al volver a correrlos saltean l
 - **`fire/points`:** solo focos con país Argentina, todos los sensores y satélites, filtrados igual que el resto.
 - **`lc`:** `null` en esta versión (D3).
 - **Tamaños comprimidos** (gzip nivel 6) en `data/processed/export/sizes.json`.
+- **Validación:** `python pipeline/validate_export.py` corre la misma función `_check` de `back/tools/validate_contract.py`, repartida en todos los núcleos. El validador original, de a un archivo por vez, tarda más de 2 horas con ~1,4 GB de JSON; esta versión, unos 15 minutos.
+
+## 2026 por la API de FIRMS (paso 7, E4)
+
+- **Fuentes:** `MODIS_SP` (2026-01-01 → 2026-08-31), `MODIS_NRT` (2026-09-01 → hoy), `VIIRS_NOAA20_SP` (2026-01-01 → 2026-07-31), `VIIRS_NOAA20_NRT` (2026-08-01 → hoy). Donde hay SP no se usa NRT.
+- **S-NPP de 2026 no se baja:** la serie usa NOAA-20 desde 2018-04. `sp_until.VIIRS_SNPP` queda en 2025-12-31. Por eso el factor S-NPP → NOAA-20 del paso 4 se calcula **solo con los meses en que hay datos de los dos sensores** (2018-04 → 2025-12); si se incluyera 2026, el factor se inflaría.
+- **Pedidos:** 129 pedidos mundiales de 5 días (`/api/area/csv/{key}/{fuente}/world/5/{inicio}`; la fecha es el inicio del tramo). Cada uno cuesta ~180 transacciones de las 5.000 cada 10 minutos, así que el script consulta `mapkey_status` antes de cada pedido y espera si hace falta. Las respuestas se guardan en `~/spaceapps-fuego/data/raw/firms_api/` (reanudable). Unos 50 minutos, 1,6 GB.
+- **`type` en NRT:** los NRT no traen la columna `type`. Se infiere con una máscara de fuentes fijas: celdas res 6 donde, con NOAA-20 2018–2025, al menos la mitad de las detecciones (y como mínimo 10) fueron type 1, 2 o 3. Los NRT en esas celdas quedan type 2 y se descartan; el resto, type 0. Resultado: 5,7 % descartado en NOAA-20 NRT contra 8,6 % en SP con `type` real.
+- **`country`:** la API no lo trae. Se marca Argentina si la celda res 6 tiene focos históricos de Argentina, o si el punto cae dentro de un departamento del IGN (GeoJSON leído con `read_json`, porque `ST_Read` de DuckDB 2.0 no puede con el archivo de 140 MB).
+- **Resultado:** 20,2 M de focos de 2026 hasta el día de hoy; 124 mil en Argentina.
 
 
 ## Números de la primera corrida

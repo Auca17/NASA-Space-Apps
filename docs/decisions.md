@@ -57,3 +57,7 @@ Convención: `D<n>` es el identificador estable. Una decisión no se borra; si c
   - `fire/points`: 4 de 1.485 archivos superan 800 KB (máximo 1,5 MB). Son descargas, no se cargan en el render.
   - Riesgo nivel historial: con la regla del brief, una celda sin focos recientes tiene `p = clim` → `ratio = 1` → **`moderado`** siempre que `clim ≥ 0,01`. En plena temporada, "moderado" significa "lo normal para la época", lo que puede leerse como alarma. Se mantuvo la regla; propuesta: que el front muestre "normal para la época" cuando `ratio` esté entre 0,75 y 1,5, o mover los cortes.
   - Riesgo con `ratio = null`: el contrato no da umbrales para `cat` desde `p`. Se usó p < 0,05 bajo · < 0,15 moderado · < 0,30 alto · resto muy_alto.
+- **Frente A, E4 (2026-11-14), para discutir:**
+  - 2026 por API: los NRT no traen `type`; se infiere con una máscara de fuentes fijas (celdas res 6 con ≥ 50 % de detecciones no vegetación en NOAA-20 2018–2025). `country` se infiere con celdas históricas y polígonos del IGN. Ver `pipeline/README.md`.
+  - S-NPP de 2026 no se descargó (la serie usa NOAA-20). `sp_until.VIIRS_SNPP = 2025-12-31`. El factor S-NPP → NOAA-20 se calcula solo con los meses en que hay datos de los dos sensores.
+  - D29 dice que el riesgo escala con focos recientes "en la celda o las vecinas"; el pipeline calcula la persistencia solo en la celda. Si se quiere incluir las vecinas (anillo H3 de 1), es un cambio chico en `05_aggregate.py`.

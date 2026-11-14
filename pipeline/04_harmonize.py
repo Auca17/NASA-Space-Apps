@@ -91,7 +91,11 @@ def factor_tables(con):
         WITH s AS (
             SELECT band, moy, sum(n20) AS n20, sum(n) AS n,
                    sum(n20_cd) AS n20_cd, sum(n_cd) AS n_cd FROM r3
-            WHERE month >= DATE '{N20_START}' GROUP BY ALL),
+            -- solo meses con los dos sensores: S-NPP de 2026 no se bajó (paso 7)
+            WHERE month >= DATE '{N20_START}'
+              AND month <= (SELECT max(month) FROM r3 WHERE n > 0)
+              AND month <= (SELECT max(month) FROM r3 WHERE n20 > 0)
+            GROUP BY ALL),
         g AS (SELECT moy, sum(n20) / sum(n) AS fg, sum(n20_cd) / sum(n_cd) AS fg_cd FROM s GROUP BY moy)
         SELECT s.band, s.moy,
                CASE WHEN s.n >= 50 THEN s.n20 / s.n ELSE g.fg END AS f_snpp,
