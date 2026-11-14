@@ -1,0 +1,13 @@
+{
+  "generic": [
+    "Los cambios de rotación tardan 2-3 campañas en mostrar efecto en el suelo.",
+    "Verificar disponibilidad de semilla y maquinaria antes de decidir."
+  ],
+  "per_crop": {
+    "soja": ["Monocultivo de soja: presión de malezas resistentes."],
+    "maiz": ["Maíz: alta demanda de nitrógeno y de agua en floración."],
+    "trigo": ["Trigo: riesgo de heladas tardías en espigazón."],
+    "sorgo": ["Sorgo: mercado más chico que maíz/soja; asegurar salida."],
+    "vicia": ["Vicia puede ser hospedante de plagas de soja; consultar disponibilidad de semilla."]
+  }
+}

@@ -1,0 +1,135 @@
+{
+  "version": "0.1",
+  "rotations": [
+    {
+      "id": "soja-soja",
+      "name": {
+        "es": "Soja â€“ soja",
+        "en": "Soy â€“ soy"
+      },
+      "years": 2,
+      "sequence": [
+        {
+          "crop": "soja",
+          "start": "11-01",
+          "end": "04-30"
+        },
+        {
+          "crop": "soja",
+          "start": "11-01",
+          "end": "04-30"
+        }
+      ],
+      "bare_soil_days": 180,
+      "sources": [
+        "MAGyP Estimaciones AgrÃ­colas"
+      ]
+    },
+    {
+      "id": "maiz-soja-vicia",
+      "name": {
+        "es": "MaÃ­z â€“ soja + vicia",
+        "en": "Maize â€“ soy + vetch"
+      },
+      "years": 2,
+      "sequence": [
+        {
+          "crop": "maiz",
+          "start": "09-15",
+          "end": "03-15"
+        },
+        {
+          "crop": "vicia",
+          "start": "04-01",
+          "end": "10-15"
+        },
+        {
+          "crop": "soja",
+          "start": "11-01",
+          "end": "04-30"
+        }
+      ],
+      "bare_soil_days": 40,
+      "sources": [
+        "INTA Cultivos de cobertura 2019"
+      ]
+    },
+    {
+      "id": "trigo-soja2-maiz",
+      "name": {
+        "es": "Trigo – soja 2ª – maíz",
+        "en": "Wheat – 2nd soy – maize"
+      },
+      "years": 2,
+      "sequence": [
+        {
+          "crop": "trigo",
+          "start": "06-15",
+          "end": "12-15"
+        },
+        {
+          "crop": "soja",
+          "start": "12-20",
+          "end": "04-30"
+        },
+        {
+          "crop": "maiz",
+          "start": "09-20",
+          "end": "03-20"
+        }
+      ],
+      "bare_soil_days": 70,
+      "sources": [
+        "INTA Rotaciones pampa húmeda 2022"
+      ]
+    },
+    {
+      "id": "maiz-soja",
+      "name": {
+        "es": "Maíz – soja",
+        "en": "Maize – soy"
+      },
+      "years": 2,
+      "sequence": [
+        {
+          "crop": "maiz",
+          "start": "09-20",
+          "end": "03-20"
+        },
+        {
+          "crop": "soja",
+          "start": "11-01",
+          "end": "04-30"
+        }
+      ],
+      "bare_soil_days": 120,
+      "sources": [
+        "MAGyP Estimaciones Agrícolas"
+      ]
+    },
+    {
+      "id": "sorgo-soja",
+      "name": {
+        "es": "Sorgo – soja",
+        "en": "Sorghum – soy"
+      },
+      "years": 2,
+      "sequence": [
+        {
+          "crop": "sorgo",
+          "start": "10-15",
+          "end": "04-15"
+        },
+        {
+          "crop": "soja",
+          "start": "11-01",
+          "end": "04-30"
+        }
+      ],
+      "bare_soil_days": 150,
+      "sources": [
+        "INTA Sorgo granífero 2017"
+      ]
+    }
+  ]
+}

@@ -120,3 +120,40 @@ Calendar rows (levels 0–3; `null` row when no data):
 | water_stress | monthly precip/potential-ET ratio: <0.5→3, <0.8→2, <1.0→1, else 0 |
 | heat | fraction of month days T2M_MAX>35 °C: ≥2%→1, ≥10%→2, ≥25%→3 |
 | burn_season | month mean of the 52-week fire climatology, fraction of the peak: ≥0.15→1, ≥0.4→2, ≥0.7→3 |
+
+## POST /api/field/rotations + /explain
+
+Body: `{diagnosis: <full diagnose response>, current: {rotation_id|sequence|null}, priorities: {water|soil|erosion|income|forage|nitrogen|pests|avoid_burning: 0-5}, constraints: {irrigation, machinery, livestock, markets}, zone?}`.
+`current: null` = "no sé" -> the first zone-valid rotation in file order
+(placeholder typicality). Always returns the current strategy
+(`is_current: true`) + exactly 3 alternatives; when fewer than 3 are
+viable, the least-bad non-viable ones fill in with their reasons in `risks`.
+`Cache-Control: no-store`. `POST /api/field/explain` takes that response and
+returns one template paragraph per strategy (`{strategies:[{id,text}]}`).
+
+Priority -> indicator weights, viability thresholds and engine constants are
+documented in `app/services/rotations.py` (module docstring). Knowledge
+(`back/knowledge/`) is validated at import; bad crop refs fail loudly.
+
+## Fire prevention measures (D26, contract 4.6)
+
+`fire_weather` card (diagnose): last 7 valid POWER days — mean RH2M, max
+WS2M, max T2M_MAX, days since >1 mm rain. Score: +1 each for RH<30 %,
+wind>11 m/s (~40 km/h), T>35 °C, >10 dry days (INTA harvest stop-work
+thresholds). 3+ = alto, 2 = moderado, else bajo.
+
+`measures` + `measures_gaps` on `/api/field/diagnose`, `/api/risk` and every
+rotation strategy, from `app/services/measures.py` (pure `evaluate(ctx)`).
+Triggers:
+
+| rule | fires when |
+|---|---|
+| harvest_in_dry_season | a sequence `end` month has burn_season>=2 or water_stress>=2 |
+| fire_weather_high | `fire_weather` card = alto |
+| risk_high | risk `cat` in {alto, muy_alto} |
+| bare_soil_in_burn_season | sequence leaves a burn_season>=2 month uncovered |
+| burn_season_now | today's month has burn_season>=2 |
+
+Missing input -> trigger skipped, listed in `measures_gaps`. Order: most
+triggers fired first, then lowest cost. `burns_avoided` in the rotation
+engine uses the same `uncovered_burn_months` rule.

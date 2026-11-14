@@ -1,91 +1,382 @@
 {
-  "diagnosis_id": "dx_7f3a",
+  "diagnosis_id": "dx_8b6d3e68",
   "strategies": [
     {
       "id": "soja-soja",
-      "name": "Soja – soja",
+      "name": "Soja â€“ soja",
       "is_current": true,
-      "score": 0.42,
-      "sequence": [
-        {
-          "crop": "soja",
-          "start": "11-01",
-          "end": "04-30"
-        }
-      ],
+      "score": 0.5,
+      "confidence": "low",
+      "indicators": {
+        "water_balance": -71,
+        "carbon": 2.5,
+        "nitrogen": 2,
+        "bare_soil_days": 180,
+        "erosion_risk": "bajo",
+        "pest_break": 1,
+        "income": "high",
+        "forage": false,
+        "burns_avoided": 0
+      },
       "why": "Es tu rotación actual; sirve de referencia.",
       "evidence": [
         {
-          "text": "180 días/año de suelo desnudo (may–oct)",
-          "indicator": "bare_soil_days",
-          "source": "MODIS NDVI 250 m"
+          "text": "1087 mm/año; 1 de cada 4 años < 935 mm",
+          "indicator": "rain",
+          "source": "NASA POWER"
+        },
+        {
+          "text": "2 días/año con más de 50 mm",
+          "indicator": "heavy_rain",
+          "source": "NASA POWER"
+        },
+        {
+          "text": "Período libre de heladas: 25/08 – 11/06",
+          "indicator": "frost",
+          "source": "NASA POWER"
+        },
+        {
+          "text": "Hoy 18 % bajo lo normal",
+          "indicator": "soil_moisture",
+          "source": "SMAP L3"
         }
       ],
       "benefits": {
         "water_balance": 0,
-        "carbon": 0,
+        "carbon": 0.0,
         "nitrogen": 0,
-        "bare_soil_days": 180,
-        "erosion_risk": "medio",
+        "bare_soil_days": 0,
+        "erosion_risk": "bajo",
         "pest_break": 0,
+        "income": "high",
+        "forage": 0,
         "burns_avoided": 0
       },
       "gaps": [
-        "SMAP tiene 9 km de resolución: no distingue diferencias dentro del lote"
+        "rain tiene resolución 0.5°×0.625°: no distingue diferencias dentro del lote",
+        "heavy_rain tiene resolución 0.5°×0.625°: no distingue diferencias dentro del lote",
+        "frost tiene resolución 0.5°×0.625°: no distingue diferencias dentro del lote",
+        "heat tiene resolución 0.5°×0.625°: no distingue diferencias dentro del lote"
       ],
       "risks": [
-        "Monocultivo: presión de malezas resistentes; validar con tu agrónomo"
-      ]
-    },
-    {
-      "id": "maiz-soja-vicia",
-      "name": "Maíz – soja + vicia",
-      "is_current": false,
-      "score": 0.78,
+        "Monocultivo de soja: presión de malezas resistentes.",
+        "Los cambios de rotación tardan 2-3 campañas en mostrar efecto en el suelo.",
+        "Verificar disponibilidad de semilla y maquinaria antes de decidir.",
+        "Validar estas opciones con tu agrónomo de cabecera."
+      ],
       "sequence": [
         {
-          "crop": "maiz",
-          "start": "09-15",
-          "end": "03-15"
-        },
-        {
-          "crop": "vicia",
-          "start": "04-01",
-          "end": "10-15"
+          "crop": "soja",
+          "start": "11-01",
+          "end": "04-30",
+          "cover": true
         },
         {
           "crop": "soja",
           "start": "11-01",
-          "end": "04-30"
+          "end": "04-30",
+          "cover": true
         }
       ],
-      "why": "Atiende tus prioridades de mejorar suelo y reducir erosión; corta el ciclo de suelo desnudo de invierno.",
+      "measures": [],
+      "measures_gaps": [
+        "risk_high (sin celda de riesgo)",
+        "bare_soil_in_burn_season (falta rotación o calendario)"
+      ]
+    },
+    {
+      "id": "trigo-soja2-maiz",
+      "name": "Trigo – soja 2ª – maíz",
+      "is_current": false,
+      "score": 0.656,
+      "confidence": "low",
+      "indicators": {
+        "water_balance": -168,
+        "carbon": 5.5,
+        "nitrogen": 1,
+        "bare_soil_days": 70,
+        "erosion_risk": "bajo",
+        "pest_break": 2,
+        "income": "high",
+        "forage": false,
+        "burns_avoided": 0
+      },
+      "why": "Atiende tus prioridades de mejorar el suelo y reducir la erosión; ataca los días de suelo desnudo.",
       "evidence": [
         {
-          "text": "IMERG: 5 días/año > 50 mm, concentrados en oct–mar",
-          "indicator": "heavy_days_yr",
-          "source": "GPM IMERG 0.1°"
+          "text": "1087 mm/año; 1 de cada 4 años < 935 mm",
+          "indicator": "rain",
+          "source": "NASA POWER"
         },
         {
-          "text": "Zonas análogas: 28 % maíz, 8.900 kg/ha",
-          "indicator": "analogs",
-          "source": "MAGyP 2023/24"
+          "text": "2 días/año con más de 50 mm",
+          "indicator": "heavy_rain",
+          "source": "NASA POWER"
+        },
+        {
+          "text": "Período libre de heladas: 25/08 – 11/06",
+          "indicator": "frost",
+          "source": "NASA POWER"
+        },
+        {
+          "text": "Hoy 18 % bajo lo normal",
+          "indicator": "soil_moisture",
+          "source": "SMAP L3"
         }
       ],
       "benefits": {
-        "water_balance": -1,
-        "carbon": 2,
-        "nitrogen": 2,
-        "bare_soil_days": 40,
+        "water_balance": -97,
+        "carbon": 3.0,
+        "nitrogen": -1,
+        "bare_soil_days": -110,
         "erosion_risk": "bajo",
-        "pest_break": 2,
-        "burns_avoided": 1
+        "pest_break": 1,
+        "income": "high",
+        "forage": 0,
+        "burns_avoided": 0
       },
       "gaps": [
-        "Sin dato de materia orgánica medido en el lote; se usa SoilGrids 250 m"
+        "rain tiene resolución 0.5°×0.625°: no distingue diferencias dentro del lote",
+        "heavy_rain tiene resolución 0.5°×0.625°: no distingue diferencias dentro del lote",
+        "frost tiene resolución 0.5°×0.625°: no distingue diferencias dentro del lote",
+        "heat tiene resolución 0.5°×0.625°: no distingue diferencias dentro del lote"
       ],
       "risks": [
-        "Vicia puede ser hospedante de plagas de soja; consultar disponibilidad de semilla"
+        "Trigo: riesgo de heladas tardías en espigazón.",
+        "Monocultivo de soja: presión de malezas resistentes.",
+        "Maíz: alta demanda de nitrógeno y de agua en floración.",
+        "Los cambios de rotación tardan 2-3 campañas en mostrar efecto en el suelo.",
+        "Verificar disponibilidad de semilla y maquinaria antes de decidir.",
+        "Validar estas opciones con tu agrónomo de cabecera."
+      ],
+      "sequence": [
+        {
+          "crop": "trigo",
+          "start": "06-15",
+          "end": "12-15",
+          "cover": true
+        },
+        {
+          "crop": "soja",
+          "start": "12-20",
+          "end": "04-30",
+          "cover": true
+        },
+        {
+          "crop": "maiz",
+          "start": "09-20",
+          "end": "03-20",
+          "cover": true
+        }
+      ],
+      "measures": [
+        {
+          "id": "clean_harvester",
+          "name": "Limpiar la cosechadora",
+          "factor": "machine_ignition",
+          "why": "ignición por residuo seco acumulado en el motor y partes calientes: cosecha en meses secos/de quemas: [12]",
+          "benefit": "elimina el foco de ignición más frecuente en cosecha (el motor trabaja a más de 600 °C)",
+          "requires": {
+            "people": 1,
+            "machinery": [
+              "soplador o aire comprimido"
+            ],
+            "downtime_h": 0.5,
+            "cost": "low"
+          },
+          "cost": "low",
+          "source": "INTA/UIB Balcarce + Bomberos Tandil, 'Pautas para evitar incendios durante la cosecha' (2023), https://www.argentina.gob.ar/node/413622"
+        },
+        {
+          "id": "water_and_extinguisher",
+          "name": "Agua y matafuegos a mano",
+          "factor": "initial_attack",
+          "why": "ataque inicial del foco antes de que lleguen los bomberos: cosecha en meses secos/de quemas: [12]",
+          "benefit": "matafuegos tipo A/B/C dimensionados a cada máquina y tanque de al menos 500 l con bombeo para controlar rápido",
+          "requires": {
+            "people": 1,
+            "machinery": [
+              "tanque 500 l con bomba",
+              "matafuegos ABC"
+            ],
+            "downtime_h": 0.0,
+            "cost": "medium"
+          },
+          "cost": "medium",
+          "source": "INTA/UIB Balcarce + Bomberos Tandil, 'Pautas para evitar incendios durante la cosecha' (2023), https://www.argentina.gob.ar/node/413622"
+        }
+      ],
+      "measures_gaps": [
+        "risk_high (sin celda de riesgo)",
+        "bare_soil_in_burn_season (falta rotación o calendario)"
+      ]
+    },
+    {
+      "id": "maiz-soja",
+      "name": "Maíz – soja",
+      "is_current": false,
+      "score": 0.581,
+      "confidence": "low",
+      "indicators": {
+        "water_balance": -67,
+        "carbon": 3.8,
+        "nitrogen": 1,
+        "bare_soil_days": 120,
+        "erosion_risk": "bajo",
+        "pest_break": 2,
+        "income": "high",
+        "forage": false,
+        "burns_avoided": 0
+      },
+      "why": "Atiende tus prioridades de mejorar el suelo y reducir la erosión; suma un cultivo de invierno al ciclo.",
+      "evidence": [
+        {
+          "text": "1087 mm/año; 1 de cada 4 años < 935 mm",
+          "indicator": "rain",
+          "source": "NASA POWER"
+        },
+        {
+          "text": "2 días/año con más de 50 mm",
+          "indicator": "heavy_rain",
+          "source": "NASA POWER"
+        },
+        {
+          "text": "Período libre de heladas: 25/08 – 11/06",
+          "indicator": "frost",
+          "source": "NASA POWER"
+        },
+        {
+          "text": "Hoy 18 % bajo lo normal",
+          "indicator": "soil_moisture",
+          "source": "SMAP L3"
+        }
+      ],
+      "benefits": {
+        "water_balance": 4,
+        "carbon": 1.3,
+        "nitrogen": -1,
+        "bare_soil_days": -60,
+        "erosion_risk": "bajo",
+        "pest_break": 1,
+        "income": "high",
+        "forage": 0,
+        "burns_avoided": 0
+      },
+      "gaps": [
+        "rain tiene resolución 0.5°×0.625°: no distingue diferencias dentro del lote",
+        "heavy_rain tiene resolución 0.5°×0.625°: no distingue diferencias dentro del lote",
+        "frost tiene resolución 0.5°×0.625°: no distingue diferencias dentro del lote",
+        "heat tiene resolución 0.5°×0.625°: no distingue diferencias dentro del lote"
+      ],
+      "risks": [
+        "Maíz: alta demanda de nitrógeno y de agua en floración.",
+        "Monocultivo de soja: presión de malezas resistentes.",
+        "Los cambios de rotación tardan 2-3 campañas en mostrar efecto en el suelo.",
+        "Verificar disponibilidad de semilla y maquinaria antes de decidir.",
+        "Validar estas opciones con tu agrónomo de cabecera."
+      ],
+      "sequence": [
+        {
+          "crop": "maiz",
+          "start": "09-20",
+          "end": "03-20",
+          "cover": true
+        },
+        {
+          "crop": "soja",
+          "start": "11-01",
+          "end": "04-30",
+          "cover": true
+        }
+      ],
+      "measures": [],
+      "measures_gaps": [
+        "risk_high (sin celda de riesgo)",
+        "bare_soil_in_burn_season (falta rotación o calendario)"
+      ]
+    },
+    {
+      "id": "sorgo-soja",
+      "name": "Sorgo – soja",
+      "is_current": false,
+      "score": 0.531,
+      "confidence": "low",
+      "indicators": {
+        "water_balance": -136,
+        "carbon": 3.5,
+        "nitrogen": 1,
+        "bare_soil_days": 150,
+        "erosion_risk": "bajo",
+        "pest_break": 2,
+        "income": "medium",
+        "forage": false,
+        "burns_avoided": 0
+      },
+      "why": "Atiende tus prioridades de mejorar el suelo y reducir la erosión; suma un cultivo de invierno al ciclo.",
+      "evidence": [
+        {
+          "text": "1087 mm/año; 1 de cada 4 años < 935 mm",
+          "indicator": "rain",
+          "source": "NASA POWER"
+        },
+        {
+          "text": "2 días/año con más de 50 mm",
+          "indicator": "heavy_rain",
+          "source": "NASA POWER"
+        },
+        {
+          "text": "Período libre de heladas: 25/08 – 11/06",
+          "indicator": "frost",
+          "source": "NASA POWER"
+        },
+        {
+          "text": "Hoy 18 % bajo lo normal",
+          "indicator": "soil_moisture",
+          "source": "SMAP L3"
+        }
+      ],
+      "benefits": {
+        "water_balance": -65,
+        "carbon": 1.0,
+        "nitrogen": -1,
+        "bare_soil_days": -30,
+        "erosion_risk": "bajo",
+        "pest_break": 1,
+        "income": "medium",
+        "forage": 0,
+        "burns_avoided": 0
+      },
+      "gaps": [
+        "rain tiene resolución 0.5°×0.625°: no distingue diferencias dentro del lote",
+        "heavy_rain tiene resolución 0.5°×0.625°: no distingue diferencias dentro del lote",
+        "frost tiene resolución 0.5°×0.625°: no distingue diferencias dentro del lote",
+        "heat tiene resolución 0.5°×0.625°: no distingue diferencias dentro del lote"
+      ],
+      "risks": [
+        "Sorgo: mercado más chico que maíz/soja; asegurar salida.",
+        "Monocultivo de soja: presión de malezas resistentes.",
+        "Los cambios de rotación tardan 2-3 campañas en mostrar efecto en el suelo.",
+        "Verificar disponibilidad de semilla y maquinaria antes de decidir.",
+        "Validar estas opciones con tu agrónomo de cabecera."
+      ],
+      "sequence": [
+        {
+          "crop": "sorgo",
+          "start": "10-15",
+          "end": "04-15",
+          "cover": true
+        },
+        {
+          "crop": "soja",
+          "start": "11-01",
+          "end": "04-30",
+          "cover": true
+        }
+      ],
+      "measures": [],
+      "measures_gaps": [
+        "risk_high (sin celda de riesgo)",
+        "bare_soil_in_burn_season (falta rotación o calendario)"
       ]
     }
   ],

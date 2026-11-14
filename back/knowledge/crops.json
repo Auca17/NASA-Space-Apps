@@ -1,0 +1,197 @@
+{
+  "version": "0.1",
+  "crops": [
+    {
+      "id": "soja",
+      "name": {
+        "es": "Soja",
+        "en": "Soybean"
+      },
+      "family": "Fabaceae",
+      "sowing": {
+        "pampa_humeda": [
+          "10-15",
+          "12-15"
+        ]
+      },
+      "harvest": {
+        "pampa_humeda": [
+          "03-15",
+          "05-15"
+        ]
+      },
+      "gdd_base10": 1300,
+      "frost_tolerance": "low",
+      "drought_tolerance": "medium",
+      "heat_tolerance": "medium",
+      "water_mm_cycle": 500,
+      "root_depth_cm": 120,
+      "n_fixation": true,
+      "residue_t_ha": 2.5,
+      "forage": false,
+      "market_ar": "high",
+      "sources": [
+        "INTA Manual de soja 2020",
+        "FAO ECOCROP"
+      ]
+    },
+    {
+      "id": "vicia",
+      "name": {
+        "es": "Vicia (cobertura)",
+        "en": "Vetch (cover crop)"
+      },
+      "family": "Fabaceae",
+      "sowing": {
+        "pampa_humeda": [
+          "04-01",
+          "05-31"
+        ]
+      },
+      "harvest": {
+        "pampa_humeda": [
+          "09-15",
+          "10-31"
+        ]
+      },
+      "gdd_base10": 900,
+      "frost_tolerance": "high",
+      "drought_tolerance": "medium",
+      "heat_tolerance": "low",
+      "water_mm_cycle": 250,
+      "root_depth_cm": 60,
+      "n_fixation": true,
+      "residue_t_ha": 4.0,
+      "forage": true,
+      "market_ar": "low",
+      "sources": [
+        "INTA Cultivos de cobertura 2019"
+      ]
+    },
+    {
+      "id": "maiz",
+      "name": {
+        "es": "Maíz",
+        "en": "Maize"
+      },
+      "family": "Poaceae",
+      "sowing": {
+        "pampa_humeda": [
+          "09-15",
+          "12-01"
+        ],
+        "nea": [
+          "09-01",
+          "11-15"
+        ]
+      },
+      "harvest": {
+        "pampa_humeda": [
+          "03-01",
+          "05-01"
+        ],
+        "nea": [
+          "02-15",
+          "04-15"
+        ]
+      },
+      "gdd_base10": 1400,
+      "frost_tolerance": "low",
+      "drought_tolerance": "medium",
+      "heat_tolerance": "medium",
+      "water_mm_cycle": 550,
+      "root_depth_cm": 150,
+      "n_fixation": false,
+      "residue_t_ha": 5.0,
+      "forage": false,
+      "market_ar": "high",
+      "sources": [
+        "INTA Manual de maíz 2018",
+        "MAGyP Estimaciones"
+      ]
+    },
+    {
+      "id": "trigo",
+      "name": {
+        "es": "Trigo",
+        "en": "Wheat"
+      },
+      "family": "Poaceae",
+      "sowing": {
+        "pampa_humeda": [
+          "06-01",
+          "08-15"
+        ],
+        "noa": [
+          "05-15",
+          "07-15"
+        ]
+      },
+      "harvest": {
+        "pampa_humeda": [
+          "11-15",
+          "01-10"
+        ],
+        "noa": [
+          "11-01",
+          "12-20"
+        ]
+      },
+      "gdd_base10": 1100,
+      "frost_tolerance": "high",
+      "drought_tolerance": "medium",
+      "heat_tolerance": "low",
+      "water_mm_cycle": 400,
+      "root_depth_cm": 140,
+      "n_fixation": false,
+      "residue_t_ha": 3.5,
+      "forage": false,
+      "market_ar": "medium",
+      "sources": [
+        "INTA Trigo 2021",
+        "FAO ECOCROP"
+      ]
+    },
+    {
+      "id": "sorgo",
+      "name": {
+        "es": "Sorgo granífero",
+        "en": "Grain sorghum"
+      },
+      "family": "Poaceae",
+      "sowing": {
+        "pampa_humeda": [
+          "10-01",
+          "12-15"
+        ],
+        "nea": [
+          "10-01",
+          "12-31"
+        ]
+      },
+      "harvest": {
+        "pampa_humeda": [
+          "03-15",
+          "05-31"
+        ],
+        "nea": [
+          "03-01",
+          "05-15"
+        ]
+      },
+      "gdd_base10": 1500,
+      "frost_tolerance": "low",
+      "drought_tolerance": "high",
+      "heat_tolerance": "high",
+      "water_mm_cycle": 450,
+      "root_depth_cm": 160,
+      "n_fixation": false,
+      "residue_t_ha": 4.5,
+      "forage": false,
+      "market_ar": "medium",
+      "sources": [
+        "INTA Sorgo granífero 2017"
+      ]
+    }
+  ]
+}

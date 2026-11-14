@@ -238,6 +238,10 @@ Ejemplos: `fixtures/knowledge/crops.json`, `fixtures/knowledge/rotations.json`.
 
 ---
 
+### 3.3 `measures.json` (D26)
+
+Medidas de prevención de incendios. Productor del contenido: Augustus (fuente INTA). Por medida: `id`; `name.es`, `name.en`; `factor` (`machine_ignition` | `spread_boundary` | `residue_burning` | `initial_attack` | otro documentado); `addresses` (qué problema atiende, una frase); `benefit` (beneficio esperado, una frase); `requires` = `{people, machinery, downtime_h, cost: low|medium|high}`; `triggers` (lista de ids de regla: `harvest_in_dry_season`, `fire_weather_high`, `risk_high`, `bare_soil_in_burn_season`, `burn_season_now`); `sources` (obligatorio).
+
 ## 4. Back a demanda (FastAPI en Vercel Hobby, D18)
 
 Restricciones de diseño: llamadas externas en paralelo con timeout de 3 s cada una; caché por celda H3 res 6 + día; si una fuente falla, la tarjeta correspondiente vuelve con `value: null` y `confidence: "low"`, nunca se cae el pedido completo.
@@ -293,6 +297,12 @@ Devuelve el objeto de la celda res 5 de `risk/{h3_r2}.json` más `h3_r5` y `gene
 ### 4.5 `POST /api/field/explain` (Could)
 
 Entrada: la salida de `/rotations`. Salida: `{ "strategies": [{"id", "text"}] }`. Primero plantillas desde los indicadores; LLM solo si se decide (ver pendientes en `decisions.md`). Cada afirmación debe citar un `indicator`.
+
+### 4.6 Medidas de prevención en las respuestas (D26, compatible)
+
+`/api/field/diagnose`, `/api/risk` y cada estrategia de `/api/field/rotations` agregan `measures`: lista de `{id, name, factor, why, benefit, requires, cost, source}` donde `why` cita los valores que dispararon la medida. Más `measures_gaps`: reglas que no se evaluaron por falta de datos. El diagnóstico agrega la tarjeta `fire_weather` (humedad, viento y temperatura de los últimos 7 días, días sin lluvia; nivel `bajo` | `moderado` | `alto`).
+
+Modo live (front): cada foco muestra la hora de detección y el texto fijo "Detección térmica satelital: no es un incendio confirmado y llega con horas de demora", más los teléfonos de emergencia del país.
 
 ---
 

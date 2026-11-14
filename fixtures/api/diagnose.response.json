@@ -1,6 +1,6 @@
 {
-  "diagnosis_id": "dx_7f3a",
-  "area_ha": 52.4,
+  "diagnosis_id": "dx_8b6d3e68",
+  "area_ha": 50.0,
   "centroid": [
     -33.89,
     -60.57
@@ -14,11 +14,38 @@
   "cards": [
     {
       "id": "rain",
-      "value": 980,
+      "value": 1087,
       "unit": "mm/año",
-      "text": "980 mm/año; 1 de cada 4 años < 790 mm",
-      "source": "GPM IMERG",
-      "resolution": "0.1°",
+      "text": "1087 mm/año; 1 de cada 4 años < 935 mm",
+      "source": "NASA POWER",
+      "resolution": "0.5°×0.625°",
+      "confidence": "high"
+    },
+    {
+      "id": "heavy_rain",
+      "value": 2.0,
+      "unit": "días/año",
+      "text": "2 días/año con más de 50 mm",
+      "source": "NASA POWER",
+      "resolution": "0.5°×0.625°",
+      "confidence": "high"
+    },
+    {
+      "id": "frost",
+      "value": 294,
+      "unit": "días",
+      "text": "Período libre de heladas: 25/08 – 11/06",
+      "source": "NASA POWER",
+      "resolution": "0.5°×0.625°",
+      "confidence": "high"
+    },
+    {
+      "id": "heat",
+      "value": 20.0,
+      "unit": "días/año",
+      "text": "20 días/año por encima de 35 °C",
+      "source": "NASA POWER",
+      "resolution": "0.5°×0.625°",
       "confidence": "high"
     },
     {
@@ -31,21 +58,75 @@
       "confidence": "medium"
     },
     {
-      "id": "frost",
+      "id": "crop_water",
+      "value": 2.9,
+      "unit": "mm/día",
+      "text": "Demanda hídrica potencial: 2.9 mm/día",
+      "source": "NASA POWER (EVPTRNS)",
+      "resolution": "0.5°×0.625°",
+      "confidence": "medium"
+    },
+    {
+      "id": "vigor_bare_soil",
       "value": null,
       "unit": null,
-      "text": "Período libre de heladas: 15/10 – 20/04",
-      "source": "NASA POWER",
-      "resolution": "0.5°",
+      "text": "Sin datos disponibles",
+      "source": "MODIS MOD13Q1",
+      "resolution": "250 m",
+      "confidence": "low"
+    },
+    {
+      "id": "slope",
+      "value": 4.1,
+      "unit": "%",
+      "text": "Pendiente media: 4.1 %",
+      "source": "AWS Terrain Tiles (SRTM)",
+      "resolution": "~30 m",
       "confidence": "high"
     },
     {
-      "id": "fire",
-      "value": "moderado",
+      "id": "soil",
+      "value": null,
       "unit": null,
-      "text": "Temporada de quemas: ago–sep; riesgo 7 días: moderado",
+      "text": "Sin datos disponibles",
+      "source": "ISRIC SoilGrids v2",
+      "resolution": "250 m",
+      "confidence": "low"
+    },
+    {
+      "id": "water_trend",
+      "value": "down",
+      "unit": null,
+      "text": "Agua subterránea: tendencia descendente",
+      "source": "GRACE-FO",
+      "resolution": "regional",
+      "confidence": "medium"
+    },
+    {
+      "id": "fire",
+      "value": null,
+      "unit": null,
+      "text": "Sin datos disponibles",
       "source": "Serie armonizada MODIS+VIIRS",
       "resolution": "H3 res 5 (~250 km²)",
+      "confidence": "low"
+    },
+    {
+      "id": "fire_weather",
+      "value": "bajo",
+      "unit": null,
+      "text": "HR media 50 %; viento máx 3.8 m/s; T máx 30 °C; 0 días sin lluvia",
+      "source": "NASA POWER",
+      "resolution": "0.5°×0.625°",
+      "confidence": "high"
+    },
+    {
+      "id": "recent_weather",
+      "value": 0,
+      "unit": "días",
+      "text": "Últimos 30 días: 51.2 mm (media histórica 104 mm); última lluvia >1 mm hace 0 días",
+      "source": "NASA POWER",
+      "resolution": "0.5°×0.625°",
       "confidence": "high"
     }
   ],
@@ -69,18 +150,18 @@
         "id": "bare_soil",
         "label": "Suelo desnudo",
         "levels": [
-          0,
-          0,
-          0,
-          1,
-          3,
-          3,
-          3,
-          2,
-          1,
-          0,
-          0,
-          0
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null
         ]
       },
       {
@@ -90,12 +171,12 @@
           0,
           0,
           0,
+          0,
+          0,
           1,
           2,
-          3,
-          3,
-          2,
           1,
+          0,
           0,
           0,
           0
@@ -105,17 +186,17 @@
         "id": "water_stress",
         "label": "Estrés hídrico",
         "levels": [
+          1,
+          1,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          1,
+          0,
           2,
-          1,
-          0,
-          0,
-          0,
-          0,
-          0,
-          0,
-          0,
-          0,
-          1,
           2
         ]
       },
@@ -123,7 +204,7 @@
         "id": "heat",
         "label": "Calor",
         "levels": [
-          3,
+          2,
           2,
           1,
           0,
@@ -141,18 +222,18 @@
         "id": "burn_season",
         "label": "Temporada de quemas",
         "levels": [
-          0,
-          0,
-          0,
-          0,
-          0,
-          1,
-          2,
-          3,
-          3,
-          1,
-          0,
-          0
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null
         ]
       }
     ],
@@ -162,5 +243,11 @@
       "2": "media",
       "3": "alta"
     }
-  }
+  },
+  "measures": [],
+  "measures_gaps": [
+    "harvest_in_dry_season (falta rotación o calendario)",
+    "risk_high (sin celda de riesgo)",
+    "bare_soil_in_burn_season (falta rotación o calendario)"
+  ]
 }

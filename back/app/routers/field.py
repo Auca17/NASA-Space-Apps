@@ -413,6 +413,9 @@ def build_cards(power, soilg, slope, ndvi, grid_cell, fire_cal,
         cards.append(_null_card("fire", "Serie armonizada MODIS+VIIRS",
                                 "H3 res 5 (~250 km²)"))
 
+    cards.append(fire_weather_card(power, _last_valid_day(
+        P("PRECTOTCORR") or {})))
+
     rw = recent_weather(P("PRECTOTCORR") or {})
     if rw:
         text = (f"Últimos 30 días: {rw['p30']:g} mm "
@@ -512,6 +515,40 @@ def build_calendar(power, ndvi, monthly_burn):
                       "2": "media", "3": "alta"}}
 
 
+def fire_weather_card(power, end: date | None):
+    """Last 7 valid days: mean RH2M, max WS2M, max T2M_MAX + dry days.
+
+    Level score (INTA harvest guidance: stop work at wind>40 km/h,
+    T>35 °C, RH<30 %): +1 each for mean RH<30 %, max wind>11 m/s,
+    max T>35 °C, >10 days since rain. 3+ alto, 2 moderado, else bajo.
+    """
+    P = (power or {}).get
+    rh, ws, tx = P("RH2M") or {}, P("WS2M") or {}, P("T2M_MAX") or {}
+    if end is None or not (rh or ws or tx):
+        return _null_card("fire_weather", "NASA POWER", POWER_RES)
+    week = [end - timedelta(days=i) for i in range(7)]
+    def vals(s): return [s[d] for d in week if s.get(d) is not None]
+    rhm = statistics.fmean(v) if (v := vals(rh)) else None
+    wsm = max(vals(ws), default=None)
+    txm = max(vals(tx), default=None)
+    since = next(
+        (i for i in range(365)
+         if (v := (P("PRECTOTCORR") or {}).get(end - timedelta(days=i)))
+         is not None and v > 1), None)
+    score = sum([rhm is not None and rhm < 30,
+                 wsm is not None and wsm > 11,
+                 txm is not None and txm > 35,
+                 since is not None and since > 10])
+    level = "alto" if score >= 3 else "moderado" if score >= 2 else "bajo"
+    parts = [f"HR media {rhm:.0f} %" if rhm is not None else None,
+             f"viento máx {wsm:.1f} m/s" if wsm is not None else None,
+             f"T máx {txm:.0f} °C" if txm is not None else None,
+             f"{since} días sin lluvia" if since is not None else None]
+    return _card("fire_weather", level, None,
+                 "; ".join(p for p in parts if p),
+                 "NASA POWER", POWER_RES, "high")
+
+
 # -------------------------------------------------------------- endpoint ----
 
 @router.post("/api/field/diagnose")
@@ -556,8 +593,70 @@ async def diagnose(request: Request):
     dx = hashlib.sha256(
         (";".join(sorted(r6s)) + "|" + utc_today()).encode()).hexdigest()[:8]
 
+    from ..services.measures import evaluate
+    card_map = {c["id"]: c for c in cards}
+    msr = evaluate({"cards": card_map,
+                    "calendar": calendar["rows"],
+                    "risk_cat": (risk_cell or {}).get("cat")})
+
     return JSONResponse(
         {"diagnosis_id": f"dx_{dx}", "area_ha": round(area_ha, 1),
          "centroid": [round(clat, 4), round(clon, 4)],
-         "h3_r5": r5s, "h3_r6": r6s, "cards": cards, "calendar": calendar},
+         "h3_r5": r5s, "h3_r6": r6s, "cards": cards, "calendar": calendar,
+         **msr},
         headers={"Cache-Control": "no-store"})
+
+
+# ----------------------------------------------------- rotations / explain -
+
+ROTATIONS_ZONES = {"pampa_humeda", "nea", "noa", "cuyo", "patagonia",
+                   "other"}
+
+
+@router.post("/api/field/rotations")
+async def rotations(request: Request):
+    from ..services.rotations import run, PRIORITY_MAP
+    body = await request.json()
+    diag = body.get("diagnosis")
+    if not isinstance(diag, dict) or not isinstance(diag.get("cards"), list):
+        return JSONResponse(
+            status_code=400,
+            content={"error": "invalid_input",
+                     "detail": "diagnosis must be the full diagnose response"})
+    zone = body.get("zone")
+    if zone is not None and zone not in ROTATIONS_ZONES:
+        return JSONResponse(status_code=400, content={
+            "error": "invalid_input",
+            "detail": f"zone must be one of {sorted(ROTATIONS_ZONES)}"})
+    priorities = body.get("priorities") or {}
+    if not isinstance(priorities, dict) or any(
+            k not in PRIORITY_MAP or
+            not isinstance(v, (int, float)) or not 0 <= v <= 5
+            for k, v in priorities.items()):
+        return JSONResponse(status_code=400, content={
+            "error": "invalid_input",
+            "detail": f"priorities keys: {sorted(PRIORITY_MAP)}, values 0-5"})
+    constraints = body.get("constraints") or {}
+    if not isinstance(constraints, dict):
+        return JSONResponse(status_code=400, content={
+            "error": "invalid_input",
+            "detail": "constraints must be an object"})
+    try:
+        out = run(diag, body.get("current"), priorities, constraints, zone)
+    except ValueError as exc:
+        return JSONResponse(status_code=400, content={
+            "error": "invalid_input", "detail": str(exc)})
+    return JSONResponse(out, headers={"Cache-Control": "no-store"})
+
+
+@router.post("/api/field/explain")
+async def explain(request: Request):
+    from ..services.rotations import explain as explain_fn
+    body = await request.json()
+    if not isinstance(body, dict) or not isinstance(
+            body.get("strategies"), list):
+        return JSONResponse(status_code=400, content={
+            "error": "invalid_input",
+            "detail": "body must be the full rotations response"})
+    return JSONResponse(explain_fn(body),
+                        headers={"Cache-Control": "no-store"})

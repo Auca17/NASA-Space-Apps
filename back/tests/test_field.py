@@ -57,7 +57,7 @@ async def test_diagnose_all_sources_ok(monkeypatch):
     ids = [c["id"] for c in body["cards"]]
     assert ids == ["rain", "heavy_rain", "frost", "heat", "soil_moisture",
                    "crop_water", "vigor_bare_soil", "slope", "soil",
-                   "water_trend", "fire", "recent_weather"]
+                   "water_trend", "fire", "fire_weather", "recent_weather"]
     assert all(k in body["cards"][0] for k in
                ("value", "unit", "text", "source", "resolution", "confidence"))
     assert body["h3_r5"] and body["h3_r6"]

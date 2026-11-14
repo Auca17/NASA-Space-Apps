@@ -32,6 +32,9 @@ async def risk(lat: float = Query(...), lon: float = Query(...)):
     cell = shard.get("cells", {}).get(r5)
     if cell is None:
         return _not_found(r5)
+    from ..services.measures import evaluate
+    msr = evaluate({"risk_cat": cell.get("cat")})
     return JSONResponse(
-        {**cell, "h3_r5": r5, "generated_at": shard.get("generated_at")},
+        {**cell, "h3_r5": r5, "generated_at": shard.get("generated_at"),
+         **msr},
         headers={"Cache-Control": CACHE_CONTROL})

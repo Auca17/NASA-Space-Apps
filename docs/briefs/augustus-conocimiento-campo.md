@@ -17,6 +17,8 @@ Si un campo del esquema no aplica a un cultivo, va `null`, nunca un invento. Cad
 | **B3** | h24 | Export de Orin en `data/orin/`: lotes (GeoJSON), muestreos y estaciones (CSV), umbrales de helada; más un `README.md` que diga qué es cada archivo y de dónde salió | Devin (validación 10.4), presentación |
 | **B4** | h30 | Números de validación satélite vs. campo: RMSE y sesgo de NDVI y temperatura contra lo medido en los lotes de Orin, en `docs/validation/orin.md` | Front ("qué tan bien ve el satélite tu lote"), video, README |
 
+**B1b (h12): `back/knowledge/measures.json`** (contrato 3.3, D26). Medidas de prevención de incendios con fuente INTA ([pautas para prevenir incendios durante la cosecha](https://www.argentina.gob.ar/node/413622)). Devin deja 5 medidas de relleno; reemplazalas y agregá las que falten, cada una con su factor, qué requiere (personas, maquinaria, horas de parada, costo bajo/medio/alto) y qué reglas la disparan. Validalas con el contacto productor.
+
 También: revisar con los contactos agrónomos las rotaciones y los indicadores antes de la h32.
 
 ---

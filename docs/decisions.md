@@ -34,6 +34,8 @@ Convención: `D<n>` es el identificador estable. Una decisión no se borra; si c
 
 | D25 | 2026-11-14 | Consultas de clima a demanda (lote, "mi zona"): **API diaria por punto de NASA POWER**, una sola llamada 2001 → ayer por lote, caché por celda res 6 + día, timeout 5 s. De esa serie salen lluvia, lluvias extremas, heladas, calor, condiciones recientes y, si sirve, humedad del suelo (`GWETTOP`/`GWETROOT`). | Pedido del equipo. Medido: 25 años de un punto en 2,0 s; los últimos 2 días vienen como `-999`. | Vigente |
 
+| D26 | 2026-11-14 | **Medidas de prevención de incendios**: `measures.json` (contenido de Augustus, fuente INTA) y motor de reglas determinístico que las activa con datos que ya tenemos (cosecha en temporada seca, clima de fuego, riesgo alto, suelo desnudo en temporada de quemas). Se muestran en el panel de riesgo, en el diagnóstico y por rotación. Fuera de alcance: directorio de contactos y daño post-incendio; el modo live solo agrega el aviso de que una detección no es un incendio confirmado. | Propuesta del equipo: convierte el riesgo en acción y cruza las dos lentes en la quema de rastrojos. | Vigente |
+
 ## Pendientes de decisión
 
 - Orden de construcción y asignación de la lente Campo (`crops.json`, `rotations.json`, `/api/field/*`): se define con el plan de acción.
