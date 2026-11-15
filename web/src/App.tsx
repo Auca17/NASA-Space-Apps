@@ -314,7 +314,8 @@ export default function App() {
   const coveredBottom = () => {
     const el = document.querySelector(".map-wrap .controls");
     const map = mapDiv.current;
-    if (!el || !map || innerWidth > 560) return 0;
+    if (!el || !map || innerWidth > 900 ||
+        el.getClientRects().length === 0) return 0;
     return Math.max(0, map.getBoundingClientRect().bottom -
       el.getBoundingClientRect().top);
   };

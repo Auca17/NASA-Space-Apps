@@ -185,7 +185,7 @@ export function HistoricControls({ globe, onMonth, view }: {
   }, []);
 
   return (
-    <div className="controls">
+    <div className="controls hist">
       <div className="row">
         <button onClick={() => setPlaying(!playing)}
                 aria-label={playing ? t("historic.pause") : t("historic.play")}

@@ -112,12 +112,12 @@ input[type="range"] { min-height: var(--touch); }
 .panel { position: absolute; z-index: 6; background: var(--panel);
   border: 1px solid var(--border); overflow-y: auto;
   box-shadow: 0 4px 24px rgb(0 0 0 / 0.18); }
-@media (max-width: 720px) {
+@media (max-width: 900px) {
   .panel { left: 0; right: 0; bottom: 0; max-height: 55%;
     border-radius: 16px 16px 0 0; }
   .panel .grab { display: block; }
 }
-@media (min-width: 721px) {
+@media (min-width: 901px) {
   .panel { right: 12px; top: 12px; bottom: 12px; width: 400px;
     border-radius: var(--radius); }
   .panel .grab { display: none; }
@@ -410,11 +410,13 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
 
 /* B3 — while a bottom sheet is open it would cover the playback
  * controls pinned at the bottom; they ride under the top bar instead,
- * and the sheet is capped so both fit at once. */
-@media (max-width: 720px) {
-  .app:has(.panel) .map-wrap .controls {
+ * and the sheet is capped so both fit at once. Scoped to .controls.hist:
+ * the field chooser, review and fields panels are .controls too and
+ * must not be lifted (task 40 — that lift stacked them over the map). */
+@media (max-width: 900px) and (min-height: 561px) {
+  .app:has(.panel) .map-wrap .controls.hist {
     bottom: auto; top: calc(var(--top-safe, 78px) + 8px); }
-  .app:has(.map-wrap .controls) .panel { max-height: 42%; }
+  .app:has(.map-wrap .controls.hist) .panel { max-height: 42%; }
 }
 
 /* Reopen affordance when the fire panel is closed (round-2 minor) */
@@ -422,6 +424,9 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
   top: calc(var(--top-safe, 78px) + 8px); z-index: 6;
   padding: 10px 14px; min-height: var(--touch);
   border-radius: var(--radius-ctl, 10px); font-weight: 600; }
+/* any open sheet takes that corner — the button is only useful once
+ * the sheet is closed anyway */
+.app:has(.panel) .fire-reopen { display: none; }
 
 /* Freehand layer: catches the stroke so the map does not pan */
 .freehand-layer { position: absolute; inset: 0; z-index: 4;

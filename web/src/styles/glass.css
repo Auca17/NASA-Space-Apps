@@ -111,7 +111,7 @@ body:has(.app) { background: #0f110e; }
 .app .draw-hint { top: var(--top-safe); }
 /* a right-side panel is open (fire area, field lens, emergencies):
  * the map's top-right controls step left of it (task 33.2) */
-@media (min-width: 721px) {
+@media (min-width: 901px) {
   .app.has-side-panel .field-map-tools { right: 434px; }
 }
 
@@ -158,11 +158,11 @@ body:has(.app) { background: #0f110e; }
 /* ---------- panel / bottom sheet ---------- */
 .app .panel { border-radius: var(--radius-panel); scrollbar-width: thin;
   scrollbar-color: rgba(255, 255, 255, 0.18) transparent; }
-@media (min-width: 721px) {
+@media (min-width: 901px) {
   .app .panel { top: var(--top-safe); right: 10px; bottom: 10px; width: 410px;
     animation: panel-in-side 240ms var(--ease-out) both; }
 }
-@media (max-width: 720px) {
+@media (max-width: 900px) {
   .app .panel { left: 6px; right: 6px; bottom: 6px; max-height: 58%;
     border-radius: var(--radius-panel);
     animation: panel-in-up 260ms var(--ease-out) both; }
@@ -254,7 +254,7 @@ body:has(.app) { background: #0f110e; }
 .app .field-frame { display: none; }
 .app .topbar .nav-ico, .app .emerg-ico { display: none; }
 
-@media (max-width: 640px) {
+@media (max-width: 900px) {
   /* 1 · the bar is a single row again (the nav moved to the bottom) */
   .app { --top-safe: 66px; }
   .app .topbar .meth-link, .app .topbar .lang-btn { display: none; }
@@ -342,6 +342,27 @@ body:has(.app) { background: #0f110e; }
       #field-chooser-options > :not(.row) { display: none; }
   .app .field-chooser:has(.picker-head [aria-expanded="false"])
       #field-chooser-options[hidden] { display: grid; gap: 8px; }
+
+  /* 5 · one sheet at a time: an open .panel (emergencies, fire area)
+   *     collapses the map sheets (chooser, review, fields, parcels);
+   *     closing the panel restores them. The playback controls are
+   *     exempt — they are lifted above the sheet in app.css (B3). */
+  .app:has(.panel) .map-wrap .controls:not(.hist) { display: none; }
+}
+
+/* short landscape (phones/tablets rotated): a bottom sheet would fight
+ * the lifted playback controls for the same ~250 px strip — the sheet
+ * becomes a right column and the controls stay bottom-left, capped so
+ * they never reach under it. */
+@media (max-width: 900px) and (max-height: 560px) {
+  .app .panel { left: auto; right: 6px;
+    top: calc(var(--top-safe) + 4px);
+    bottom: calc(64px + env(safe-area-inset-bottom, 0px));
+    width: min(48%, 340px); max-height: none; }
+  .app .map-wrap .controls.hist { left: 8px; right: auto;
+    max-width: calc(52% - 16px); }
+  .app.has-side-panel .field-map-tools {
+    right: calc(min(48%, 340px) + 16px); }
 }
 @media (hover: none) {
   .app .field-zoom { display: none; }
