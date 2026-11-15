@@ -1,0 +1,40 @@
+# Ready but DISABLED on purpose: manual trigger only, no schedule.
+# Runs the Argentine clima risk-refresh pipeline in dry-run mode
+# (--no-upload). To enable real uploads, change the last step to
+# `python tools/refresh_risk.py` after reviewing a dry-run output.
+# Secret names match .env.example exactly.
+name: risk-refresh
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r back/requirements.txt
+          pip install lightgbm python-dotenv boto3 pandas pyarrow scipy h3
+
+      - name: Refresh risk (dry-run, no upload)
+        env:
+          FIRMS_MAP_KEY: ${{ secrets.FIRMS_MAP_KEY }}
+          EARTHDATA_TOKEN: ${{ secrets.EARTHDATA_TOKEN }}
+          DATA_BASE_URL: ${{ secrets.DATA_BASE_URL }}
+          R2_ACCOUNT_ID: ${{ secrets.R2_ACCOUNT_ID }}
+          R2_BUCKET: ${{ secrets.R2_BUCKET }}
+          R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: python tools/refresh_risk.py --no-upload
