@@ -41,7 +41,7 @@ Productor: pipeline de fuego. Consumidor: front, Devin, README. Se carga siempre
 | `baseline.start`, `baseline.end` | mes | Línea base (D10). |
 | `h3.globe`, `h3.panel`, `h3.shard`, `h3.cache` | int | Resoluciones H3 en uso (3, 5, 2, 6). |
 | `harmonization` | objeto | `unit`, `method`, `overlap`, `holdout`, `validation.{r2, bias_pct, r2_cells_day}`. Va al README y al video. |
-| `low_confidence_periods` | lista de `[mes, mes]` | Tramos de menor confianza (2000-11 → 2011-12). |
+| `low_confidence_periods` | lista de `[mes, mes]` | Tramos de menor confianza (2000-11 → 2012-01, D30). |
 | `sp_until` | objeto | Último día con datos Standard Processing por sensor; de ahí en adelante es NRT. |
 | `semaphore` | objeto | `window_days` (30), `categories` con rangos de percentil, `ratio_min_median` (5). Parámetros de D9 para que el front no los tenga hardcodeados. |
 

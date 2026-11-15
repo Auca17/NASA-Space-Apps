@@ -57,7 +57,7 @@ found.
 | garbanzo-maiz | noa | |
 | alfalfa4-maiz | cuyo (irrigated) | cuyo |
 
-- **Patagonia has no rotation.** The engine falls back to soja-soja. Which rotation should it be?
+- **Patagonia has no rotation.** The engine returns `confidence: "low"` and "sin rotaciones validadas para esta zona" — no soja-soja fallback (see `back/README.md`). Which rotation should it be?
 - Is soja-soja really the typical current rotation for NEA and NOA? PRD 7.3 says "la típica de la zona según MAGyP".
 - `bare_soil_days` = (years × 365 − days with a live crop) / years. Standing stubble is not subtracted. Confirm the definition.
 - All sequence dates fall inside the crop windows (checked by script). Confirm the dates themselves, especially soja 2ª after trigo and cebada, and garbanzo / maíz in NOA as a double crop.
