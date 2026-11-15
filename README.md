@@ -2,9 +2,9 @@
 
 ![Ashfield](web/public/brand/ashfield-lockup-light.svg)
 
-**NASA Space Apps Challenge 2026 · Registered challenge: Field Shift: Adapting Farms with NASA Data** — the project also covers **Harmonization of MODIS and VIIRS Hot Spots**.
+**NASA Space Apps Challenge 2026 · Registered challenge: Field Shift: Adapting Farms with NASA Data**
 
-A producer draws their plot and asks the real question: **what should I plant next?** Ashfield answers with NASA data — a per-parcel diagnosis, the current rotation compared against up to three alternatives in cards that explain *why, evidence, benefits, gaps and risks*, and validation against real weather stations. The same engine brings scattered NASA data — different sensors, different resolutions — onto one common grid; the 25-year MODIS/VIIRS fire harmonization is the working example.
+A producer draws their plot and asks the real question: **what should I plant next?** Ashfield answers with NASA data — a per-parcel diagnosis, the current rotation compared against up to three alternatives in cards that explain *why, evidence, benefits, gaps and risks*, and validation against real weather stations. Several NASA products at very different resolutions land on one common grid, so each parcel reads them all cell by cell.
 
 **Demo:** [PENDIENTE: URL de la demo] · **Video:** [PENDIENTE: URL del video]
 
@@ -14,18 +14,16 @@ A producer draws their plot and asks the real question: **what should I plant ne
 
 ## The problem
 
-**Field.** Producers face changing temperatures, less predictable rainfall, water scarcity and degraded soils. Choosing a crop rotation that protects soil and water is hard: a crop that improves soil in one place can use too much water or fall outside the season in another. In Argentina, stubble and pasture burning adds to the problem — it damages the soil and is a major source of thermal anomalies.
+Producers face changing temperatures, less predictable rainfall, water scarcity and degraded soils. Choosing a crop rotation that protects soil and water is hard: a crop that improves soil in one place can use too much water or fall outside the season in another. In Argentina, stubble and pasture burning adds to the problem — it damages the soil and threatens the plot itself.
 
-**Fire.** The satellite record of thermal anomalies is split between sensors that cannot be compared directly: MODIS (1 km pixels, since 2000, ending its mission in 2026) and VIIRS (375 m pixels, since 2012), which sees smaller fires and fragments a single fire into many more detections. Without harmonization the series jumps when VIIRS comes online, and there is no way to tell whether a year was worse because of fire or because of the sensor.
-
-**What ties them together:** scattered NASA data, at different resolutions, that nobody translates into decisions for the person standing on the land.
+**What makes it hard:** the NASA data that could inform that decision is scattered across products, resolutions and portals — nobody translates it into a decision for the person standing on the land.
 
 ## What the app does
 
 - **Field lens (Field Shift):** the producer draws their plot, splits it into **parcels with a crop each**, ranks the eight hazards that worry them most (fire, drought, El Niño, frost, heat, snow, hail, flood), and optionally adds water access, distance to emergency services, and per-parcel costs, prices and margins. The diagnosis gives each parcel a fire and a water percentage **with the reason for every number**, evaporation/evapotranspiration (NASA POWER `EVLAND`, with a FAO-56 Penman-Monteith or Hargreaves ET0 fallback where POWER is masked), a soil-infiltration score (USDA hydrologic groups from SoilGrids texture, organic matter, slope and bare-soil days), alerts, and fire-risk/dry/bare-soil zones on the map — then their **current rotation + 3 alternatives**, each with its infiltration effect and the five sections the challenge asks for: why, evidence, benefits, information gaps, and risks to validate with an agronomist. An optional AI summary (Gemini) puts the numbers in plain words; emergency-service phones are a tap away, never dialed automatically.
-- **Planned:** proactive alerts when a parcel's risk turns high (the alert banner and emergency contacts already ship; the push-style warning does not).
+- **Planned:** alerts that warn about live fire detections near a saved field — the n8n workflows exist and were delivery-tested on a sandbox, but the notification system is not part of the app yet (the alert banner and emergency contacts inside the diagnosis do ship).
 
-**Two-minute demo path:** welcome → **"Ver un ejemplo"** (a fictional farm in Mendoza — real location and satellite data) → the per-parcel diagnosis with fire and water badges and their reasons → the priorities tab (rank the eight hazards) → the agricultural calendar with vulnerable months → the validation card → then **"Ver mi zona"** (location, globe flies to a 50 km view) → historic mode playing **Corrientes 2022** → risk and semaphore in the area panel. To see rotation cards, use **"Analizar mi campo"** and tap a point in a grain zone — rotations do not apply to the Mendoza demo's vineyards and olives.
+**Two-minute demo path:** welcome → **"Ver un ejemplo"** (a fictional farm in Mendoza — real location and satellite data) → the per-parcel diagnosis with fire and water badges and their reasons → the fire alert and the emergency-services block → the priorities tab (rank the eight hazards) → the agricultural calendar with vulnerable months → the validation card. To see rotation cards, use **"Analizar mi campo"** and tap a point in a grain zone — rotations do not apply to the Mendoza demo's vineyards and olives.
 
 Location and plots stay in the browser: no accounts, no server-side storage.
 
@@ -35,10 +33,8 @@ All NASA satellite sources are global. Resolution and period are the source's ow
 
 | Dataset | Used for | Resolution | Period |
 |---|---|---|---|
-| FIRMS MODIS Collection 6.1 | Hot spots | 1 km | 2000-11 → 2026-08-31 (SP), then NRT |
-| FIRMS VIIRS S-NPP | Hot spots | 375 m | 2012-01-20 → 2025-12-31 |
-| FIRMS VIIRS NOAA-20 | Hot spots, unit of the series | 375 m | 2018-04-01 → 2026-07-31 (SP), then NRT |
-| NASA POWER (daily) | Frosts, heat, rain, fire weather, model features | 0.5° × 0.625° (≈55 × 60 km) | 2001 → yesterday (MERRA-2; tail from GEOS-IT) |
+| FIRMS MODIS + VIIRS | Active-fire detections near the plot (parcel fire %, alerts and the planned notification) | 1 km / 375 m | NRT + history |
+| NASA POWER (daily) | Frosts, heat, rain, evaporation | 0.5° × 0.625° (≈55 × 60 km) | 2001 → yesterday (MERRA-2; tail from GEOS-IT) |
 | NASA POWER `GWETROOT` | Root-zone soil moisture (the parcel water indicator) | 0.5° × 0.625° | Same as POWER |
 | NOAA CPC ONI | El Niño / La Niña tendency per parcel | Seasonal index | Ongoing |
 | GPM IMERG (monthly V07) | Monthly rain in the Argentina field grid | 0.1°, monthly | 2015 → 2024 (precomputed) |
@@ -51,12 +47,13 @@ All NASA satellite sources are global. Resolution and period are the source's ow
 | GRACE-FO (mascon) | Regional water trend | Regional | 2018 → today |
 | ECOSTRESS (ECO_L2T_LSTE) | Land-surface temperature | 70 m | 2024–2025, Orin demo plots only |
 | ISRIC SoilGrids | Soil texture and organic carbon (0–30 cm) | 250 m | v2 |
-| NASA GIBS | Base imagery (Blue Marble; VIIRS True Color for live mode) | — | Daily |
+| NASA GIBS | Base imagery (Blue Marble) | — | Daily |
 | MAGyP Estimaciones Agrícolas | Typical rotation per zone, analog-zone crops and yields | By department (Argentina) | Latest published |
+| Sentinel-2 L2A (ESA Copernicus) | Current-crop and moisture check on demand | 20 m | On demand |
 | Orin field data | Satellite-vs-field validation | 53 weather stations, Mendoza | 2026-10-04 → 2026-10-20 |
 | IGN / Natural Earth | Provinces, departments, country lookup | Polygons | — |
 
-**Not used, and why:** the field datasets suggested for the US (SSURGO, NASS/CDL, NLDAS/PRISM, NAIP, CoCoRaHS, OpenET) cover only the United States; they are replaced by SoilGrids, MAGyP, POWER and the Orin data so the tool works in Argentina and worldwide. **FAO GAEZ** is pending a manual license step. **Hail** has no usable satellite product, so the app says "no satellite data" instead of guessing. Landsat/HLS and Sentinel-2 are kept for demo plots only (partial coverage). ERA5/GLDAS stay as a climate backup. On-demand SoilGrids and ORNL MODIS calls time out beyond the latency budget, so those cards fall back to the precomputed grid.
+**Not used, and why:** the field datasets suggested for the US (SSURGO, NASS/CDL, NLDAS/PRISM, NAIP, CoCoRaHS, OpenET) cover only the United States; they are replaced by SoilGrids, MAGyP, POWER and the Orin data so the tool works in Argentina and worldwide. **FAO GAEZ** is pending a manual license step. **Hail** has no usable satellite product, so the app says "no satellite data" instead of guessing. Landsat/HLS is kept for demo plots only (partial coverage). ERA5/GLDAS stay as a climate backup. On-demand SoilGrids and ORNL MODIS calls time out beyond the latency budget, so those cards fall back to the precomputed grid.
 
 ## Method
 
@@ -68,16 +65,9 @@ All NASA satellite sources are global. Resolution and period are the source's ow
 
 **Uncertainty.** Every number in the diagnosis shows its source and resolution; cards flag low confidence when data is thin, resolution is coarse or the calibration stratum is small.
 
-**One grid, many resolutions — the harmonization (requirement F8 in action).** The Field Shift brief asks for heterogeneous data on a common grid; the fire series is the working example. All counts are expressed in **VIIRS NOAA-20 equivalent detections**, because MODIS is retiring and every new observation arrives as VIIRS. Calibration is done per stratum — 10° latitude band × month (18 bands, 208 strata with data) — over the 2012–2025 overlap:
+**One grid, many resolutions (requirement F8 in action).** The field layers are precomputed onto the same **H3 hexagonal grid** (res 5 ≈ 253 km², res 2 as shard unit): POWER daily weather (0.5°), IMERG monthly rain (0.1°), MODIS NDVI (0.05°), SoilGrids texture and carbon (250 m), slope (SRTM ~30 m), land cover and the FIRMS fire history. Each drawn parcel is rasterized to the same cells, so unlike sources are read cell by cell inside the plot — and on-demand sources (Sentinel-2 at 20 m, OpenStreetMap, daily POWER) join at the point when they are fresher than the grid. The precomputed layers cover Argentina; elsewhere the diagnosis runs on point data.
 
-1. **Terra → Terra + Aqua** (2000-11 → 2002-06): per-stratum (T+A)/T factor measured over 2003–2011.
-2. **S-NPP → NOAA-20** (2012-02 → 2018-03): per-stratum N20/N factor computed only over months where both satellites deliver data (2018-04 → 2025-12); in Argentina the factor lands between 0.98 and 1.0.
-3. **MODIS → VIIRS:** `log(VIIRS + 1) = a + b · log(MODIS + 1)` per stratum over res-3 cell × month pairs (training 2012-02 → 2022-12), plus a per-stratum total-preserving factor `k` that corrects the log-space bias and the fire VIIRS sees where MODIS sees nothing. Strata with fewer than 200 pairs use global month coefficients and are flagged `low` confidence (71 of 208).
-4. **Res 3 → res 5:** each res-3 prediction is split among its res-5 children in proportion to their MODIS detections, so small cells always add up to the parent.
-
-Final series: MODIS converted for 2000-11 → 2012-01, S-NPP × factor for 2012-02 → 2018-03, NOAA-20 as-is from 2018-04. Raw detections are filtered to `type = 0` (presumed vegetation fire), MODIS confidence ≥ 30, VIIRS `nominal`/`high`; NRT files lack `type`, so a fixed-source mask inferred from the NOAA-20 history is applied. In total ~568 million worldwide detections were processed onto H3 cells (res 5 ≈ 253 km² for panels and risk, res 3 for the globe, res 2 as shard unit).
-
-**Fire risk in 7 days.** Two levels. Worldwide, no ML: `p = min(0.95, clim × (1 + 2·A + B))` where `clim` is the weekly climatology (fraction of 2003–2022 years with ≥ 1 detection that week) and A/B flag detections in the cell in the last 7 and 30 days. In Argentina, a **LightGBM** model adds NASA POWER weather (rain accumulation, dry days, humidity, temperature, wind) plus fire history, seasonality, land cover and neighbouring-cell fires; probabilities are Platt-calibrated and each prediction ships 2–3 SHAP-based reasons. The climatology is computed everywhere and is the baseline the model must beat.
+**Fire history per parcel.** The fire percentage each parcel gets — and the months marked as burn-prone on the calendar — come from the FIRMS record (MODIS since 2000, VIIRS since 2012) gridded to the same cells, plus detections near the plot in the last days. The MODIS/VIIRS harmonization pipeline that produced that record stays in the repository (`pipeline/`, `model/fire_risk/`) but is not part of this submission.
 
 ## Validation
 
@@ -99,59 +89,29 @@ The error is driven by elevation: a POWER cell (~55 × 60 km) has one mean altit
 
 Both products read wet on average, concentrated in arid Mendoza: a station is a point gauge on the dry valley floor while the satellite pixel averages the surrounding grid cell, including orographic rain the gauge never sees — a point-vs-pixel limitation, not a broken product. Monthly agreement does not prove long-term climatology; the full pairing record is in `pairs.csv`.
 
-**Harmonization hold-out.** Trained on 2012-02 → 2022-12, evaluated on **2023–2024** — years the calibration never saw — by converting hold-out MODIS and comparing against real NOAA-20:
-
-| Metric | Value |
-|---|---|
-| R² of the global monthly series | **0.979** |
-| R² linear, per res-3 cell × month | **0.926** |
-| R² log1p, per res-3 cell × month | **0.654** |
-| Total bias | **−0.8 %** |
-| Cells-day with fire: R² log1p / bias | 0.61 / +1.4 % |
-
-The log1p R² is lower because it weighs every cell equally and most cells have few detections per month — there, the difference between 1 and 3 detections is sampling noise (overpass timing, clouds, VIIRS' smaller pixels), not calibration error. High-fire cells, which drive totals and peaks, are predicted well, as the linear and global R² show. The harmonized series shows no jump in 2012 or 2018 (`docs/validation/series_global.png`).
-
-**Fire-risk model vs baselines** (test split 2023–2025, Argentina):
-
-| Predictor | ROC-AUC | PR-AUC | Brier |
-|---|---|---|---|
-| LightGBM (climate + history) | **0.920** | **0.427** | **0.0302** |
-| Climatology | 0.843 | 0.295 | 0.0350 |
-| Persistence | 0.852 | 0.310 | 0.0452 |
+The earlier MODIS/VIIRS fire-harmonization validation (R² 0.979 holdout, risk model vs baselines) remains in `docs/validation/` and `model/fire_risk/report.md`; that pipeline is not part of this submission.
 
 ## Limitations
 
-- **2000-11 → 2012-01 is the low-confidence stretch** (marked in the app): those years are MODIS converted to a more sensitive sensor, and a small fire MODIS missed cannot be reconstructed. June–July 2001 carry an extra low-confidence flag because Terra recorded nothing between 2001-06-15 and 2001-07-03 (safe mode), before Aqua existed.
-- **Calibration is by latitude band × month, not land cover** — grassland and rainforest at the same latitude share coefficients; land-cover stratification is a planned improvement. 71 of 208 strata fall back to global coefficients.
 - **Precomputed field layers cover Argentina only** (plus demo plots); elsewhere the diagnosis relies on on-demand APIs and some cards may read "no data available".
-- **POWER temperature in mountain cells** can miss several degrees (see validation): the diagnosis applies a −6.5 °C/km elevation correction on demand, but frost cards in valleys still need ground confirmation — and the fire-risk model features remain uncorrected (the model was not retrained).
+- **POWER temperature in mountain cells** can miss several degrees (see validation): the diagnosis applies a −6.5 °C/km elevation correction on demand, but frost cards in valleys still need ground confirmation.
+- **The parcel fire history is single-sensor before 2012** — MODIS-only years carry less confidence, and a small fire MODIS missed cannot be reconstructed (June–July 2001 has a real gap, Terra safe mode).
 - **SMAP soil-moisture anomaly was computed (SPL3SMP_E) but rejected by the quality gates** — it showed no positive relation to recent POWER rain — so the card falls back to POWER `GWETROOT`.
 - **Climate scenarios are simple scalings** of the historical POWER series (rain × (1 + pct), temperature ± delta), not forecasts. The El Niño tendency shown per parcel is a historical statistic, not a forecast either.
 - **Hail is reported as "no satellite data"** — there is no satellite hail product honest enough to show a number for.
 - **Nearby-services lookups (OpenStreetMap) can fail or time out**; when they do the diagnosis says so and marks itself incomplete rather than hiding it.
 - **Parcel margins are rough estimates** from the producer's own costs/prices (or the department average from MAGyP) — agronomic advice still needed.
 - **ECOSTRESS** is not part of the general diagnosis (partial coverage; demo plots only).
-- **NRT hot spots infer `type`** with a fixed-source mask (discards 5.7 % of NOAA-20 NRT vs 8.6 % with the real flag); a new industrial source could slip through in recent months.
 - **The crop knowledge base is a draft under agronomic review** (`docs/revision-agronomica.md`): several water-use and residue figures await Argentine sources, and Patagonia has no validated rotation.
 - **Rotations are decision support, not agronomic advice** — the app says so on every card and lists what to validate with a local agronomist.
 - **Evaporation and crop-water estimates are references, not measurements** — `EVLAND` is POWER's land evaporation; where masked, the card falls back to FAO-56 Penman-Monteith (or Hargreaves when radiation inputs are missing) ET0, labeled as a reference estimate. Crop-water demand uses generic FAO `Kc` coefficients pending local agronomic review.
 - **The infiltration score is relative and qualitative** — USDA hydrologic groups derived from SoilGrids texture, organic matter, slope and bare-soil days; it ranks parcels and rotation alternatives, it does not measure infiltration.
-- The Argentina risk model's 365-day fire-history feature misses Jan–Oct 2026 fires until the next annual Parquet is added (`fires_365d_complete` flag on every shard).
+- The 365-day fire history behind each parcel's fire percentage misses Jan–Oct 2026 fires until the next annual Parquet is added (`fires_365d_complete` flag on every shard).
 - The Orin frost-forecast pilot (one station, spring 2026, 24 complete nights) saw no frost, so the alert's value cannot be judged — and the station-based bias correction made RMSE worse in that sample (3.64 vs 3.07 °C), so it is not evidence that calibration helps.
 
 ## Where the Orin data comes from
 
 The Orin data (plots, samplings and 53 weather stations in Mendoza) was **collected before the hackathon** by the Orin project. Per team decision D17, its use is authorized without restrictions: **only the collected data is used, never Orin's code**. This is stated here for transparency, as the challenge rules require for pre-existing work.
-
-## Also built: Hot Spots (Harmonization of MODIS and VIIRS)
-
-The second lens of the same app — it shares the engine and the H3 grid, and it is what turns "fire" from a map curiosity into a plot-level input: the parcel fire percentage, the burning months on the agricultural calendar, the *burns avoided* indicator per rotation and the INTA prevention measures all come from this layer.
-
-- **Historic mode:** a 3D globe playing the harmonized monthly series, November 2000 → today — 25 years in one comparable unit.
-- **Live mode:** detections from the last 24 h / 48 h / 7 d over today's NASA GIBS imagery.
-- **Calendar + semaphore:** a year × month fire calendar and a comparison of the current month against its 2003–2022 baseline.
-- **7-day risk:** the model described above, with its 2–3 reasons, plus CSV download.
-- **Alert idea:** proactive notifications (e.g. an n8n flow) when a cell's risk turns high — sketched, not shipped.
 
 ## Run it locally
 
@@ -198,10 +158,10 @@ Single Vercel project serving the static `web/` build plus the Python serverless
 ## Repository map
 
 ```
-pipeline/    FIRMS ingest → clean → H3 grid → harmonize → aggregates → export (Python + DuckDB)
-model/       fire_risk (LightGBM + report), analogs (clustering), power, field_grid builders
-back/        FastAPI app (Vercel serverless): /api/live, /api/risk, /api/field/*, knowledge/ (crops, rotations, measures)
-web/         React + TypeScript + MapLibre GL (globe) front end
+pipeline/    FIRMS ingest → clean → H3 grid → aggregates → export (Python + DuckDB)
+model/       field_grid builders, analogs (clustering), power; fire_risk kept in repo — not part of this submission
+back/        FastAPI app (Vercel serverless): /api/field/*, knowledge/ (crops, rotations, measures)
+web/         React + TypeScript + MapLibre GL front end
 api/         Vercel entry point re-exporting the back app
 fixtures/    Contract-shaped example data the front can run on
 docs/        PRD, data contract, decisions log, method, validation, case study, deploy
@@ -212,12 +172,11 @@ tools/       R2 upload, brand assets (logo and palette: ember #b3401e, crop gree
 
 - **Ariel** — documentation and README.
 - **Augustus** — Orin field data and agronomic knowledge.
-- **Ezequiel** — fire data and pipeline, deploy, Orin data and agronomic knowledge.
+- **Ezequiel** — data pipeline, deploy, Orin data and agronomic knowledge.
 - **Alex** — front end and presentation.
 
 ## Licenses and acknowledgements
 
 - **Code license:** MIT — see [`LICENSE`](LICENSE).
-- Harmonized fire dataset: released as Parquet + CSV with metadata and `CITATION.cff` — [PENDIENTE: URL de descarga del dataset armonizado]
-- Data: NASA FIRMS (MODIS, VIIRS S-NPP, VIIRS NOAA-20), NASA POWER, GPM IMERG, SMAP, MODIS (NDVI, land cover), SRTM, GRACE-FO, NASA GIBS, FAO GAEZ, ISRIC SoilGrids, MAGyP Estimaciones Agrícolas (Argentina), IGN (Argentina), Natural Earth, INTA (prevention measures and crop parameters, under review; SIGA automatic weather stations used as ground truth for the rain validation), Orin field data (with authorization).
+- Data: NASA FIRMS (MODIS, VIIRS S-NPP, VIIRS NOAA-20), NASA POWER, GPM IMERG, SMAP, MODIS (NDVI, land cover), SRTM, GRACE-FO, NASA GIBS, FAO GAEZ, ISRIC SoilGrids, MAGyP Estimaciones Agrícolas (Argentina), ESA Copernicus Sentinel-2, IGN (Argentina), Natural Earth, INTA (prevention measures and crop parameters, under review; SIGA automatic weather stations used as ground truth for the rain validation), Orin field data (with authorization).
 - Tools: MapLibre GL JS, OpenFreeMap, Uber H3, DuckDB, LightGBM, FastAPI, React/Vite, Cloudflare R2, Vercel.

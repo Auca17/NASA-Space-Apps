@@ -44,29 +44,11 @@ const reqGroup = (g: Landing["brief"]["groups"][number]) => `
     </div>
   </section>`;
 
-const figure = (img: Landing["proof"]["img"]) => `
+const figure = (img: Landing["trust"]["orinImg"]) => `
   <figure class="chart">
     <img src="${img.src}" alt="${img.alt}" width="${img.width}" height="${img.height}" loading="lazy" decoding="async" />
     <figcaption>${img.caption}</figcaption>
   </figure>`;
-
-const riskTable = () => `
-  <div class="table-wrap" role="region" tabindex="0" aria-label="${c.trust.riskTitle}">
-    <table class="risk-table">
-      <thead><tr>
-        <th scope="col">${c.trust.riskCols.label}</th>
-        <th scope="col" class="num">${c.trust.riskCols.roc}</th>
-        <th scope="col" class="num">${c.trust.riskCols.pr}</th>
-        <th scope="col" class="num">${c.trust.riskCols.brier}</th>
-      </tr></thead>
-      <tbody>${c.trust.riskRows.map((r, i) => `
-        <tr class="${i === 0 ? "risk-best" : ""}">
-          <th scope="row">${r.label}</th>
-          <td class="num">${r.roc}</td><td class="num">${r.pr}</td><td class="num">${r.brier}</td>
-        </tr>`).join("")}
-      </tbody>
-    </table>
-  </div>`;
 
 const dataTable = () => `
   <div class="table-wrap" role="region" tabindex="0" aria-label="${c.data.heading}">
@@ -172,23 +154,8 @@ document.getElementById("root")!.innerHTML = `
       ${c.brief.groups.map(reqGroup).join("")}
     </section>
 
-    <section aria-labelledby="s-proof">
-      <h2 id="s-proof">${c.proof.heading}</h2>
-      <p>${c.proof.lead}</p>
-      ${figure(c.proof.img)}
-      <dl class="metrics">${c.proof.metrics.map((m) =>
-        `<div class="metric"><dt>${m.label}</dt><dd>${m.value}</dd></div>`).join("")}
-      </dl>
-      <p class="note">${c.proof.logNote}</p>
-      <p>${c.proof.method}</p>
-    </section>
-
     <section aria-labelledby="s-trust">
       <h2 id="s-trust">${c.trust.heading}</h2>
-      <h3>${c.trust.riskTitle}</h3>
-      <p>${c.trust.riskIntro}</p>
-      ${riskTable()}
-      <p class="note">${c.trust.riskNote}</p>
       <h3>${c.trust.orinTitle}</h3>
       <p>${c.trust.orinText}</p>
       ${figure(c.trust.orinImg)}
