@@ -25,7 +25,11 @@ import httpx
 log = logging.getLogger(__name__)
 
 GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta"
-GEMINI_MODEL = "gemini-2.5-flash"
+GEMINI_MODEL = "gemini-3.1-flash-lite"
+# Tried in order when the chosen model answers 429 (free-tier quota),
+# 404 (retired) or 400 (unsupported config): the app degrades to the
+# template only when every model fails.
+GEMINI_FALLBACKS = ("gemini-3.1-flash-lite", "gemini-2.5-flash")
 ANTHROPIC_URL = "https://api.anthropic.com/v1/messages"
 ANTHROPIC_MODEL = "claude-haiku-5-5"
 TIMEOUT = 6.0
@@ -241,7 +245,26 @@ async def _gemini_model(client: httpx.AsyncClient, key: str) -> str:
 
 async def _call_gemini(client: httpx.AsyncClient, key: str,
                        payload: dict, system: str = SYSTEM) -> dict:
-    model = await _gemini_model(client, key)
+    first = await _gemini_model(client, key)
+    models = [first] + [m for m in GEMINI_FALLBACKS if m != first]
+    last: Exception | None = None
+    for model in models:
+        try:
+            return await _call_gemini_model(client, key, model,
+                                            payload, system)
+        except httpx.HTTPStatusError as exc:
+            if exc.response.status_code not in (400, 404, 429):
+                raise
+            log.warning("ai_explain: %s answered %s, trying next model",
+                        model, exc.response.status_code)
+            last = exc
+    assert last is not None
+    raise last
+
+
+async def _call_gemini_model(client: httpx.AsyncClient, key: str,
+                             model: str, payload: dict,
+                             system: str) -> dict:
     gen = {"temperature": 0, "maxOutputTokens": MAX_TOKENS,
            "responseMimeType": "application/json"}
     if "flash" in model.lower():

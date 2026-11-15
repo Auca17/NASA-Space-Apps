@@ -1,4 +1,5 @@
 import { Suspense, lazy, useRef, useState, useCallback, useEffect } from "react";
+import { insertCheapest } from "./domain/parcelsGeo";
 import { useT } from "./i18n";
 import { APP_NAME, DEFAULT_VIEW, DEMO_PLOT, WORLD_VIEW } from "./config";
 import { WindLogo } from "./components/WindLogo";
@@ -123,7 +124,8 @@ export default function App() {
       if (modeRef.current !== "field" || movingMapRef.current) return;
       const d = drawRef.current;
       if (d === "draw") {
-        const n = [...draftRef.current, [lat, lon] as [number, number]];
+        // keep the outline a simple polygon whatever the click order
+        const n = insertCheapest(draftRef.current, [lat, lon]);
         setDraft(n); h.setDraft(n);
       } else if (d === "point") {
         onShapeRef.current(circleApprox(lat, lon), true);
