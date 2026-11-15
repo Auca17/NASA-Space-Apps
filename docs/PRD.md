@@ -325,7 +325,7 @@ El motor no es una caja negra: siempre se puede explicar por qué una estrategia
 
 | Componente | Qué hace | Cómo |
 |---|---|---|
-| **Riesgo de fuego en 7 días** (Devin) | Probabilidad de ≥ 1 foco en la celda H3 nivel 5 | **Nivel base mundial:** LightGBM con historial de fuego, estacionalidad y cobertura del suelo (nuestros datos). **Nivel clima, Argentina:** + POWER (lluvia acumulada, días sin lluvia, humedad, temperatura, viento). Partición temporal: train 2012–2021, validación 2022, test 2023–2025. Tiene que superar a la línea base de climatología. Métricas: ROC-AUC, PR-AUC, Brier, calibración. Razones con SHAP |
+| **Riesgo de fuego en 7 días** (Devin) | Probabilidad de ≥ 1 foco en la celda H3 nivel 5 | **Nivel base mundial:** climatología semanal + persistencia calculada en el pipeline, sin ML (D7). **Nivel clima, Argentina:** LightGBM con historial de fuego, estacionalidad, cobertura del suelo y clima de NASA POWER (lluvia acumulada, días sin lluvia, humedad, temperatura, viento). Partición temporal: train 2012–2021, validación 2022, test 2023–2025. Tiene que superar a la línea base de climatología, que también se calcula para Argentina. Métricas: ROC-AUC, PR-AUC, Brier, calibración. Razones con SHAP |
 | **Zonas análogas** | "Campos parecidos al tuyo" para la evidencia | Clustering (k-means / HDBSCAN) sobre clima, suelo y fenología NDVI armonizados por celda. En Argentina se cruza con MAGyP: qué se siembra y con qué rendimiento en zonas análogas |
 | **Patrones del calendario** | Detecta suelo desnudo, transiciones y períodos de estrés | Umbrales y suavizado sobre la serie NDVI y las anomalías de humedad y temperatura |
 | **Explicación en lenguaje simple** | Convierte puntajes y evidencia en texto para el productor | LLM con salida estructurada. **Solo explica**, no decide. Recibe los números y fuentes del motor y no puede inventar datos: cada afirmación debe citar un indicador |
@@ -349,14 +349,14 @@ El motor no es una caja negra: siempre se puede explicar por qué una estrategia
 
 | Capa | Tecnología | Por qué |
 |---|---|---|
-| Pipeline | Python 3.12, DuckDB (`h3`, `spatial`), pandas, pyarrow, xarray, earthaccess | Procesa ~300 M de focos y grillas NASA en una laptop |
+| Pipeline | Python 3.12, DuckDB (`h3`, `spatial`), pandas, pyarrow, xarray, earthaccess | Procesa ~568 M de detecciones y grillas NASA en una laptop |
 | IA | LightGBM, scikit-learn, SHAP; LLM vía API | Tabular, explicable |
 | Back | **FastAPI (Python)** en funciones serverless de Vercel | Reutiliza el código del pipeline; un solo lenguaje para la ciencia |
 | Front | Vite + React + TypeScript | Rápido, conocido |
 | Globo / mapa | MapLibre GL JS v5 (globe) + `h3-js` + NASA GIBS + OpenFreeMap | 3D y mapa local en una librería, sin keys |
 | Gráficos | Calendarios en HTML/CSS (tablas accesibles) + Observable Plot | Accesible y liviano |
 | Almacenamiento de datos | Cloudflare R2 (archivos estáticos con CDN) | Gratis hasta 10 GB, rápido en todo el mundo |
-| Jobs | GitHub Actions: live cada 3 h, riesgo diario | Gratis |
+| Jobs | GitHub Actions: solo el job diario de riesgo (el modo live sale de `/api/live`, sin cron — D6) | Gratis |
 | Hosting | Vercel (HTTPS, necesario para geolocalización) | Deploy en cada push |
 
 **Endpoints del back**
@@ -375,7 +375,7 @@ El motor no es una caja negra: siempre se puede explicar por qué una estrategia
   │ pipeline/  FIRMS + NASA grids │ ────────────► │ Cloudflare R2│◄──┐
   │ model/     (Devin)            │               └──────┬───────┘   │
   └───────────────────────────────┘                      │           │ GitHub Actions
-                                                         ▼           │ live (3 h), riesgo (diario)
+                                                         ▼           │ riesgo (diario)
   Navegador ◄──── Vercel: front (React + MapLibre) ──────┤
   (mobile)        Vercel: back (FastAPI) ── POWER, ORNL MODIS, SoilGrids, SRTM, FIRMS, LLM
 ```
@@ -409,19 +409,19 @@ El equipo es de **4 personas**. Cada una es dueña de una parte y la presentaci�
 
 | # | Persona | Es dueño/a de | Entrega principal |
 |---|---|---|---|
-| 1 | **Ezequiel** (+ Claude) | Lente Fuego: datos + motor de armonización + back de fuego + deploy | `pipeline/` FIRMS, calibración y validación, export a R2, `/api/live`, `/api/risk`, Vercel, R2, GitHub Actions |
-| 2 | **Compañero de Orin** | Lente Campo: datos + conocimiento agronómico | Export de Orin, capas de campo a la grilla, `crops.json`, `rotations.json`, motor de rotaciones, `/api/field/*` |
-| 3 | **Compañero con Devin** | IA | `model/fire_risk`, `model/analogs`; además usa Devin para tareas de front acotadas que le pase la persona 4 |
-| 4 | **Cuarto integrante** | Front + UX + presentación | `web/` (globo, paneles, lote, tarjetas), accesibilidad, guion, video, slides |
+| 1 | **Ezequiel** (+ Claude) | Datos de fuego y pipeline (D14) | `pipeline/` FIRMS, calibración y validación, export a R2, `/api/live`, `/api/risk`, Vercel, R2, GitHub Actions |
+| 2 | **Augustus** | Lente Campo + integrador: datos y conocimiento agronómico de Orin; back, deploy, R2, operación de Devin y validación contra el contrato (D14) | Export de Orin, capas de campo a la grilla, `crops.json`, `rotations.json`, motor de rotaciones, `/api/field/*`, integración de los entregables de Devin (`model/fire_risk`, `model/analogs`) |
+| 3 | **Ariel (Chucky)** | Front (D14) | `web/` (globo, paneles, lote, tarjetas), accesibilidad |
+| 4 | **Alex** | Front y presentación desde la hora ~12 (D14) | `web/`, accesibilidad, guion, video, slides |
 
 Responsabilidades compartidas:
-- **README:** cada uno escribe la sección de su parte; la persona 4 la unifica.
+- **README:** cada uno escribe la sección de su parte; Alex la unifica.
 - **QA en celulares:** todos, en la ventana de las horas 32–40.
-- **Revisión agronómica** de las rotaciones: persona 2.
+- **Revisión agronómica** de las rotaciones: Augustus.
 
 ### 13.2 Cronograma
 
-| Horas | 1. Fuego + deploy (Ezequiel) | 2. Campo (Orin) | 3. IA (Devin) | 4. Front + presentación |
+| Horas | 1. Fuego + deploy (Ezequiel) | 2. Campo + integración (Augustus) | 3. IA (Devin, operado por Augustus) | 4. Front + presentación (Ariel; Alex desde ~h12) |
 |---|---|---|---|---|
 | 0–8 | Ingesta + limpieza + H3; repo, Vercel y R2 | Export de Orin; `crops.json`; prueba de APIs POWER / ORNL / SoilGrids | Diseño de features; Devin arma el esqueleto de `web/` | Wireframes mobile; globo + geolocalización |
 | 8–16 | Armonización + validación; `/api/live` | IMERG, SMAP y GAEZ a la grilla; `/api/field/diagnose` | Dataset de riesgo | Modo histórico (datos de prueba); pantalla de lote |

@@ -37,20 +37,19 @@ All NASA satellite sources are global. Resolution and period are the source's ow
 | FIRMS VIIRS S-NPP | Hot spots | 375 m | 2012-01-20 → 2025-12-31 |
 | FIRMS VIIRS NOAA-20 | Hot spots, unit of the series | 375 m | 2018-04-01 → 2026-07-31 (SP), then NRT |
 | NASA POWER (daily) | Frosts, heat, rain, fire weather, model features | 0.5° × 0.625° (≈55 × 60 km) | 2001 → yesterday (MERRA-2; tail from GEOS-IT) |
-| GPM IMERG | Annual rain, variability, days > 50 mm | 0.1° | 2001–2025 |
-| SMAP L3 | Soil moisture anomaly | 9 km | Layer nulled until a 30-day baseline exists (see limitations) |
+| SMAP L3 (SPL3SMP_E) | Soil moisture anomaly | 9 km | Computed but rejected by quality gates; the card uses POWER `GWETROOT` (see limitations) |
 | MODIS MOD13C2 NDVI | Bare-soil days per year | 0.05°, monthly | Multi-year record |
 | MCD12Q1 / ESA WorldCover | Dominant land cover | 500 m / 10 m | Latest available |
 | SRTM (AWS Terrain Tiles) | Slope, elevation correction | ~30 m | — |
-| GRACE-FO (mascon) | Regional water trend | Regional | Latest available |
-| FAO GAEZ v4 | Crop suitability classes | — | — |
+| GRACE-FO (mascon) | Regional water trend | Regional | 2018 → today |
+| ECOSTRESS (ECO_L2T_LSTE) | Land-surface temperature | 70 m | 2024–2025, Orin demo plots only |
 | ISRIC SoilGrids | Soil texture and organic carbon (0–30 cm) | 250 m | v2 |
 | NASA GIBS | Base imagery (Blue Marble; VIIRS True Color for live mode) | — | Daily |
 | MAGyP Estimaciones Agrícolas | Typical rotation per zone, analog-zone crops and yields | By department (Argentina) | Latest published |
 | Orin field data | Satellite-vs-field validation | 53 weather stations, Mendoza | 2026-10-04 → 2026-10-20 |
 | IGN / Natural Earth | Provinces, departments, country lookup | Polygons | — |
 
-**Not used, and why:** the field datasets suggested for the US (SSURGO, NASS/CDL, NLDAS/PRISM, NAIP, CoCoRaHS, OpenET) cover only the United States; they are replaced by SoilGrids, MAGyP, POWER and the Orin data so the tool works in Argentina and worldwide. ECOSTRESS, Landsat/HLS and Sentinel-2 are kept for demo plots only (partial coverage). ERA5/GLDAS stay as a climate backup. On-demand SoilGrids and ORNL MODIS calls time out beyond the latency budget, so those cards fall back to the precomputed grid.
+**Not used, and why:** the field datasets suggested for the US (SSURGO, NASS/CDL, NLDAS/PRISM, NAIP, CoCoRaHS, OpenET) cover only the United States; they are replaced by SoilGrids, MAGyP, POWER and the Orin data so the tool works in Argentina and worldwide. **GPM IMERG** is pending a data-use agreement at GES DISC — rain cards come from NASA POWER instead. **FAO GAEZ** is pending a manual license step. Landsat/HLS and Sentinel-2 are kept for demo plots only (partial coverage). ERA5/GLDAS stay as a climate backup. On-demand SoilGrids and ORNL MODIS calls time out beyond the latency budget, so those cards fall back to the precomputed grid.
 
 ## Method
 
@@ -69,7 +68,7 @@ Final series: MODIS converted for 2000-11 → 2012-01, S-NPP × factor for 2012-
 
 **Analog zones.** Cells are clustered by harmonized climate, soil and NDVI phenology; in Argentina each cluster is crossed with MAGyP records so the evidence can say what is actually planted, and with what yield, in fields similar to yours.
 
-**AI explanation.** The LLM only translates the engine's numbers into plain language: it receives the indicators and sources and must cite an indicator for every claim — it cannot invent data. If it is unreliable, cards fall back to template text generated from the same indicators.
+**AI explanation.** An optional, pluggable LLM provider (Gemini Flash by default) only translates the engine's numbers into plain language: the prompt carries computed indicators, units and sources — never coordinates, plot ids or Orin data — and every number and citation in the answer is validated against the engine's output before anything is shown. Any failure falls back to template text generated from the same indicators.
 
 **Uncertainty.** Every number in the diagnosis shows its source and resolution; cards flag low confidence when data is thin, resolution is coarse or the calibration stratum is small.
 
@@ -109,8 +108,9 @@ The error is driven by elevation: a POWER cell (~55 × 60 km) has one mean altit
 - **2000-11 → 2012-01 is the low-confidence stretch** (marked in the app): those years are MODIS converted to a more sensitive sensor, and a small fire MODIS missed cannot be reconstructed. June–July 2001 carry an extra low-confidence flag because Terra recorded nothing between 2001-06-15 and 2001-07-03 (safe mode), before Aqua existed.
 - **Calibration is by latitude band × month, not land cover** — grassland and rainforest at the same latitude share coefficients; land-cover stratification is a planned improvement. 71 of 208 strata fall back to global coefficients.
 - **Precomputed field layers cover Argentina only** (plus demo plots); elsewhere the diagnosis relies on on-demand APIs and some cards may read "no data available".
-- **POWER temperature in mountain cells** can miss several degrees (see validation): frost cards in valleys need ground confirmation.
-- **SMAP soil-moisture anomaly is nulled** in the current export — single-swath noise dominated the signal until a proper 30-day × multi-year baseline is computed.
+- **POWER temperature in mountain cells** can miss several degrees (see validation): the diagnosis applies a −6.5 °C/km elevation correction on demand, but frost cards in valleys still need ground confirmation — and the fire-risk model features remain uncorrected (the model was not retrained).
+- **SMAP soil-moisture anomaly was computed (SPL3SMP_E) but rejected by the quality gates** — it showed no positive relation to recent POWER rain — so the card falls back to POWER `GWETROOT`.
+- **Climate scenarios are simple scalings** of the historical POWER series (rain × (1 + pct), temperature ± delta), not forecasts.
 - **ECOSTRESS** is not part of the general diagnosis (partial coverage; demo plots only).
 - **NRT hot spots infer `type`** with a fixed-source mask (discards 5.7 % of NOAA-20 NRT vs 8.6 % with the real flag); a new industrial source could slip through in recent months.
 - **The crop knowledge base is a draft under agronomic review** (`docs/revision-agronomica.md`): several water-use and residue figures await Argentine sources, and Patagonia has no validated rotation.

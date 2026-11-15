@@ -44,9 +44,15 @@ repo de donde se copió. **No publicar.**
 | Celda Iberá `85a9441bfffffff`: pico feb-2022 = 416 (ene-2022 = 320); mediana feb = 0 | video, slides | `docs/case-study/README.md` → Números clave; `docs/decisions.md` → D27 |
 | 15 cultivos, 12 rotaciones, 6 medidas | README EN/ES método, slides | `back/knowledge/README.md`; `docs/revision-agronomica.md` → encabezado |
 | POWER 0,5° × 0,625°, 2001 → ayer; MERRA-2 + cola GEOS-IT | README EN/ES datos, limitaciones | `docs/data-contract.md` → 5.2; `docs/decisions.md` → D25 y Pendientes; `docs/validation/orin/README.md` → Limitaciones |
-| IMERG 0,1°, 2001–2025 | README EN/ES datos | `docs/PRD.md` → 8.1 y 9.4; `docs/data-contract.md` → 2.7 (`src` ejemplo) |
-| SMAP 9 km | README EN/ES datos | `docs/PRD.md` → 8.1 y 9.4 |
-| `sm_anom_pct` anulado (ruido de pasada única) | README EN/ES datos y limitaciones | `model/field_grid/README.md` → sm_anom_pct reliability |
+| IMERG pendiente (acuerdo GES DISC); la lluvia sale de NASA POWER | README EN/ES datos (no usado) | `web/src/content/datasets.ts` → `DATASETS_PENDING` |
+| FAO GAEZ pendiente (paso manual de licencia) | README EN/ES datos (no usado) | `web/src/content/datasets.ts` → `DATASETS_PENDING` |
+| SMAP SPL3SMP_E 9 km calculada pero rechazada por las pruebas de calidad; la tarjeta usa POWER `GWETROOT` | README EN/ES datos y limitaciones | `web/src/content/datasets.ts` → `DATASETS_PENDING`; `model/field_grid/smap_gate.py` |
+| GRACE-FO 2018 → hoy | README EN/ES datos | `web/src/content/datasets.ts` → `DATASETS_USED` |
+| ECOSTRESS ECO_L2T_LSTE LST 70 m, 2024–2025, solo lotes demo de Orin | README EN/ES datos | `web/src/content/datasets.ts` → `DATASETS_USED`; `model/field_grid/ecostress_demo.py` |
+| Corrección por altura −6,5 °C/km aplicada a demanda en el diagnóstico | README EN/ES limitaciones | `docs/data-contract.md` → 4.2 (`temp_adjust_c`, `elevation_m`, `power_cell_elevation_m`); `model/field_grid/update_elevation.py` |
+| Features del modelo de riesgo sin corrección por altura | README EN/ES limitaciones | `model/fire_risk/report.md` → Known limitation (elevation correction) |
+| Escenarios climáticos = escalado simple de la serie POWER (lluvia ×(1+pct), T ± delta), no pronósticos | README EN/ES limitaciones | `back/README.md` → Climate scenarios (task 17A); `web/src/content/datasets.ts` → `LIMITATIONS` |
+| Explicación IA: proveedor intercambiable, Gemini Flash por defecto, prompt sin coordenadas ni ids, validación de números y citas, fallback a plantillas | README EN/ES método | `back/README.md` → Optional AI explanation (task 19); `back/app/services/ai_explain.py` |
 | MOD13C2 0,05° mensual para suelo desnudo; MOD13Q1 inviable | README EN/ES datos y limitaciones | `model/field_grid/README.md` → bare_soil_days_yr rule; `back/README.md` → Note (06) |
 | SoilGrids 250 m (WCS 0–30 cm); ORNL/SolGrids > 15 s a demanda | README EN/ES datos y limitaciones | `back/README.md` → card sources y Note (03b)/(06); `docs/decisions.md` → Pendientes |
 | SRTM ~30 m vía AWS Terrain Tiles | README EN/ES datos | `back/README.md` → card sources (`slope`) |

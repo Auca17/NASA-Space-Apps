@@ -48,7 +48,7 @@ cruzan en la quema de rastrojos, el riesgo del lote y el suelo desnudo.
 
 - ~568 M de detecciones FIRMS → una serie en equivalente VIIRS NOAA-20
 - Calibración por estrato (banda de latitud 10° × mes): Terra→T+A, S-NPP→NOAA-20, MODIS→VIIRS `log(V+1)=a+b·log(M+1)` + factor de totales
-- Campo a la misma grilla: POWER, IMERG, SMAP, MODIS NDVI, SRTM, SoilGrids, GRACE, GAEZ, MAGyP
+- Campo a la misma grilla: POWER, MODIS NDVI, SRTM, SoilGrids, GRACE, MAGyP (IMERG, SMAP y GAEZ quedaron pendientes)
 
 **Visual:** `docs/validation/series_global.png` — la serie armonizada sin salto
 en 2012 ni en 2018.
@@ -96,7 +96,7 @@ la estación da el valor exacto; mostramos el error y corregimos por altura real
 ## Slide 8 — Límites, dichos en voz alta
 
 - 2000-11 → 2012-01 marcado como baja confianza; hueco de Terra jun–jul 2001
-- POWER puede errar varios grados en celdas de montaña; SMAP anulado hasta nueva línea base
+- POWER puede errar varios grados en celdas de montaña (la app corrige por altura); SMAP calculada pero rechazada por las pruebas de calidad
 - Capas de campo precalculadas solo en Argentina; rotaciones = apoyo, no consejo
 
 **Visual:** captura del calendario con la franja de baja confianza marcada, o

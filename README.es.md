@@ -37,20 +37,19 @@ Todas las fuentes satelitales de NASA son globales. La resolución y el período
 | FIRMS VIIRS S-NPP | Focos de calor | 375 m | 2012-01-20 → 2025-12-31 |
 | FIRMS VIIRS NOAA-20 | Focos de calor, unidad de la serie | 375 m | 2018-04-01 → 2026-07-31 (SP), luego NRT |
 | NASA POWER (diario) | Heladas, calor, lluvia, clima de fuego, features del modelo | 0,5° × 0,625° (≈55 × 60 km) | 2001 → ayer (MERRA-2; cola desde GEOS-IT) |
-| GPM IMERG | Lluvia anual, variabilidad, días > 50 mm | 0,1° | 2001–2025 |
-| SMAP L3 | Anomalía de humedad del suelo | 9 km | Capa anulada hasta que exista una línea base de 30 días (ver limitaciones) |
+| SMAP L3 (SPL3SMP_E) | Anomalía de humedad del suelo | 9 km | Calculada pero rechazada por las pruebas de calidad; la tarjeta usa POWER `GWETROOT` (ver limitaciones) |
 | MODIS MOD13C2 NDVI | Días de suelo desnudo por año | 0,05°, mensual | Registro multianual |
 | MCD12Q1 / ESA WorldCover | Cobertura dominante del suelo | 500 m / 10 m | Última disponible |
 | SRTM (AWS Terrain Tiles) | Pendiente, corrección por altura | ~30 m | — |
-| GRACE-FO (mascon) | Tendencia regional del agua | Regional | Última disponible |
-| FAO GAEZ v4 | Clases de aptitud por cultivo | — | — |
+| GRACE-FO (mascon) | Tendencia regional del agua | Regional | 2018 → hoy |
+| ECOSTRESS (ECO_L2T_LSTE) | Temperatura de superficie (LST) | 70 m | 2024–2025, solo lotes de demo de Orin |
 | ISRIC SoilGrids | Textura del suelo y carbono orgánico (0–30 cm) | 250 m | v2 |
 | NASA GIBS | Imagen de fondo (Blue Marble; VIIRS True Color en modo live) | — | Diaria |
 | MAGyP Estimaciones Agrícolas | Rotación típica por zona, cultivos y rendimientos en zonas análogas | Por departamento (Argentina) | Última publicada |
 | Datos de campo de Orin | Validación satélite contra campo | 53 estaciones meteorológicas, Mendoza | 2026-10-04 → 2026-10-20 |
 | IGN / Natural Earth | Provincias, departamentos, país | Polígonos | — |
 
-**No se usa, y por qué:** los datasets de campo sugeridos para EE. UU. (SSURGO, NASS/CDL, NLDAS/PRISM, NAIP, CoCoRaHS, OpenET) cubren solo Estados Unidos; se reemplazan por SoilGrids, MAGyP, POWER y los datos de Orin para que la herramienta funcione en Argentina y en el mundo. ECOSTRESS, Landsat/HLS y Sentinel-2 quedan solo para lotes de demo (cobertura parcial). ERA5/GLDAS queda como respaldo de clima. Las consultas a demanda de SoilGrids y MODIS de ORNL superan el presupuesto de latencia, así que esas tarjetas usan la grilla precalculada.
+**No se usa, y por qué:** los datasets de campo sugeridos para EE. UU. (SSURGO, NASS/CDL, NLDAS/PRISM, NAIP, CoCoRaHS, OpenET) cubren solo Estados Unidos; se reemplazan por SoilGrids, MAGyP, POWER y los datos de Orin para que la herramienta funcione en Argentina y en el mundo. **GPM IMERG** está pendiente de un acuerdo de uso en GES DISC — las tarjetas de lluvia salen de NASA POWER. **FAO GAEZ** está pendiente de un paso manual de licencia. Landsat/HLS y Sentinel-2 quedan solo para lotes de demo (cobertura parcial). ERA5/GLDAS queda como respaldo de clima. Las consultas a demanda de SoilGrids y MODIS de ORNL superan el presupuesto de latencia, así que esas tarjetas usan la grilla precalculada.
 
 ## Método
 
@@ -69,7 +68,7 @@ Serie final: MODIS convertido para 2000-11 → 2012-01, S-NPP × factor para 201
 
 **Zonas análogas.** Las celdas se agrupan por clima, suelo y fenología NDVI armonizados; en Argentina cada grupo se cruza con registros de MAGyP para que la evidencia pueda decir qué se siembra de verdad, y con qué rendimiento, en campos parecidos al tuyo.
 
-**Explicación con IA.** El LLM solo traduce los números del motor a lenguaje simple: recibe los indicadores y las fuentes y debe citar un indicador en cada afirmación — no puede inventar datos. Si no es confiable, las tarjetas usan texto de plantillas generado desde los mismos indicadores.
+**Explicación con IA.** Un proveedor de LLM opcional e intercambiable (Gemini Flash por defecto) solo traduce los números del motor a lenguaje simple: el prompt lleva indicadores calculados, unidades y fuentes — nunca coordenadas, ids de lote ni datos de Orin — y cada número y cita de la respuesta se valida contra la salida del motor antes de mostrar nada. Cualquier fallo vuelve al texto de plantillas generado desde los mismos indicadores.
 
 **Incertidumbre.** Cada número del diagnóstico muestra su fuente y su resolución; las tarjetas marcan baja confianza cuando hay pocos datos, resolución gruesa o un estrato chico en la calibración.
 
@@ -109,8 +108,9 @@ El error lo explica la altura: una celda de POWER (~55 × 60 km) tiene una sola 
 - **2000-11 → 2012-01 es el tramo de menor confianza** (marcado en la app): esos años son MODIS convertido a un sensor más sensible, y un fuego chico que MODIS no vio no se puede reconstruir. Junio y julio de 2001 llevan una marca extra de baja confianza porque Terra no registró nada entre el 15/06/2001 y el 03/07/2001 (modo seguro), antes de que existiera Aqua.
 - **La calibración es por banda de latitud × mes, no por cobertura** — un pastizal y una selva de la misma latitud comparten coeficientes; la estratificación por cobertura es una mejora prevista. 71 de 208 estratos usan coeficientes globales.
 - **Las capas de campo precalculadas cubren solo Argentina** (más los lotes de demo); en el resto del mundo el diagnóstico depende de las APIs a demanda y algunas tarjetas pueden mostrar "sin datos disponibles".
-- **La temperatura de POWER en celdas de montaña** puede errar varios grados (ver validación): las tarjetas de helada en valles necesitan confirmación en campo.
-- **La anomalía de humedad de SMAP está anulada** en la exportación actual — el ruido de una sola pasada dominaba la señal hasta que se pueda computar una línea base de 30 días × varios años.
+- **La temperatura de POWER en celdas de montaña** puede errar varios grados (ver validación): el diagnóstico aplica una corrección de −6,5 °C/km por altura a demanda, pero las tarjetas de helada en valles igual necesitan confirmación en campo — y las features del modelo de riesgo quedan sin corregir (el modelo no se reentrenó).
+- **La anomalía de humedad de SMAP se calculó (SPL3SMP_E) pero fue rechazada por las pruebas de calidad** — no mostró relación positiva con la lluvia reciente de POWER — así que la tarjeta usa POWER `GWETROOT`.
+- **Los escenarios climáticos son escalados simples** de la serie histórica de POWER (lluvia × (1 + pct), temperatura ± delta), no pronósticos.
 - **ECOSTRESS** no forma parte del diagnóstico general (cobertura parcial; solo lotes de demo).
 - **Los focos NRT infieren `type`** con una máscara de fuentes fijas (descarta 5,7 % del NRT de NOAA-20 contra 8,6 % con el flag real); una fuente industrial nueva podría pasar en los últimos meses.
 - **La base de conocimiento de cultivos es un borrador en revisión agronómica** (`docs/revision-agronomica.md`): varios valores de uso de agua y rastrojo esperan fuentes argentinas, y Patagonia no tiene rotación validada.
