@@ -27,3 +27,7 @@ Source of the finding: Ezequiel validated POWER daily temperature against 53 Ori
 ## Report
 
 Per section: what changed, the Pergamino (no adjustment) and a Valle de Uco point (about -33.37, -69.15) before and after in frost-free days and hot days, the counts of adjusted grid cells, the stations table before and after, tests, and files to upload to R2 (`orin/validation.json`, `orin/lots.geojson` if present, the regenerated `field/grid/` shards) with the exact commands.
+
+## Then
+
+After task 20 (and task 19), read `docs/briefs/devin/21-agronomy-corrections.md` and execute it: it applies the source-backed answers of the agronomic review and retries IMERG now that the data agreement is accepted. One combined report at the end of the whole chain (17, 18, 19, 20, 21).
