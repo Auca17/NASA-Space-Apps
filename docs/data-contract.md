@@ -259,6 +259,10 @@ Ruta: `back/knowledge/`. Productor: responsable de la lente Campo. Consumidor: m
 | `root_carbon_note` | string | Opcional. Incertidumbre de carbono de raíz/corona (pasturas); se muestra como vacío de información. |
 | `forage` | bool | |
 | `market_ar` | `low` \| `medium` \| `high` | Cualitativo. |
+| `color` | string | Opcional. Color hex para display. |
+| `icon` | string | Opcional. Hint de ícono para display. |
+| `rotatable` | bool | Default `true`. `false` en perennes y cobertura nativa (`vid`, `olivo`, `frutal_carozo`, `monte_nativo`): el motor nunca las propone en una secuencia. |
+| `frost_window` | `{zona: [MM-DD, MM-DD]}` | Opcional. Tramo sensible a heladas del cultivo (p. ej. brotación de vid); `/parcels` alerta cuando no queda cubierto por la ventana libre de heladas de la celda. |
 | `sources` | lista de strings | Obligatorio. |
 
 ### 3.2 `rotations.json`
@@ -321,11 +325,13 @@ Salida (`fixtures/api/diagnose.response.json`):
 |---|---|
 | `diagnosis_id` | Id para encadenar con `/rotations`. |
 | `area_ha`, `centroid`, `h3_r5`, `h3_r6` | Geometría resuelta. |
-| `cards[]` | Tarjetas de diagnóstico: `id`, `value`, `unit`, `text`, `source`, `resolution`, `confidence`. Ids previstos: `rain`, `heavy_rain`, `soil_moisture`, `frost`, `heat`, `crop_water`, `vigor_bare_soil`, `slope`, `soil`, `water_trend`, `fire`. |
+| `cards[]` | Tarjetas de diagnóstico: `id`, `value`, `unit`, `text`, `source`, `resolution`, `confidence`. Ids previstos: `rain`, `heavy_rain`, `soil_moisture`, `frost`, `heat`, `crop_water`, `evaporation`, `vigor_bare_soil`, `slope`, `soil`, `infiltration`, `water_trend`, `fire`. |
 | `calendar.months` | 12 etiquetas. |
 | `calendar.rows[]` | `id`, `label`, `levels` (12 enteros 0–3). Filas previstas: `bare_soil`, `frost`, `water_stress`, `heat`, `burn_season`, `current_rotation`. |
 | `calendar.scale` | Significado de 0–3. |
 | `zone` | Zona agronómica del centroide (`pampa_humeda`, `nea`, `noa`, `cuyo`, `patagonia`; `other` fuera de Argentina). Adición compatible 2026-11-14; `/rotations` la lee del diagnóstico cuando el request no trae `zone`. |
+| `cards[evaporation]` | Adición 2026-12. `value` = evaporación anual del suelo y las plantas en mm (NASA POWER `EVLAND`, mm/día); lleva además `monthly_mm` (12 medias mensuales en mm) y `balance_mm` (lluvia − evaporación por mes en mm, mismo helper `monthly_sum_clim` que la fila `water_stress`). `crop_water` sigue usando `EVPTRNS`, que el catálogo POWER define como **flujo de energía** en MJ/m²/día — se convierte a mm/día dividiendo por 2,45 (λ FAO-56). |
+| `cards[infiltration]` | Adición 2026-12. `value` = puntaje 0–100 y clase `alta`/`media`/`baja` en el texto; entradas: textura SoilGrids (grupos hidrológicos USDA), carbono orgánico, pendiente y días de suelo desnudo. Fórmula documentada en `back/knowledge/README.md`. Heurística de ordenamiento, no una medición. |
 | `elevation_m` | Elevación media del lote (Terrarium/SRTM); `null` si no resuelve. Adición compatible 2026-11-20. |
 | `power_cell_elevation_m` | Elevación de la celda POWER (tercera coordenada de la geometría). Adición compatible 2026-11-20. |
 | `temp_adjust_c` | Ajuste aplicado a `T2M_MAX`/`T2M_MIN` (−6,5 °C/km × diferencia de altura); 0 si la diferencia es < 100 m o falta alguna elevación. Adición compatible 2026-11-20. |
@@ -400,7 +406,11 @@ Validación (HTTP 400 con `error` estable): `boundary` pasa las mismas reglas de
       "enso":  {"phase_now", "oni", "oni_period",
                 "rain_effect_pct": {"el_nino", "la_nina"}, "basis"},
       "flood": {"heavy_rain_days_yr", "low_slope", "basis"}
-             | {"available": false, "basis"}},
+             | {"available": false, "basis"},
+      "evaporation": {"mm_per_year", "monthly_mm": [12],
+                      "balance_mm": {"1".."12": mm}, "basis"},
+      "infiltration": {"class": "alta|media|baja", "score": "0-100",
+                       "basis"}},
     "alerts": [{"kind": "fire|dry|heat|frost", "severity": "high|medium", "text"}],
     "order": ["ids de peligro en orden de pantalla"],
     "extra": [{"id", "hidden": true}],
@@ -429,6 +439,8 @@ Indicadores extra (D36): `snow` = días/año con `PRECSNOLAND` >1 mm + % de año
 **Nearby** — Overpass: bomberos y hospitales/clínicas ≤50 km, agua (`waterway=river|canal`, `natural=water`, `landuse=reservoir`) ≤10 km del centroide. Coordenadas redondeadas a 0,01°, cache 24 h por centroide redondeado, timeout 6 s. En falla: listas vacías + `degraded: true`. Haversine, ordenadas por distancia, máx. 5 por categoría.
 
 **Resumen** — proveedor de IA existente (Gemini por defecto) sobre solo números computados, cultivos, needs y alertas; `notes` pasa únicamente al proveedor tras el sanitizador de privacidad. Validación estricta (sin números inventados, sin contradecir alertas) o fallback `template` con la misma forma. El titular abre con fuego.
+
+Indicadores informativos (F1–F6, 2026-12): `evaporation` = total anual `EVLAND` (mm), perfil mensual y balance lluvia − evaporación por mes (helper `monthly_sum_clim` compartido con `/diagnose`); `infiltration` = clase + puntaje 0–100 (textura/USDA HSG, MO, pendiente, suelo desnudo — fórmula en `back/knowledge/README.md`). No son peligros: no entran en `order` ni en `priorities`. Además de la alerta de helada genérica, los cultivos con `frost_window` en `crops.json` (vid, olivo, frutales de carozo) generan una alerta `frost`/`medium` cuando su tramo sensible queda ≥7 días fuera de la ventana libre de heladas de la celda. Cultivos nuevos del catálogo: `vid`, `olivo`, `ajo`, `frutal_carozo`, `monte_nativo` (perennes con `rotatable:false` salvo `ajo`).
 
 `degraded`/`degraded_reason` agregan cualquier fuente caída (POWER, FIRMS, Overpass). Ejemplo completo de respuesta: `back/tests/fixtures/parcels_example.json` (Pergamino, 3 parcelas).
 

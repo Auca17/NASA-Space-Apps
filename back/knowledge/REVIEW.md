@@ -89,3 +89,24 @@ found.
 - **Trigger mapping is ours.** Check that each trigger makes sense:
   - `water_and_extinguisher` also fires on `fire_weather_high`;
   - `fire_response_protocol` fires on `risk_high` and `burn_season_now`.
+
+## Mendoza display crops (F1–F6 additions) — pending local agronomist review
+
+Every value below is a draft pending review by a local agronomist
+(INTA EEA Mendoza / Junín ideally). None was checked against a
+regional trial.
+
+| Item | Current draft | Basis | Ask |
+|---|---|---|---|
+| `water_mm_cycle` vid | 550 | FAO-56 tabla 12 (Kc 0,30/0,70/0,45): ETc estacional Mendoza ~450–700 mm — **pendiente de validación local** | Confirmar con ETc medido en EEA Mendoza. |
+| `water_mm_cycle` olivo | 700 | FAO-56 (Kc ~0,65 todo el año): ~600–900 mm anual — **pendiente de validación local** | Olivar en secano vs riego. |
+| `water_mm_cycle` ajo | 450 | FAO-56: ETc ~350–500 mm ciclo — **pendiente de validación local** | Cuenca del sur mendocina. |
+| `water_mm_cycle` frutal_carozo | 800 | FAO-56 (Kc caducifolios ~0,45/0,90): ~700–900 mm — **pendiente de validación local** | Durazno/ciruela/cereza Valle de Uco. |
+| `water_mm_cycle` monte_nativo | 350 | Algarrobo/monte: ~300–400 mm anual, orden de magnitud bibliográfico — **pendiente de validación local** | Uso hídrico del monte degradado vs conservado. |
+| `frost_window` vid `cuyo` | 09-01 – 11-15 | Brotación–cuajado, sensible a helada tardía — **pendiente de validación local** | Ajustar por variedad y zona (Uco vs este). |
+| `frost_window` olivo `cuyo` | 09-15 – 11-30 | Floración oct–nov — **pendiente de validación local** | — |
+| `frost_window` frutal_carozo `cuyo` | 08-15 – 10-31 | Floración ago–sep muy sensible — **pendiente de validación local** | Cereza florece antes que durazno. |
+| `rotatable: false` vid, olivo, frutal_carozo, monte_nativo | — | Perennes/cobertura nativa: el motor no debe proponer rotarlas — **pendiente de validación local** | — |
+| `color`/`icon` de los 5 cultivos | hex + hint | Solo display; sin base agronómica — **pendiente de validación local** | — |
+| `residue_t_ha` perennes | 0.0 con `residue_note` | Poda sin valor normalizado — **pendiente de validación local** | Contar carbono de poda/raíz. |
+| `sowing`/`harvest`/`cycle_end` nuevos | ver crops.json | Calendario general Mendoza, no validado con EEA — **pendiente de validación local** | Especialmente ajo (siembra otoño). |

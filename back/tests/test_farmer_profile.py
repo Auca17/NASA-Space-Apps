@@ -80,7 +80,7 @@ def stubs(monkeypatch):
         return _power()
 
     async def terrain(c, lat, lon, r6):
-        return {"elevation_m": 100.0, "slope_deg": 0.5}
+        return {"elevation_m": 100.0, "slope": 0.5}
 
     async def shard(lat, lon, path, r6, name):
         if "analogs" in name:

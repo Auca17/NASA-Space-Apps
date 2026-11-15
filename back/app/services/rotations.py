@@ -80,6 +80,7 @@ INDICATOR_LABEL = {
     "nitrogen": "cultivos fijadores de N",
     "bare_soil_days": "días sin cultivo vivo",
     "erosion_risk": "riesgo de erosión",
+    "infiltration": "infiltración estimada (relativa)",
     "pest_break": "familias en el ciclo",
     "income": "ingreso",
     "forage": "forraje",
@@ -412,6 +413,11 @@ def indicators(rot: Rotation, diag: dict, zone: str | None,
         "nitrogen": sum(1 for c in crops if c.n_fixation),
         "bare_soil_days": bare,
         "erosion_risk": erosion,
+        # relative, qualitative: how this alternative moves the
+        # infiltration drivers a rotation controls (cover days and
+        # residue). Texture, OM and slope do not change.
+        "infiltration": _infiltration_alt(
+            bare, sum(c.residue_t_ha for c in crops) / years),
         "pest_break": len({c.family for c in crops}),
         "income": {1: "low", 2: "medium", 3: "high"}[round(income_lvl)],
         "forage": any(c.forage for c in crops),
@@ -424,6 +430,19 @@ def indicators(rot: Rotation, diag: dict, zone: str | None,
 
 
 # ----------------------------------------------------------------- score ---
+
+def _infiltration_alt(bare_soil_days: float,
+                      residue_t_ha_yr: float) -> str:
+    """alta/media/baja — RELATIVE and qualitative only.
+
+    Cover days and residue are the infiltration drivers a rotation can
+    change; texture, organic matter and slope stay fixed, so the class
+    here only orders alternatives against each other (same inputs as
+    the parcel infiltration score in services/infiltration.py)."""
+    score = round((365 - bare_soil_days) / 365 * 70 +
+                  min(residue_t_ha_yr, 10) * 3)
+    return "alta" if score >= 60 else "media" if score >= 30 else "baja"
+
 
 def _numeric_delta(a, b, invert=False):
     if a is None or b is None:

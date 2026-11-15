@@ -16,6 +16,8 @@ from ..h3util import h3_r5, h3_r6
 from ..services import field_sources as src
 from ..services.geodesy import ring_area_ha, ring_centroid
 from ..services.data import risk_shard
+from ..services.infiltration import (infiltration_class,
+                                     infiltration_score)
 
 log = logging.getLogger("field")
 
@@ -343,20 +345,29 @@ def monthly_frac(series: dict, cond) -> dict[int, float] | None:
     return {m: num.get(m, 0) / n for m, n in den.items()}
 
 
-def monthly_sum_clim(p_series, e_series) -> dict[int, float] | None:
-    """Water balance ratio per month: mean monthly P / mean monthly ET."""
+def monthly_sum_clim(p_series, e_series) -> dict[int, dict] | None:
+    """Water balance per month: mean monthly rain and evaporation in
+    mm, their ratio and the rain - evaporation difference in mm.
+
+    `e_series` must be in mm/day (POWER EVLAND), the same units as
+    PRECTOTCORR, so the difference is a real mm water balance."""
     months = {}
+    years = set()
     for d, p in p_series.items():
         e = e_series.get(d)
         if p is not None and e is not None:
             months.setdefault(d.month, []).append((p, e))
-    if not months:
+            years.add(d.year)
+    if not months or not years:
         return None
+    ny = len(years)
     out = {}
     for m, pairs in months.items():
-        sp = sum(p for p, _ in pairs)
-        se = sum(e for _, e in pairs)
-        out[m] = sp / se if se > 0 else 1.0
+        sp = sum(p for p, _ in pairs) / ny
+        se = sum(e for _, e in pairs) / ny
+        out[m] = {"p_mm": round(sp, 1), "e_mm": round(se, 1),
+                  "balance_mm": round(sp - se, 1),
+                  "ratio": sp / se if se > 0 else 1.0}
     return out
 
 
@@ -556,17 +567,43 @@ def build_cards(power, soilg, slope, ndvi, grid_cell, fire_cal,
         else:
             cards.append(_null_card("soil_moisture", "SMAP L3", "9 km"))
 
+    # EVPTRNS is an evapotranspiration ENERGY flux (MJ/m^2/day per the
+    # POWER catalogue), not a mm depth: convert with the FAO-56 latent
+    # heat of vaporization ~2.45 MJ/kg so the card stays in mm/day.
     et = P("EVPTRNS") or {}
     et_years = _years(et)
     if et_years:
         mean_et = statistics.fmean(
-            statistics.fmean(vs) for vs in et_years.values())
+            statistics.fmean(vs) for vs in et_years.values()) / 2.45
         cards.append(_card("crop_water", round(mean_et, 1), "mm/día",
                            f"Demanda hídrica potencial: {mean_et:.1f} mm/día",
-                           "NASA POWER (EVPTRNS)", POWER_RES, "medium",
+                           "NASA POWER (EVPTRNS, MJ/m²/día ÷ 2,45)",
+                           POWER_RES, "medium",
                            f"Potential water demand: {mean_et:.1f} mm/day"))
     else:
         cards.append(_null_card("crop_water", "NASA POWER", POWER_RES))
+
+    # EVLAND is evaporation over land, mm/day (POWER catalogue).
+    ev = P("EVLAND") or {}
+    ev_years = _years(ev)
+    if ev_years:
+        annual_ev = statistics.fmean(
+            sum(v for v in vs if v is not None)
+            for vs in ev_years.values())
+        card = _card("evaporation", round(annual_ev), "mm/año",
+                     f"El suelo y las plantas pierden al aire unos "
+                     f"{_fmt_es(annual_ev, 0)} mm de agua por año",
+                     "NASA POWER (EVLAND)", POWER_RES, "medium",
+                     f"Soil and plants lose ~{round(annual_ev)} mm of "
+                     "water to the air per year")
+        card["monthly_mm"] = rain_monthly_mm(ev)
+        wb = monthly_sum_clim(P("PRECTOTCORR") or {}, ev)
+        card["balance_mm"] = ({m: v["balance_mm"] for m, v in wb.items()}
+                              if wb else None)
+        cards.append(card)
+    else:
+        cards.append(_null_card("evaporation",
+                                "NASA POWER (EVLAND)", POWER_RES))
 
     grid_bare = (grid_cell or {}).get("bare_soil_days_yr")
     if ndvi:
@@ -619,6 +656,30 @@ def build_cards(power, soilg, slope, ndvi, grid_cell, fire_cal,
                            "medium", "; ".join(parts_en) or "No data"))
     else:
         cards.append(_null_card("soil", "ISRIC SoilGrids v2", "250 m"))
+
+    bare_days = None
+    if ndvi:
+        bare_days = days_per_year({d: v for d, v in ndvi},
+                                  lambda v: v < NDVI_BARE)
+    if bare_days is None:
+        bare_days = grid_bare
+    inf_score = infiltration_score(
+        texture_class(soilg) if soilg else grid_soil.get("texture"),
+        (soilg or {}).get("soc") if soilg else grid_soil.get("soc_g_kg"),
+        slope, bare_days)
+    if inf_score is not None:
+        icls = infiltration_class(inf_score)
+        cards.append(_card(
+            "infiltration", inf_score, "0-100",
+            f"Infiltración {icls}: cuánta agua de lluvia entra al suelo "
+            "en vez de escurrir",
+            "SoilGrids textura+MO, pendiente SRTM y suelo desnudo "
+            "(fórmula en knowledge/README)", "~250 m", "low",
+            f"{icls} infiltration: how much rain soaks in instead of "
+            "running off"))
+    else:
+        cards.append(_null_card("infiltration", "SoilGrids + SRTM",
+                                "~250 m"))
 
     gt = (grid_cell or {}).get("grace_trend")
     trend_txt = {"down": "descendente", "flat": "estable",
@@ -750,6 +811,7 @@ def degraded_cards(grid_cell, terr, soilg, fire_cal, risk_cell, r5):
         cards.append(_unavailable("soil_moisture"))
 
     cards.append(_unavailable("crop_water"))
+    cards.append(_unavailable("evaporation"))
 
     bare = gc.get("bare_soil_days_yr")
     cards.append(
@@ -876,11 +938,12 @@ def build_calendar(power, ndvi, monthly_burn):
                  "levels": [_lvl(fr.get(m, 0), .02, .1, .3)
                             for m in range(1, 13)] if fr else [None] * 12})
 
-    wb = monthly_sum_clim(P("PRECTOTCORR") or {}, P("EVPTRNS") or {})
+    wb = monthly_sum_clim(P("PRECTOTCORR") or {}, P("EVLAND") or {})
     rows.append({"id": "water_stress", "label": "Estrés hídrico",
-                 "levels": [3 if wb.get(m, 1) < .5 else
-                            2 if wb.get(m, 1) < .8 else
-                            1 if wb.get(m, 1) < 1.0 else 0
+                 "levels": [3 if wb.get(m, {}).get("ratio", 1) < .5 else
+                            2 if wb.get(m, {}).get("ratio", 1) < .8 else
+                            1 if wb.get(m, {}).get("ratio", 1) < 1.0
+                            else 0
                             for m in range(1, 13)] if wb else [None] * 12})
 
     ht = monthly_frac(P("T2M_MAX") or {}, lambda v: v > 35)
