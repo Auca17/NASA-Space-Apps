@@ -268,3 +268,15 @@ export type CropZones = {
   zones: { crop: { id: string; es: string; en: string }; ha: number;
            geometry: { type: "Polygon" | "MultiPolygon"; coordinates: unknown } }[];
 };
+
+/** POST /api/field/current-crop — what is on the field now (Sentinel-2). */
+export type CurrentCropZone = {
+  class: { id: string; es: string; en: string; short_es: string; short_en: string };
+  kind: "crop" | "fallow" | "perennial"; ha: number; share: number;
+  geometry: { type: "Polygon" | "MultiPolygon"; coordinates: unknown };
+};
+export type CurrentCrop = {
+  status: "available" | "no_detail" | "no_coverage" | "unavailable";
+  source: string; resolution_m: number; season: string;
+  as_of: string | null; zones: CurrentCropZone[];
+};

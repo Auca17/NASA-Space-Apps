@@ -4,7 +4,7 @@
  * (the result is stored as `cropSplit`); if INTA is down it retries
  * after a minute. */
 import { useEffect, useRef } from "react";
-import { apiCropZones } from "../../api";
+import { apiCropZones, apiCurrentCrop } from "../../api";
 import { geoJsonToMulti, type Field } from "../../domain/fields";
 import { plotBody, type Multi } from "../../domain/selection";
 import type { Lang } from "../../i18n";
@@ -12,10 +12,18 @@ import type { Lang } from "../../i18n";
 export type NewZone = { name: string; crop: string; geom: Multi };
 const RETRY_MS = 60_000;
 
-/** Ask INTA for the field's crop zones; null when it could not answer. */
+/** Zones of what is on the field now (Sentinel-2 of this season); when
+ * that is not possible, last campaign's INTA map. null: nobody answered. */
 export async function cropZonesFor(geom: Multi, lang: Lang):
     Promise<{ zones: NewZone[]; result: "done" | "none" } | null> {
-  const r = await apiCropZones(plotBody(geom));
+  const body = plotBody(geom);
+  const now = await apiCurrentCrop(body);
+  if (now?.status === "available" && now.zones.length && now.zones[0].class) {
+    const short = lang === "es" ? "short_es" : "short_en";
+    return { result: "done", zones: now.zones.map((z) => ({
+      name: z.class[short], crop: z.class[short], geom: geoJsonToMulti(z.geometry) })) };
+  }
+  const r = await apiCropZones(body);
   if (!r || r.status === "unavailable") return null;
   const zones = r.zones.map((z) => ({ name: z.crop[lang], crop: z.crop[lang],
                                       geom: geoJsonToMulti(z.geometry) }));

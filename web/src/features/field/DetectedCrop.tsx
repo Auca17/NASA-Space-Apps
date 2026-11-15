@@ -9,7 +9,7 @@ import { useT, type Lang } from "../../i18n";
 
 const TXT = {
   es: {
-    title: "Cultivo detectado", loading: "Buscando el cultivo en el mapa del INTA…",
+    title: "Campaña pasada (INTA)", loading: "Buscando el cultivo en el mapa del INTA…",
     summer: "Verano", winter: "Invierno", of: "de la parcela",
     no_coverage: "sin identificar", unavailable: "sin identificar", crop: "sin identificar",
     non_agricultural: "sin cultivo (no agrícola)", fallow: "barbecho",
@@ -20,7 +20,7 @@ const TXT = {
     declared: "Cultivo declarado por vos",
   },
   en: {
-    title: "Detected crop", loading: "Looking up the crop in INTA's map…",
+    title: "Last campaign (INTA)", loading: "Looking up the crop in INTA's map…",
     summer: "Summer", winter: "Winter", of: "of the parcel",
     no_coverage: "unidentified", unavailable: "unidentified", crop: "unidentified",
     non_agricultural: "no crop (non-agricultural)", fallow: "fallow",

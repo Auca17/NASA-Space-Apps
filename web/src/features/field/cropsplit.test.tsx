@@ -89,7 +89,7 @@ describe("useAutoCropSplit", () => {
   });
 
   it("asks only once per field even if the list re-renders", async () => {
-    const fetch = vi.fn(async () => zonesReply.clone());
+    const fetch = vi.fn(async (_u: string) => zonesReply.clone());
     vi.stubGlobal("fetch", fetch);
     const apply = vi.fn();
     const fields = [f("c")];
@@ -97,7 +97,8 @@ describe("useAutoCropSplit", () => {
                                     { initialProps: { fs: fields } });
     rerender({ fs: [...fields] });
     await vi.waitFor(() => expect(apply).toHaveBeenCalled());
-    expect(fetch).toHaveBeenCalledTimes(1);
+    expect(fetch.mock.calls.filter(([u]) => String(u).includes("crop-zones")))
+      .toHaveLength(1);
   });
 
   it("does not mark the field when INTA is down, so it retries later", async () => {

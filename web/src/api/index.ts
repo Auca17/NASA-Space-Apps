@@ -6,6 +6,7 @@ import type {
   LiveResponse, DiagnoseResponse, RotationsResponse,
   ExplainResponse, RotationEntry, CropEntry, CaseEntry, RiskCell,
   OrinValidation, OrinLots, MoistureResult, CropDetection, CropZones,
+  CurrentCrop,
 } from "./types";
 
 function cachedByKey<T>(load: (key: string) => Promise<T | null>, max: number) {
@@ -125,6 +126,21 @@ export function apiCrop(body: unknown): Promise<CropDetection | null> {
     cropCache.set(key, hit);
     hit.then((r) => { if (!r) cropCache.delete(key); });
     if (cropCache.size > 200) cropCache.delete(cropCache.keys().next().value!);
+  }
+  return hit;
+}
+
+const currentCache = new Map<string, Promise<CurrentCrop | null>>();
+/** What is on the field now (slow: reads several Sentinel-2 dates), shared
+ * by the automatic split and the panel; failures are retried later. */
+export function apiCurrentCrop(body: unknown): Promise<CurrentCrop | null> {
+  const key = JSON.stringify(body);
+  let hit = currentCache.get(key);
+  if (!hit) {
+    hit = postJson<CurrentCrop>("/api/field/current-crop", body);
+    currentCache.set(key, hit);
+    hit.then((r) => { if (!r || r.status === "unavailable") currentCache.delete(key); });
+    if (currentCache.size > 100) currentCache.delete(currentCache.keys().next().value!);
   }
   return hit;
 }

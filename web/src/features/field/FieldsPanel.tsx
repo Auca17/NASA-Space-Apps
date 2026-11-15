@@ -8,22 +8,23 @@ import {
 import type { Multi } from "../../domain/selection";
 import { useAreaLabel } from "./areaLabel";
 import { DetectedCrop } from "./DetectedCrop";
+import { CurrentCropPanel } from "./CurrentCrop";
 import { cropZonesFor, type NewZone } from "./autoCropSplit";
 type SplitState = null | "loading" | "none" | "unavailable" | "done";
 
 /** Text for the automatic split by crop; kept here, next to its only use. */
 const SPLIT_TXT = {
-  es: { go: "Volver a dividir por cultivo (mapa del INTA)",
-        loading: "Buscando los cultivos del campo en el mapa del INTA…",
+  es: { go: "Volver a dividir por cultivo",
+        loading: "Buscando los cultivos del campo en las imágenes de esta campaña (puede tardar un minuto)…",
         none: "El mapa del INTA no encontró cultivos en este campo. Podés dibujar las zonas a mano.",
         unavailable: "No pudimos consultar el mapa del INTA ahora. Probá de nuevo en un rato.",
-        done: "Listo: una zona por cultivo, campaña Verano 2024-2025. Lo que no es cultivo queda sin zona.",
+        done: "Listo: el campo quedó dividido según lo que hay hoy en cada parte.",
         hint: "Crea una zona por cada cultivo que ve el satélite, sin cargar nada." },
-  en: { go: "Split by crop again (INTA map)",
-        loading: "Looking up the field's crops in INTA's map…",
+  en: { go: "Split by crop again",
+        loading: "Looking up the field's crops in this season's images (may take a minute)…",
         none: "INTA's map found no crops in this field. You can draw the zones by hand.",
         unavailable: "We couldn't reach INTA's map right now. Try again shortly.",
-        done: "Done: one zone per crop, Summer 2024-2025 campaign. Non-crop land stays unzoned.",
+        done: "Done: the field is split by what is on each part today.",
         hint: "Creates one zone per crop seen from space, no typing needed." },
 } as const;
 
@@ -156,6 +157,7 @@ export function FieldDetail({ field, pending, choice, onChoose, onAnalyze,
         <strong>{field.name}</strong>
         <button onClick={onBack}>{t("fields.back")}</button>
       </div>
+      <CurrentCropPanel geom={field.geom} />
       <DetectedCrop geom={field.geom} declared={field.crop ?? ""}
                     onDeclare={onSetCrop} />
 

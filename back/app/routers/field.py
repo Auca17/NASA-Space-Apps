@@ -20,6 +20,7 @@ from ..services.geodesy import ring_area_ha
 from ..services.field_geometry import cell_weights, sample_locations, weather_locations
 from ..services.field_moisture import moisture_zones
 from ..services.crop_map import crop_zones, detect_crop
+from ..services import current_crop as now_crop
 from ..services.risk_validity import risk_dates
 from ..services.data import risk_shard
 
@@ -1276,6 +1277,18 @@ async def field_crop(request: Request):
         geom = Polygon([(lon - .0005, lat - .0005), (lon + .0005, lat - .0005),
                         (lon + .0005, lat + .0005), (lon - .0005, lat + .0005)])
     return await detect_crop(geom)
+
+
+@router.post("/api/field/current-crop")
+async def field_current_crop(request: Request):
+    """What is on each part of the field now (this season's Sentinel-2)."""
+    parsed, err = parse_plot(await json_object(request))
+    if err:
+        return err
+    geom = parsed[-1]
+    if geom is None:
+        return {"status": "no_detail", "zones": []}
+    return await now_crop.current_crop(geom)
 
 
 @router.post("/api/field/crop-zones")
