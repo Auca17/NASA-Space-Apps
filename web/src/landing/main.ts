@@ -21,7 +21,7 @@ const seeLink = (see?: { label: string; href: string }) =>
 const reqRow = (r: Landing["brief"]["groups"][number]["rows"][number]) => `
   <tr>
     <th scope="row"><span class="req-id">${r.id}</span>${r.requirement}</th>
-    <td>${r.does}</td>
+    <td class="cell-does">${r.does}</td>
     <td class="cell-status">${status(r.status)}</td>
     <td class="cell-see">${seeLink(r.see)}</td>
     <td class="cell-limit">${r.limit ?? ""}</td>
@@ -123,6 +123,12 @@ document.getElementById("root")!.innerHTML = `
         </div>
       </div>
       <img class="hero-mark" src="/brand/ashfield-mark-light.svg" alt="${c.hero.markAlt}" width="120" height="120" />
+      <figure class="hero-shot">
+        <img src="${c.hero.shot.src}" alt="${c.hero.shot.alt}"
+             width="${c.hero.shot.width}" height="${c.hero.shot.height}"
+             decoding="async" />
+        <figcaption>${c.hero.shot.caption}</figcaption>
+      </figure>
     </section>
 
     <section aria-labelledby="s-problem">

@@ -98,3 +98,23 @@ describe("FieldPicker place finder", () => {
       .toBeInTheDocument();
   });
 });
+
+describe("FieldPicker keyboard path", () => {
+  it("submits typed coordinates and rejects out-of-range ones", () => {
+    const onPointCoords = vi.fn();
+    renderPicker("none", 0, { onPointCoords });
+    const [lat, lon] = screen.getAllByRole("textbox")
+      .filter((x) => x.closest(".coord-form"));
+    const submit = () =>
+      fireEvent.submit(document.querySelector(".coord-form")!);
+    fireEvent.change(lat, { target: { value: "-33,9" } });
+    fireEvent.change(lon, { target: { value: "-60.6" } });
+    submit();
+    expect(onPointCoords).toHaveBeenCalledWith(-33.9, -60.6);
+    onPointCoords.mockClear();
+    fireEvent.change(lat, { target: { value: "999" } });
+    submit();
+    expect(onPointCoords).not.toHaveBeenCalled();
+    expect(screen.getByRole("alert")).toBeInTheDocument();
+  });
+});

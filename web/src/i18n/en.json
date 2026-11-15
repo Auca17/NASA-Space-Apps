@@ -396,7 +396,7 @@
   "orin.q.good": "good",
   "orin.q.fair": "fair",
   "orin.q.poor": "poor",
-  "orin.details": "Exact numbers",
+  "orin.details": "View detail",
   "orin.take.good": "{v} looks good",
   "orin.take.fair": "{v} looks acceptable",
   "orin.take.poor": "{v} at {res} cannot tell differences inside the plot",
@@ -504,5 +504,16 @@
   "orin.elevBias": "(the mean offset goes from {raw} to {adj} {u}).",
   "orin.finerRef": "compared with {ref}",
   "orin.finerLead": "Compared with {ref}, {ds} at {res} is off by {v} {u}.",
-  "orin.finerLesson": "For the producer: a {res} pixel mixes rows, soil and shadow, so the plot reading can differ from what the field shows."
+  "orin.finerLesson": "For the producer: a {res} pixel mixes rows, soil and shadow, so the plot reading can differ from what the field shows.",
+  "nav.langLabel": "Switch language",
+  "map.label": "Map",
+  "orin.verdict": "The satellite gets {label} right within ±{v} {u}",
+  "orin.verdict.finer": "Compared with a finer satellite ({ref}); margin of ±{v} {u}",
+  "field.coords": "Enter coordinates",
+  "field.coords.how": "Latitude and longitude of the plot centre; we make a ~50 ha selection around it.",
+  "field.coords.lat": "Latitude",
+  "field.coords.lon": "Longitude",
+  "field.coords.go": "Use this point",
+  "field.coords.invalid": "Invalid coordinates (lat −90…90, lon −180…180)",
+  "orin.detail.label": "Dataset and numbers"
 }

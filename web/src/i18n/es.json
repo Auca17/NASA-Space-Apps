@@ -396,7 +396,7 @@
   "orin.q.good": "buena",
   "orin.q.fair": "aceptable",
   "orin.q.poor": "baja",
-  "orin.details": "Números exactos",
+  "orin.details": "Ver detalle",
   "orin.take.good": "{v} se ve bien",
   "orin.take.fair": "{v} se ve aceptable",
   "orin.take.poor": "{v} de {res} no distingue diferencias dentro del lote",
@@ -504,5 +504,16 @@
   "orin.elevBias": "(la desviación media pasa de {raw} a {adj} {u}).",
   "orin.finerRef": "comparado con {ref}",
   "orin.finerLead": "Comparado con {ref}, {ds} de {res} se equivoca {v} {u}.",
-  "orin.finerLesson": "Para el productor: un píxel de {res} mezcla hileras, suelo y sombra; por eso la lectura del lote puede salir distinta de lo que se ve en el campo."
+  "orin.finerLesson": "Para el productor: un píxel de {res} mezcla hileras, suelo y sombra; por eso la lectura del lote puede salir distinta de lo que se ve en el campo.",
+  "nav.langLabel": "Cambiar idioma",
+  "map.label": "Mapa",
+  "orin.verdict": "El satélite acierta {label} con un margen de ±{v} {u}",
+  "orin.verdict.finer": "Se compara contra un satélite más fino ({ref}); margen de ±{v} {u}",
+  "field.coords": "Ingresar coordenadas",
+  "field.coords.how": "Latitud y longitud del centro del lote; creamos una selección de ~50 ha alrededor.",
+  "field.coords.lat": "Latitud",
+  "field.coords.lon": "Longitud",
+  "field.coords.go": "Usar este punto",
+  "field.coords.invalid": "Coordenadas inválidas (lat −90…90, lon −180…180)",
+  "orin.detail.label": "Dataset y números"
 }

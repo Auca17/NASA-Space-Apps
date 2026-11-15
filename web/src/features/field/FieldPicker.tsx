@@ -12,11 +12,14 @@ export function FieldPicker({ draw, points, onPick, onDemo, onFinish,
                               onUndo, onCancel, onGo, onFields = () => {},
                               fieldsCount = 0, context, freeError = false,
                               zoomLow = false, onZoomIn = () => {},
-                              demoLots = [], movingMap = false, onToggleMove }: {
+                              demoLots = [], movingMap = false, onToggleMove,
+                              onPointCoords }: {
   draw: DrawMode;
   points: number;
   onPick: (m: "draw" | "point" | "free") => void;
   onDemo: () => void;
+  /** Keyboard path: a ~50 ha selection around entered coordinates. */
+  onPointCoords?: (lat: number, lon: number) => void;
   demoLots?: { id: string; label: string; onOpen: () => void }[];
   onFinish: () => void;
   onUndo: () => void;
@@ -141,6 +144,7 @@ export function FieldPicker({ draw, points, onPick, onDemo, onFinish,
               <span className="muted">{t("field.opt.pointText")}</span>
             </li>
           </ul>
+          {onPointCoords && <CoordForm onSubmit={onPointCoords} t={t} />}
         </details>
         <details className="field-examples">
           <summary>{t("field.examples")}</summary>
@@ -152,4 +156,39 @@ export function FieldPicker({ draw, points, onPick, onDemo, onFinish,
         </details>
       </div>
     </div>);
+}
+
+/** Keyboard-only path to a ~50 ha selection: typed lat/lon instead of
+ * a map tap. Lives inside "Otras formas de marcar". */
+function CoordForm({ onSubmit, t }: {
+    onSubmit: (lat: number, lon: number) => void;
+    t: (k: string) => string }) {
+  const [lat, setLat] = useState("");
+  const [lon, setLon] = useState("");
+  const [bad, setBad] = useState(false);
+  const submit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const la = Number(lat.replace(",", "."));
+    const lo = Number(lon.replace(",", "."));
+    if (!Number.isFinite(la) || !Number.isFinite(lo) ||
+        Math.abs(la) > 90 || Math.abs(lo) > 180) {
+      setBad(true); return;
+    }
+    setBad(false);
+    onSubmit(la, lo);
+  };
+  return (
+    <form className="coord-form" onSubmit={submit}>
+      <p className="picker-how">{t("field.coords.how")}</p>
+      <div className="coord-row">
+        <label>{t("field.coords.lat")}
+          <input inputMode="decimal" value={lat}
+                 onChange={(e) => setLat(e.target.value)} /></label>
+        <label>{t("field.coords.lon")}
+          <input inputMode="decimal" value={lon}
+                 onChange={(e) => setLon(e.target.value)} /></label>
+        <button type="submit">{t("field.coords.go")}</button>
+      </div>
+      {bad && <p className="notice" role="alert">{t("field.coords.invalid")}</p>}
+    </form>);
 }

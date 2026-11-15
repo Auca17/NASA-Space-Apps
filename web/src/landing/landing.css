@@ -16,7 +16,7 @@
   --focus: #1a56db; --bare: #d9c9a8; --covered: #5d8a4e;
   --radius: 10px; --touch: 44px;
   --display: "Archivo", "Arial Narrow", system-ui, sans-serif;
-  --text: system-ui, -apple-system, "Segoe UI", sans-serif;
+  --text: "Archivo", system-ui, -apple-system, "Segoe UI", sans-serif;
 }
 @media (prefers-color-scheme: dark) {
   :root {
@@ -73,6 +73,7 @@ h1 {
 h2 { font-size: clamp(1.75rem, 4.5vw, 2.6rem); letter-spacing: -0.02em; }
 h3 { font-size: 1.25rem; font-weight: 700; letter-spacing: -0.01em; margin-top: 2.5rem; }
 p { max-width: 68ch; margin: 0 0 1.1rem; text-wrap: pretty; }
+li { text-wrap: pretty; }
 .lede {
   font-size: clamp(1.15rem, 2.2vw, 1.4rem);
   line-height: 1.5;
@@ -167,6 +168,21 @@ a:hover { text-decoration-thickness: 2px; }
 .hero-mark { margin-top: 0.5rem; }
 .hero-cta { display: flex; flex-wrap: wrap; gap: 0.75rem; margin-top: 1.75rem; }
 
+/* real product shot above the fold — the field diagnosis at the
+ * Pergamino demo plot, captured from the running app */
+.hero-shot {
+  grid-column: 1 / -1;
+  margin: 2.5rem 0 0;
+}
+.hero-shot img {
+  display: block; width: 100%; height: auto;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+.hero-shot figcaption {
+  color: var(--muted); font-size: 0.9rem; margin-top: 0.5rem;
+}
+
 @media (prefers-reduced-motion: no-preference) {
   .hero-text > * {
     animation: rise 0.7s cubic-bezier(0.16, 1, 0.3, 1) both;
@@ -199,7 +215,7 @@ th, td {
   border-bottom: 1px solid var(--border);
 }
 thead th {
-  font-size: 0.78rem;
+  font-size: 0.8rem;
   text-transform: uppercase;
   letter-spacing: 0.06em;
   color: var(--muted);
@@ -211,7 +227,7 @@ tbody th { font-weight: 500; max-width: 22rem; }
 .req-id {
   display: inline-block;
   font-family: var(--display);
-  font-weight: 800; font-size: 0.75rem;
+  font-weight: 800; font-size: 0.8rem;
   color: var(--accent);
   margin-right: 0.4rem;
 }
@@ -291,7 +307,35 @@ tbody th { font-weight: 500; max-width: 22rem; }
 
 @media (max-width: 720px) {
   .hero { grid-template-columns: 1fr; padding-block: 3rem 2.5rem; }
-  .hero-mark { display: none; }
+  /* keep the mark visible — scaled down, floated beside the headline */
+  .hero-mark { width: 56px; height: 56px; margin-top: 0; float: right; }
+  .hero-shot { margin-top: 1.75rem; }
   main > section { padding-block: 2.5rem; }
   th, td { padding: 0.75rem 0.8rem; }
+
+  /* requirement rows become stacked cards: title, status pill,
+   * honest limit, then what Ashfield does — no horizontal scroll */
+  .table-wrap { overflow-x: visible; border: 0; border-radius: 0;
+    background: transparent; }
+  .req-table { min-width: 0; }
+  .req-table thead { display: none; }
+  .req-table, .req-table tbody, .req-table tr,
+  .req-table th, .req-table td { display: block; width: 100%; }
+  .req-table tbody tr {
+    border: 1px solid var(--border); border-radius: var(--radius);
+    background: var(--panel); padding: 0.9rem 1rem;
+    margin-bottom: 0.9rem;
+    display: flex; flex-direction: column; gap: 0.5rem;
+  }
+  .req-table th, .req-table td { border: 0; padding: 0; max-width: none; }
+  .req-table tbody tr:last-child th,
+  .req-table tbody tr:last-child td { border-bottom: 0; }
+  .req-table .cell-status { order: 1; white-space: normal; }
+  .req-table .cell-limit { order: 2; font-size: 0.9rem; }
+  .req-table .cell-does { order: 3; }
+  .req-table .cell-see { order: 4; white-space: normal; }
+  .req-table .cell-limit::before {
+    content: "Limit: "; font-weight: 700; color: var(--fg);
+  }
+  :lang(es) .req-table .cell-limit::before { content: "Límite: "; }
 }

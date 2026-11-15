@@ -37,6 +37,7 @@ export interface Landing {
     video?: string; // hidden until the video URL exists
     tagline: string;
     markAlt: string;
+    shot: { src: string; alt: string; width: number; height: number; caption: string };
   };
   problem: { heading: string; paragraphs: string[] };
   brief: {
@@ -105,12 +106,18 @@ const en: Landing = {
     video: undefined, // [PENDIENTE: URL del video] — hidden until it exists
     tagline: "NASA Space Apps Challenge 2026 · Field Shift (also covers Harmonization of MODIS and VIIRS Hot Spots)",
     markAlt: "Ashfield mark",
+    shot: {
+      src: "/landing/app_diagnosis.webp",
+      alt: "The Ashfield app diagnosing a 50 ha demo plot near Pergamino over satellite imagery: climate, soil and 7-day fire-risk results in plain language.",
+      width: 1200, height: 794,
+      caption: "The app: a field diagnosis on the Pergamino demo plot, satellite base map included.",
+    },
   },
   problem: {
     heading: "The problem",
     paragraphs: [
       "Two NASA sensors have watched the same fires for 25 years, but their numbers cannot be compared directly: MODIS at 1 km since 2000, VIIRS at 375 m since 2012, with a second VIIRS instrument arriving in April 2018. Any long series built by simply joining them inherits artificial jumps exactly where the instruments change.",
-      "Meanwhile a producer deciding next season's rotation faces climate stress with the relevant NASA data scattered across products, resolutions and portals. Soil, rain, frost, heat and water stress exist — but not in one place, and not at the scale of a plot.",
+      "Meanwhile a producer deciding next season's rotation faces climate stress with the relevant NASA data scattered across products, resolutions and portals. Soil, rain, frost, heat and water stress exist, but not in one place, and not at the scale of a plot.",
       "The two problems meet in stubble burning. A rotation that keeps soil covered and spreads risk is also a field less likely to burn. Ashfield treats fire and field as one story, not two products.",
     ],
   },
@@ -155,7 +162,7 @@ const en: Landing = {
             limit: "The AI provider only runs when a server-side key is configured; templates ship by default. Patagonia returns 'no validated rotations' rather than a weak guess." },
           { id: "F8", status: "partial",
             requirement: "Harmonize datasets with different resolutions and time scales into a common grid",
-            does: "Everything is projected onto the same H3 hexagonal grid — fires, climate, soil, NDVI — so unlike sources can be compared cell by cell.",
+            does: "Everything is projected onto the same H3 hexagonal grid (fires, climate, soil, NDVI), so unlike sources can be compared cell by cell.",
             limit: "Fire data are on the grid worldwide; the climate, soil, NDVI and rain layers are precomputed for Argentina only, and the on-demand diagnosis elsewhere uses point data.",
             see: { label: "Data contract", href: blob("docs/data-contract.md") } },
           { id: "F9", status: "done",
@@ -164,7 +171,7 @@ const en: Landing = {
             see: { label: "In the app", href: "/app/" } },
           { id: "F10", status: "partial",
             requirement: "Validate satellite estimates against field measurement",
-            does: "NASA POWER is compared against 53 real stations on the Orin farm (742 station-days), before and after an elevation correction — chart below.",
+            does: "NASA POWER is compared against 53 real stations on the Orin farm (742 station-days), before and after an elevation correction (chart below).",
             limit: "Only temperature, one farm, fourteen days. No field samples of NDVI or soil moisture yet." },
           { id: "F11", status: "done",
             requirement: "Optional: let the producer explore climate scenarios (rain, temperature)",
@@ -174,7 +181,7 @@ const en: Landing = {
             requirement: "Optional: consider producer constraints (water, machinery, market)",
             does: "The form asks for irrigation, livestock, machinery and reachable markets; crops that don't fit are excluded before ranking." },
           { id: "F13", status: "done",
-            requirement: "Support — never replace — the producer's informed decision",
+            requirement: "Support the producer's informed decision, never replace it",
             does: "The disclaimer ships with every diagnosis; information gaps are a required section on each rotation card." },
         ],
       },
@@ -183,7 +190,7 @@ const en: Landing = {
         rows: [
           { id: "H1", status: "done",
             requirement: "Harmonize MODIS and VIIRS into one comparable historical series",
-            does: "Both sensors are converted into one unit — equivalent VIIRS NOAA-20 detections — with per-stratum calibration. Validated on a 2023–2024 holdout: R² 0.979 on the global monthly series.",
+            does: "Both sensors are converted into one unit, equivalent VIIRS NOAA-20 detections, with per-stratum calibration. Validated on a 2023–2024 holdout: R² 0.979 on the global monthly series.",
             see: { label: "Method", href: blob("docs/metodo-fuego.md") } },
           { id: "H2", status: "done",
             requirement: "Web app to select a region and time range and explore the harmonized data",
@@ -211,7 +218,7 @@ const en: Landing = {
   },
   proof: {
     heading: "Proof the harmonization works",
-    lead: "Joined naively, MODIS and VIIRS show jumps at 2012 and April 2018. After calibrating each of the strata — latitude band by calendar month — the series reads as one instrument.",
+    lead: "Joined naively, MODIS and VIIRS show jumps at 2012 and April 2018. After calibrating each of the strata (latitude band by calendar month), the series reads as one instrument.",
     img: {
       src: "/landing/series_global.webp",
       alt: "Global monthly fire detections 2000–2025: raw MODIS and VIIRS series before harmonization, and the harmonized series continuing through both sensor changes without a jump.",
@@ -226,7 +233,7 @@ const en: Landing = {
       { label: "Cell-day scale", value: "R² 0.61 · bias +1.4 %" },
     ],
     logNote: "The log1p number is lower by design: logarithmic space gives small values the same weight as large ones, so error on low-activity cells counts as much as error on the big fire provinces.",
-    method: "Calibration is fit per stratum — 18 latitude bands crossed with the 12 calendar months, 208 strata with data; the 71 strata without enough overlap fall back to global coefficients. Validation is a 2023–2024 holdout never seen in training.",
+    method: "Calibration is fit per stratum: 18 latitude bands crossed with the 12 calendar months, 208 strata with data; the 71 strata without enough overlap fall back to global coefficients. Validation is a 2023–2024 holdout never seen in training.",
   },
   trust: {
     heading: "How much to trust it",
@@ -238,7 +245,7 @@ const en: Landing = {
       { label: "Weekly climatology", roc: "0.843", pr: "0.295", brier: "0.0350" },
       { label: "Recent persistence", roc: "0.852", pr: "0.310", brier: "0.0452" },
     ],
-    riskNote: "Outside Argentina the risk layer falls back to climatology plus persistence — no ML is claimed there. Source: model/fire_risk/report.md.",
+    riskNote: "Outside Argentina the risk layer falls back to climatology plus persistence; no ML is claimed there. Source: model/fire_risk/report.md.",
     orinTitle: "Satellite vs. field measurement",
     orinText: "Against 53 real stations on the Orin farm in Mendoza (742 station-days, 4–20 Oct 2026), raw POWER maximum temperature read RMSE 5.05 °C with a −2.82 °C cold bias. The cause is elevation: the 0.5° POWER cell averages around 2,485 m while the stations sit at 1,000–1,500 m. Applying a −6.5 °C/km correction, maximum-temperature RMSE drops to 2.82 °C (minimum: 3.89 → 2.28 °C).",
     orinImg: {
@@ -250,7 +257,7 @@ const en: Landing = {
     orinHonest: "Honest gap: the field comparison covers temperature only. There are no field samples for NDVI or soil moisture yet.",
   },
   data: {
-    heading: "Data used — and not used",
+    heading: "Data used, and not used",
     cols: { name: "Dataset", what: "What it gives", resolution: "Resolution", where: "Where it appears" },
     rows: [
       { name: "FIRMS MODIS + VIIRS", what: "Harmonized active-fire series", resolution: "1 km / 375 m", where: "Globe and fire panel" },
@@ -265,18 +272,18 @@ const en: Landing = {
       { name: "ECOSTRESS (ECO_L2T_LSTE)", what: "Land-surface temperature", resolution: "70 m", where: "Demo tile on Orin plots only" },
       { name: "Orin field data", what: "Satellite vs field-measurement validation", resolution: "plot", where: "Validation card (real data only)" },
     ],
-    pendingTitle: "Pending or rejected — and why",
+    pendingTitle: "Pending or rejected, and why",
     pending: [
       { name: "GPM IMERG", why: "Pending a GES DISC data-use agreement; rain comes from NASA POWER meanwhile." },
       { name: "FAO GAEZ", why: "License requires a manual step." },
-      { name: "SMAP moisture anomaly", why: "Computed (SPL3SMP_E, 9 km) but failed sanity gates — no positive relation to recent POWER rain. The card falls back to POWER GWETROOT." },
+      { name: "SMAP moisture anomaly", why: "Computed (SPL3SMP_E, 9 km) but failed sanity gates: no positive relation to recent POWER rain. The card falls back to POWER GWETROOT." },
     ],
   },
   human: {
     heading: "Human in the loop",
     paragraphs: [
-      "The agronomic knowledge base — 15 crops, 12 rotation templates, 6 prevention measures — is compiled from published sources and written down in the repository (back/knowledge/) so an agronomist can review it file by file.",
-      "It remains a draft awaiting that review. Where the engine has no validated rotations — Patagonia today — it says so and returns low confidence instead of guessing.",
+      "The agronomic knowledge base (15 crops, 12 rotation templates, 6 prevention measures) is compiled from published sources and written down in the repository (back/knowledge/) so an agronomist can review it file by file.",
+      "It remains a draft awaiting that review. Where the engine has no validated rotations (Patagonia today), it says so and returns low confidence instead of guessing.",
     ],
     disclaimer: "Ashfield supports a producer's decision. It does not replace an agronomist.",
   },
@@ -284,7 +291,7 @@ const en: Landing = {
     heading: "Limits",
     items: [
       "2000–2011 is the lowest-confidence part of the fire series (single-sensor era, calibrated on short overlap); Terra's safe-mode gap in June–July 2001 is real, not a processing error.",
-      "Fire harmonization calibrates by latitude band and month only — it does not model local differences inside a band.",
+      "Fire harmonization calibrates by latitude band and month only; it does not model local differences inside a band.",
       "The precomputed field grid covers Argentina only; on-demand diagnosis works worldwide with point data, but without the local layers.",
       "The Argentina risk model's 365-day fire history is incomplete for January–October 2026 until the annual Parquet lands.",
       "The POWER mountain-cell elevation bias is corrected in the field diagnosis but not in the risk-model features.",
@@ -308,7 +315,7 @@ const en: Landing = {
       { label: "Harmonized dataset download", href: "#", pending: true }, // [PENDIENTE: URL de descarga]
     ],
     credits: "NASA data: FIRMS (MODIS, VIIRS), POWER, GIBS, GRACE-FO, MODIS (MOD13C2, MCD12Q1), ECOSTRESS. Also SoilGrids, MAGyP (Argentina), IGN and Natural Earth base data.",
-    orinNote: "Orin field data was collected before the hackathon; only the data — no code — is used.",
+    orinNote: "Orin field data was collected before the hackathon; only the data, not the code, is used.",
   },
   footer: { note: "Ashfield · NASA Space Apps Challenge 2026" },
 };
@@ -325,6 +332,12 @@ const es: Landing = {
     video: undefined, // [PENDIENTE: URL del video] — oculto hasta que exista
     tagline: "NASA Space Apps Challenge 2026 · Field Shift (también cubre Armonización de focos MODIS y VIIRS)",
     markAlt: "Marca Ashfield",
+    shot: {
+      src: "/landing/app_diagnosis.webp",
+      alt: "La app Ashfield diagnosticando un lote demo de 50 ha cerca de Pergamino sobre imagen satelital: clima, suelo y riesgo de fuego a 7 días en lenguaje simple.",
+      width: 1200, height: 794,
+      caption: "La app: diagnóstico de un lote demo en Pergamino, con mapa satelital incluido.",
+    },
   },
   problem: {
     heading: "El problema",

@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { useT } from "../../i18n";
-import { APP_NAME } from "../../config";
 import { apiUrl } from "../../api/client";
 import { WindLogo } from "../../components/WindLogo";
 
@@ -45,7 +44,6 @@ export function Welcome({ onAnalyze, onDemo, onLocate, onExplore, onLive }: {
   return (
     <div className="welcome">
       <div className="welcome-logo" aria-hidden="true"><WindLogo size={72} /></div>
-      <p className="welcome-brand">{APP_NAME}</p>
       <h2>{t("welcome.title")}</h2>
       <p>{t("welcome.text")}</p>
       <div className="actions">
@@ -55,38 +53,35 @@ export function Welcome({ onAnalyze, onDemo, onLocate, onExplore, onLive }: {
         <p className="muted demo-note">{t("welcome.demoNote")}</p>
       </div>
 
-      <section className="welcome-more" aria-labelledby="welcome-more-h">
-        <h3 id="welcome-more-h">{t("welcome.more")}</h3>
+      <details className="welcome-more">
+        <summary>{t("welcome.more")}</summary>
         <p className="muted">{t("welcome.fireText")}</p>
         <div className="row-actions">
           <button onClick={onExplore}>{t("welcome.explore")}</button>
           <button onClick={onLive}>{t("welcome.live")}</button>
         </div>
-        <details>
-          <summary>{t("welcome.fireSearch")}</summary>
-          <button onClick={geo}>{t("welcome.myZone")}</button>
-          <p className="geo-note">{t("welcome.geoNote")}</p>
-          {denied && <p className="muted">{t("welcome.noGps")}</p>}
-          <form className="search"
-                onSubmit={(e) => { e.preventDefault(); search(); }}>
-            <input value={q} onChange={(e) => setQ(e.target.value)}
-                   placeholder={t("welcome.searchPlaceholder")}
-                   aria-label={t("welcome.searchPlaceholder")} />
-            <button type="submit" disabled={busy}>
-              {busy ? t("welcome.searching") : "→"}
-            </button>
-          </form>
-          <ul className="search-results">
-            {hits.map((h) => (
-              <li key={`${h.lat}${h.lon}${h.name}`}>
-                <button type="button" onClick={() => onLocate(h.lat, h.lon)}>
-                  {h.name}
-                </button>
-              </li>
-            ))}
-          </ul>
-        </details>
-      </section>
+        <button onClick={geo}>{t("welcome.myZone")}</button>
+        <p className="geo-note">{t("welcome.geoNote")}</p>
+        {denied && <p className="muted">{t("welcome.noGps")}</p>}
+        <form className="search"
+              onSubmit={(e) => { e.preventDefault(); search(); }}>
+          <input value={q} onChange={(e) => setQ(e.target.value)}
+                 placeholder={t("welcome.searchPlaceholder")}
+                 aria-label={t("welcome.searchPlaceholder")} />
+          <button type="submit" disabled={busy}>
+            {busy ? t("welcome.searching") : "→"}
+          </button>
+        </form>
+        <ul className="search-results">
+          {hits.map((h) => (
+            <li key={`${h.lat}${h.lon}${h.name}`}>
+              <button type="button" onClick={() => onLocate(h.lat, h.lon)}>
+                {h.name}
+              </button>
+            </li>
+          ))}
+        </ul>
+      </details>
     </div>
   );
 }

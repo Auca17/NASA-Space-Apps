@@ -492,14 +492,14 @@ export default function App() {
   return (
     <div className="app">
       <header className="topbar">
-        <h1><button type="button" className="home-button"
-                    aria-label={t("nav.home")} onClick={() => {
-                      if (modeRef.current === "field") changePlot();
-                      setMode("welcome");
-                    }}>
-          <WindLogo size={30} title={APP_NAME} />
-          <span className="topbar-name">{APP_NAME}</span>
-        </button></h1>
+        <h1><WindLogo size={30} title={APP_NAME} />
+          <span className="topbar-name">{APP_NAME}</span></h1>
+        <button type="button" className="home-button"
+                onClick={() => {
+                  if (modeRef.current === "field") changePlot();
+                  setMode("welcome");
+                }}>
+          {t("nav.home")}</button>
         <nav>
           <button aria-pressed={mode === "field"}
                   onClick={() => {
@@ -520,7 +520,7 @@ export default function App() {
           <span className="ml-short">{t("meth.short")}</span></button>
         <button className="lang-btn"
                 onClick={() => setLang(lang === "es" ? "en" : "es")}
-                aria-label="language">{t("nav.lang")}</button>
+                aria-label={t("nav.langLabel")}>{t("nav.lang")}</button>
       </header>
 
       <div className={`map-wrap${mode === "field" && draw !== "none" && !movingMap ? " marking" : ""}`}>
@@ -533,7 +533,7 @@ export default function App() {
               else { setFreeError(true); globeRef.current?.setDraft(null); }
             }} />)}
         <div ref={mapDiv} className="map" role="application"
-             aria-label="mapa" />
+             aria-label={t("map.label")} />
         {mode === "fire" && <div className="reticle" aria-hidden="true" />}
         {mode === "field" && !fieldOpen && (
           <>
@@ -645,6 +645,10 @@ export default function App() {
                          setMovingMap(!movingMap);
                        }}
                        zoomLow={zoom < DRAW_ZOOM - 0.5} onZoomIn={zoomToDraw}
+                       onPointCoords={(la, lo) => {
+                         goTo(la, lo, true);
+                         onShape(circleApprox(la, lo), true);
+                       }}
                        context={zoneField
                          ? t("zones.drawingFor", { name: zoneField.name })
                          : undefined} />)}
