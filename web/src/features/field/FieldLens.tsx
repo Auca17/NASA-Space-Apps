@@ -4,18 +4,21 @@ import type { MoistureZone } from "../../api/types";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useT } from "../../i18n";
 import { Card, BottomSheet, Tooltip } from "../../components/ui";
-import { Glossary } from "../../components/Glossary";
+import { GlossDefs } from "../../components/Glossary";
+import { DiagTile } from "./DiagTile";
+import { Calendar, calendarCrops, type CatalogCrop } from "./Calendar";
+import { SatelliteAccuracy } from "./SatelliteAccuracy";
 import {
   apiDiagnose, apiRotations, apiExplain, apiFieldCatalog, ecostressDemo, knowledgeCases, orinValidation,
 } from "../../api";
 import type {
-  Card as DiagCard, CaseEntry, CropEntry, DiagnoseResponse, Measure, OrinValidation,
+  CaseEntry, CropEntry, DiagnoseResponse, Measure, OrinValidation,
   RotationEntry, RotationsResponse, Strategy,
 } from "../../api/types";
 import type { EcostressDemo } from "../../api";
 import { OrinCard, SyntheticBanner } from "./OrinCard";
 import {
-  benefitValue, benefitRows, cardValueText, compareDeltas, deltaText, groupVariants,
+  benefitValue, benefitRows, compareDeltas, groupVariants,
   groupedCards, humanizeGap, indicatorLabelKey, irrigationNeedMm, measureReqPairs,
   orderNote, prioWeights, rankNote,
   seqSegments, verdictDelta, PRIORITY_IDS, type Scenario,
@@ -80,109 +83,6 @@ function savePlot(name: string, body: PlotBody) {
     all.push({ name, body, saved_at: new Date().toISOString() });
     localStorage.setItem(LS_PLOTS, JSON.stringify(all.slice(-20)));
   } catch { /* quota/parse errors: non-fatal */ }
-}
-
-function levelText(lv: number | null): string {
-  if (lv == null) return "·";
-  return ["○", "◔", "◑", "●"][Math.min(Math.max(lv, 0), 3)];
-}
-
-/** Word-first confidence badge + small dot (never color alone). */
-export function ConfBadge({ level, t }: {
-    level: string;
-    t: (k: string, v?: Record<string, string | number>) => string }) {
-  return (
-    <span className={`badge conf-${level}`}>
-      <i className="cdot" aria-hidden="true" />
-      {t(`field.confidence.${level}`)}
-    </span>);
-}
-
-function RainChart({ card, t }: {
-    card: DiagCard;
-    t: (k: string, v?: Record<string, string | number>) => string }) {
-  const mm = card.rain_monthly_mm;
-  if (!mm || mm.length !== 12) return null;
-  const months = t("ui.monthInitials").split(",");
-  const max = Math.max(...mm, 1);
-  return (
-    <div className="rain-chart">
-      <p className="muted">{t("field.rainMonthly",
-        { y0: 2001, y1: new Date().getFullYear() - 1 })}</p>
-      <div className="rain-bars" role="img"
-           aria-label={t("field.rainMonthly",
-             { y0: 2001, y1: new Date().getFullYear() - 1 })}>
-        {mm.map((v, i) => (
-          <div key={i} className="rain-bar-col" title={`${months[i]}: ${v} mm`}>
-            <div className="rain-bar"
-                 style={{ height: `${Math.max(4, (v / max) * 100)}%` }} />
-            <span className="rain-bar-label">{months[i]}</span>
-          </div>))}
-      </div>
-      <p className="muted">
-        {t("field.rainMinMax",
-          { min: Math.round(Math.min(...mm)),
-            max: Math.round(Math.max(...mm)) })}</p>
-      <details>
-        <summary>{t("field.rainTable")}</summary>
-        <table className="cal">
-          <tbody>
-            <tr>{months.map((m, i) => <th key={i} scope="col">{m}</th>)}</tr>
-            <tr>{mm.map((v, i) => <td key={i}>{v}</td>)}</tr>
-          </tbody>
-        </table>
-      </details>
-    </div>
-  );
-}
-
-function StopConditions({ card, t }: {
-    card: DiagCard;
-    t: (k: string, v?: Record<string, string | number>) => string }) {
-  if (!card.stop_conditions?.length) return null;
-  return (
-    <div className="stop-conditions">
-      <strong>{t("field.stopConditions")}</strong>
-      <ul>
-        {card.stop_conditions.map((c) => (
-          <li key={c}>{card.stop_detail?.[c] ?? c}</li>))}
-      </ul>
-    </div>
-  );
-}
-
-/** Compact diagnosis tile: label, value with unit, confidence badge. */
-function DiagTile({ c, t, fmt }: {
-    c: DiagCard;
-    t: (k: string, v?: Record<string, string | number>) => string;
-    fmt: Intl.NumberFormat }) {
-  // string values are backend ids (bajo, flat…): show them as words
-  const vkey = typeof c.value === "string" ? `cardval.${c.value}` : null;
-  const val = vkey && t(vkey) !== vkey ? t(vkey) : cardValueText(c, fmt);
-  return (
-    <div className="dtile">
-      <div className="dtile-head">
-        <span className="dtile-label">{t(`card.${c.id}`)}</span>
-        <ConfBadge level={c.confidence} t={t} />
-      </div>
-      <div className="dtile-value">
-        {val ?? <span className="muted">{t("field.noData")}</span>}
-        {deltaText(c, fmt) && (
-          <span className={`dtile-delta${c.delta! > 0 ? " up" : " down"}`}>
-            {" "}{c.delta! > 0 ? "↑" : "↓"} {deltaText(c, fmt)}
-          </span>)}
-      </div>
-      {c.text && <p className="muted">{c.text}</p>}
-      {c.id === "rain" && <RainChart card={c} t={t} />}
-      {c.id === "fire_weather" && <StopConditions card={c} t={t} />}
-      {(c.source || c.resolution) && (
-        <details className="dtile-src">
-          <summary>{t("field.source")}</summary>
-          <p className="muted">
-            {c.source}{c.resolution ? ` · ${c.resolution}` : ""}
-          </p>
-        </details>)}
-    </div>);
 }
 
 /** Afinidad bar 0-100 with a one-line scale tooltip. */
@@ -1075,40 +975,30 @@ export function FieldPanel({ target, open, onClose, onChangePlot, onMethods,
                     <DiagTile key={c.id} c={c} t={t} fmt={fmt} />))}
                 </div>
               </section>))}
-            <p className="muted">
-              {t("field.glossary")}:{" "}
-              {t("gloss.ndvi")}<Glossary term="ndvi" /> ·{" "}
-              {t("gloss.et")}<Glossary term="et" /> ·{" "}
-              {t("gloss.waterBalance")}<Glossary term="waterBalance" /> ·{" "}
-              {t("gloss.anomaly")}<Glossary term="anomaly" /> ·{" "}
-              {t("gloss.gdd")}<Glossary term="gdd" />
-            </p>
+            <SatelliteAccuracy
+              accuracy={diag.accuracy}
+              tempAdjustC={diag.temp_adjust_c}
+              elevationM={diag.elevation_m}
+              cellElevationM={diag.power_cell_elevation_m} />
+            <details className="gloss-all">
+              <summary>{t("field.glossary")}</summary>
+              <GlossDefs />
+            </details>
           </details>
 
           <details className="sec more">
             <summary>{t("field.calendarMore")}</summary>
-            <div style={{ overflowX: "auto" }}>
-              <table className="cal" aria-label={t("calendar.aria")}>
-                <thead><tr><th></th>
-                  {(view ?? diag).calendar.months.map((m) =>
-                    <th key={m} scope="col">{m}</th>)}
-                </tr></thead>
-                <tbody>
-                  {(base ?? diag).calendar.rows.map((row) => (
-                    <tr key={row.id}>
-                      <th scope="row">{t(`calendar.row.${row.id}`) !==
-                        `calendar.row.${row.id}`
-                        ? t(`calendar.row.${row.id}`)
-                        : row.label ?? row.id}</th>
-                      {row.levels.map((lv, i) => (
-                        <td key={i} style={{
-                          background: lv == null ? "transparent"
-                            : `color-mix(in srgb, var(--covered) ${lv * 30}%, var(--panel))`,
-                        }}>{levelText(lv)}</td>))}
-                    </tr>))}
-                </tbody>
-              </table>
-            </div>
+            <Calendar
+              months={(view ?? diag).calendar.months}
+              rows={(base ?? diag).calendar.rows}
+              crops={calendarCrops({
+                sequence: rots?.strategies.find((s) => s.is_current)
+                  ?.sequence,
+                parcelCrops: effParcels.map((p) => p.crop),
+                catalog: catalog?.crops as CatalogCrop[] | undefined,
+                zone: diag.zone,
+                lang,
+              })} />
           </details>
 
           {lot && (

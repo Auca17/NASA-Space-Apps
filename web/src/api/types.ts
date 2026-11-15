@@ -116,6 +116,22 @@ export interface DiagnoseResponse {
    * some sources. The UI shows the reason + retry, never a blank. */
   degraded?: boolean;
   degraded_reason?: string;
+  /** How well the satellite sees this plot (task 44): typical errors
+   * from our own validations. */
+  accuracy?: DiagAccuracy;
+}
+
+export interface DiagAccuracy {
+  temp_rmse_c?: number | null;
+  temp_rmse_adjusted_c?: number | null;
+  rain_bias_mm_month?: number | null;
+  rain_rmse_mm_month?: number | null;
+  rain_r?: number | null;
+  stations?: { temperature?: number | null; rain?: number | null };
+  /** Temperature lapse-rate correction applied (°C), echoed here. */
+  elevation_correction_c?: number | null;
+  note?: string;
+  sources?: string[];
 }
 
 export type MoistureKind = "dry" | "middle" | "wet" | "missing";
