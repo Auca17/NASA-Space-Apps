@@ -99,6 +99,18 @@ const linksList = () => `
 const videoBtn = c.hero.video
   ? `<a class="btn btn-ghost" href="${c.hero.video}">▶ Watch the video</a>` : "";
 
+const block = (b: Landing["blocks"][number]) => `
+  <article class="block">
+    <h3>${b.heading}</h3>
+    <p>${b.text}</p>
+    ${b.figure ? `<figure class="chart"><img src="${b.figure.src}"
+        alt="${b.figure.alt}" width="${b.figure.width}"
+        height="${b.figure.height}" loading="lazy" decoding="async" />
+      <figcaption>${b.figure.caption}</figcaption></figure>` : ""}
+    ${b.stat ? `<p class="block-stat"><strong>${b.stat.value}</strong>
+      <span>${b.stat.note}</span></p>` : ""}
+  </article>`;
+
 document.getElementById("root")!.innerHTML = `
   <a class="skip" href="#main">${c.skip}</a>
   <header class="site-head">
@@ -119,10 +131,10 @@ document.getElementById("root")!.innerHTML = `
         <p class="tagline">${c.hero.tagline}</p>
         <div class="hero-cta">
           <a class="btn btn-primary btn-lg" href="/app/">${c.hero.openApp}</a>
+          <a class="btn btn-ghost btn-lg" href="${c.hero.example.href}">${c.hero.example.label}</a>
           ${videoBtn}
         </div>
       </div>
-      <img class="hero-mark" src="/brand/ashfield-mark-light.svg" alt="${c.hero.markAlt}" width="120" height="120" />
       <figure class="hero-shot">
         <img src="${c.hero.shot.src}" alt="${c.hero.shot.alt}"
              width="${c.hero.shot.width}" height="${c.hero.shot.height}"
@@ -130,6 +142,17 @@ document.getElementById("root")!.innerHTML = `
         <figcaption>${c.hero.shot.caption}</figcaption>
       </figure>
     </section>
+
+    <section class="blocks" aria-label="Overview">
+      ${c.blocks.map(block).join("")}
+    </section>
+
+    <details class="brief-details">
+      <summary>
+        <span class="summary-title">${c.details.summary}</span>
+        <span class="summary-caption">${c.details.caption}</span>
+      </summary>
+      <div class="details-body">
 
     <section aria-labelledby="s-problem">
       <h2 id="s-problem">${c.problem.heading}</h2>
@@ -181,7 +204,10 @@ document.getElementById("root")!.innerHTML = `
       <h2 id="s-limits">${c.limits.heading}</h2>
       <ul class="limits">${c.limits.items.map((i) => `<li>${i}</li>`).join("")}</ul>
     </section>
-
+      </div>
+    </details>
+  </main>
+  <footer class="site-foot">
     <section aria-labelledby="s-team">
       <h2 id="s-team">${c.team.heading}</h2>
       <ul class="team">${c.team.members.map((m) =>
@@ -192,6 +218,6 @@ document.getElementById("root")!.innerHTML = `
       <p class="note">${c.team.credits}</p>
       <p class="note">${c.team.orinNote}</p>
     </section>
-  </main>
-  <footer class="site-foot"><p>${c.footer.note}</p></footer>
+    <p class="foot-note">${c.footer.note}</p>
+  </footer>
 `;

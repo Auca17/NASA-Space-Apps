@@ -25,20 +25,33 @@ export interface PendingRow { name: string; why: string; }
 export interface TeamMember { name: string; role: string; }
 export interface SiteLink { label: string; href: string; pending?: boolean; }
 
+export interface BlockFigure {
+  src: string; alt: string; width: number; height: number; caption: string;
+}
+export interface Block {
+  heading: string;
+  text: string;
+  figure?: BlockFigure;
+  stat?: { value: string; note: string };
+}
+
 export interface Landing {
   lang: Lang;
   otherLang: { label: string; href: string };
   skip: string;
   nav: { openApp: string };
   hero: {
-    title: string;
-    lede: string;
+    title: string;   // the one-sentence promise, rendered as h1
+    lede: string;    // one supporting line
     openApp: string;
+    example: { label: string; href: string };
     video?: string; // hidden until the video URL exists
     tagline: string;
     markAlt: string;
     shot: { src: string; alt: string; width: number; height: number; caption: string };
   };
+  blocks: Block[];
+  details: { summary: string; caption: string };
   problem: { heading: string; paragraphs: string[] };
   brief: {
     heading: string;
@@ -100,9 +113,10 @@ const en: Landing = {
   skip: "Skip to content",
   nav: { openApp: "Open the app" },
   hero: {
-    title: "Ashfield",
-    lede: "One harmonization engine turns NASA data into two lenses: 25 years of comparable fire history, and a field diagnosis that helps a producer choose what to plant next.",
+    title: "Check the fire risk on your field with NASA data.",
+    lede: "One engine, two lenses: 25 years of harmonized fire history, and a diagnosis that helps a producer choose the next rotation.",
     openApp: "Open the app",
+    example: { label: "See an example", href: "/app/#-33.89,-60.57" },
     video: undefined, // [PENDIENTE: URL del video] — hidden until it exists
     tagline: "NASA Space Apps Challenge 2026 · Field Shift (also covers Harmonization of MODIS and VIIRS Hot Spots)",
     markAlt: "Ashfield mark",
@@ -112,6 +126,32 @@ const en: Landing = {
       width: 1200, height: 794,
       caption: "The app: a field diagnosis on the Pergamino demo plot, satellite base map included.",
     },
+  },
+  blocks: [
+    {
+      heading: "What you see",
+      text: "Fires detected right now by NASA's MODIS and VIIRS satellites, 25 years of monthly history on a 3D globe, and an estimate of fire risk for the next 7 days in your area.",
+      figure: {
+        src: "/landing/app_fire_risk.webp",
+        alt: "The Ashfield fire view over South America: harmonized detection hexagons on the map, a 7-day fire-risk card reading 'low' and a fire calendar panel.",
+        width: 1200, height: 750,
+        caption: "The app, fire view: harmonized detections and the 7-day risk card.",
+      },
+    },
+    {
+      heading: "What your field gets",
+      text: "Outline a plot and get a diagnosis in plain words: rain, frost, heat, soil and bare-soil months — plus your current rotation compared with alternatives ranked by your own priorities.",
+      stat: { value: "1 + 3", note: "your current rotation plus up to three alternatives, each with why, evidence, benefits, gaps and risks" },
+    },
+    {
+      heading: "Why trust it",
+      text: "Built only on named NASA data — MODIS, VIIRS, POWER, GRACE-FO, SRTM. The harmonized fire series is validated on data never used in calibration; the lowest-confidence stretch, 2000–2011, is flagged in the app.",
+      stat: { value: "R² 0.979", note: "harmonized global monthly series, validated on a 2023–2024 holdout" },
+    },
+  ],
+  details: {
+    summary: "How it meets the challenge brief",
+    caption: "Every requirement of both challenges, the method, the validation numbers and the honest limits — nothing removed.",
   },
   problem: {
     heading: "The problem",
@@ -326,9 +366,10 @@ const es: Landing = {
   skip: "Saltar al contenido",
   nav: { openApp: "Abrir la app" },
   hero: {
-    title: "Ashfield",
-    lede: "Un motor de armonización convierte datos de la NASA en dos lentes: 25 años de historia de fuego comparable, y un diagnóstico del lote que ayuda al productor a decidir qué sembrar.",
+    title: "Mirá el riesgo de fuego de tu campo con datos de la NASA.",
+    lede: "Un motor, dos lentes: 25 años de historia de fuego armonizada, y un diagnóstico del lote que ayuda a decidir la próxima rotación.",
     openApp: "Abrir la app",
+    example: { label: "Ver un ejemplo", href: "/app/#-33.89,-60.57" },
     video: undefined, // [PENDIENTE: URL del video] — oculto hasta que exista
     tagline: "NASA Space Apps Challenge 2026 · Field Shift (también cubre Armonización de focos MODIS y VIIRS)",
     markAlt: "Marca Ashfield",
@@ -338,6 +379,32 @@ const es: Landing = {
       width: 1200, height: 794,
       caption: "La app: diagnóstico de un lote demo en Pergamino, con mapa satelital incluido.",
     },
+  },
+  blocks: [
+    {
+      heading: "Lo que ves",
+      text: "Los focos que detectan ahora los satélites MODIS y VIIRS de la NASA, 25 años de historia mensual en un globo 3D, y una estimación del riesgo de fuego para los próximos 7 días en tu zona.",
+      figure: {
+        src: "/landing/app_fire_risk.webp",
+        alt: "La vista de fuego de Ashfield sobre Sudamérica: hexágonos de detecciones armonizadas en el mapa, la tarjeta de riesgo a 7 días marcando «bajo» y el calendario de fuego.",
+        width: 1200, height: 750,
+        caption: "La app, vista fuego: detecciones armonizadas y la tarjeta de riesgo a 7 días.",
+      },
+    },
+    {
+      heading: "Lo que obtenés para tu lote",
+      text: "Dibujá un lote y recibí un diagnóstico en palabras simples: lluvia, heladas, calor, suelo y meses de suelo desnudo — más tu rotación actual comparada con alternativas ordenadas por tus prioridades.",
+      stat: { value: "1 + 3", note: "tu rotación actual más hasta tres alternativas, cada una con por qué, evidencia, beneficios, vacíos y riesgos" },
+    },
+    {
+      heading: "Por qué confiar",
+      text: "Construida solo sobre datos NASA nombrados — MODIS, VIIRS, POWER, GRACE-FO, SRTM. La serie de fuego armonizada se valida contra datos nunca usados en la calibración; el tramo de menor confianza, 2000–2011, está señalado en la app.",
+      stat: { value: "R² 0,979", note: "serie mensual global armonizada, validada en un holdout 2023–2024" },
+    },
+  ],
+  details: {
+    summary: "Cómo cumple el desafío",
+    caption: "Cada requisito de los dos desafíos, el método, los números de validación y los límites honestos — nada se quitó.",
   },
   problem: {
     heading: "El problema",

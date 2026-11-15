@@ -59,4 +59,26 @@ describe("landing page", () => {
       expect(img.getAttribute("alt")).toBeTruthy();
     }
   });
+
+  it("the requirement table lives behind the collapsible brief section", async () => {
+    await render("en");
+    const det = document.querySelector("details.brief-details");
+    expect(det).toBeTruthy();
+    expect(det!.querySelector("summary")).toBeTruthy();
+    expect(det!.querySelectorAll(".req-table").length).toBe(2);
+    expect(det!.hasAttribute("open")).toBe(false);
+  });
+
+  it("hero offers exactly one primary and one example action", async () => {
+    await render("es");
+    const cta = document.querySelector(".hero-cta");
+    expect(cta?.querySelectorAll("a.btn-primary").length).toBe(1);
+    const ex = cta?.querySelector('a[href^="/app/#"]');
+    expect(ex?.textContent).toContain("ejemplo");
+  });
+
+  it("shows at most three overview blocks", async () => {
+    await render("en");
+    expect(document.querySelectorAll(".blocks .block").length).toBeLessThanOrEqual(3);
+  });
 });
