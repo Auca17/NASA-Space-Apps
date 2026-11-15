@@ -20,6 +20,13 @@ the original JSON is stored in object metadata `x-amz-meta-src-md5`.
 `.csv.gz` goes up as `text/csv` + `Content-Encoding: gzip`.
 All objects get `Cache-Control: public, max-age=3600`.
 
+`--exclude` skips v1-relative prefixes and defaults to
+`globe,fire/daily,fire/points` — the prefixes retired by the
+Fire/Live removal (task 51) — so a stale local export or the
+`data/dev_v1` mirror can never resurrect them. Matching is on the
+resulting key, so `--prefix v1/globe/` is excluded too;
+`--exclude ''` opts out.
+
 Credentials: `R2_ACCOUNT_ID`, `R2_BUCKET` plus either the
 `R2_ACCESS_KEY_ID`/`R2_SECRET_ACCESS_KEY` pair or just
 `CLOUDFLARE_API_TOKEN` — with the token the tool derives the pair
@@ -68,6 +75,29 @@ objects, and a 20-object download+parse spot check. `--public` fetches
 the spot check through `DATA_BASE_URL`. Exit code is non-zero when
 anything is missing, mismatched, or fails to parse. Note: r2.dev 403s
 urllib's default User-Agent; the tool sends its own.
+
+Retired prefixes (`v1/globe/`, `v1/fire/daily/`, `v1/fire/points/`,
+task 51) are no longer expected locally: they are tagged `(retired)`
+in the remote count and any object still present under them prints a
+`WARNING` instead of a missing/remote-only entry.
+
+## prune_r2.py — delete retired v1/ prefixes
+
+    python tools/prune_r2.py                                       # dry run
+    python tools/prune_r2.py --delete \
+        --confirm-prefixes globe,fire/daily,fire/points            # delete
+
+Read-only by default: lists the objects under each retired prefix
+(`v1/globe/`, `v1/fire/daily/`, `v1/fire/points/` — the only prefixes
+it can ever touch) and prints counts and total bytes. `--delete`
+additionally requires the exact `--confirm-prefixes` string, runs the
+keep-list guard first (aborts if any kept prefix — `risk/`,
+`fire/cal/`, `field/*`, `knowledge/`, `orin/`, `meta.json`,
+`ecostress_demo.json` — lists empty), then writes
+`data/prune-manifest-<date>.json` (key/size/ETag of every object)
+**before** deleting in <=1000-key `delete_objects` batches with
+throttle retries. Keys outside `v1/` are never touched.
+See `docs/ops/r2-layout.md`.
 
 ## audit_data.py — data sanity audit for published shards
 
