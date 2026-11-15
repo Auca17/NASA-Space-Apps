@@ -1,6 +1,7 @@
 import { Suspense, lazy, useRef, useState, useCallback, useEffect } from "react";
 import { useT } from "./i18n";
 import { APP_NAME, DEMO_PLOT } from "./config";
+import { WindLogo } from "./components/WindLogo";
 import { Welcome } from "./features/welcome/Welcome";
 import { useGlobe, type GlobeHandle } from "./features/globe/GlobeView";
 import { HistoricControls } from "./features/fire/HistoricControls";
@@ -144,7 +145,7 @@ export default function App() {
   return (
     <div className="app">
       <header className="topbar">
-        <h1>{APP_NAME}</h1>
+        <h1><WindLogo size={30} title={APP_NAME} /><span className="topbar-name">{APP_NAME}</span></h1>
         <nav>
           <button aria-pressed={mode === "fire"}
                   onClick={() => { setMode("fire"); setPanelOpen(true); }}>

@@ -1,4 +1,4 @@
-export const APP_NAME = "Nombre a definir";
+export const APP_NAME = "Ashfield";
 
 export const DATA_BASE_URL: string =
   (import.meta.env.VITE_DATA_BASE_URL as string | undefined) ??
