@@ -403,3 +403,7 @@ body:has(.app) { background: #0f110e; }
     animation: none !important; transition: none !important; }
   .app button:active:not(:disabled) { transform: none; }
 }
+.rec-tech { margin-top: 8px; }
+.rec-tech h5 { margin: 0 0 4px; font-size: .85rem; }
+.rec-tech ul { margin: 0; padding-left: 18px; display: grid; gap: 4px; font-size: .9rem; }
+.rec-outlook { font-size: .9rem; }

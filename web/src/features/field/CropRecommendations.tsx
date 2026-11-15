@@ -3,6 +3,7 @@ import { apiCropRecommendations } from "../../api";
 import type { CropEntry, CropRecommendations as Result, CurrentCrop, DiagnoseResponse } from "../../api/types";
 import { PRIORITY_IDS, prioWeights } from "../../domain/rotations";
 import { useT } from "../../i18n";
+import { outlookLine, technicalReasons } from "../../domain/cropReasons";
 import { DecisionDetail } from "./DecisionDetail";
 
 const RESOURCES = ["irrigation", "livestock", "markets"] as const;
@@ -78,19 +79,22 @@ export function CropRecommendations({ diagnosis, crops, declared, observation, p
       </strong>
     </div>
     <p>{t("recs.window", { start: formatDate(row.sow_from), end: formatDate(row.sow_until) })}</p>
-    {row.cover_days != null && <p>{t("recs.coverDays", { days: row.cover_days })}</p>}
-    <p>{row.rain_mm == null ? t("recs.rainMissing") : t(row.rain_period === "year" ? "recs.waterYear" : "recs.water", {
-      rain: row.rain_mm, need: row.water_demand_mm,
-    })}</p>
+    {row.rain_mm == null && <p>{t("recs.rainMissing")}</p>}
     {optionConditions(row).map((condition) => <p className="rec-conditional" key={condition}>
       {t("recs.condition." + condition, {
         gap: formatNumber.format(row.water_demand_mm - (row.rain_mm ?? 0)),
       })}
     </p>)}
-    {row.different_family && <p>{t("recs.different")}</p>}
-    {row.same_family && <p>{t("recs.same")}</p>}
+    <div className="rec-tech">
+      <h5>{t("recs.techTitle")}</h5>
+      <ul>{technicalReasons(row, result?.status === "ok" ? result.outlook : null, formatNumber.format)
+        .map((reason) => <li key={reason.key}>{t(reason.key, reason.vars)}</li>)}</ul>
+    </div>
     <DecisionDetail decision={row.decision} fallback={t("decision.cropFallback")} facts={{
       ...(row.rain_mm != null ? { rain_mm: row.rain_mm } : {}), water_demand_mm: row.water_demand_mm,
+      ...(row.balance_mm != null ? { balance_mm: row.balance_mm } : {}),
+      ...(row.rain_expected_mm != null ? { rain_expected_mm: row.rain_expected_mm } : {}),
+      ...(row.balance_expected_mm != null ? { balance_expected_mm: row.balance_expected_mm } : {}),
       ...(row.cover_days != null ? { cover_days: row.cover_days } : {}),
     }} />
   </li>;
@@ -117,6 +121,7 @@ export function CropRecommendations({ diagnosis, crops, declared, observation, p
         <h3>{t("recs.top")}</h3>
         {result.ranking_source && <small className="muted">{t(`decision.order.${result.ranking_source}`)}</small>}
         {result.soil_data != null && <p className="muted">{t(result.soil_data ? "recs.soilUsed" : "recs.soilMissing")}</p>}
+        <p className="notice rec-outlook">{(({ key, vars }) => t(key, vars))(outlookLine(result.outlook, formatNumber.format))}</p>
         <p className="muted">{t("recs.sharedData")}</p>
         {ranked.length < 3 && <p className="muted">{t(ranked.length === 1 ? "recs.oneOption" : "recs.fewOptions")}</p>}
         {ranked.every((row) => row.conditional) && <p className="notice">{t("recs.allConditional")}</p>}

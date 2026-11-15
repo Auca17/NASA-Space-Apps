@@ -1624,6 +1624,7 @@ async def recommendation_zones(request: Request):
 @router.post("/api/field/recommendations")
 async def recommendations(request: Request):
     from ..services.ai_ranking import rank_candidates
+    from ..services.crop_outlook import apply_outlook, fetch_outlook
     from ..services.rotations import KNOWLEDGE, PRIORITY_MAP, recommend_crops
 
     body = await json_object(request)
@@ -1649,6 +1650,8 @@ async def recommendations(request: Request):
         return _err("invalid_input", "invalid constraints")[1]
     try:
         result = recommend_crops(diag, current, priorities, constraints)
+        if result["status"] == "ok":
+            apply_outlook(result, diag, await fetch_outlook(diag))
         if body.get("rank_with_gemini") is True and result["status"] == "ok":
             return await rank_candidates(result, diag, priorities, constraints,
                                          "en" if body.get("lang") == "en" else "es",

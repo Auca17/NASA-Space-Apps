@@ -43,7 +43,7 @@ it("shows no crop when the image supports it and limits the main recommendations
   render(<I18nProvider><CropRecommendations {...props} observation={imagery("fallow", .9)} /></I18nProvider>);
   expect(screen.getByText(/sin cultivo visible/i)).toBeInTheDocument();
   expect(await screen.findByRole("heading", { name: "Recomendaciones principales" })).toBeInTheDocument();
-  expect(within(screen.getAllByRole("list")[0]).getAllByRole("listitem")).toHaveLength(3);
+  expect(within(screen.getAllByRole("list")[0]).getAllByRole("heading", { level: 4 })).toHaveLength(3);
   expect(screen.getByText(/434 mm por debajo/i)).toBeInTheDocument();
   const more = screen.getByText("Ver más cultivos (1)");
   expect(more.closest("details")).not.toHaveAttribute("open");
@@ -92,4 +92,21 @@ it("waits for this parcel and leaves a mixed signal unconfirmed", async () => {
   expect(screen.getByText(/actual sin confirmar/i)).toBeInTheDocument();
   await waitFor(() => expect(recommend).toHaveBeenCalledWith(expect.objectContaining({ current: "unknown" }), expect.anything()));
   await screen.findByText(/ninguna opción/i);
+});
+
+it("explains each option with its water balance and the coming season's ENSO scenario", async () => {
+  recommend.mockResolvedValue({ status: "ok", ranking_source: "catalog",
+    outlook: { phase: "la_nina", oni: -0.8, oni_period: "SON 2026", season: "2026-27", rain_effect_pct: -20,
+               effects: { el_nino: 15, la_nina: -20 } },
+    options: [{ id: "soja", name: { es: "Soja" }, score: .9, conditional: false, conditions: [],
+      sow_from: "2026-11-15", sow_until: "2026-12-10", rain_mm: 620, water_demand_mm: 500,
+      balance_mm: 120, rain_wet_mm: 520, rain_expected_mm: 516, balance_expected_mm: 16,
+      cover_days: 150, fits_frost: true, different_family: true, same_family: false }] });
+  render(<I18nProvider><CropRecommendations {...props} observation={null} /></I18nProvider>);
+  expect(await screen.findByText(/clima de la campaña 2026-27: la niña/i)).toBeInTheDocument();
+  expect(screen.getByText(/tendencia histórica, no un pronóstico/i)).toBeInTheDocument();
+  expect(screen.getByText(/620 mm de lluvia media contra 500 mm.*\+120 mm.*124 %/i)).toBeInTheDocument();
+  expect(screen.getByText(/lluvia esperada es 516 mm y el saldo \+16 mm/i)).toBeInTheDocument();
+  expect(screen.getByText(/período libre de heladas/i)).toBeInTheDocument();
+  expect(screen.getByText(/corta el ciclo de plagas/i)).toBeInTheDocument();
 });

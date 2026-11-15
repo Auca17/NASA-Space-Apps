@@ -13,14 +13,19 @@ from .infiltration import TEXTURE_BASE
 
 log = logging.getLogger(__name__)
 CLIMATE = {"rain", "heavy_rain", "frost", "heat", "slope", "soil", "infiltration"}
-CROP_FACTS = ("rain_mm", "water_demand_mm", "cover_days", "fits_frost", "same_family")
+CROP_FACTS = ("rain_mm", "water_demand_mm", "balance_mm", "rain_wet_mm", "rain_expected_mm",
+              "balance_expected_mm", "cover_days", "fits_frost", "same_family")
 ROTATION_FACTS = ("water_balance_mm", "bare_soil_days", "soil_cover_fit", "residue_t_ha_yr", "pest_break")
 SYSTEM = (
     "Rank the supplied crop or rotation candidates for this parcel. Use the available climate and soil facts, "
-    "candidate water needs, soil cover, frost and previous crop where relevant. Honor the priorities and constraints. "
-    "Keep unconditioned candidates before conditional ones. Rank each supplied id exactly once. "
-    "Use only facts provided, no assumed irrigation, yield, or suitability. Say in plain language why each candidate "
-    "fits, or what limits it. Write in the requested language, with Argentine voseo for es, fewer than 28 words per choice. "
+    "candidate water needs, water balance, soil cover, frost and previous crop where relevant. Honor the priorities "
+    "and constraints. Keep unconditioned candidates before conditional ones. Rank each supplied id exactly once. "
+    "Use only facts provided, no assumed irrigation, yield, or suitability. Write a technical agronomic explanation "
+    "for each candidate: state the decisive numbers with their units (cycle rain against crop water demand and the "
+    "resulting balance, frost, soil cover days, erosion or previous crop family) and the cause-effect behind the "
+    "decision. When a season block is given, add the expected rain or balance for the coming season under that ENSO "
+    "phase and say it is a historical tendency, not a forecast. Write in the requested language, with Argentine voseo "
+    "for es, at most 40 words per choice. "
     'Return JSON only: {"choices":[{"id":"candidate id","why":"reason","uses":["provided fact key"]}]}. '
     "Use one to three fact keys per choice, including its specific facts where possible."
 )
@@ -47,6 +52,14 @@ async def rank_candidates(result: dict, diag: dict, priorities: dict, constraint
             texture = card.get("texture")
             if cid == "soil" and isinstance(texture, str) and texture in TEXTURE_BASE:
                 climate["texture"] = texture
+        outlook = result.get("outlook") if kind == "crop" else None
+        season = None
+        if isinstance(outlook, dict) and outlook.get("phase"):
+            season = {"enso_phase": outlook["phase"], "oni_period": outlook.get("oni_period"),
+                      "basis": "historical_tendency_not_forecast"}
+            climate.update(_number_facts({"oni": outlook.get("oni"),
+                                          "enso_rain_effect_pct": outlook.get("rain_effect_pct")},
+                                         ("oni", "enso_rain_effect_pct")))
         facts = {row["id"]: _number_facts(row if kind == "crop" else row["indicators"],
                                          CROP_FACTS if kind == "crop" else ROTATION_FACTS)
                  for row in shortlist}
@@ -59,7 +72,8 @@ async def rank_candidates(result: dict, diag: dict, priorities: dict, constraint
                    "candidates": [{"id": row["id"], "conditional": conditional[row["id"]],
                                    "facts": facts[row["id"]],
                                    **({"sequence": [step["crop"] for step in row["sequence"]]} if kind == "rotation" else {})}
-                                  for row in shortlist]}
+                                  for row in shortlist],
+                   **({"season": season} if season else {})}
         cache_key = hashlib.sha256(json.dumps(payload, sort_keys=True).encode()).hexdigest()
         cached = _cache.get(cache_key)
         decision = cached[1] if cached and time.time() - cached[0] < CACHE_TTL else None
@@ -98,7 +112,7 @@ def _decision(answer, climate, facts, conditional) -> dict | None:
             return None
         why, uses = item.get("why"), item.get("uses")
         values = {**climate, **facts[cid]}
-        if (not isinstance(why, str) or not why.strip() or len(why.split()) > 36 or
+        if (not isinstance(why, str) or not why.strip() or len(why.split()) > 45 or
                 any(word in why.lower() for word in BLOCKLIST) or
                 not isinstance(uses, list) or not 1 <= len(uses) <= 3 or
                 any(not isinstance(field, str) or field not in values for field in uses)):

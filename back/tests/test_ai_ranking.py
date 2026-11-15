@@ -3,6 +3,14 @@ import pytest
 
 from back.app.main import app
 from back.app.services import ai_ranking as ranking
+from back.app.services import crop_outlook
+
+
+@pytest.fixture(autouse=True)
+def offline_outlook(monkeypatch):
+    async def no_index(client=None):
+        return {}
+    monkeypatch.setattr(crop_outlook.enso, "fetch_oni", no_index)
 
 
 def diagnosis():
@@ -54,3 +62,34 @@ async def test_invented_evidence_keeps_catalog_ranking(monkeypatch):
     result = await ranking.rank_candidates({"options": [{"id": "maiz", "conditional": False}]},
                                            diagnosis(), {}, {}, "en", kind="crop")
     assert result == {"ranking_source": "catalog", "options": [{"id": "maiz", "conditional": False}]}
+
+
+@pytest.mark.asyncio
+async def test_gemini_gets_the_water_balance_and_the_season_outlook(monkeypatch):
+    monkeypatch.setenv("GEMINI_API_KEY", "test-key")
+    calls = []
+
+    async def gemini(client, key, payload, system):
+        calls.append((payload, system))
+        return {"choices": [{"id": "soja", "why": (
+            "Lluvia del ciclo 620 mm contra demanda 500 mm; con La Niña (ONI -0.8) "
+            "la lluvia de octubre a marzo bajó -20 % y quedan 516 mm, balance 16 mm."),
+            "uses": ["balance_expected_mm", "enso_rain_effect_pct", "oni"]}]}
+
+    monkeypatch.setattr(ranking, "_call_gemini", gemini)
+    option = {"id": "soja", "conditional": False, "rain_mm": 620, "water_demand_mm": 500,
+              "balance_mm": 120, "rain_wet_mm": 520, "rain_expected_mm": 516,
+              "balance_expected_mm": 16, "cover_days": 150}
+    result = await ranking.rank_candidates(
+        {"options": [option], "outlook": {"phase": "la_nina", "oni": -0.8, "oni_period": "SON 2026",
+                                          "rain_effect_pct": -20, "effects": {}}},
+        diagnosis(), {}, {}, "es", kind="crop")
+    (payload, system), = calls
+    facts = payload["candidates"][0]["facts"]
+    assert facts["balance_expected_mm"] == 16 and facts["rain_expected_mm"] == 516
+    assert payload["season"] == {"enso_phase": "la_nina", "oni_period": "SON 2026",
+                                 "basis": "historical_tendency_not_forecast"}
+    assert payload["parcel"]["enso_rain_effect_pct"] == -20
+    assert "technical" in system.lower()
+    assert result["options"][0]["decision"]["evidence"] == {
+        "balance_expected_mm": 16, "enso_rain_effect_pct": -20, "oni": -0.8}

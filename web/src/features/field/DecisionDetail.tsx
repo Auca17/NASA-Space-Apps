@@ -10,6 +10,8 @@ const UNITS: Record<string, string> = {
   rain: "mm/año", frost: "días/año", heat: "días/año", heavy_rain: "días/año", slope: "%",
   rain_mm: "mm", water_demand_mm: "mm", water_balance_mm: "mm", soil: "g/kg",
   cover_days: "días", bare_soil_days: "días/año", residue_t_ha_yr: "t/ha/año",
+  balance_mm: "mm", rain_wet_mm: "mm", rain_expected_mm: "mm", balance_expected_mm: "mm",
+  oni: "°C", enso_rain_effect_pct: "%",
 };
 
 export function DecisionDetail({ decision, fallback, facts }: {

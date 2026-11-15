@@ -196,11 +196,25 @@ export interface CropEntry {
   name: { es?: string; en?: string };
 }
 
+/** Coming season under the current ENSO phase (NOAA ONI) and how
+ * Oct–Mar rain changed locally in past seasons of that phase.
+ * A historical tendency, not a forecast. */
+export interface CropOutlook {
+  phase: "el_nino" | "la_nina" | "neutral";
+  oni: number;
+  oni_period: string;
+  /** the Oct–Mar season the phase applies to, e.g. "2026-27" */
+  season?: string;
+  rain_effect_pct: number | null;
+  effects: { el_nino: number; la_nina: number } | null;
+}
+
 export interface CropRecommendations {
   status: "ok" | "missing_climate" | "missing_harvest" | "perennial" | "no_catalog";
   available_from: string | null;
   soil_data?: boolean;
   ranking_source?: "gemini" | "catalog";
+  outlook?: CropOutlook | null;
   regional_crops?: CropEntry[];
   options: {
     id: string; name: CropEntry["name"]; score: number; conditional: boolean;
@@ -208,6 +222,8 @@ export interface CropRecommendations {
     sow_from: string; sow_until: string;
     water_demand_mm: number; rain_mm: number | null; rain_period?: "cycle" | "year";
     cover_days?: number;
+    balance_mm?: number; rain_wet_mm?: number;
+    rain_expected_mm?: number; balance_expected_mm?: number;
     decision?: RankedDecision;
     needs_irrigation: boolean;
     fits_frost: boolean | null; different_family: boolean; same_family: boolean;
