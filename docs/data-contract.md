@@ -49,6 +49,10 @@ Ejemplo: `fixtures/meta.json`.
 
 ### 2.2 `globe/{YYYY-MM}.json`
 
+> **Retirado (2026-11-15, task 51).** El modo histórico se eliminó del
+> front; nada lee este prefijo. Se conserva la sección como historial.
+> Ver `docs/ops/r2-layout.md`.
+
 Productor: pipeline de fuego. Consumidor: front (animación del globo). Un archivo por mes, ~300 archivos. Solo celdas con `n > 0`.
 
 ```json
@@ -88,6 +92,10 @@ Ejemplo: `fixtures/fire/cal/82a967fffffffff.json`.
 
 ### 2.4 `fire/daily/{h3_r2}.json`
 
+> **Retirado (2026-11-15, task 51).** El semáforo D9 se eliminó con los
+> modos Fuego/En vivo; nada lee este prefijo. Se conserva la sección
+> como historial. Ver `docs/ops/r2-layout.md`.
+
 Productor: pipeline de fuego. Consumidor: front (semáforo del mes, D9). Se carga solo cuando el usuario fija un área. Series diarias comprimidas: solo los días con fuego.
 
 ```json
@@ -105,6 +113,10 @@ Productor: pipeline de fuego. Consumidor: front (semáforo del mes, D9). Se carg
 Ejemplo: `fixtures/fire/daily/82a967fffffffff.json`.
 
 ### 2.5 `fire/points/{h3_r2}/{YYYY}.csv.gz`
+
+> **Retirado (2026-11-15, task 51).** La descarga de focos crudos se
+> eliminó con los modos Fuego/En vivo; nada lee este prefijo. Se
+> conserva la sección como historial. Ver `docs/ops/r2-layout.md`.
 
 Productor: pipeline de fuego. Consumidor: front (descarga de focos crudos). Solo shards de Argentina (D5). Una fila por detección, ya filtrada (`type = 0`, confianza según PRD 9.1).
 

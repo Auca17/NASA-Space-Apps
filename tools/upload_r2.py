@@ -44,6 +44,10 @@ load_dotenv(ROOT / ".env", override=False)
 CACHE_CONTROL = "public, max-age=3600"
 WORKERS = 16
 PROGRESS_EVERY = 500
+# v1-relative prefixes retired by the Fire/Live removal (task 51):
+# excluded from uploads by default so a stale local export or dev_v1
+# mirror can never resurrect them. `--exclude ""` opts out.
+DEFAULT_EXCLUDE = ("globe", "fire/daily", "fire/points")
 REQUIRED_ENV = ("R2_ACCOUNT_ID", "R2_BUCKET")
 _KEY_ENV = ("R2_ACCESS_KEY_ID", "R2_SECRET_ACCESS_KEY")
 GZIP_MAGIC = b"\x1f\x8b"
@@ -96,16 +100,26 @@ def content_meta(path: Path) -> tuple[str, str | None]:
         "application/octet-stream", None
 
 
-def plan(local_dir: Path, prefix: str) -> list[Item]:
-    """Every regular file under local_dir -> (key, metadata)."""
+def plan(local_dir: Path, prefix: str,
+         exclude: list[str] | None = None) -> list[Item]:
+    """Every regular file under local_dir -> (key, metadata).
+
+    `exclude` holds v1-relative prefixes (e.g. "fire/daily"); any file
+    whose resulting key lands under v1/<entry>/ is skipped, whatever
+    --prefix is in use.
+    """
+    retired = [e.strip("/") for e in (exclude or []) if e.strip("/")]
     items = []
     for p in sorted(local_dir.rglob("*")):
         if not p.is_file():
             continue
         rel = p.relative_to(local_dir).as_posix()
+        key = prefix + rel
+        if any(key.startswith(f"v1/{e}/") for e in retired):
+            continue
         ct, ce = content_meta(p)
         items.append(Item(
-            local=p, key=prefix + rel, is_json=p.suffix == ".json",
+            local=p, key=key, is_json=p.suffix == ".json",
             content_type=ct, content_encoding=ce))
     return items
 
@@ -251,13 +265,19 @@ def main() -> int:
                     help="R2 key prefix (default v1/)")
     ap.add_argument("--upload", action="store_true",
                     help="actually upload (default is --dry-run)")
+    ap.add_argument("--exclude", default=",".join(DEFAULT_EXCLUDE),
+                    help="comma-separated v1/ prefixes to skip "
+                         f"(default '{','.join(DEFAULT_EXCLUDE)}', "
+                         "retired by the Fire/Live removal; "
+                         "pass --exclude '' to opt out)")
     args = ap.parse_args()
     if not args.local_dir.is_dir():
         raise SystemExit(f"not a directory: {args.local_dir}")
     prefix = args.prefix if args.prefix.endswith("/") \
         else args.prefix + "/"
 
-    items = plan(args.local_dir, prefix)
+    items = plan(args.local_dir, prefix,
+                 exclude=args.exclude.split(","))
     if args.upload:
         env, client = make_client()
     else:
