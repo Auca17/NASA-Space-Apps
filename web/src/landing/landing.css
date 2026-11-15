@@ -161,8 +161,8 @@ a:hover { text-decoration-thickness: 2px; }
 .hero { padding-block: 4.5rem 3.5rem; }
 .hero-cta { display: flex; flex-wrap: wrap; gap: 0.75rem; margin-top: 1.75rem; }
 
-/* real product shot above the fold — the field diagnosis at the
- * Pergamino demo plot, captured from the running app */
+/* real product shot above the fold — the parcels analysis of the
+ * Mendoza demo farm, captured from the running app */
 .hero-shot {
   grid-column: 1 / -1;
   margin: 2.5rem 0 0;

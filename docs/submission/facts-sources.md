@@ -63,7 +63,7 @@ repo de donde se copió. **No publicar.**
 | Escenarios lluvia −20 % / +1 °C | README EN/ES método y demo | `docs/PRD.md` → 7.4 |
 | Umbral semáforo: percentiles <50 / 50–80 / 80–95 / >95; ventana 30 días | (contexto del semáforo) | `docs/decisions.md` → D9 |
 | Riesgo categorías por ratio <0,75 / 0,75–1,5 / 1,5–3 / >3 | (contexto del semáforo) | `docs/data-contract.md` → 2.6 |
-| Demo plot Pergamino | README EN/ES demo, video, slides | `docs/decisions.md` → D19 |
+| Demo: finca ficticia de Mendoza (`/app/#demo`; persona inventada, ubicación y datos reales; sin rotaciones — viñedos/olivos) | README EN/ES demo, video, slides | `docs/decisions.md` → D33; `web/src/features/demo/mendozaFarm.ts` |
 | 25 años de focos (2000 → hoy) | README EN/ES pitch | `docs/PRD.md` → 1; `docs/metodo-fuego.md` → El problema |
 | MODIS 1 km desde 2000, se apaga 2026; VIIRS 375 m desde 2012 | README EN/ES problema | `docs/PRD.md` → 2; `docs/metodo-fuego.md` → El problema |
 | ~300 M de focos que procesa la laptop (stack) | no usado (ver contradicciones: 568 M en metodo-fuego) | `docs/PRD.md` → 11 |

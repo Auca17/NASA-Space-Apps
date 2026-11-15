@@ -124,9 +124,9 @@ const en: Landing = {
     markAlt: "Ashfield mark",
     shot: {
       src: "/landing/app_diagnosis_en.webp",
-      alt: "The Ashfield app diagnosing a 50 ha demo plot near Pergamino over satellite imagery: climate, soil and 7-day fire-risk results in plain language.",
+      alt: "The Ashfield app analyzing a fictional farm in Mendoza: five parcels with their crops, each with per-parcel frost, drought and fire badges over real satellite imagery.",
       width: 1100, height: 688,
-      caption: "The app: a field diagnosis on the Pergamino demo plot, satellite base map included.",
+      caption: "The app: a fictional producer's farm in Mendoza — the parcels, names and economics are invented; the location and satellite data are real.",
     },
   },
   blocks: [
@@ -140,9 +140,9 @@ const en: Landing = {
       text: "The fire lens is the same engine seen from the territory: 25 years of MODIS and VIIRS harmonized onto one grid, the 7-day risk with its reasons, the burning months on your calendar and 'burns avoided' scored per rotation.",
       figure: {
         src: "/landing/app_fire_risk_en.webp",
-        alt: "The Ashfield fire view over South America: harmonized detection hexagons on the map, a 7-day fire-risk card reading 'low' and a fire calendar panel.",
+        alt: "The Ashfield fire view over Corrientes in February 2022: harmonized detection hexagons on the map, a 7-day fire-risk card reading 'low' with its reasons, and the 30-day fire signal panel.",
         width: 1280, height: 800,
-        caption: "The app, fire view: harmonized detections and the 7-day risk card.",
+        caption: "The app, fire view: harmonized detections over Corrientes and the 7-day risk card with its reasons.",
       },
     },
     {
@@ -382,9 +382,9 @@ const es: Landing = {
     markAlt: "Marca Ashfield",
     shot: {
       src: "/landing/app_diagnosis.webp",
-      alt: "La app Ashfield diagnosticando un lote demo de 50 ha cerca de Pergamino sobre imagen satelital: clima, suelo y riesgo de fuego a 7 días en lenguaje simple.",
+      alt: "La app Ashfield analizando una finca ficticia en Mendoza: cinco parcelas con su cultivo, cada una con indicadores de helada, sequía y fuego sobre imagen satelital real.",
       width: 1100, height: 688,
-      caption: "La app: diagnóstico de un lote demo en Pergamino, con mapa satelital incluido.",
+      caption: "La app: la finca de un productor de ejemplo en Mendoza — parcelas, nombres y números económicos inventados; la ubicación y los datos satelitales son reales.",
     },
   },
   blocks: [
@@ -398,9 +398,9 @@ const es: Landing = {
       text: "La lente de fuego es el mismo motor visto desde el territorio: 25 años de MODIS y VIIRS armonizados en una sola grilla, el riesgo a 7 días con sus razones, los meses de quema en tu calendario y las «quemas evitadas» puntuadas por rotación.",
       figure: {
         src: "/landing/app_fire_risk.webp",
-        alt: "La vista de fuego de Ashfield sobre Sudamérica: hexágonos de detecciones armonizadas en el mapa, la tarjeta de riesgo a 7 días marcando «bajo» y el calendario de fuego.",
-        width: 1280, height: 844,
-        caption: "La app, vista fuego: detecciones armonizadas y la tarjeta de riesgo a 7 días.",
+        alt: "La vista de fuego de Ashfield sobre Corrientes en febrero de 2022: hexágonos de detecciones armonizadas en el mapa, la tarjeta de riesgo a 7 días marcando «bajo» con sus razones y el panel de señal de fuego a 30 días.",
+        width: 1280, height: 800,
+        caption: "La app, vista fuego: detecciones armonizadas sobre Corrientes y la tarjeta de riesgo a 7 días con sus razones.",
       },
     },
     {
