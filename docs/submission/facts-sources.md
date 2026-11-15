@@ -1,81 +1,89 @@
 # Mapeo figura → fuente (uso interno)
 
 Archivo privado del equipo: cada número que aparece en `README.md`, `README.es.md`,
-`video-script-es.md`, `slides-outline-es.md` y `checklist.md`, con el archivo del
-repo de donde se copió. **No publicar.**
+la landing (`web/src/landing/content.ts`), `video-script-es.md`, `video-script.md`,
+`slides-outline-es.md` y `checklist.md`, con el archivo del repo de donde se copió.
+**No publicar.**
+
+La sección 1 cubre solo lo que está en la entrega (Field Shift). La sección 2
+guarda los números del pipeline de fuego que quedan en el repo pero **fuera de
+esta entrega** (D34) — se citan únicamente en el apartado "Fuera de la entrega"
+de las slides y en la línea de puntero del README.
+
+## 1. Cifras de la entrega — Field Shift
 
 | Figura | Dónde aparece | Fuente (archivo → sección) |
 |---|---|---|
-| R² serie mundial mensual = 0,979 | README EN/ES validación, slides, video | `docs/validation/metrics.json` → `r2_global_monthly`; también `docs/metodo-fuego.md` → Validación y `pipeline/README.md` → Armonización |
-| R² lineal celda res 3 × mes = 0,926 | README EN/ES validación, slides, video | `docs/validation/metrics.json` → `r2_linear`; `docs/metodo-fuego.md` → Validación |
-| R² log1p celda res 3 × mes = 0,654 | README EN/ES validación, video | `docs/validation/metrics.json` → `r2`; `docs/metodo-fuego.md` → Validación |
-| Sesgo total = −0,8 % | README EN/ES validación, slides | `docs/validation/metrics.json` → `bias_pct`; `docs/metodo-fuego.md` → Validación |
-| Celdas-día: R² log1p 0,61 / sesgo +1,4 % | README EN/ES validación | `docs/validation/metrics.json` → `r2_cells_day`, `bias_pct_cells_day`; `pipeline/README.md` → Armonización |
-| Entrenamiento 2012-02 → 2022-12, hold-out 2023–2024 | README EN/ES validación, video | `docs/validation/metrics.json` → `train`, `holdout`; `pipeline/README.md` → Armonización |
-| 18 bandas × 12 meses = 216 estratos, 208 con datos | README EN/ES método, slides | `pipeline/README.md` → Armonización (paso 4); `docs/decisions.md` → D30 |
-| 71 de 208 estratos con coeficientes globales (`low`) | README EN/ES método y limitaciones | `pipeline/README.md` → Armonización; `docs/metodo-fuego.md` → Armonización paso a paso |
-| Umbral de 200 pares por estrato | README EN/ES método | `docs/metodo-fuego.md` → Armonización paso a paso (regla de baja confianza) |
-| Factor S-NPP → NOAA-20 entre 0,98 y 1,0 en Argentina | README EN/ES método | `pipeline/README.md` → Armonización; `docs/metodo-fuego.md` → paso 2 |
-| Serie final: MODIS 2000-11→2012-01 / S-NPP 2012-02→2018-03 / NOAA-20 2018-04→hoy | README EN/ES método, slides | `docs/metodo-fuego.md` → Serie final; `pipeline/README.md` → Armonización |
-| ~568 millones de detecciones procesadas | README EN/ES método, slides | `docs/metodo-fuego.md` → Fuentes |
-| Filtros: `type = 0`, MODIS conf ≥ 30, VIIRS `nominal`/`high` | README EN/ES método | `docs/metodo-fuego.md` → Limpieza; `docs/PRD.md` → 9.1 |
-| Máscara NRT: descarta 5,7 % (NOAA-20 NRT) vs 8,6 % (SP) | README EN/ES método y limitaciones | `docs/metodo-fuego.md` → Limitaciones; `pipeline/README.md` → 2026 por la API |
-| SP: MODIS hasta 2026-08-31, NOAA-20 hasta 2026-07-31 | README EN/ES tabla de datos | `pipeline/README.md` → 2026 por la API; `docs/metodo-fuego.md` → Fuentes |
-| Hueco de Terra 2001-06-15 → 2001-07-03; junio 2001 a un tercio | README EN/ES limitaciones | `docs/metodo-fuego.md` → Limitaciones; `pipeline/README.md` → Armonización; `docs/decisions.md` → D30 |
-| Tramo de baja confianza 2000-11 → 2012-01 | README EN/ES limitaciones, video | `docs/metodo-fuego.md` → Limitaciones; `docs/decisions.md` → D30 |
-| Res 5 ≈ 253 km²; círculo de 50 km ≈ 31 celdas; res 3 ≈ 12.400 km² | README EN/ES método | `docs/metodo-fuego.md` → Grilla; `docs/decisions.md` → D9 |
-| Celda POWER ≈ 55 × 60 km, altura media 2.485 m (Valle de Uco) | README EN/ES validación, video | `docs/validation/orin/README.md` → Por qué: la altura |
-| Estaciones Orin a 1.000–1.500 m; sesgo −6,7 °C en máxima (Valle de Uco); 10 de 53 estaciones | README EN/ES validación, video, slides | `docs/validation/orin/README.md` → Por qué: la altura |
-| 53 estaciones, 2026-10-04 → 2026-10-20, 742 pares por variable | README EN/ES validación y datos, video | `docs/validation/orin/README.md` → encabezado; `docs/validation/orin/metricas.json` |
-| Tmax: RMSE 5,05 °C, sesgo −2,82 °C, r 0,63 | README EN/ES validación, video, slides | `docs/validation/orin/README.md` → Resultado; `docs/validation/orin/metricas.json` → `temp_max.crudo` |
-| Tmin: RMSE 3,89 °C, sesgo −0,67 °C, r 0,46 | README EN/ES validación, video, slides | `docs/validation/orin/README.md` → Resultado; `docs/validation/orin/metricas.json` → `temp_min.crudo` |
-| Sin las 10 estaciones de montaña: 3,32 / 2,31 °C | README EN/ES validación | `docs/validation/orin/README.md` → tabla Por qué |
-| Corregido por altura (6,5 °C/km): 2,82 / 2,28 °C | README EN/ES validación, video, slides | `docs/validation/orin/README.md` → tabla Por qué; `docs/validation/orin/metricas.json` → `corregido_por_altura` |
-| LightGBM ROC-AUC 0,920 / PR-AUC 0,427 / Brier 0,0302 | README EN/ES validación, video, slides | `model/fire_risk/report.md` → Test 2023-2025 |
-| Climatología ROC-AUC 0,843 / PR-AUC 0,295 / Brier 0,0350 | README EN/ES validación, slides | `model/fire_risk/report.md` → Test 2023-2025 |
-| Persistencia ROC-AUC 0,852 / PR-AUC 0,310 / Brier 0,0452 | README EN/ES validación | `model/fire_risk/report.md` → Test 2023-2025 |
-| Test 2023–2025; train 7.031.862 / val 700.492 / test 2.101.476; tasa positiva 0,0476 | README EN/ES validación | `model/fire_risk/report.md` → encabezado |
-| Calibración Platt (split 2022) | README EN/ES método | `model/fire_risk/report.md` → cuerpo |
-| Regla riesgo mundial `p = min(0,95, clim × (1 + 2·A + B))` | README EN/ES método | `docs/metodo-fuego.md` → Qué se calcula; `pipeline/README.md` → Riesgo nivel historial |
-| `fires_365d_complete` / hueco ene–oct 2026 en el historial | README EN/ES limitaciones | `model/fire_risk/report.md` → Known limitation |
-| Corrientes ene+feb 2022: 33.255 focos | video, slides | `docs/case-study/README.md` → Números clave; `docs/case-study/numeros.json` → `province_jan_feb_2022` |
-| Mediana ene+feb 2003–2022 Corrientes: 1.846 → 18× | video, slides | `docs/case-study/README.md` → Números clave; `docs/case-study/numeros.json` |
-| Corrientes ene+feb 2021: 883 → ~38× el año anterior | video | `docs/case-study/README.md` → Números clave; `docs/case-study/numeros.json` |
-| Celda Iberá `85a9441bfffffff`: pico feb-2022 = 416 (ene-2022 = 320); mediana feb = 0 | video, slides | `docs/case-study/README.md` → Números clave; `docs/decisions.md` → D27 |
+| 53 estaciones, 2026-10-04 → 2026-10-20, 742 pares por variable | README EN/ES validación y datos, landing (trust), video, slides | `docs/validation/orin/README.md` → encabezado; `docs/validation/orin/metricas.json` |
+| Tmax: RMSE 5,05 °C, sesgo −2,82 °C, r 0,63 | README EN/ES validación, landing, video, slides | `docs/validation/orin/README.md` → Resultado; `docs/validation/orin/metricas.json` → `temp_max.crudo` |
+| Tmin: RMSE 3,89 °C, sesgo −0,67 °C, r 0,46 | README EN/ES validación, landing, video, slides | `docs/validation/orin/README.md` → Resultado; `docs/validation/orin/metricas.json` → `temp_min.crudo` |
+| Corregido por altura (6,5 °C/km): 2,82 / 2,28 °C | README EN/ES validación, landing, video, slides | `docs/validation/orin/README.md` → tabla Por qué; `docs/validation/orin/metricas.json` → `corregido_por_altura` |
+| Celda POWER ≈ 55 × 60 km, altura media 2.485 m (Valle de Uco); estaciones Orin a 1.000–1.500 m; 10 de 53 en montaña | README EN/ES validación, video, slides | `docs/validation/orin/README.md` → Por qué: la altura |
+| 25 estaciones INTA SIGA, 1.346 estación-meses, 2015–2024 | README EN/ES validación, landing, video, slides | `docs/validation/rain-siga/README.md` → encabezado; `docs/validation/rain-siga/validation.json` |
+| IMERG: sesgo +22,1 mm/mes, RMSE 51,2, r 0,59 | README EN/ES validación, landing, video, slides | `docs/validation/rain-siga/validation.json` → `imerg` |
+| POWER: sesgo +22,4 mm/mes, RMSE 49,4, r 0,62 | README EN/ES validación, landing, video, slides | `docs/validation/rain-siga/validation.json` → `power` |
+| Sesgo húmedo concentrado en Mendoza, punto vs. píxel | README EN/ES validación y limitaciones, landing, slides | `docs/validation/rain-siga/README.md` → lectura |
 | 15 cultivos, 12 rotaciones, 6 medidas | README EN/ES método, slides | `back/knowledge/README.md`; `docs/revision-agronomica.md` → encabezado |
-| POWER 0,5° × 0,625°, 2001 → ayer; MERRA-2 + cola GEOS-IT | README EN/ES datos, limitaciones | `docs/data-contract.md` → 5.2; `docs/decisions.md` → D25 y Pendientes; `docs/validation/orin/README.md` → Limitaciones |
-| IMERG pendiente (acuerdo GES DISC); la lluvia sale de NASA POWER | README EN/ES datos (no usado) | `web/src/content/datasets.ts` → `DATASETS_PENDING` |
-| FAO GAEZ pendiente (paso manual de licencia) | README EN/ES datos (no usado) | `web/src/content/datasets.ts` → `DATASETS_PENDING` |
-| SMAP SPL3SMP_E 9 km calculada pero rechazada por las pruebas de calidad; la tarjeta usa POWER `GWETROOT` | README EN/ES datos y limitaciones | `web/src/content/datasets.ts` → `DATASETS_PENDING`; `model/field_grid/smap_gate.py` |
+| 8 riesgos ordenables por el productor | README EN/ES demo, landing, video, slides | `web/src/i18n/es.json`, `web/src/i18n/en.json` → hazards; `back/app/services/hazards.py` |
+| Grilla de campo: celdas H3 res 5, shards res 2 (`field/grid/{h3_r2}.json`) | README EN/ES método, landing (F8), slides | `docs/data-contract.md` → 3 (grilla de campo); `model/field_grid/` |
+| POWER 0,5° × 0,625° diario, 2001 → ayer; MERRA-2 + cola GEOS-IT | README EN/ES datos y limitaciones, landing (F8) | `docs/data-contract.md` → 5.2; `docs/decisions.md` → D25 y Pendientes; `docs/validation/orin/README.md` → Limitaciones |
+| GPM IMERG 0,1° mensual (lluvia de la grilla de campo) | README EN/ES datos, landing (F8) | `web/src/content/datasets.ts` → `DATASETS_USED`; `model/field_grid/` |
+| MODIS NDVI MOD13C2 0,05° mensual para suelo desnudo; MOD13Q1 inviable | README EN/ES datos y limitaciones, landing (F8) | `model/field_grid/README.md` → bare_soil_days_yr rule; `back/README.md` → Note (06) |
+| SoilGrids 250 m (WCS 0–30 cm); ORNL/SoilGrids > 15 s a demanda | README EN/ES datos y limitaciones, landing (F8) | `back/README.md` → card sources y Note (03b)/(06); `docs/decisions.md` → Pendientes |
+| SRTM ~30 m vía AWS Terrain Tiles (pendiente) | README EN/ES datos, landing (F8) | `back/README.md` → card sources (`slope`) |
+| Sentinel-2 L2A ~20 m a demanda (cultivo en curso) | README EN/ES datos y método, landing (F8) | `back/app/services/current_crop.py` → fuente "Sentinel-2 L2A (ESA Copernicus)" |
+| MAGyP por departamento | README EN/ES datos | `docs/PRD.md` → 8.1; `docs/data-contract.md` → 2.8 |
 | GRACE-FO 2018 → hoy | README EN/ES datos | `web/src/content/datasets.ts` → `DATASETS_USED` |
 | ECOSTRESS ECO_L2T_LSTE LST 70 m, 2024–2025, solo lotes demo de Orin | README EN/ES datos | `web/src/content/datasets.ts` → `DATASETS_USED`; `model/field_grid/ecostress_demo.py` |
+| OpenStreetMap para agua y distancia a servicios; puede fallar por timeout → `incomplete` | README EN/ES datos y limitaciones, landing (F8) | `back/app/routers/geocode.py`, `back/app/services/georef.py`; bandera `incomplete` en `/api/field/diagnose` |
+| Capas de campo precalculadas solo en Argentina; fuera de Argentina, capa por punto a demanda | README EN/ES limitaciones, landing (F8 y límites) | `docs/data-contract.md` → 3; `back/README.md` → field grid coverage |
+| FIRMS historial por lote (riesgo de fuego por parcela + alertas + aviso n8n planeado) | README EN/ES datos | `back/app/services/firms.py`, `back/app/services/field_moisture.py`; `ops/n8n/` (planeado) |
 | Corrección por altura −6,5 °C/km aplicada a demanda en el diagnóstico | README EN/ES limitaciones | `docs/data-contract.md` → 4.2 (`temp_adjust_c`, `elevation_m`, `power_cell_elevation_m`); `model/field_grid/update_elevation.py` |
-| Features del modelo de riesgo sin corrección por altura | README EN/ES limitaciones | `model/fire_risk/report.md` → Known limitation (elevation correction) |
+| Evaporación (`EVLAND`) + ET0 FAO-56 Penman-Monteith con fallback Hargreaves donde POWER está enmascarado; Kc FAO genérico pendiente de revisión local | README EN/ES demo y limitaciones, landing (F1) | `back/app/services/et0.py`, `back/app/services/crop_water.py`; prueba en vivo `/api/field/diagnose` → tarjetas `evaporation`/`crop_water` |
+| Infiltración por parcela y por alternativa (grupos hidrológicos USDA; textura SoilGrids, materia orgánica, pendiente, días de suelo desnudo); relativa y cualitativa | README EN/ES demo y limitaciones, landing (F6), slides | `back/app/services/infiltration.py`; prueba en vivo `/api/field/diagnose` → tarjeta `infiltration`, `/api/field/rotations` |
+| SMAP SPL3SMP_E 9 km calculada pero rechazada por las pruebas de calidad; la tarjeta usa POWER `GWETROOT` | README EN/ES datos y limitaciones | `web/src/content/datasets.ts` → `DATASETS_PENDING`; `model/field_grid/smap_gate.py` |
+| FAO GAEZ pendiente (paso manual de licencia) | README EN/ES datos (no usado) | `web/src/content/datasets.ts` → `DATASETS_PENDING` |
 | Escenarios climáticos = escalado simple de la serie POWER (lluvia ×(1+pct), T ± delta), no pronósticos | README EN/ES limitaciones | `back/README.md` → Climate scenarios (task 17A); `web/src/content/datasets.ts` → `LIMITATIONS` |
-| Explicación IA: proveedor intercambiable, Gemini Flash por defecto, prompt sin coordenadas ni ids, validación de números y citas, fallback a plantillas | README EN/ES método | `back/README.md` → Optional AI explanation (task 19); `back/app/services/ai_explain.py` |
-| MOD13C2 0,05° mensual para suelo desnudo; MOD13Q1 inviable | README EN/ES datos y limitaciones | `model/field_grid/README.md` → bare_soil_days_yr rule; `back/README.md` → Note (06) |
-| SoilGrids 250 m (WCS 0–30 cm); ORNL/SolGrids > 15 s a demanda | README EN/ES datos y limitaciones | `back/README.md` → card sources y Note (03b)/(06); `docs/decisions.md` → Pendientes |
-| SRTM ~30 m vía AWS Terrain Tiles | README EN/ES datos | `back/README.md` → card sources (`slope`) |
-| MAGyP por departamento | README EN/ES datos | `docs/PRD.md` → 8.1; `docs/data-contract.md` → 2.8 |
-| ~9 GB de zips FIRMS (~41 GB descomprimidos); ~70 GB de disco | README EN/ES cómo correr | `pipeline/README.md` → Requisitos; `docs/metodo-fuego.md` → Cómo reproducirlo |
-| 20,2 M de focos 2026; 124 mil en Argentina | (contexto, no usado en piezas finales) | `pipeline/README.md` → 2026 por la API |
-| Línea base 2003–2022; climatología semanal 52 valores | README EN/ES método | `docs/decisions.md` → D10; `pipeline/README.md` → Agregados |
-| Escenarios lluvia −20 % / +1 °C | README EN/ES método y demo | `docs/PRD.md` → 7.4 |
-| Umbral semáforo: percentiles <50 / 50–80 / 80–95 / >95; ventana 30 días | (contexto del semáforo) | `docs/decisions.md` → D9 |
-| Riesgo categorías por ratio <0,75 / 0,75–1,5 / 1,5–3 / >3 | (contexto del semáforo) | `docs/data-contract.md` → 2.6 |
-| Demo: finca ficticia de Mendoza (`/app/#demo`; persona inventada, ubicación y datos reales; sin rotaciones — viñedos/olivos) | README EN/ES demo, video, slides | `docs/decisions.md` → D33; `web/src/features/demo/mendozaFarm.ts` |
-| 25 años de focos (2000 → hoy) | README EN/ES pitch | `docs/PRD.md` → 1; `docs/metodo-fuego.md` → El problema |
-| MODIS 1 km desde 2000, se apaga 2026; VIIRS 375 m desde 2012 | README EN/ES problema | `docs/PRD.md` → 2; `docs/metodo-fuego.md` → El problema |
-| ~300 M de focos que procesa la laptop (stack) | no usado (ver contradicciones: 568 M en metodo-fuego) | `docs/PRD.md` → 11 |
-| Ingesta primera corrida: MODIS 111,4 M → 102,7 M; VIIRS 437,1 M → 358,9 M | no usado (contradice metodo-fuego, ver reporte) | `pipeline/README.md` → Números de la primera corrida |
-| Limpieza final: MODIS 114,5 M → 105,4 M; VIIRS 454,1 M → 372,7 M | no usado (contradice pipeline/README, ver reporte) | `docs/metodo-fuego.md` → Limpieza |
-| Ley 26.562; umbrales INTA (viento > 40 km/h, > 35 °C, HR < 30 %; motor > 600 °C; ~80 % focos en motor; 20–30 min limpieza; tanque ≥ 500 l) | slides (humano en el loop) | `docs/revision-agronomica.md` → §4; `back/knowledge/REVIEW.md` → Measures |
-| GitHub Actions: solo job diario de riesgo (live sin cron) | checklist | `docs/decisions.md` → D6 (contradice PRD 11, ver reporte) |
+| Explicación IA: Gemini Flash por defecto, prompt sin coordenadas ni ids, validación de números y citas, fallback a plantillas; requiere clave del servidor | README EN/ES método, landing (F7) | `back/README.md` → Optional AI explanation (task 19); `back/app/services/ai_explain.py` |
+| Granizo: sin dato satelital — la app lo dice | README EN/ES limitaciones, landing (límites), slides | `back/app/services/hazards.py`; `web/src/i18n/es.json` |
+| El Niño/La Niña = tendencia histórica NOAA CPC ONI, no pronóstico | README EN/ES limitaciones, landing (límites) | `back/app/services/enso.py` |
+| Historial de focos por parcela incompleto fuera de las capas precalculadas | README EN/ES limitaciones, landing (límites) | `back/app/services/firms.py`, `back/app/services/field_moisture.py` |
+| Márgenes bruto por parcela: referenciales (MAGyP), no contabilidad | README EN/ES limitaciones, landing | `back/README.md` → parcels; `docs/PRD.md` → 8.1 |
+| Infiltración cualitativa / indicadores relativos que ordenan alternativas, no predicen rindes | README EN/ES limitaciones, landing, slides | `back/app/services/rotations.py`, `back/app/services/infiltration.py` |
+| Demo: finca ficticia de Mendoza (`/app/#demo`; persona inventada, ubicación y datos reales; sin rotaciones — viñedos/olivos) | README EN/ES demo, landing, video, slides | `docs/decisions.md` → D33; `web/src/features/demo/mendozaFarm.ts` |
+| Rotaciones solo por "Analizar mi campo" en un punto de zona de granos (la finca demo no rota) | README EN/ES demo, video, slides | `web/src/features/field/FieldLens.tsx`; verificado en vivo: `/api/field/diagnose` → `/api/field/rotations` devuelve 4 estrategias en la pampa |
+| Alerta de fuego + bloque de servicios de emergencia con teléfonos clicables (la app nunca marca sola) | README EN/ES demo, landing, video | `back/app/routers/parcels.py`; `web/src/features/field/` |
+| Ley 26.562; umbrales INTA (viento > 40 km/h, > 35 °C, HR < 30 %; motor > 600 °C; ~80 % focos en motor; 20–30 min limpieza; tanque ≥ 500 l) | slides (humano en el loop), README (medidas INTA en la app) | `docs/revision-agronomica.md` → §4; `back/knowledge/REVIEW.md` → Measures |
+| Escenarios lluvia −20 % / +1 °C | README EN/ES método | `docs/PRD.md` → 7.4 |
+| Alertas n8n **planeadas**: workflows existen, entrega probada en sandbox, notificaciones todavía no integradas a la app | README EN/ES, slides ("Fuera de la entrega") | `ops/n8n/`; `docs/ideas/alerts-and-identity.md` |
+| Estado F1/F6 = done; F10 = parcial (sin muestras NDVI/humedad de suelo) | landing (tabla de requisitos) | Verificado en vivo contra `localhost:8000` (`evaporation`, `crop_water`, `infiltration` en `/api/field/diagnose`); `docs/validation/orin/`, `docs/validation/rain-siga/` |
+
+## 2. Fuera de la entrega — pipeline de fuego que queda en el repo
+
+Estos números **no aparecen como afirmaciones del producto** en la entrega. Se
+conservan aquí porque el apéndice de slides y la línea de puntero del README los
+referencian como trabajo de repo (D34). Pipeline en `pipeline/`, modelo en
+`model/fire_risk/`.
+
+| Figura | Fuente (archivo → sección) |
+|---|---|
+| R² serie mundial mensual = 0,979 · R² lineal celda = 0,926 · R² log1p = 0,654 · sesgo −0,8 % | `docs/validation/metrics.json`; `docs/metodo-fuego.md` → Validación |
+| Entrenamiento 2012-02 → 2022-12, hold-out 2023–2024 | `docs/validation/metrics.json` → `train`, `holdout` |
+| 18 bandas × 12 meses = 216 estratos, 208 con datos; 71 con coeficientes globales (`low`); umbral de 200 pares | `pipeline/README.md` → Armonización; `docs/metodo-fuego.md`; `docs/decisions.md` → D30 |
+| ~568 millones de detecciones procesadas | `docs/metodo-fuego.md` → Fuentes |
+| Serie final: MODIS 2000-11→2012-01 / S-NPP 2012-02→2018-03 / NOAA-20 2018-04→hoy | `docs/metodo-fuego.md` → Serie final |
+| Tramo de baja confianza 2000-11 → 2012-01; hueco de Terra 2001-06→07 | `docs/metodo-fuego.md` → Limitaciones; `docs/decisions.md` → D30 |
+| Modelo de riesgo: LightGBM ROC-AUC 0,920 vs. climatología 0,843 (test 2023–2025) | `model/fire_risk/report.md` → Test 2023-2025 |
+| `fires_365d_complete` / hueco ene–oct 2026 en el historial | `model/fire_risk/report.md` → Known limitation |
+| Corrientes ene+feb 2022: 33.255 focos, 18× la mediana; celda Iberá pico feb-2022 = 416 | `docs/case-study/README.md` → Números clave; `docs/case-study/numeros.json` |
+| ~9 GB de zips FIRMS (~41 GB descomprimidos); ~70 GB de disco | `pipeline/README.md` → Requisitos |
+| Línea base 2003–2022; climatología semanal; umbrales semáforo <50/50–80/80–95/>95 | `docs/decisions.md` → D9, D10; `docs/data-contract.md` → 2.6 |
 
 ## Figuras sin fuente en el repo (quedaron como `[PENDIENTE: ...]`)
 
 - URL de la demo online.
 - URL del video.
-- Licencia del código (no hay archivo LICENSE en el repo).
 - URL de descarga del dataset armonizado publicado (GitHub Release / Zenodo).
-- ~Nombre del proyecto~ — resuelto: **Ashfield** (actualización del equipo tras el brief; brand en `web/public/brand/` y `tools/brand/`).
+- ~Licencia del código~ — resuelto: MIT, `LICENSE` en el repo.
+- ~Nombre del proyecto~ — resuelto: **Ashfield** (brand en `web/public/brand/` y
+  `tools/brand/`).

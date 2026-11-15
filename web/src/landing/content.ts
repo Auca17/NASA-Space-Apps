@@ -19,7 +19,6 @@ export interface ReqRow {
 
 export interface ReqGroup { title: string; short: string; rows: ReqRow[]; }
 
-export interface MetricRow { label: string; value: string; note?: string; }
 export interface DataRow { name: string; what: string; resolution: string; where: string; }
 export interface PendingRow { name: string; why: string; }
 export interface TeamMember { name: string; role: string; }
@@ -61,21 +60,8 @@ export interface Landing {
     statusLabel: Record<Status, string>;
     cols: { requirement: string; does: string; status: string; see: string; limit: string };
   };
-  proof: {
-    heading: string;
-    lead: string;
-    img: { src: string; alt: string; width: number; height: number; caption: string };
-    metrics: MetricRow[];
-    logNote: string;
-    method: string;
-  };
   trust: {
     heading: string;
-    riskTitle: string;
-    riskIntro: string;
-    riskRows: { label: string; roc: string; pr: string; brier: string }[];
-    riskCols: { label: string; roc: string; pr: string; brier: string };
-    riskNote: string;
     orinTitle: string;
     orinText: string;
     orinImg: { src: string; alt: string; width: number; height: number; caption: string };
@@ -120,7 +106,7 @@ const en: Landing = {
     openApp: "Open the app",
     example: { label: "See an example", href: "/app/#demo" },
     video: undefined, // [PENDIENTE: URL del video] — hidden until it exists
-    tagline: "NASA Space Apps Challenge 2026 · Field Shift (also covers Harmonization of MODIS and VIIRS Hot Spots)",
+    tagline: "NASA Space Apps Challenge 2026 · Field Shift: Adapting Farms with NASA Data",
     markAlt: "Ashfield mark",
     shot: {
       src: "/landing/app_diagnosis_en.webp",
@@ -132,28 +118,23 @@ const en: Landing = {
   blocks: [
     {
       heading: "What your field gets",
-      text: "Parcels with their own fire and water percentages — each with the reason for the number — an agricultural calendar marking vulnerable months, and rotation cards that explain why, evidence, benefits, gaps and risks.",
+      text: "Parcels with their own fire and water percentages — each with the reason for the number — fire alerts with the emergency block, an agricultural calendar marking vulnerable and burn-prone months, and rotation cards that explain why, evidence, benefits, gaps and risks — burns avoided included.",
       stat: { value: "1 + 3", note: "your current rotation plus up to three alternatives, each with why, evidence, benefits, gaps and risks" },
     },
     {
-      heading: "Fire as a plot risk",
-      text: "The fire lens is the same engine seen from the territory: 25 years of MODIS and VIIRS harmonized onto one grid, the 7-day risk with its reasons, the burning months on your calendar and 'burns avoided' scored per rotation.",
-      figure: {
-        src: "/landing/app_fire_risk_en.webp",
-        alt: "The Ashfield fire view over Corrientes in February 2022: harmonized detection hexagons on the map, a 7-day fire-risk card reading 'low' with its reasons, and the 30-day fire signal panel.",
-        width: 1280, height: 800,
-        caption: "The app, fire view: harmonized detections over Corrientes and the 7-day risk card with its reasons.",
-      },
+      heading: "One grid, every layer",
+      text: "POWER weather at 0.5°, IMERG rain at 0.1°, MODIS vegetation at 0.05° and SoilGrids soil at 250 m land on the same hexagonal grid — every parcel reads all of them cell by cell, and Sentinel-2 at 20 m joins on demand for the current crop.",
+      stat: { value: "4 + 1", note: "dataset resolutions on one grid — weather, rain, vegetation, soil — plus Sentinel-2 on demand" },
     },
     {
       heading: "Why trust it",
-      text: "Built only on named NASA data — MODIS, VIIRS, POWER, GRACE-FO, SRTM. Temperature is checked against 53 real stations and rain against 25 INTA SIGA stations; the harmonized fire series is validated on data never used in calibration, and the lowest-confidence stretch is flagged in the app.",
-      stat: { value: "R² 0.979", note: "harmonized global monthly series, validated on a 2023–2024 holdout" },
+      text: "Built only on named data — NASA POWER, IMERG, MODIS NDVI, GRACE-FO, SRTM, SoilGrids — and checked against the field: temperature against 53 real stations on a Mendoza farm, monthly rain against 25 INTA SIGA stations. Where the satellite is weak, the app says so.",
+      stat: { value: "53 + 25", note: "real stations the estimates were checked against — Orin temperature, INTA SIGA rain" },
     },
   ],
   details: {
     summary: "How it meets the challenge brief",
-    caption: "Every requirement of both challenges, the method, the validation numbers and the honest limits — nothing removed.",
+    caption: "Every requirement of the Field Shift challenge, the method, the validation numbers and the honest limits.",
     scoreSep: " · ", statusSep: " · ",
   },
   pendTag: "[PENDING]",
@@ -161,13 +142,12 @@ const en: Landing = {
     heading: "The problem",
     paragraphs: [
       "A producer deciding next season's rotation faces climate stress with the relevant NASA data scattered across products, resolutions and portals. Soil, rain, frost, heat and water stress exist, but not in one place, and not at the scale of a plot.",
-      "Fire adds to the decision — and the satellite record of it is split between sensors that cannot be compared directly: MODIS at 1 km since 2000, VIIRS at 375 m since 2012, with a second VIIRS instrument arriving in April 2018. Any long series built by simply joining them inherits artificial jumps exactly where the instruments change.",
-      "The two problems meet in stubble burning. A rotation that keeps soil covered and spreads risk is also a field less likely to burn. Ashfield treats fire and field as one story, not two products.",
+      "Stubble burning is part of that decision too: a rotation that keeps the soil covered and spreads risk is also a field less likely to burn. Fire stays where it belongs — inside the plot, as a probability per parcel with its reason, alerts, and the burn months on the calendar.",
     ],
   },
   brief: {
     heading: "The challenge brief, point by point",
-    intro: "Both challenges Ashfield was built against, requirement by requirement. Statuses are honest: partial means partial.",
+    intro: "The Field Shift challenge, requirement by requirement. Statuses are honest: partial means partial.",
     statusLabel: { done: "Done", partial: "Partial", "not-included": "Not included" },
     cols: { requirement: "Requirement", does: "What Ashfield does", status: "Status", see: "See it", limit: "Honest limit" },
     groups: [
@@ -207,8 +187,8 @@ const en: Landing = {
             limit: "The AI provider only runs when a server-side key is configured; templates ship by default. Patagonia returns 'no validated rotations' rather than a weak guess." },
           { id: "F8", status: "partial",
             requirement: "Harmonize datasets with different resolutions and time scales into a common grid",
-            does: "Everything is projected onto the same H3 hexagonal grid (fires, climate, soil, NDVI), so unlike sources can be compared cell by cell.",
-            limit: "Fire data are on the grid worldwide; the climate, soil, NDVI and rain layers are precomputed for Argentina only, and the on-demand diagnosis elsewhere uses point data.",
+            does: "POWER daily weather (0.5°), IMERG monthly rain (0.1°), MODIS NDVI (0.05°) and SoilGrids (250 m) are precomputed onto the same H3 hexagonal grid (res 5); each parcel is rasterized to the same cells, so every layer is read cell by cell. Sentinel-2 at 20 m joins on demand for the current crop.",
+            limit: "The precomputed layers cover Argentina only; elsewhere the on-demand diagnosis uses point data instead of the grid.",
             see: { label: "Data contract", href: blob("docs/data-contract.md") } },
           { id: "F9", status: "done",
             requirement: "Explain technical terms (evapotranspiration, NDVI, anomalies, frost thresholds, water balance)",
@@ -230,68 +210,10 @@ const en: Landing = {
             does: "The disclaimer ships with every diagnosis; information gaps are a required section on each rotation card." },
         ],
       },
-      {
-        title: "Harmonization of MODIS and VIIRS Hot Spots",
-        short: "MODIS & VIIRS Hot Spots",
-        rows: [
-          { id: "H1", status: "done",
-            requirement: "Harmonize MODIS and VIIRS into one comparable historical series",
-            does: "Both sensors are converted into one unit, equivalent VIIRS NOAA-20 detections, with per-stratum calibration. Validated on a 2023–2024 holdout: R² 0.979 on the global monthly series.",
-            see: { label: "Method", href: blob("docs/metodo-fuego.md") } },
-          { id: "H2", status: "done",
-            requirement: "Web app to select a region and time range and explore the harmonized data",
-            does: "A 3D globe shows the monthly harmonized layer worldwide; the area panel opens the local history for any point.",
-            see: { label: "Open the globe", href: "/app/" } },
-          { id: "H3", status: "done",
-            requirement: "Calendar of activity since 2000",
-            does: "A year-by-month calendar of detections for the selected area, colored by count or anomaly.",
-            see: { label: "Area panel", href: "/app/" } },
-          { id: "H4", status: "done",
-            requirement: "Compare the current month against the historical median",
-            does: "A semaphore marks the current month low / normal / high against that month's median for the area." },
-          { id: "H5", status: "done",
-            requirement: "Show absolute counts and anomalies against multi-year averages",
-            does: "A toggle switches the calendar between counts and anomalies against the 2003–2022 baseline." },
-          { id: "H6", status: "done",
-            requirement: "Accessible color scales",
-            does: "Viridis for counts, red-blue diverging for anomalies; the palette is audited for WCAG contrast (web/scripts/contrast.mjs)." },
-          { id: "H7", status: "done",
-            requirement: "Download detections as CSV",
-            does: "The area panel exports the monthly series and the detections list as CSV." },
-        ],
-      },
     ],
-  },
-  proof: {
-    heading: "Proof the harmonization works",
-    lead: "Joined naively, MODIS and VIIRS show jumps at 2012 and April 2018. After calibrating each of the strata (latitude band by calendar month), the series reads as one instrument.",
-    img: {
-      src: "/landing/series_global.webp",
-      alt: "Global monthly fire detections 2000–2025: raw MODIS and VIIRS series before harmonization, and the harmonized series continuing through both sensor changes without a jump.",
-      width: 1650, height: 630,
-      caption: "Global monthly detections before and after harmonization. Source: docs/validation/series_global.png.",
-    },
-    metrics: [
-      { label: "Global monthly series (holdout 2023–24)", value: "R² 0.979" },
-      { label: "Per res-3 cell-month, linear", value: "R² 0.926" },
-      { label: "Per res-3 cell-month, log1p", value: "R² 0.654" },
-      { label: "Total bias (global monthly)", value: "−0.8 %" },
-      { label: "Cell-day scale", value: "R² 0.61 · bias +1.4 %" },
-    ],
-    logNote: "The log1p number is lower by design: logarithmic space gives small values the same weight as large ones, so error on low-activity cells counts as much as error on the big fire provinces.",
-    method: "Calibration is fit per stratum: 18 latitude bands crossed with the 12 calendar months, 208 strata with data; the 71 strata without enough overlap fall back to global coefficients. Validation is a 2023–2024 holdout never seen in training.",
   },
   trust: {
     heading: "How much to trust it",
-    riskTitle: "7-day fire risk vs. baselines",
-    riskIntro: "The risk layer is not just 'fires happened here before'. A LightGBM model trained on Argentina is measured against two baselines on the same 2023–2025 holdout:",
-    riskCols: { label: "Model", roc: "ROC-AUC", pr: "PR-AUC", brier: "Brier" },
-    riskRows: [
-      { label: "LightGBM (Platt-calibrated)", roc: "0.920", pr: "0.427", brier: "0.0302" },
-      { label: "Weekly climatology", roc: "0.843", pr: "0.295", brier: "0.0350" },
-      { label: "Recent persistence", roc: "0.852", pr: "0.310", brier: "0.0452" },
-    ],
-    riskNote: "Outside Argentina the risk layer falls back to climatology plus persistence; no ML is claimed there. Source: model/fire_risk/report.md.",
     orinTitle: "Satellite vs. field measurement",
     orinText: "Against 53 real stations on the Orin farm in Mendoza (742 station-days, 4–20 Oct 2026), raw POWER maximum temperature read RMSE 5.05 °C with a −2.82 °C cold bias. The cause is elevation: the 0.5° POWER cell averages around 2,485 m while the stations sit at 1,000–1,500 m. Applying a −6.5 °C/km correction, maximum-temperature RMSE drops to 2.82 °C (minimum: 3.89 → 2.28 °C).",
     orinImg: {
@@ -307,8 +229,8 @@ const en: Landing = {
     heading: "Data used, and not used",
     cols: { name: "Dataset", what: "What it gives", resolution: "Resolution", where: "Where it appears" },
     rows: [
-      { name: "FIRMS MODIS + VIIRS", what: "Harmonized active-fire series", resolution: "1 km / 375 m", where: "Globe and fire panel" },
-      { name: "NASA POWER", what: "Daily weather for diagnosis and the risk model", resolution: "0.5°", where: "Field diagnosis, risk" },
+      { name: "FIRMS MODIS + VIIRS", what: "Active-fire detections near the plot", resolution: "1 km / 375 m", where: "Parcel fire % and alerts" },
+      { name: "NASA POWER", what: "Daily weather for the diagnosis", resolution: "0.5°", where: "Field diagnosis" },
       { name: "GPM IMERG", what: "Monthly rain in the Argentina field grid", resolution: "0.1° monthly", where: "Rain card (precomputed)" },
       { name: "GRACE-FO", what: "Long-term groundwater trend", resolution: "regional", where: "Water-trend card" },
       { name: "MODIS NDVI (MOD13C2; MOD13Q1 on demand)", what: "Months without live crop", resolution: "0.05° monthly / 250 m", where: "Vigor / bare-soil card" },
@@ -317,6 +239,7 @@ const en: Landing = {
       { name: "SoilGrids", what: "Soil organic carbon and texture", resolution: "250 m", where: "Soil card" },
       { name: "NASA GIBS", what: "Base map imagery", resolution: "up to 250 m", where: "Basemap" },
       { name: "MAGyP", what: "Agricultural estimates for analog zones", resolution: "department", where: "Rotation evidence" },
+      { name: "Sentinel-2 L2A (ESA Copernicus)", what: "Current-crop and moisture check on demand", resolution: "20 m", where: "Crop-detection card" },
       { name: "ECOSTRESS (ECO_L2T_LSTE)", what: "Land-surface temperature", resolution: "70 m", where: "Demo tile on Orin plots only" },
       { name: "Orin field data", what: "Satellite vs field-measurement validation", resolution: "plot", where: "Validation card (real data only)" },
     ],
@@ -337,19 +260,18 @@ const en: Landing = {
   limits: {
     heading: "Limits",
     items: [
-      "2000–2011 is the lowest-confidence part of the fire series (single-sensor era, calibrated on short overlap); Terra's safe-mode gap in June–July 2001 is real, not a processing error.",
-      "Fire harmonization calibrates by latitude band and month only; it does not model local differences inside a band.",
       "The precomputed field grid covers Argentina only; on-demand diagnosis works worldwide with point data, but without the local layers.",
-      "The Argentina risk model's 365-day fire history is incomplete for January–October 2026 until the annual Parquet lands.",
-      "The POWER mountain-cell elevation bias is corrected in the field diagnosis but not in the risk-model features.",
+      "The POWER mountain-cell elevation bias is corrected in the field diagnosis.",
+      "The parcel fire history window is incomplete for January–October 2026 until the annual Parquet lands.",
       "Climate scenarios are scalings of the historical series, not forecasts.",
       "ECOSTRESS covers only the Orin demo plots; GAEZ is pending; the SMAP anomaly was rejected by quality gates.",
+      "Planned, not shipped: alerts that warn about live fire detections near a saved field — the n8n workflows exist and were delivery-tested on a sandbox, but the notification system is not part of the app yet.",
     ],
   },
   team: {
     heading: "Team and links",
     members: [
-      { name: "Ezequiel", role: "fire data and pipeline, deployment" },
+      { name: "Ezequiel", role: "data pipeline and deployment" },
       { name: "Augustus", role: "field lens, integrator and AI-agent operations" },
       { name: "Ariel (Chucky)", role: "front end" },
       { name: "Alex", role: "front end and presentation" },
@@ -359,9 +281,8 @@ const en: Landing = {
       { label: "Repository", href: REPO },
       { label: "README", href: blob("README.md") },
       { label: "Data contract", href: blob("docs/data-contract.md") },
-      { label: "Harmonized dataset download", href: "#", pending: true }, // [PENDIENTE: URL de descarga]
     ],
-    credits: "NASA data: FIRMS (MODIS, VIIRS), POWER, GIBS, GRACE-FO, MODIS (MOD13C2, MCD12Q1), ECOSTRESS. Also SoilGrids, MAGyP (Argentina), IGN and Natural Earth base data.",
+    credits: "NASA data: FIRMS (MODIS, VIIRS), POWER, GPM IMERG, GIBS, GRACE-FO, MODIS (MOD13C2, MCD12Q1), ECOSTRESS. Also SoilGrids, MAGyP (Argentina), Sentinel-2 (ESA Copernicus), IGN and Natural Earth base data.",
     orinNote: "Orin field data was collected before the hackathon; only the data, not the code, is used.",
   },
   footer: { note: "Ashfield · NASA Space Apps Challenge 2026" },
@@ -378,7 +299,7 @@ const es: Landing = {
     openApp: "Abrir la app",
     example: { label: "Ver un ejemplo", href: "/app/#demo" },
     video: undefined, // [PENDIENTE: URL del video] — oculto hasta que exista
-    tagline: "NASA Space Apps Challenge 2026 · Field Shift (también cubre Armonización de focos MODIS y VIIRS)",
+    tagline: "NASA Space Apps Challenge 2026 · Field Shift: Adapting Farms with NASA Data",
     markAlt: "Marca Ashfield",
     shot: {
       src: "/landing/app_diagnosis.webp",
@@ -390,28 +311,23 @@ const es: Landing = {
   blocks: [
     {
       heading: "Lo que obtenés para tu lote",
-      text: "Parcelas con su porcentaje de fuego y de agua — cada uno con el motivo del número —, un calendario agrícola que marca los meses vulnerables y tarjetas de rotación que explican por qué, evidencia, beneficios, vacíos y riesgos.",
+      text: "Parcelas con su porcentaje de fuego y de agua — cada uno con el motivo del número —, alertas de fuego con el bloque de emergencias, un calendario agrícola que marca los meses vulnerables y los de quema, y tarjetas de rotación que explican por qué, evidencia, beneficios, vacíos y riesgos — quemas evitadas incluidas.",
       stat: { value: "1 + 3", note: "tu rotación actual más hasta tres alternativas, cada una con por qué, evidencia, beneficios, vacíos y riesgos" },
     },
     {
-      heading: "El fuego como riesgo del lote",
-      text: "La lente de fuego es el mismo motor visto desde el territorio: 25 años de MODIS y VIIRS armonizados en una sola grilla, el riesgo a 7 días con sus razones, los meses de quema en tu calendario y las «quemas evitadas» puntuadas por rotación.",
-      figure: {
-        src: "/landing/app_fire_risk.webp",
-        alt: "La vista de fuego de Ashfield sobre Corrientes en febrero de 2022: hexágonos de detecciones armonizadas en el mapa, la tarjeta de riesgo a 7 días marcando «bajo» con sus razones y el panel de señal de fuego a 30 días.",
-        width: 1280, height: 800,
-        caption: "La app, vista fuego: detecciones armonizadas sobre Corrientes y la tarjeta de riesgo a 7 días con sus razones.",
-      },
+      heading: "Una grilla, todas las capas",
+      text: "El clima de POWER a 0,5°, la lluvia de IMERG a 0,1°, la vegetación de MODIS a 0,05° y el suelo de SoilGrids a 250 m caen en la misma grilla hexagonal — cada parcela lee todas las capas celda por celda, y Sentinel-2 a 20 m se suma a pedido para el cultivo actual.",
+      stat: { value: "4 + 1", note: "resoluciones de datos en una grilla — clima, lluvia, vegetación, suelo — más Sentinel-2 a pedido" },
     },
     {
       heading: "Por qué confiar",
-      text: "Construida solo sobre datos NASA nombrados — MODIS, VIIRS, POWER, GRACE-FO, SRTM. La temperatura se contrasta con 53 estaciones reales y la lluvia con 25 estaciones INTA SIGA; la serie de fuego armonizada se valida contra datos que la calibración nunca vio, y el tramo de menor confianza está señalado en la app.",
-      stat: { value: "R² 0,979", note: "serie mensual global armonizada, validada en un holdout 2023–2024" },
+      text: "Construida solo sobre datos nombrados — NASA POWER, IMERG, NDVI de MODIS, GRACE-FO, SRTM, SoilGrids — y contrastada en el campo: temperatura contra 53 estaciones reales en una finca de Mendoza, lluvia mensual contra 25 estaciones INTA SIGA. Donde el satélite falla, la app lo dice.",
+      stat: { value: "53 + 25", note: "estaciones reales contra las que se contrastó — temperatura Orin, lluvia INTA SIGA" },
     },
   ],
   details: {
     summary: "Cómo cumple el desafío",
-    caption: "Cada requisito de los dos desafíos, el método, los números de validación y los límites honestos — nada se quitó.",
+    caption: "Cada requisito del desafío Field Shift, el método, los números de validación y los límites honestos.",
     scoreSep: " · ", statusSep: " · ",
   },
   pendTag: "[PENDIENTE]",
@@ -419,13 +335,12 @@ const es: Landing = {
     heading: "El problema",
     paragraphs: [
       "Un productor que decide la rotación de la próxima campaña enfrenta el estrés climático con los datos de la NASA dispersos entre productos, resoluciones y portales. Suelo, lluvia, heladas, calor y estrés hídrico existen — pero no en un solo lugar ni a escala de lote.",
-      "El fuego se suma a la decisión — y su registro satelital está partido entre sensores que no se pueden comparar directo: MODIS a 1 km desde 2000, VIIRS a 375 m desde 2012, y un segundo VIIRS que llegó en abril de 2018. Toda serie que simplemente los une hereda saltos artificiales justo donde cambia el instrumento.",
-      "Los dos problemas se cruzan en la quema de rastrojo. Una rotación que mantiene el suelo cubierto y reparte el riesgo también es un campo que arde menos. Ashfield cuenta fuego y campo como una sola historia.",
+      "La quema de rastrojo también es parte de esa decisión: una rotación que mantiene el suelo cubierto y reparte el riesgo es también un campo que arde menos. El fuego queda donde pertenece — dentro del lote, como probabilidad por parcela con su motivo, alertas y los meses de quema en el calendario.",
     ],
   },
   brief: {
     heading: "El brief del desafío, punto por punto",
-    intro: "Los dos desafíos para los que se construyó Ashfield, requisito por requisito. Los estados son honestos: parcial es parcial.",
+    intro: "El desafío Field Shift, requisito por requisito. Los estados son honestos: parcial es parcial.",
     statusLabel: { done: "Hecho", partial: "Parcial", "not-included": "No incluido" },
     cols: { requirement: "Requisito", does: "Qué hace Ashfield", status: "Estado", see: "Dónde verlo", limit: "Límite honesto" },
     groups: [
@@ -465,8 +380,8 @@ const es: Landing = {
             limit: "El proveedor de IA solo corre si hay una clave configurada en el servidor; las plantillas son el comportamiento por defecto. Patagonia devuelve «sin rotaciones validadas» en vez de adivinar." },
           { id: "F8", status: "partial",
             requirement: "Armonizar datasets con resoluciones y escalas temporales distintas en una grilla común",
-            does: "Todo se proyecta sobre la misma grilla hexagonal H3 — fuegos, clima, suelo, NDVI — para comparar fuentes distintas celda por celda.",
-            limit: "Los datos de fuego están en la grilla en todo el mundo; las capas de clima, suelo, NDVI y lluvia están precalculadas solo para Argentina, y fuera de ahí el diagnóstico usa datos de punto.",
+            does: "El clima diario de POWER (0,5°), la lluvia mensual de IMERG (0,1°), el NDVI de MODIS (0,05°) y SoilGrids (250 m) están precalculados sobre la misma grilla hexagonal H3 (res 5); cada parcela se rasteriza a las mismas celdas, así que toda capa se lee celda por celda. Sentinel-2 a 20 m se suma a pedido para el cultivo actual.",
+            limit: "Las capas precalculadas cubren solo Argentina; en otros países el diagnóstico a pedido usa datos de punto en vez de la grilla.",
             see: { label: "Contrato de datos", href: blob("docs/data-contract.md") } },
           { id: "F9", status: "done",
             requirement: "Explicar términos técnicos (evapotranspiración, NDVI, anomalías, umbrales de helada, balance hídrico)",
@@ -488,68 +403,10 @@ const es: Landing = {
             does: "La aclaración va con cada diagnóstico; los vacíos de información son una sección obligatoria de cada tarjeta." },
         ],
       },
-      {
-        title: "Armonización de focos de calor MODIS y VIIRS",
-        short: "Focos MODIS y VIIRS",
-        rows: [
-          { id: "H1", status: "done",
-            requirement: "Armonizar MODIS y VIIRS en una serie histórica comparable",
-            does: "Los dos sensores se convierten a una sola unidad — detecciones equivalentes a VIIRS NOAA-20 — con calibración por estrato. Validado en un holdout 2023–2024: R² 0,979 en la serie mensual global.",
-            see: { label: "Método", href: blob("docs/metodo-fuego.md") } },
-          { id: "H2", status: "done",
-            requirement: "Aplicación web para seleccionar región y rango temporal y explorar los datos armonizados",
-            does: "Un globo 3D muestra la capa mensual armonizada en todo el mundo; el panel de área abre la historia local de cualquier punto.",
-            see: { label: "Abrir el globo", href: "/app/" } },
-          { id: "H3", status: "done",
-            requirement: "Calendario de actividad desde 2000",
-            does: "Un calendario año × mes de detecciones para el área elegida, coloreado por cantidad o anomalía.",
-            see: { label: "Panel de área", href: "/app/" } },
-          { id: "H4", status: "done",
-            requirement: "Comparar el mes actual con la mediana histórica",
-            does: "Un semáforo marca el mes actual como bajo / normal / alto contra la mediana de ese mes en el área." },
-          { id: "H5", status: "done",
-            requirement: "Mostrar cantidades y anomalías frente a promedios plurianuales",
-            does: "Un conmutador alterna el calendario entre cantidades y anomalías contra la base 2003–2022." },
-          { id: "H6", status: "done",
-            requirement: "Paletas de colores accesibles",
-            does: "Viridis para cantidades, divergente rojo-azul para anomalías; la paleta se audita contra contraste WCAG (web/scripts/contrast.mjs)." },
-          { id: "H7", status: "done",
-            requirement: "Descarga de detecciones a CSV",
-            does: "El panel de área exporta la serie mensual y el listado de detecciones como CSV." },
-        ],
-      },
     ],
-  },
-  proof: {
-    heading: "Prueba de que la armonización funciona",
-    lead: "Unidos sin más, MODIS y VIIRS muestran saltos en 2012 y abril de 2018. Después de calibrar cada estrato — banda de latitud por mes del calendario — la serie se lee como un solo instrumento.",
-    img: {
-      src: "/landing/series_global.webp",
-      alt: "Detecciones globales mensuales de focos 2000–2025: series crudas de MODIS y VIIRS antes de armonizar, y la serie armonizada que cruza los dos cambios de sensor sin salto.",
-      width: 1200, height: 675,
-      caption: "Detecciones mensuales globales antes y después de armonizar. Fuente: docs/validation/series_global.png.",
-    },
-    metrics: [
-      { label: "Serie mensual global (holdout 2023–24)", value: "R² 0,979" },
-      { label: "Por celda res-3 × mes, lineal", value: "R² 0,926" },
-      { label: "Por celda res-3 × mes, log1p", value: "R² 0,654" },
-      { label: "Sesgo total (mensual global)", value: "−0,8 %" },
-      { label: "Escala celda-día", value: "R² 0,61 · sesgo +1,4 %" },
-    ],
-    logNote: "El número log1p es más bajo por diseño: en escala logarítmica los valores chicos pesan igual que los grandes, así que el error en celdas de poca actividad cuenta tanto como el de las provincias de mucho fuego.",
-    method: "La calibración se ajusta por estrato — 18 bandas de latitud cruzadas con los 12 meses del año, 208 estratos con datos; los 71 sin solape suficiente caen a coeficientes globales. La validación es un holdout 2023–2024 nunca visto en el ajuste.",
   },
   trust: {
     heading: "Cuánto confiar",
-    riskTitle: "Riesgo de fuego a 7 días vs. baselines",
-    riskIntro: "La capa de riesgo no es solo «acá hubo fuego antes». Un modelo LightGBM entrenado para Argentina se mide contra dos baselines en el mismo holdout 2023–2025:",
-    riskCols: { label: "Modelo", roc: "ROC-AUC", pr: "PR-AUC", brier: "Brier" },
-    riskRows: [
-      { label: "LightGBM (calibrado Platt)", roc: "0,920", pr: "0,427", brier: "0,0302" },
-      { label: "Climatología semanal", roc: "0,843", pr: "0,295", brier: "0,0350" },
-      { label: "Persistencia reciente", roc: "0,852", pr: "0,310", brier: "0,0452" },
-    ],
-    riskNote: "Fuera de Argentina la capa de riesgo cae a climatología más persistencia — ahí no se afirma ML. Fuente: model/fire_risk/report.md.",
     orinTitle: "Satélite vs. medición en campo",
     orinText: "Contra 53 estaciones reales de la finca Orin en Mendoza (742 estación-días, 4–20 oct 2026), la temperatura máxima cruda de POWER marcó RMSE 5,05 °C con un sesgo frío de −2,82 °C. La causa es la altitud: la celda POWER de 0,5° promedia cerca de 2.485 m mientras las estaciones están entre 1.000 y 1.500 m. Con una corrección de −6,5 °C/km, el RMSE de la máxima baja a 2,82 °C (mínima: 3,89 → 2,28 °C).",
     orinImg: {
@@ -565,8 +422,8 @@ const es: Landing = {
     heading: "Datos usados — y no usados",
     cols: { name: "Dataset", what: "Qué aporta", resolution: "Resolución", where: "Dónde aparece" },
     rows: [
-      { name: "FIRMS MODIS + VIIRS", what: "Serie de focos de calor armonizada", resolution: "1 km / 375 m", where: "Globo y panel de focos" },
-      { name: "NASA POWER", what: "Clima diario para el diagnóstico y el modelo de riesgo", resolution: "0,5°", where: "Diagnóstico del lote, riesgo" },
+      { name: "FIRMS MODIS + VIIRS", what: "Detecciones de fuego activo cerca del lote", resolution: "1 km / 375 m", where: "% de fuego por parcela y alertas" },
+      { name: "NASA POWER", what: "Clima diario para el diagnóstico", resolution: "0,5°", where: "Diagnóstico del lote" },
       { name: "GPM IMERG", what: "Lluvia mensual de la grilla de campo argentina", resolution: "0,1° mensual", where: "Tarjeta de lluvia (precalculada)" },
       { name: "GRACE-FO", what: "Tendencia del agua subterránea a largo plazo", resolution: "regional", where: "Tarjeta de tendencia del agua" },
       { name: "NDVI MODIS (MOD13C2; MOD13Q1 a pedido)", what: "Meses sin cultivo vivo", resolution: "0,05° mensual / 250 m", where: "Tarjeta de vigor y suelo desnudo" },
@@ -575,6 +432,7 @@ const es: Landing = {
       { name: "SoilGrids", what: "Carbono orgánico y textura del suelo", resolution: "250 m", where: "Tarjeta de suelo" },
       { name: "NASA GIBS", what: "Imagen base del mapa", resolution: "hasta 250 m", where: "Mapa de fondo" },
       { name: "MAGyP", what: "Estimaciones agrícolas para zonas análogas", resolution: "departamento", where: "Evidencia de rotaciones" },
+      { name: "Sentinel-2 L2A (ESA Copernicus)", what: "Chequeo de cultivo actual y humedad a pedido", resolution: "20 m", where: "Tarjeta de cultivo detectado" },
       { name: "ECOSTRESS (ECO_L2T_LSTE)", what: "Temperatura de superficie (LST)", resolution: "70 m", where: "Ficha demo solo en lotes Orin" },
       { name: "Datos de campo Orin", what: "Validación de satélite contra mediciones en lote", resolution: "lote", where: "Tarjeta de validación (solo datos reales)" },
     ],
@@ -595,19 +453,18 @@ const es: Landing = {
   limits: {
     heading: "Límites",
     items: [
-      "2000–2011 es el tramo de menor confianza de la serie de fuego (era de un solo sensor, calibrada con poco solape); el hueco de modo seguro de Terra en junio–julio 2001 es real, no un error de procesamiento.",
-      "La armonización de fuego calibra solo por banda de latitud y mes — no modela diferencias locales dentro de una banda.",
       "La grilla de campo precalculada cubre solo Argentina; el diagnóstico a pedido funciona en todo el mundo con datos puntuales, pero sin las capas locales.",
-      "El historial de fuego de 365 días del modelo de riesgo está incompleto para enero–octubre 2026 hasta que llegue el Parquet anual.",
-      "El sesgo de altitud de la celda montañosa de POWER se corrige en el diagnóstico del lote pero no en las variables del modelo de riesgo.",
+      "El sesgo de altitud de la celda montañosa de POWER se corrige en el diagnóstico del lote.",
+      "La ventana de historial de fuego de cada parcela queda incompleta para enero–octubre 2026 hasta que llegue el Parquet anual.",
       "Los escenarios climáticos son reescalados de la serie histórica, no pronósticos.",
       "ECOSTRESS cubre solo los lotes demo de Orin; GAEZ está pendiente; la anomalía SMAP fue rechazada por los controles de calidad.",
+      "Planeado, no entregado: alertas que avisan sobre detecciones de fuego cerca de un lote guardado — los workflows de n8n existen y se probaron en un entorno de prueba, pero el sistema de notificaciones todavía no es parte de la app.",
     ],
   },
   team: {
     heading: "Equipo y enlaces",
     members: [
-      { name: "Ezequiel", role: "datos de fuego y pipeline, despliegue" },
+      { name: "Ezequiel", role: "pipeline de datos y despliegue" },
       { name: "Augustus", role: "lente de campo, integración y operación de agentes de IA" },
       { name: "Ariel (Chucky)", role: "front end" },
       { name: "Alex", role: "front end y presentación" },
@@ -617,9 +474,8 @@ const es: Landing = {
       { label: "Repositorio", href: REPO },
       { label: "README", href: blob("README.md") },
       { label: "Contrato de datos", href: blob("docs/data-contract.md") },
-      { label: "Descarga del dataset armonizado", href: "#", pending: true }, // [PENDIENTE: URL de descarga]
     ],
-    credits: "Datos NASA: FIRMS (MODIS, VIIRS), POWER, GIBS, GRACE-FO, MODIS (MOD13C2, MCD12Q1), ECOSTRESS. También SoilGrids, MAGyP (Argentina), IGN y Natural Earth.",
+    credits: "Datos NASA: FIRMS (MODIS, VIIRS), POWER, GPM IMERG, GIBS, GRACE-FO, MODIS (MOD13C2, MCD12Q1), ECOSTRESS. También SoilGrids, MAGyP (Argentina), Sentinel-2 (ESA Copernicus), IGN y Natural Earth.",
     orinNote: "Los datos de campo de Orin se recolectaron antes del hackatón; solo se usan los datos, no código.",
   },
   footer: { note: "Ashfield · NASA Space Apps Challenge 2026" },

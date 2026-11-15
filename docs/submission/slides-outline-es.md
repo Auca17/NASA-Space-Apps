@@ -1,18 +1,17 @@
-# Outline de slides (español) — Ashfield · Field Shift primero
+# Outline de slides (español) — Ashfield · solo Field Shift
 
 Nueve slides para la presentación principal. Cada una: título, máximo 3 bullets,
 el visual a usar (archivo del repo) y la nota del orador. Números solo de archivos
 del repo; el mapeo figura → fuente está en `facts-sources.md` (interno).
-Las slides de la lente Fuego (modo live, exportación CSV, alertas n8n) van al
-apéndice, listadas al final — el jurado de Field Shift no las necesita en la
-narrativa principal.
+Los modos Fuego y Live fueron retirados del producto (D33/D34): quedan listados al
+final bajo "Fuera de la entrega" — solo si el jurado pregunta por trabajo previo.
 
 ---
 
 ## Slide 1 — Título
 
 - Ashfield — ¿Qué conviene sembrar en tu lote?
-- NASA Space Apps 2026 · Field Shift (también cubre Hot Spots)
+- NASA Space Apps 2026 · Field Shift
 - Equipo: Ariel (documentación) · Augustus (datos Orin, agronomía) · Ezequiel (datos y pipeline, deploy, agronomía) · Alex (front, presentación)
 
 **Visual:** `web/public/brand/ashfield-cover.png` (portada de marca; lockup en
@@ -26,7 +25,7 @@ responde qué conviene sembrar, con datos de la NASA detrás de cada número".
 
 - Productores eligiendo rotaciones con clima cambiante, agua escasa y suelos degradados
 - Los datos de la NASA existen pero están dispersos entre productos, resoluciones y portales — nunca a escala de lote
-- En Argentina se suma la quema de rastrojos: daña el suelo y es fuente importante de focos de calor
+- En Argentina se suma la quema de rastrojos: daña el suelo y amenaza el propio lote
 
 **Visual:** imagen satelital de un lote (NASA GIBS) o captura de la app sobre la
 finca de ejemplo en Mendoza.
@@ -62,21 +61,21 @@ activan con los datos del lote.
 
 ## Slide 5 — Método: una grilla, muchas resoluciones
 
-- El brief pide datos heterogéneos en una grilla común (F8) — el ejemplo: la serie de fuego armonizada
-- ~568 M de detecciones FIRMS → equivalente VIIRS NOAA-20, calibración por estrato (banda 10° × mes)
-- Campo a la misma grilla: POWER, MODIS NDVI, SRTM, SoilGrids, GRACE, MAGyP (SMAP rechazada por QA, GAEZ pendiente)
+- El brief pide datos heterogéneos en una grilla común (F8): todas las capas de campo van a la misma grilla H3 res 5
+- POWER diario (0,5°) · IMERG mensual (0,1°) · NDVI MODIS (0,05°) · SoilGrids (250 m) · SRTM (~30 m) · historial de fuego FIRMS
+- Cada parcela se rasteriza a esas celdas y lee todas las capas celda por celda; Sentinel-2 (20 m) y OpenStreetMap se suman a pedido
 
-**Visual:** `docs/validation/series_global.png` — la serie armonizada sin salto
-en 2012 ni en 2018.
+**Visual:** captura de la app con las zonas del lote (riesgo de fuego, suelo seco,
+suelo desnudo) sobre el mapa — cada zona es una lectura de la misma grilla.
 
-**Nota:** Todo se expresa en la unidad del sensor que queda (NOAA-20), porque
-MODIS se apaga en 2026. La misma grilla H3 sirve al lote y al fuego.
+**Nota:** Es la misma idea que la armonización de sensores pero aplicada al lote:
+fuentes de resoluciones y escalas distintas, comparables celda por celda.
 
 ## Slide 6 — Validación
 
 - Satélite vs. campo: 53 estaciones Orin, 742 pares — RMSE 5,05 °C crudo → 2,82 °C corrigiendo por altura
 - Lluvia vs. pluviómetros: 25 estaciones INTA SIGA, 1.346 estación-meses — ambos productos ~+22 mm/mes (punto vs. píxel, Mendoza)
-- Armonización, hold-out 2023–2024: R² mundial 0,979 · R² lineal 0,926 · sesgo −0,8 %
+- Lo que todavía no está validado: NDVI y humedad del suelo sin muestras de campo — dicho en la app
 
 **Visual:** `docs/validation/orin/satelite_vs_estaciones.png` (los puntos rojos
 de la celda con cordillera cuentan la historia solos).
@@ -110,7 +109,7 @@ brief de Field Shift sobre vacíos de información e incertidumbre.
 ## Slide 9 — Cierre
 
 - Un productor, una pregunta, una respuesta con evidencia NASA: rotación actual + 3 alternativas
-- El fuego queda donde pertenece: un riesgo del lote, medido con la misma grilla (ver apéndice)
+- El fuego queda donde pertenece: una probabilidad por parcela, con su motivo, sus alertas y sus meses de quema
 - Datos de la NASA, traducidos a decisiones — apoyo a la decisión, no consejo agronómico
 
 **Visual:** `web/public/brand/ashfield-cover.png` o la app sobre la finca de
@@ -121,18 +120,16 @@ lo que la NASA puede decirte, y esto es lo que tenés que validar con tu agróno
 
 ---
 
-## Apéndice — slides de la lente Fuego (fuera de la narrativa principal)
+## Fuera de la entrega — trabajo que queda en el repo, no en el producto
 
-Usar solo si el jurado pregunta por el segundo challenge o por la cobertura
-completa del producto:
+Usar solo si el jurado pregunta por trabajo previo; ninguno de estos modos forma
+parte de la app ni de esta entrega (D34):
 
-- **Serie armonizada en vivo:** `docs/validation/series_global.png` +
-  `docs/validation/holdout_scatter.png` (R² 0,979 / 0,926 / 0,654, sesgo −0,8 %).
-- **Modo histórico:** globo 3D reproduciendo mes a mes 2000 → hoy; caso Corrientes
-  ene–feb 2022: 33.255 focos, 18× la mediana (`docs/case-study/mapa_ene-feb_2022_vs_2021.png`).
-- **Modo live:** detecciones 24 h / 48 h / 7 d sobre imagen GIBS del día.
-- **Semáforo y riesgo a 7 días:** mes actual vs. línea base 2003–2022; LightGBM
-  ROC-AUC 0,920 vs. climatología 0,843 (`model/fire_risk/report.md`).
-- **Descarga CSV** de la serie de la celda.
-- **Alertas n8n (idea):** notificaciones proactivas cuando el riesgo de una celda
-  sube — bosquejado, no implementado.
+- **Armonización MODIS/VIIRS:** ~568 M de detecciones → equivalente NOAA-20;
+  hold-out 2023–2024 R² mundial 0,979 (`docs/validation/metrics.json`,
+  `docs/metodo-fuego.md`). El pipeline queda en `pipeline/` y `model/fire_risk/`.
+- **Modo histórico / Live / semáforo / CSV / riesgo a 7 días:** retirados de la app.
+- **Alertas n8n (planeado, no entregado):** workflows que avisan sobre detecciones
+  en vivo cerca de un lote guardado — existen y se probaron en un entorno de
+  prueba; el sistema de notificaciones todavía no es parte de la app
+  (`ops/n8n/`, `docs/ideas/alerts-and-identity.md`).
