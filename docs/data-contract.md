@@ -358,6 +358,64 @@ Entrada: la salida de `/rotations`. Salida: `{ "strategies": [{"id", "text"}] }`
 
 Modo live (front): cada foco muestra la hora de detección y el texto fijo "Detección térmica satelital: no es un incendio confirmado y llega con horas de demora", más los teléfonos de emergencia del país.
 
+### 4.7 `POST /api/field/parcels` (D32)
+
+Diagnóstico multi-parcela dentro de un campo: indicadores llanos por parcela, zonas para el mapa, servicios cercanos y un resumen en lenguaje simple.
+
+**Entrada**
+
+```json
+{
+  "boundary": {"type": "Polygon", "coordinates": [[[lon, lat], ...]]},
+  "parcels": [
+    {"id": "p1", "name": "Lote norte", "crop": "soja",
+     "polygon": {"type": "Polygon", "coordinates": [[[lon, lat], ...]]}}
+  ],
+  "needs": {
+    "water_access": "none|well|channel|irrigation|unknown",
+    "emergency_distance_km": 12.5,
+    "concerns": ["fire", "water", "frost", "heat", "flood", "access"],
+    "notes": "texto libre hasta 300 caracteres"
+  },
+  "lang": "es|en"
+}
+```
+
+Validación (HTTP 400 con `error` estable): `boundary` pasa las mismas reglas del polígono de `/diagnose` (`invalid_boundary` / `invalid_polygon`: anillo cerrado, sin autointersección, sin antimeridiano, 0,5–5000 ha, máx. vértices). `parcels`: 1–20, `id` único, `crop` en `crops.json` más `otro` y `sin_cultivo` (`unknown_crop`). Cada parcela se recorta al `boundary`; si queda afuera o con <0,1 ha dentro → `parcel_outside_boundary`. Dos parcelas no pueden superponerse en más del 1 % de la menor → `parcels_overlap`. `needs` es opcional; concerns desconocidos se ignoran y `notes` se recorta a 300 caracteres (`invalid_needs`). Centro fuera de tierra → `no_land`.
+
+**Salida**
+
+```json
+{
+  "parcels": [{"id", "crop", "area_ha",
+    "indicators": {
+      "fire":  {"pct", "level": "bajo|moderado|alto|muy_alto", "basis"},
+      "water": {"pct", "level": "seco|normal|humedo", "basis"},
+      "heat":  {"days_over_35", "basis"},
+      "frost": {"frost_free_days", "basis"}},
+    "alerts": [{"kind": "fire|dry|heat|frost", "severity": "high|medium", "text"}]}],
+  "zones": [{"kind": "hotspot|fire_risk|dry|bare_soil", "geometry",
+             "center": [lon, lat], "radius_m", "pct", "label",
+             "source", "date"}],
+  "nearby": {"fire_stations": [{"name", "distance_km", "lon", "lat"}],
+             "hospitals": [], "water": [{"name", "kind", "distance_km"}],
+             "source": "OpenStreetMap contributors", "degraded": false},
+  "summary": {"headline", "bullets": ["≤3"], "source": "gemini|template"},
+  "sources": [{"id", "text"}],
+  "degraded": false, "degraded_reason": null
+}
+```
+
+**Cómputo** — `water.pct`: media de `GWETROOT` de los últimos 30 días ×100; `level` contra los percentiles 20/80 del mismo mes calendario en la historia POWER de la celda (2001→año pasado). Sin `GWETROOT` se usa anomalía de lluvia a 30 días (dicho en `basis`). `fire.pct`: probabilidad del modelo a 7 días ×100; `level` = `cat` de la celda, sube a `alto` si hay una detección FIRMS ≤5 km de la parcela. Alerta de fuego `high` si `pct≥50`, `level` alto/muy_alto o detección cercana. `heat`/`frost`: derivaciones de `/diagnose` con corrección por altura. Parcelas que comparten celda climática lo aclaran en `basis`.
+
+**Zonas** — `hotspot`: detecciones FIRMS 72 h a ≤25 km del boundary, círculo de 32 vértices (375 m VIIRS, 1000 m MODIS). `fire_risk`: celdas res-5 `alto`/`muy_alto` del shard de riesgo que intersectan un buffer de 10 km. `dry`: cada parcela con `water.level="seco"` (su propia geometría). `bare_soil`: celdas del grid con días de suelo desnudo > p80 regional. Máx. 200, más cercanas primero.
+
+**Nearby** — Overpass: bomberos y hospitales/clínicas ≤50 km, agua (`waterway=river|canal`, `natural=water`, `landuse=reservoir`) ≤10 km del centroide. Coordenadas redondeadas a 0,01°, cache 24 h por centroide redondeado, timeout 6 s. En falla: listas vacías + `degraded: true`. Haversine, ordenadas por distancia, máx. 5 por categoría.
+
+**Resumen** — proveedor de IA existente (Gemini por defecto) sobre solo números computados, cultivos, needs y alertas; `notes` pasa únicamente al proveedor tras el sanitizador de privacidad. Validación estricta (sin números inventados, sin contradecir alertas) o fallback `template` con la misma forma. El titular abre con fuego.
+
+`degraded`/`degraded_reason` agregan cualquier fuente caída (POWER, FIRMS, Overpass). Ejemplo completo de respuesta: `back/tests/fixtures/parcels_example.json` (Pergamino, 3 parcelas).
+
 ---
 
 ## 5. Entre pipeline y Devin (archivos de trabajo, fuera de git)

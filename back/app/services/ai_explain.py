@@ -50,6 +50,23 @@ SYSTEM = (
     " con un párrafo de máximo 70 palabras por estrategia y una oración "
     "obligatoria sobre la mayor brecha de información.")
 
+PARCELS_SYSTEM_ES = (
+    "Resumís para un productor, en español rioplatense con voseo, el "
+    "estado de sus parcelas según los números del JSON de entrada. "
+    "Reglas: el titular empieza por el fuego (riesgo o foco cercano); "
+    "no inventés números — solo valores del JSON; no contradigas las "
+    "alertas; no menciones lugares ni coordenadas. Respondés "
+    "estrictamente JSON: "
+    '{"headline":"una oración","bullets":["máximo 3 oraciones"]}.')
+
+PARCELS_SYSTEM_EN = (
+    "Summarize for a farmer, in plain English, the state of their "
+    "parcels from the numbers in the input JSON. Rules: the headline "
+    "leads with fire (risk or a nearby detection); never invent "
+    "numbers — only values present in the JSON; do not contradict the "
+    "alerts; never mention places or coordinates. Answer strictly JSON: "
+    '{"headline":"one sentence","bullets":["at most 3 sentences"]}.')
+
 _cache: dict[str, tuple[float, dict]] = {}
 _model_choice: str | None = None
 
@@ -195,14 +212,14 @@ async def _gemini_model(client: httpx.AsyncClient, key: str) -> str:
 
 
 async def _call_gemini(client: httpx.AsyncClient, key: str,
-                       payload: dict) -> dict:
+                       payload: dict, system: str = SYSTEM) -> dict:
     model = await _gemini_model(client, key)
     r = await client.post(
         f"{GEMINI_URL}/models/{model}:generateContent",
         headers={"x-goog-api-key": key},
         json={"contents": [{"role": "user", "parts": [
             {"text": json.dumps(payload, ensure_ascii=False)}]}],
-            "systemInstruction": {"parts": [{"text": SYSTEM}]},
+            "systemInstruction": {"parts": [{"text": system}]},
             "generationConfig": {"temperature": 0,
                                  "maxOutputTokens": MAX_TOKENS,
                                  "responseMimeType": "application/json"}})
@@ -214,13 +231,13 @@ async def _call_gemini(client: httpx.AsyncClient, key: str,
 
 
 async def _call_anthropic(client: httpx.AsyncClient, key: str,
-                          payload: dict) -> dict:
+                          payload: dict, system: str = SYSTEM) -> dict:
     model = os.environ.get("AI_MODEL") or ANTHROPIC_MODEL
     r = await client.post(
         ANTHROPIC_URL,
         headers={"x-api-key": key, "anthropic-version": "2023-06-01"},
         json={"model": model, "max_tokens": MAX_TOKENS,
-              "temperature": 0, "system": SYSTEM,
+              "temperature": 0, "system": system,
               "messages": [{"role": "user", "content":
                             json.dumps(payload, ensure_ascii=False)}]})
     r.raise_for_status()
@@ -252,6 +269,75 @@ async def ai_explain(rotations: dict) -> dict | None:
     ok = _validate(answer, rotations)
     if ok is None:
         log.warning("ai_explain: response failed validation")
+        return None
+    _cache[chash] = (time.time(), ok)
+    return ok
+
+
+# -------------------------------------------------------- parcels summary --
+
+def _validate_summary(answer: dict, allowed: set) -> dict | None:
+    """-> {"headline","bullets"} or None. Same rules as the strategies
+    validator: strict shape, blocklist, numbers must come from input."""
+    if not isinstance(answer, dict):
+        return None
+    head = answer.get("headline")
+    bullets = answer.get("bullets")
+    if not isinstance(head, str) or not head.strip():
+        return None
+    if not isinstance(bullets, list) or len(bullets) > 3:
+        return None
+    texts = [head]
+    out_b = []
+    for b in bullets:
+        if not isinstance(b, str) or not b.strip():
+            return None
+        texts.append(b)
+        out_b.append(b.strip())
+    for t in texts:
+        low = t.lower()
+        if any(w in low for w in BLOCKLIST):
+            return None
+        for n in _numbers(t):
+            if round(n, 3) not in allowed and \
+                    round(n * 10) / 10 not in {
+                    round(v, 1) for v in allowed}:
+                return None
+    return {"headline": head.strip(), "bullets": out_b[:3]}
+
+
+async def parcels_summary(payload: dict, lang: str = "es") -> dict | None:
+    """-> {"headline", "bullets"} from the AI provider, or None.
+
+    `payload` carries only computed numbers, crop ids, declared needs
+    and alert texts; `_sanitize` strips anything identifying before it
+    reaches the provider (notes pass through by design, per task 32).
+    """
+    provider = _provider()
+    key = _key(provider)
+    if not key:
+        return None
+    clean = _sanitize(payload)
+    chash = hashlib.sha256(
+        json.dumps([provider, "parcels", lang, clean],
+                   sort_keys=True).encode()).hexdigest()
+    hit = _cache.get(chash)
+    if hit and time.time() - hit[0] < CACHE_TTL:
+        return hit[1]
+    system = PARCELS_SYSTEM_EN if lang == "en" else PARCELS_SYSTEM_ES
+    try:
+        async with httpx.AsyncClient(timeout=TIMEOUT) as client:
+            if provider == "anthropic":
+                answer = await _call_anthropic(
+                    client, key, clean, system)
+            else:
+                answer = await _call_gemini(client, key, clean, system)
+    except Exception as exc:
+        log.warning("parcels_summary failed: %s", type(exc).__name__)
+        return None
+    ok = _validate_summary(answer, _allowed_numbers(clean))
+    if ok is None:
+        log.warning("parcels_summary: response failed validation")
         return None
     _cache[chash] = (time.time(), ok)
     return ok

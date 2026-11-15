@@ -5,7 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from .config import MissingEnv, front_origin
-from .routers import field, geocode, live, risk
+from .routers import field, geocode, live, parcels, risk
 
 app = FastAPI(title="NASA Space Apps backend")
 
@@ -28,6 +28,7 @@ async def missing_env_handler(_: Request, exc: MissingEnv):
 app.include_router(live.router)
 app.include_router(risk.router)
 app.include_router(field.router)
+app.include_router(parcels.router)
 app.include_router(geocode.router)
 
 
