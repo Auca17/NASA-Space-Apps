@@ -16,12 +16,12 @@ interface View { lat: number; lon: number; zoom: number;
                  bbox: [number, number, number, number] }
 
 const FIELD_METRIC: Record<Exclude<FieldLayer, "fire">, {
-    key: string; unit: string; diverging?: boolean }> = {
-  rain: { key: "rain_mm_yr", unit: "mm/año" },
-  heat: { key: "hot_days_gt35", unit: "días/año" },
-  bare: { key: "bare_soil_days_yr", unit: "días/año" },
-  sm: { key: "sm_anom_pct", unit: "%", diverging: true },
-  wt: { key: "grace_trend", unit: "", diverging: true },
+    key: string; unitKey: string; diverging?: boolean }> = {
+  rain: { key: "rain_mm_yr", unitKey: "units.mmYr" },
+  heat: { key: "hot_days_gt35", unitKey: "units.daysYr" },
+  bare: { key: "bare_soil_days_yr", unitKey: "units.daysYr" },
+  sm: { key: "sm_anom_pct", unitKey: "units.pct", diverging: true },
+  wt: { key: "grace_trend", unitKey: "", diverging: true },
 };
 
 const WT_MAP: Record<string, number> = { down: -1, flat: 0, up: 1 };
@@ -43,8 +43,12 @@ export function HistoricControls({ globe, onMonth, view }: {
   onMonth?: (month: string) => void;
   view?: View | null;
 }) {
-  const { t } = useT();
+  const { t, lang } = useT();
   const now = new Date().toISOString().slice(0, 7);
+  const monthFmt = new Intl.DateTimeFormat(lang, { month: "short",
+    year: "numeric", timeZone: "UTC" });
+  const monthLabel = (m: string) =>
+    monthFmt.format(new Date(`${m}-01T00:00:00Z`));
   const months = useRef(monthSeq(START, now));
   const [idx, setIdx] = useState(months.current.length - 1);
   const [playing, setPlaying] = useState(false);
@@ -189,7 +193,7 @@ export function HistoricControls({ globe, onMonth, view }: {
           {playing ? "⏸" : "▶"}
         </button>
         <span aria-live="polite" role="status">
-          {months.current[idx]}
+          {monthLabel(months.current[idx])}
         </span>
         {!reduce && (
           <label>{t("historic.speed")}
@@ -211,7 +215,7 @@ export function HistoricControls({ globe, onMonth, view }: {
                      css(viridis(1))]} />
           <p className="muted" style={{ margin: 0, fontSize: "0.72rem" }}>
             {t("legend.unit")} · {t("legend.maxMonth",
-              { max: maxN, month: months.current[idx] })}
+              { max: maxN, month: monthLabel(months.current[idx]) })}
           </p>
         </>)}
 
@@ -223,11 +227,13 @@ export function HistoricControls({ globe, onMonth, view }: {
                   setPlaying(false);
                 }}>
           <option value="fire">{t("layers.fire")}</option>
-          <option value="rain">{t("layers.rain")}</option>
-          <option value="heat">{t("layers.heat")}</option>
-          <option value="bare">{t("layers.bare")}</option>
-          {hasSm && <option value="sm">{t("layers.sm")}</option>}
-          <option value="wt">{t("layers.wt")}</option>
+          <optgroup label={t("layers.groupField")}>
+            <option value="rain">{t("layers.rain")}</option>
+            <option value="heat">{t("layers.heat")}</option>
+            <option value="bare">{t("layers.bare")}</option>
+            {hasSm && <option value="sm">{t("layers.sm")}</option>}
+            <option value="wt">{t("layers.wt")}</option>
+          </optgroup>
         </select>
       </label>
 
@@ -246,7 +252,8 @@ export function HistoricControls({ globe, onMonth, view }: {
                      css(viridis(1))]} />
               <p className="muted" style={{ margin: 0,
                 fontSize: "0.72rem" }}>
-                {FIELD_METRIC[layer].unit}
+                {FIELD_METRIC[layer].unitKey &&
+                  t(FIELD_METRIC[layer].unitKey)}
                 {centerVal != null &&
                   ` · ${t("field.center")}: ${centerVal}`}
               </p>

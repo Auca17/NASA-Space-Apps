@@ -54,6 +54,24 @@ export function apiRisk(lat: number, lon: number) {
     apiUrl(`/api/risk?lat=${lat}&lon=${lon}`));
 }
 
+/** Risk query that keeps a transport/server failure apart from a real
+ * 404 ("no model output for this cell"): 404 -> ok with data null,
+ * anything else broken -> ok:false so the UI can offer a retry. */
+export async function apiRiskResult(lat: number, lon: number):
+    Promise<{ ok: true; data: (RiskCell & { h3_r5?: string;
+              country?: string | null }) | null }
+            | { ok: false; status: number }> {
+  try {
+    const r = await fetch(apiUrl(`/api/risk?lat=${lat}&lon=${lon}`));
+    if (r.status === 404) return { ok: true, data: null };
+    if (!r.ok) return { ok: false, status: r.status };
+    return { ok: true, data: (await r.json()) as RiskCell & {
+      h3_r5?: string; country?: string | null } };
+  } catch {
+    return { ok: false, status: 0 };
+  }
+}
+
 export function apiLive(window: string, bbox: [number, number, number, number]) {
   return fetchJson<LiveResponse>(
     apiUrl(`/api/live?window=${window}&bbox=${bbox.join(",")}`));

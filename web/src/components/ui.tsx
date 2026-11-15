@@ -42,9 +42,10 @@ export function BottomSheet({ children, open }: {
 
 export function Legend({ from, to, mid, colors }: {
     from: string; to: string; mid?: string; colors: string[] }) {
+  const { t } = useT();
   return (
     <div className="legend" role="img"
-         aria-label={`${from} a ${to}`}>
+         aria-label={t("legend.range", { from, to })}>
       <span>{from}</span>
       <span className="bar" style={{
         background: `linear-gradient(90deg, ${colors.join(",")})` }} />

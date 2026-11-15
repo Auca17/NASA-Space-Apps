@@ -88,7 +88,7 @@ input[type="range"] { min-height: var(--touch); }
 .field-basemap button[aria-pressed="true"], .field-guide button[aria-pressed="true"] {
   background: var(--accent);
   color: var(--accent-fg); border-color: transparent; }
-.reticle { position: absolute; left: 50%; top: 42%; width: 28px; height: 28px;
+.reticle { position: absolute; left: 50%; top: 50%; width: 28px; height: 28px;
   transform: translate(-50%, -50%); pointer-events: none; z-index: 5; }
 .reticle::before, .reticle::after { content: ""; position: absolute;
   background: var(--accent); }
@@ -136,8 +136,11 @@ input[type="range"] { min-height: var(--touch); }
 .badge.bajo, .badge.normal { color: var(--good); border-color: var(--good); }
 .badge.moderado, .badge.sobre_lo_normal { color: var(--warn);
   border-color: var(--warn); }
-.badge.alto, .badge.extremo, .badge.muy_alto { color: var(--bad);
-  border-color: var(--bad); }
+.badge.alto { color: var(--bad); border-color: var(--bad); }
+/* the top step gets a filled badge — text differs too, so this is a
+ * second channel, never color alone (round-2 audit minor) */
+.badge.extremo, .badge.muy_alto { background: var(--bad);
+  color: var(--bg); border-color: var(--bad); font-weight: 700; }
 .notice { font-size: 0.8rem; color: var(--muted);
   border: 1px solid var(--border); border-radius: 8px; padding: 6px 10px; }
 
@@ -405,6 +408,21 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
 .place-row .search input { width: 100%; min-width: 0; flex: 1 1 auto; }
 .controls { box-sizing: border-box; overflow-x: hidden; }
 
+/* B3 — while a bottom sheet is open it would cover the playback
+ * controls pinned at the bottom; they ride under the top bar instead,
+ * and the sheet is capped so both fit at once. */
+@media (max-width: 720px) {
+  .app:has(.panel) .map-wrap .controls {
+    bottom: auto; top: calc(var(--top-safe, 78px) + 8px); }
+  .app:has(.map-wrap .controls) .panel { max-height: 42%; }
+}
+
+/* Reopen affordance when the fire panel is closed (round-2 minor) */
+.fire-reopen { position: absolute; right: 12px;
+  top: calc(var(--top-safe, 78px) + 8px); z-index: 6;
+  padding: 10px 14px; min-height: var(--touch);
+  border-radius: var(--radius-ctl, 10px); font-weight: 600; }
+
 /* Freehand layer: catches the stroke so the map does not pan */
 .freehand-layer { position: absolute; inset: 0; z-index: 4;
   cursor: crosshair; touch-action: none; }
@@ -552,7 +570,7 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
 @media (max-width: 600px) { .meth-link .ml-short { display: inline; } }
 
 /* Task 26 — emergency call block */
-.emerg { border: 1px solid var(--border); border-left: 4px solid #b3401e;
+.emerg { border: 1px solid var(--border);
   border-radius: var(--radius); padding: 12px; margin: 10px 0;
   background: var(--panel); }
 .emerg-lead { margin-top: 0; }
@@ -577,4 +595,4 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
 @media (prefers-color-scheme: dark) {
   .emerg-link { color: var(--logo-ember-hot); }
 }
-.diag-degraded { border-left: 4px solid #b3401e; }
+.diag-degraded { border: 1px solid #b3401e; }
