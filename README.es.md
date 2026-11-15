@@ -157,7 +157,7 @@ npm install
 npm run dev
 ```
 
-Abrir http://localhost:5173 — el servidor de desarrollo sirve `fixtures/` en `/data/v1/`, así que la app funciona sin backend; `/api/*` se redirige a `localhost:8000`.
+Abrir http://localhost:5173/app/ — el servidor de desarrollo sirve `fixtures/` en `/data/v1/`, así que la app funciona sin backend; `/api/*` se redirige a `localhost:8000`. La landing está en `/` (inglés) y `/es/` (español).
 
 ## Deploy
 

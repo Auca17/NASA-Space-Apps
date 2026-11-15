@@ -16,11 +16,11 @@ for (const w of [390, 1280]) {
   const page = await ctx.newPage();
   const tag = `${PREFIX}-${w}px`;
 
-  await page.goto(BASE, { waitUntil: "domcontentloaded" });
+  await page.goto(BASE + "/app/", { waitUntil: "domcontentloaded" });
   await page.waitForTimeout(2000);
   await page.screenshot({ path: `${OUT}${tag}-welcome.png` });
 
-  await page.goto(`${BASE}/?r2=2#-33.89,-60.57`,
+  await page.goto(`${BASE}/app/?r2=2#-33.89,-60.57`,
     { waitUntil: "domcontentloaded" });
   await page.getByRole("button", { name: /analizar mi campo/i })
     .click().catch(() => {});
