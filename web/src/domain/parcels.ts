@@ -108,6 +108,8 @@ export interface ApiParcel {
   extra?: { id: string; hidden?: boolean }[];
   economics?: ApiEconomics;
   alerts: ApiAlert[];
+  /** Last 24 months vs normals for this parcel (task 47). */
+  timeline?: import("../api/types").DiagTimeline;
 }
 
 export interface ApiZone {

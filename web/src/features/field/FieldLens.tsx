@@ -7,6 +7,7 @@ import { Card, BottomSheet, Tooltip } from "../../components/ui";
 import { GlossDefs } from "../../components/Glossary";
 import { DiagTile } from "./DiagTile";
 import { Calendar, calendarCrops, type CatalogCrop } from "./Calendar";
+import { Timeline, TimelinePeek } from "./Timeline";
 import { SatelliteAccuracy } from "./SatelliteAccuracy";
 import {
   apiDiagnose, apiRotations, apiExplain, apiFieldCatalog, ecostressDemo, knowledgeCases, orinValidation,
@@ -820,6 +821,16 @@ export function FieldPanel({ target, open, onClose, onChangePlot, onMethods,
             <>
             <HiddenHazards res={pres.res} parcels={effParcels}
                            profile={profile} t={t} fmt={fmt} />
+            {pres.res.parcels.some((p) => p.timeline) && (
+              <section className="card tl-block"
+                       aria-label={t("field.timeline.title")}>
+                <h4 style={{ marginTop: 0 }}>{t("field.timeline.title")}</h4>
+                {pres.res.parcels.filter((p) => p.timeline).map((p) => (
+                  <Timeline key={`tl-${p.id}`} timeline={p.timeline!}
+                    label={pres.res.parcels.filter((x) => x.timeline)
+                           .length > 1
+                           ? parcelName(effParcels, p.id) : undefined} />))}
+              </section>)}
       {verMas && (
         <>
       {reading && <p role="status">{t("field.diagnosing")}</p>}
@@ -975,6 +986,12 @@ export function FieldPanel({ target, open, onClose, onChangePlot, onMethods,
                     <DiagTile key={c.id} c={c} t={t} fmt={fmt} />))}
                 </div>
               </section>))}
+            {diag.timeline && (
+              <section className="card tl-block"
+                       aria-label={t("field.timeline.title")}>
+                <h4 style={{ marginTop: 0 }}>{t("field.timeline.title")}</h4>
+                <Timeline timeline={diag.timeline} />
+              </section>)}
             <SatelliteAccuracy
               accuracy={diag.accuracy}
               tempAdjustC={diag.temp_adjust_c}
@@ -1234,6 +1251,11 @@ export function ParcelsResult({ res, parcels, profile, t, fmt,
         {res.parcels.length === 0 && (
           <li className="muted">{t("parcels.empty")}</li>)}
       </ul>
+
+      {res.parcels.map((p) => p.timeline && (
+        <TimelinePeek key={`tl-${p.id}`} timeline={p.timeline}
+          label={res.parcels.filter((x) => x.timeline).length > 1
+                 ? name(p.id) : undefined} />))}
 
       <section className="parcel-nearby" id="parcels-emergency"
                aria-labelledby="parcel-nearby-h">
