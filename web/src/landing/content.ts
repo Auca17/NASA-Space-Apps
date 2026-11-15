@@ -117,7 +117,7 @@ const en: Landing = {
     title: "Check the fire risk on your field with NASA data.",
     lede: "One engine, two lenses: 25 years of harmonized fire history, and a diagnosis that helps a producer choose the next rotation.",
     openApp: "Open the app",
-    example: { label: "See an example", href: "/app/#-33.89,-60.57" },
+    example: { label: "See an example", href: "/app/#demo" },
     video: undefined, // [PENDIENTE: URL del video] — hidden until it exists
     tagline: "NASA Space Apps Challenge 2026 · Field Shift (also covers Harmonization of MODIS and VIIRS Hot Spots)",
     markAlt: "Ashfield mark",
@@ -375,7 +375,7 @@ const es: Landing = {
     title: "Mirá el riesgo de fuego de tu campo con datos de la NASA.",
     lede: "Un motor, dos lentes: 25 años de historia de fuego armonizada, y un diagnóstico del lote que ayuda a decidir la próxima rotación.",
     openApp: "Abrir la app",
-    example: { label: "Ver un ejemplo", href: "/app/#-33.89,-60.57" },
+    example: { label: "Ver un ejemplo", href: "/app/#demo" },
     video: undefined, // [PENDIENTE: URL del video] — oculto hasta que exista
     tagline: "NASA Space Apps Challenge 2026 · Field Shift (también cubre Armonización de focos MODIS y VIIRS)",
     markAlt: "Marca Ashfield",

@@ -72,7 +72,7 @@ export function ParcelsMapLayer({ globe, parcels, res }: {
           .slice(0, 2);
         if (!shown.length) shown.push("fire", "drought");
         return (
-          <div key={ap.id} className="parcel-badge"
+          <div key={ap.id} className="parcel-badge" data-tour="badges"
                style={{ left: x, top: y }}>
             {shown.map((h) => (
               <span key={h} className="badge-hz">

@@ -52,7 +52,7 @@ describe("Glossary", () => {
 });
 
 describe("Welcome", () => {
-  it("leads with Analizar mi campo and offers the Pergamino demo", () => {
+  it("leads with Analizar mi campo and offers the Mendoza demo", () => {
     const onAnalyze = vi.fn(), onDemo = vi.fn(), onExplore = vi.fn(),
           onLive = vi.fn();
     render(
@@ -64,7 +64,7 @@ describe("Welcome", () => {
     expect(primary).toHaveTextContent("Analizar mi campo");
     fireEvent.click(primary!);
     expect(onAnalyze).toHaveBeenCalledOnce();
-    fireEvent.click(screen.getByRole("button", { name: /pergamino/i }));
+    fireEvent.click(screen.getByRole("button", { name: /mendoza/i }));
     expect(onDemo).toHaveBeenCalledOnce();
     // fire and live stay reachable under the "Otras vistas" disclosure
     (document.querySelector("details.welcome-more") as HTMLDetailsElement)

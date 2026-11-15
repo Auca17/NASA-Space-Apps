@@ -56,6 +56,16 @@ export type AnalysisTarget = {
   parcels?: ParcelInput[];
   /** Needs step answers: null when skipped, undefined = ask first. */
   needs?: Needs | null;
+  /** Guided demo (task 40): seed the fictional producer's profile and
+   * economics instead of the stored ones, and fall back to a cached
+   * real response when the live call fails. */
+  demo?: {
+    /** Dated cached response, shown only if the live call fails. */
+    cached: ParcelsResponse;
+    cachedDate: string;
+  };
+  profile?: Profile;
+  econ?: Economics;
 };
 
 const LS_PLOTS = "fs_plots";
@@ -619,10 +629,17 @@ export function FieldPanel({ target, open, onClose, onChangePlot, onMethods,
   /** undefined = the needs step still has to be answered/skipped. */
   const effNeeds = target?.needs !== undefined ? target.needs : needs;
 
+  /** Set when the shown result is the demo's cached response, not a
+   * live call — the panel says "resultado guardado del …". */
+  const [cachedDate, setCachedDate] = useState<string | null>(null);
+
   // New target: reset the whole flow.
   useEffect(() => {
     setNeeds(undefined); setPres(null); setTab("resumen");
-    setDiag(null); setStep(1); setRots(null);
+    setDiag(null); setStep(1); setRots(null); setCachedDate(null);
+    // a demo target carries its own fictional profile/economics
+    setProfile(target?.profile ?? loadProfile());
+    setEcon(target?.econ ?? loadEconomics());
   }, [target]);
 
   // POST /api/field/parcels — the main analysis.
@@ -636,10 +653,16 @@ export function FieldPanel({ target, open, onClose, onChangePlot, onMethods,
       parcelsBody(target.geom, effParcels, effNeeds, lang,
                   profileBody(profile, econ))).then((r) => {
       if (!active) return;
-      setPres(r); setPReading(false);
-      if (r.ok) {
+      let out = r;
+      if (!r.ok && target.demo) {
+        // guided demo: the cached real response keeps the demo going
+        out = { ok: true, res: target.demo.cached, fixture: true };
+        setCachedDate(target.demo.cachedDate);
+      }
+      setPres(out); setPReading(false);
+      if (out.ok) {
         if (body) savePlot(lot?.name ?? "lote", body);
-        onResult?.(r.res, effParcels, r.fixture);
+        onResult?.(out.res, effParcels, out.fixture);
       }
     });
     return () => { active = false; };
@@ -769,6 +792,11 @@ export function FieldPanel({ target, open, onClose, onChangePlot, onMethods,
             {target.geom.length > 1 &&
               <> · {t("analyze.scopePieces", { n: target.geom.length })}</>}
           </div>
+          {target.demo && (
+            <p className="muted demo-note">
+              <strong>{t("demo.producer")}</strong><br />
+              {t("demo.disclaimer")}
+            </p>)}
         </div>)}
       {lot?.synthetic && <SyntheticBanner t={t} />}
 
@@ -805,8 +833,11 @@ export function FieldPanel({ target, open, onClose, onChangePlot, onMethods,
           </button>
         </div>)}
 
-      {pres?.ok && pres.fixture && (
+      {pres?.ok && pres.fixture && !cachedDate && (
         <p className="notice" role="status">{t("parcels.fixture")}</p>)}
+      {pres?.ok && cachedDate && (
+        <p className="notice" role="status">
+          {t("demo.saved", { date: cachedDate })}</p>)}
 
       {/* a nearby-services failure alone is a quiet note inside the
           nearby section, not a big "incomplete" card */}
@@ -822,8 +853,10 @@ export function FieldPanel({ target, open, onClose, onChangePlot, onMethods,
       {pres?.ok && (
         <>
           {/* alerts stay above the tabs, whatever the priorities */}
-          <ParcelAlerts res={pres.res} parcels={effParcels} t={t}
-                        onEmergency={onEmergency} />
+          <div data-tour="alerts">
+            <ParcelAlerts res={pres.res} parcels={effParcels} t={t}
+                          onEmergency={onEmergency} />
+          </div>
           <Tabs active={tab} onSelect={(id) =>
                   setTab(id as typeof tab)}
                 tabs={[
@@ -1202,7 +1235,7 @@ export function ParcelsResult({ res, parcels, profile, t, fmt,
           <p className="parcel-source">{res.summary.source}</p>)}
       </section>
 
-      <ul className="parcel-rows">
+      <ul className="parcel-rows" data-tour="parcels">
         {res.parcels.map((p) => {
           const high = hasHighFireAlert(p);
           const shown = visibleHazards(p, profile).slice(0, 3);

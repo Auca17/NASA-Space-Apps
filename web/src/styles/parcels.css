@@ -259,3 +259,26 @@
 .econ-fields input { min-height: 40px; }
 .prio-card h4 { margin-bottom: 4px; }
 .prio-card .primary { margin-top: 12px; }
+
+/* ---------- guided demo tour (task 40) ---------- */
+/* The overlay layer takes no pointer events: the map keeps working
+ * under the hints; only the hint card itself is interactive. */
+.demo-tour { position: fixed; inset: 0; z-index: 40;
+  pointer-events: none; }
+.tour-hint {
+  position: fixed; z-index: 41; pointer-events: auto;
+  width: min(280px, calc(100vw - 16px));
+  padding: 10px 12px; border-radius: 10px;
+  background: var(--panel); border: 1px solid var(--line, #c9d2da);
+  box-shadow: 0 8px 28px rgba(15, 23, 32, 0.28);
+}
+.tour-hint:focus { outline: none; }
+.tour-step { font-size: 11.5px; text-transform: uppercase;
+  letter-spacing: 0.04em; margin: 0 0 2px; }
+.tour-text { font-weight: 600; margin: 0 0 4px; }
+.tour-sub { font-size: 13px; line-height: 1.4; margin: 0 0 8px; }
+.tour-actions { display: flex; gap: 8px; align-items: center; }
+.tour-actions .tour-close { margin-left: auto; }
+@media (prefers-reduced-motion: reduce) {
+  .tour-hint { transition: none; animation: none; }
+}

@@ -338,9 +338,9 @@ body:has(.app) { background: #0f110e; }
   .app .field-chooser .picker-head button:first-child::before {
     content: ""; display: block; width: 34px; height: 5px;
     border-radius: 3px; background: var(--muted); }
-  .app .field-chooser:has(.picker-head [aria-expanded="true"])
+  .app .field-chooser:has(.picker-head [data-peek="true"])
       #field-chooser-options > :not(.row) { display: none; }
-  .app .field-chooser:has(.picker-head [aria-expanded="false"])
+  .app .field-chooser:has(.picker-head [data-peek="false"])
       #field-chooser-options[hidden] { display: grid; gap: 8px; }
 
   /* 5 · one sheet at a time: an open .panel (emergencies, fire area)

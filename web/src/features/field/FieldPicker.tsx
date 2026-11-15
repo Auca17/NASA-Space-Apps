@@ -1,7 +1,7 @@
 /** Step-by-step guide to mark a field: choose a method, then follow
  * the instructions for drawing an outline (point by point or freehand)
  * or tapping a point. Also used to draw crop zones inside a field. */
-import { useState, useSyncExternalStore } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 import { useT } from "../../i18n";
 import { drawStatus } from "../../domain/clarity";
 import { PlaceFinder } from "./PlaceFinder";
@@ -43,6 +43,21 @@ export function FieldPicker({ draw, points, onPick, onDemo, onFinish,
 }) {
   const { t } = useT();
   const [expanded, setExpanded] = useState(true);
+  /** On compact widths the chooser is a peekable bottom sheet where the
+   * default state is the peek (only the main action visible): there
+   * `expanded` means "peek", so the visible state is inverted and
+   * aria-expanded must report what the user actually sees. */
+  const [compact, setCompact] = useState(() =>
+    typeof matchMedia !== "undefined" &&
+    matchMedia("(max-width: 900px)").matches);
+  useEffect(() => {
+    if (typeof matchMedia === "undefined") return;
+    const mq = matchMedia("(max-width: 900px)");
+    const on = () => setCompact(mq.matches);
+    mq.addEventListener("change", on);
+    return () => mq.removeEventListener("change", on);
+  }, []);
+  const shown = compact ? !expanded : expanded;
   // the draw layer's session: selected vertex + refusal notices
   const drawSt = useSyncExternalStore(subscribeDrawSession,
                                       activeDrawState);
@@ -133,9 +148,11 @@ export function FieldPicker({ draw, points, onPick, onDemo, onFinish,
     <div className="controls picker field-chooser" role="region"
          aria-label={t("field.choose.title")}>
       <div className="picker-head">
-        <button type="button" aria-expanded={expanded} aria-controls="field-chooser-options"
+        <button type="button" aria-expanded={shown}
+                aria-controls="field-chooser-options"
+                data-peek={expanded}
                 onClick={() => setExpanded(!expanded)}>
-          {t(expanded ? "field.choose.hide" : "field.choose.show")}</button>
+          {t(shown ? "field.choose.hide" : "field.choose.show")}</button>
         <button type="button" onClick={onFields}>{t("fields.open", { n: fieldsCount })}</button>
       </div>
       <div id="field-chooser-options" hidden={!expanded}>
