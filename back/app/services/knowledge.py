@@ -33,6 +33,10 @@ class Crop(BaseModel):
     frost_tolerance: str = "medium"
     drought_tolerance: str = "medium"
     heat_tolerance: str = "medium"
+    color: str | None = None
+    icon: str | None = None
+    rotatable: bool = True  # False: perennials/nativo never in sequences
+    frost_window: dict[str, list[str]] = {}  # zone -> [MM-DD, MM-DD]
     water_mm_cycle: int
     water_mm_observed: float | None = None
     water_observed_note: str | None = None
@@ -63,6 +67,16 @@ class Crop(BaseModel):
                 raise ValueError(f"unknown zone {z}")
             if not MM_DD.match(d):
                 raise ValueError(f"bad {z} cycle_end {d}")
+        return v
+
+    @field_validator("frost_window")
+    @classmethod
+    def _frost_window(cls, v):
+        for z, win in v.items():
+            if z not in ZONES:
+                raise ValueError(f"unknown zone {z}")
+            if len(win) != 2 or not all(MM_DD.match(d) for d in win):
+                raise ValueError(f"bad {z} frost_window {win}")
         return v
 
     def window(self, zone: str | None):
