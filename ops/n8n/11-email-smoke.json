@@ -1,0 +1,56 @@
+{
+  "name": "Ashfield · Email smoke",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "0b931f6f-e023-4c6a-a48e-2d6e1b603a51",
+      "name": "Probar",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "message",
+        "operation": "send",
+        "sendTo": "REEMPLAZAR@ejemplo.com",
+        "subject": "Ashfield: prueba de alertas",
+        "emailType": "text",
+        "message": "Si te llegó este correo, n8n ya puede mandar las alertas de Ashfield por email.",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "id": "f885d688-c737-4a07-8520-34dfb993dfbe",
+      "name": "Email (Gmail)",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        260,
+        0
+      ]
+    }
+  ],
+  "connections": {
+    "Probar": {
+      "main": [
+        [
+          {
+            "node": "Email (Gmail)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "America/Argentina/Buenos_Aires"
+  },
+  "pinData": {},
+  "active": false
+}
