@@ -31,3 +31,7 @@ Update `web/src/content/datasets.ts` so the "Datos y métodos" page reflects the
 ## Report
 
 Per section: result, sanity-gate numbers, what was blocked and the exact error, screenshots at 390 and 1280 px, tests, and the files to upload.
+
+## Then (priority change)
+
+After task 18, read `docs/briefs/devin/20-elevation-correction.md` and execute it **before** task 19. Then finish with `19-ai-explanation.md`. One combined report at the end covering 17, 18, 20 and 19.
