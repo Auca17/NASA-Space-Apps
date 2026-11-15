@@ -187,3 +187,33 @@ def test_trigger_harvest_stop_conditions():
         {"cards": {"fire_weather": {"value": "bajo",
                                     "stop_conditions": []}}})["measures"]}
     assert "harvest_timing" not in ids
+
+
+# ------------------------------------------------------------- task 21 ----
+
+def test_clean_harvester_checks_and_firebreak_width():
+    """The Chaco guide adds two harvester checks (kept at 30 min) and a
+    30 m reference firebreak width; both reach the evaluate() output."""
+    out = evaluate({"calendar": BURN_CAL,
+                    "sequence": [{"crop": "x", "start": "03-01",
+                                  "end": "08-15"}],
+                    "risk_cat": "alto"})
+    clean = next(m for m in out["measures"]
+                 if m["id"] == "clean_harvester")
+    assert clean["requires"]["downtime_h"] == 0.5
+    checks = " ".join(clean["checks"])
+    assert "gasoil" in checks and "matachispas" in checks
+    fb = next(m for m in out["measures"]
+              if m["id"] == "maintain_firebreak")
+    assert fb["requires"]["reference_width_m"] == 30
+    assert "chaqueña" in fb["requires"]["reference_width_note"]
+
+
+def test_cases_knowledge_loads():
+    """cases.json parses into the Case model (kind news_report)."""
+    from app.services.knowledge import CASES
+    sg = next(c for c in CASES if c.id == "san-genaro-2026-05-04")
+    assert sg.kind == "news_report"
+    assert "San Genaro" in sg.place
+    assert sg.source["url"].startswith("https://mdr.ar/")
+    assert len(sg.lessons) == 3

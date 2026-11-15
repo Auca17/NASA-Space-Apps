@@ -140,7 +140,7 @@ def evaluate(context: dict) -> dict:
             continue
         why = "; ".join(ctx["_why"].get(t, t) for t in hits) or \
             m.addresses
-        out.append({
+        entry = {
             "id": m.id, "name": m.name.get("es", m.id),
             "factor": m.factor,
             "why": f"{m.addresses}: {why}",
@@ -148,7 +148,10 @@ def evaluate(context: dict) -> dict:
             "requires": m.requires.model_dump(),
             "cost": m.requires.cost,
             "source": m.sources[0],
-            "_n": len(hits)})
+            "_n": len(hits)}
+        if m.checks:
+            entry["checks"] = m.checks
+        out.append(entry)
     out.sort(key=lambda m: (-m["_n"], COST_ORDER.get(m["cost"], 9)))
     for m in out:
         del m["_n"]

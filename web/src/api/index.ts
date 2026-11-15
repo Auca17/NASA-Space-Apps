@@ -3,7 +3,7 @@ import { dataUrl, apiUrl, fetchJson, postJson } from "./client";
 import type {
   MetaJson, GlobeShard, CalShard, DailyShard, RiskShard,
   LiveResponse, DiagnoseResponse, RotationsResponse,
-  ExplainResponse, RotationEntry, CropEntry, RiskCell,
+  ExplainResponse, RotationEntry, CropEntry, CaseEntry, RiskCell,
   OrinValidation, OrinLots,
 } from "./types";
 
@@ -35,6 +35,9 @@ export const knowledgeRotations = () =>
 
 export const knowledgeCrops = () =>
   fetchJson<{ crops: CropEntry[] }>(dataUrl("knowledge/crops.json"));
+
+export const knowledgeCases = () =>
+  fetchJson<{ cases: CaseEntry[] }>(dataUrl("knowledge/cases.json"));
 
 export const orinValidation = () =>
   fetchJson<OrinValidation>(dataUrl("orin/validation.json"));

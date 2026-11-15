@@ -5,12 +5,11 @@ import { Card, BottomSheet, Tooltip } from "../../components/ui";
 import { Glossary } from "../../components/Glossary";
 import {
   apiDiagnose, apiRotations, apiExplain, ecostressDemo,
-  knowledgeRotations,
-  knowledgeCrops, orinValidation,
+  knowledgeRotations, knowledgeCrops, knowledgeCases, orinValidation,
 } from "../../api";
 import type {
-  Card as DiagCard, DiagnoseResponse, OrinValidation,
-  RotationsResponse, Strategy,
+  Card as DiagCard, CaseEntry, DiagnoseResponse, Measure,
+  OrinValidation, RotationsResponse, Strategy,
 } from "../../api/types";
 import type { EcostressDemo } from "../../api";
 import { OrinCard, SyntheticBanner } from "./OrinCard";
@@ -197,6 +196,70 @@ function SeqBar({ s, t }: {
     </div>);
 }
 
+/** Requirements/cost/checks/source block shared by the two measure
+ * lists (diagnosis card and strategy section). */
+function MeasureMeta({ m, t }: {
+    m: Measure;
+    t: (k: string, v?: Record<string, string | number>) => string }) {
+  const note = m.requires?.reference_width_note;
+  return (
+    <>
+      {m.requires && <div className="muted">
+        {measureReqPairs(m.requires).map((p) =>
+          `${t(p.key)}: ${p.value.startsWith("field.")
+            ? t(p.value) : p.value}`).join(" · ")}</div>}
+      {typeof note === "string" && <div className="muted">{note}</div>}
+      {m.cost && <div className="muted">
+        {t("measure.req.cost")}: {t(benefitValue(m.cost))}</div>}
+      {m.checks && m.checks.length > 0 && (
+        <div className="muted">{t("measure.checks")}: {m.checks.join("; ")}</div>)}
+      {m.source && <div className="muted">{m.source}</div>}
+    </>);
+}
+
+/** Measures that bring the "Un caso real" card into the prevention
+ * block (harvester checks / harvest stop). */
+const CASE_MEASURE_IDS = new Set(["clean_harvester", "harvest_timing"]);
+
+/** A documented incident (kind news_report) shown next to the
+ * prevention measures — report, never a worker testimony. */
+export function CaseBlock({ c, t }: {
+    c: CaseEntry;
+    t: (k: string, v?: Record<string, string | number>) => string }) {
+  return (
+    <div className="case-block notice" role="note">
+      <strong>{t("case.title")}</strong> — {c.place}, {c.date}
+      <p>{c.summary}</p>
+      <p className="muted">{t("case.disclaimer")}</p>
+      {c.lessons && c.lessons.length > 0 && (
+        <p className="muted">{t("case.lessons")}: {c.lessons.join("; ")}</p>)}
+      {c.unknown && <p className="muted">{t("case.unknown")}: {c.unknown}</p>}
+      {c.source?.url && (
+        <p className="muted">{t("case.source")}:{" "}
+          <a href={c.source.url} target="_blank" rel="noreferrer">
+            {c.source.title ?? c.source.url}</a></p>)}
+    </div>);
+}
+
+/** "Qué hacer" prevention-measures card + real case (exported for
+ * tests). */
+export function MeasuresCard({ measures, cases, t }: {
+    measures: Measure[];
+    cases?: CaseEntry[];
+    t: (k: string, v?: Record<string, string | number>) => string }) {
+  if (!measures.length) return null;
+  const showCase = measures.some((m) => CASE_MEASURE_IDS.has(m.id));
+  return (
+    <Card title={t("measures.title")}>
+      <ul>{measures.map((m) => (
+        <li key={m.id}><strong>{m.name}</strong> — {m.why}
+          <MeasureMeta m={m} t={t} />
+        </li>))}</ul>
+      {showCase && (cases ?? []).map((c) => (
+        <CaseBlock key={c.id} c={c} t={t} />))}
+    </Card>);
+}
+
 function Section({ title, count, open = false, children }: {
     title: string; count?: number; open?: boolean;
     children: React.ReactNode }) {
@@ -270,14 +333,7 @@ function StrategyCard({ s, t, current, variants, explain, rank }: {
         <ul>{(s.measures ?? []).map((m) => (
           <li key={m.id}><strong>{m.name}</strong>
             {m.why && <> — {m.why}</>}
-            {m.requires && <div className="muted">
-              {measureReqPairs(m.requires).map((p) =>
-                `${t(p.key)}: ${p.value.startsWith("field.")
-                  ? t(p.value) : p.value}`).join(" · ")}</div>}
-            {m.cost && <div className="muted">
-              {t("measure.req.cost")}: {
-                t(benefitValue(m.cost))}</div>}
-            {m.source && <div className="muted">{m.source}</div>}
+            <MeasureMeta m={m} t={t} />
           </li>))}</ul>
       </Section>
     </article>
@@ -368,6 +424,11 @@ export function RotationResults({ rots, diag, explain, t,
       {rots.strategies.length === 0 ? (
         <div className="notice" role="status">
           <p>{t("rot.noStrategies")}</p>
+          {(rots.zone_references ?? []).map((r, i) => (
+            <p key={i} className="muted">
+              <strong>{t("rot.zoneRef")}</strong>: {r.text}{" "}
+              <span className="muted">— {r.source}</span>
+            </p>))}
           <p className="muted">{t("rot.askAgronomist")}</p>
         </div>
       ) : (
@@ -421,6 +482,7 @@ export function FieldPanel({ ring, open, onClose, lot, onMethods }: {
   const { t, lang } = useT();
   const [diag, setDiag] = useState<DiagnoseResponse | null>(null);
   const [orin, setOrin] = useState<OrinValidation | null>(null);
+  const [cases, setCases] = useState<CaseEntry[]>([]);
   const [rots, setRots] = useState<RotationsResponse | null>(null);
   const [explain, setExplain] = useState<Record<string, string>>({});
   const [explainMode, setExplainMode] = useState<string | null>(null);
@@ -468,6 +530,12 @@ export function FieldPanel({ ring, open, onClose, lot, onMethods }: {
   useEffect(() => {
     if (open) { orinValidation().then(setOrin);
                 ecostressDemo().then(setEco); }
+  }, [open]);
+
+  useEffect(() => {
+    if (open) {
+      knowledgeCases().then((k) => setCases(k?.cases ?? []));
+    }
   }, [open]);
 
   // ECOSTRESS demo tile: only for the two demo plots (task 18.3)
@@ -636,18 +704,7 @@ export function FieldPanel({ ring, open, onClose, lot, onMethods }: {
           </Card>
 
           {diag.measures && diag.measures.length > 0 && (
-            <Card title={t("measures.title")}>
-              <ul>{diag.measures.map((m) => (
-                <li key={m.id}><strong>{m.name}</strong> — {m.why}
-                  <div className="muted">
-                    {m.requires && measureReqPairs(m.requires)
-                      .map((p) => `${t(p.key)}: ${p.value.startsWith("field.")
-                        ? t(p.value) : p.value}`).join(" · ")}
-                    {m.cost && ` · ${t("measure.req.cost")}: ${
-                      t(benefitValue(m.cost))}`}
-                    {m.source && ` · ${m.source}`}</div>
-                </li>))}</ul>
-            </Card>)}
+            <MeasuresCard measures={diag.measures} cases={cases} t={t} />)}
 
           <p className="muted">
             {t("gloss.ndvi")}<Glossary term="ndvi" /> ·{" "}

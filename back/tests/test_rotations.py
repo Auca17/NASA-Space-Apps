@@ -341,3 +341,101 @@ def test_irrigation_water_scoring_numeric():
     assert high["water_balance_mm"] == high["irrigation_need_mm"]
     prio = {"water": 5}
     assert eng.score(low, cur, prio) > eng.score(high, cur, prio)
+
+
+# ------------------------------------------------- task 21: knowledge ----
+
+def test_water_observed_rides_as_evidence():
+    """Observed consumptive use (semiarid Pampa trials) shows under
+    water_balance evidence when the crop is in the rotation."""
+    out = eng.run(DIAG, None, {}, {}, ZONE)
+    ev = [e for s in out["strategies"] for e in s["evidence"]
+          if "consumo observado" in e["text"]]
+    assert ev, "observed water evidence missing"
+    assert all(e["indicator"] == "water_balance" for e in ev)
+    assert all("referencia FAO" in e["text"] for e in ev)
+    assert any("487 mm" in e["text"] for e in ev)   # maíz
+    assert any("semiárido pampeano" in e["text"] for e in ev)
+    # a rotation with trigo shows its 319 mm
+    out2 = eng.run(DIAG, {"rotation_id": "trigo-soja2-maiz"}, {},
+                   {}, ZONE)
+    ev2 = [e["text"] for s in out2["strategies"] for e in s["evidence"]
+           if "consumo observado" in e["text"]]
+    assert any("319 mm" in x for x in ev2)
+
+
+def test_residue_indicator_is_sum_over_years():
+    """residue_t_ha_yr = sum of per-harvest residues / rotation years."""
+    rot = eng.KNOWLEDGE.rotations[0]
+    ind = eng.indicators(rot, DIAG, ZONE)
+    expected = round(sum(eng.KNOWLEDGE.crops[s.crop].residue_t_ha
+                         for s in rot.sequence) / max(rot.years, 1), 1)
+    assert ind["residue_t_ha_yr"] == expected
+
+
+def test_alfalfa_root_carbon_gap():
+    """The undeclared root/crown carbon of pastures rides as an
+    information gap when alfalfa is in the rotation."""
+    out = eng.run(DIAG, None, {}, {}, "cuyo")
+    gaps = [g for s in out["strategies"] for g in s["gaps"]
+            if "raíz" in g or "corona" in g]
+    assert gaps, "root-carbon gap missing"
+    assert any("alfalfa" in g for g in gaps)
+
+
+def test_nea_noa_default_rotation_unvalidated_gap():
+    """'No sé' in NEA/NOA uses a typical rotation whose evidence is not
+    validated per subzone — flagged, with INTA/EEAOC named."""
+    for z in ("nea", "noa"):
+        out = eng.run(DIAG, None, {}, {}, z)
+        cur = next(s for s in out["strategies"] if s["is_current"])
+        assert any("subzona" in g and "INTA" in g and "EEAOC" in g
+                   for g in cur["gaps"]), z
+        # a declared rotation does not carry the flag
+        out2 = eng.run(DIAG, {"rotation_id": "soja-soja"}, {}, {}, z)
+        cur2 = next(s for s in out2["strategies"] if s["is_current"])
+        assert not any("subzona" in g for g in cur2["gaps"]), z
+
+
+def test_patagonia_zone_reference_not_computed():
+    """Patagonia gets the INTA reference verbatim in zone_references —
+    nothing is computed."""
+    out = eng.run(DIAG, None, {}, {}, "patagonia")
+    assert not out["strategies"]
+    refs = out.get("zone_references") or []
+    assert refs and refs[0]["zone"] == "patagonia"
+    assert "Valle Inferior" in refs[0]["text"]
+    assert "No la calculamos" in refs[0]["text"]
+    assert "INTA" in refs[0]["source"]
+
+
+def test_cycle_end_late_maize_frost():
+    """Maíz tardío: the cycle ends at physiological maturity (04-30),
+    not at the harvest close (07-31) — a frost-free window ending 11/06
+    keeps the whole cycle inside."""
+    from app.services.knowledge import SeqItem
+    item = SeqItem(crop="maiz", start="12-31", end="07-31")
+    ff = set(range(0, eng._doy("06-11") + 1))
+    r = eng.crop_viable(eng.KNOWLEDGE.crops["maiz"], _diag_rain(1200),
+                        {"irrigation": True}, ZONE, ff, item=item)
+    assert not any("heladas" in x for x in r)
+
+
+def test_harvest_extended_but_cycle_end_drives_water():
+    """The harvest window is the real calendar (maíz to 07-31, sorgo to
+    07-15) while cycle_end is the physiological end used for water."""
+    K = eng.KNOWLEDGE.crops
+    assert K["maiz"].window(ZONE)[2] == "07-31"
+    assert K["maiz"].cycle_end_for(ZONE) == "04-30"
+    assert K["sorgo"].window(ZONE)[2] == "07-15"
+    assert K["sorgo"].cycle_end_for(ZONE) == "05-15"
+    # water availability stops at maturity, not at the harvest close
+    monthly = [20] * 12
+    monthly[6] = 200   # julio artificialmente húmedo
+    diag = _diag_rain(sum(monthly), monthly)
+    avail = eng._crop_rain(diag, K["sorgo"], ZONE)
+    flat = _diag_rain(sum(monthly))
+    avail_flat = eng._crop_rain(flat, K["sorgo"], ZONE)
+    # julio no aporta al ciclo del sorgo (madura 05-15, cosecha 07-15):
+    # con lluvia plana el disponible es mayor que con el julio húmedo
+    assert avail < avail_flat
