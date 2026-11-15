@@ -23,6 +23,10 @@ async def geocode(q: str = "", bias: str = ""):
     q = q.strip()
     if len(q) < 3:
         return JSONResponse({"hits": []})
+    if len(q) > 200:
+        return JSONResponse({"error": "invalid_query",
+                             "detail": "query too long (max 200 chars)"},
+                            status_code=400)
     params = {"format": "json", "limit": "5", "q": q}
     key = q.lower()
     if bias == "ar":

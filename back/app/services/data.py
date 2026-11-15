@@ -5,6 +5,7 @@ JSON responses are cached in-process via the shared TTL cache.
 """
 
 import json
+import os
 import re
 from pathlib import Path
 from urllib.parse import urljoin, urlparse
@@ -24,6 +25,8 @@ def data_url(path: str) -> str:
 
 async def fetch_json(url: str, client: httpx.AsyncClient | None = None) -> dict:
     if url.startswith("file://"):
+        if os.environ.get("VERCEL"):  # file:// is dev-only, never in prod
+            raise RuntimeError("file:// DATA_BASE_URL not allowed on Vercel")
         p = urlparse(url).path
         if re.match(r"^/[A-Za-z]:", p):  # Windows drive in file:///C:/...
             p = p[1:]

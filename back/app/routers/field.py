@@ -52,6 +52,47 @@ def _err(code: str, detail: str):
                               content={"error": code, "detail": detail})
 
 
+async def _json_body(request: Request):
+    """Parsed JSON object body or a 400 (empty/malformed must not 500)."""
+    try:
+        body = await request.json()
+    except Exception:
+        return None, JSONResponse(
+            status_code=400,
+            content={"error": "invalid_input",
+                     "detail": "body must be a JSON object"})
+    if not isinstance(body, dict):
+        return None, JSONResponse(
+            status_code=400,
+            content={"error": "invalid_input",
+                     "detail": "body must be a JSON object"})
+    return body, None
+
+
+def _seg_intersect(a, b, c, d) -> bool:
+    """Proper intersection of segments ab and cd (excl. shared endpoints)."""
+    def orient(p, q, r):
+        return (q[0] - p[0]) * (r[1] - p[1]) - (q[1] - p[1]) * (r[0] - p[0])
+    o1, o2 = orient(a, b, c), orient(a, b, d)
+    o3, o4 = orient(c, d, a), orient(c, d, b)
+    return ((o1 > 0) != (o2 > 0) and (o1 != 0 or o2 != 0)
+            and (o3 > 0) != (o4 > 0) and (o3 != 0 or o4 != 0))
+
+
+def _self_intersects(ring) -> bool:
+    """True if any non-adjacent edges of the ring properly cross."""
+    n = len(ring)
+    edges = [(ring[i], ring[(i + 1) % n]) for i in range(n)]
+    for i in range(n):
+        for j in range(i + 2, n):
+            if i == 0 and j == n - 1:
+                continue  # closing edge shares vertex 0 with edge 0
+            if _seg_intersect(edges[i][0], edges[i][1],
+                              edges[j][0], edges[j][1]):
+                return True
+    return False
+
+
 def parse_plot(body: dict):
     """-> (centroid(lat,lon), area_ha, r5_list, r6_list, bbox|None) or 400."""
     polygon, point = body.get("polygon"), body.get("point")
@@ -61,7 +102,7 @@ def parse_plot(body: dict):
     if point is not None:
         try:
             lat, lon = float(point[0]), float(point[1])
-        except (TypeError, IndexError, ValueError):
+        except (TypeError, IndexError, KeyError, ValueError):
             return _err("invalid_point", "point must be [lat, lon]")
         if not (-90 <= lat <= 90 and -180 <= lon <= 180):
             return _err("invalid_point", "lat -90..90, lon -180..180")
@@ -108,6 +149,13 @@ def parse_plot(body: dict):
             if any(not (-90 <= q[1] <= 90 and -180 <= q[0] <= 180)
                    for q in ring):
                 return _err("invalid_polygon", "vertex out of lat/lon range")
+            n = len(ring)
+            if any(abs(ring[(i + 1) % n][0] - ring[i][0]) > 180
+                   for i in range(n)):
+                return _err("invalid_polygon",
+                            "polygon crosses the antimeridian, not supported")
+            if _self_intersects(ring):
+                return _err("invalid_polygon", "polygon self-intersects")
             n_vertices += len(ring)
             rings.append(ring)
         polys.append(rings)
@@ -382,8 +430,14 @@ MIN_ELEV_DIFF_M = 100
 
 
 def temp_adjust_for(plot_elev_m, cell_elev_m) -> float:
-    """Lapse-rate correction added to POWER temps (task 20)."""
+    """Lapse-rate correction added to POWER temps (task 20).
+
+    Negative elevations are not trusted: terrain tiles encode ocean
+    bathymetry, so a sub-zero "elevation" would manufacture a huge
+    warming correction (observed: -4 290 m -> +27.9 °C)."""
     if plot_elev_m is None or cell_elev_m is None:
+        return 0.0
+    if plot_elev_m < 0 or cell_elev_m < 0:
         return 0.0
     if abs(plot_elev_m - cell_elev_m) < MIN_ELEV_DIFF_M:
         return 0.0
@@ -862,7 +916,9 @@ def apply_scenario(power: dict | None, sc: dict) -> dict:
 
 @router.post("/api/field/diagnose")
 async def diagnose(request: Request):
-    body = await request.json()
+    body, err = await _json_body(request)
+    if err:
+        return err
     scenario, err = parse_scenario(body)
     if err:
         return err
@@ -873,6 +929,15 @@ async def diagnose(request: Request):
     r6c = r6s[0]
     r2 = h3_r2(clat, clon)
     r5c = r5s[0]
+
+    from ..services.georef import zone_at
+    geo = zone_at(clat, clon)
+    if geo["country"] is None:
+        return JSONResponse(
+            status_code=400,
+            content={"error": "no_land",
+                     "detail": "plot centroid is not on land "
+                               "(ocean or unmapped area)"})
 
     async with httpx.AsyncClient(timeout=TIMEOUT) as client:
         power, soilg, terr, ndvi, fire_cal, grid = await asyncio.gather(
@@ -911,8 +976,6 @@ async def diagnose(request: Request):
         risk = None
     risk_cell = (risk or {}).get("cells", {}).get(r5c)
 
-    from ..services.georef import zone_at
-    geo = zone_at(clat, clon)
     adj = {"temp_adjust_c": temp_adjust, "elevation_m": elevation_m,
            "power_cell_elevation_m": cell_elev_m}
 
@@ -982,7 +1045,9 @@ def field_catalog():
 @router.post("/api/field/rotations")
 async def rotations(request: Request):
     from ..services.rotations import run, PRIORITY_MAP
-    body = await request.json()
+    body, err = await _json_body(request)
+    if err:
+        return err
     diag = body.get("diagnosis")
     if not isinstance(diag, dict) or not isinstance(diag.get("cards"), list):
         return JSONResponse(
@@ -1015,11 +1080,14 @@ async def rotations(request: Request):
     cent = diag.get("centroid") or []
     r6s = diag.get("h3_r6") or ["x"]
     if r5s and len(cent) == 2:
-        r2a = h3.cell_to_parent(r5s[0], 2)
-        shard = await src.json_shard(
-            cent[0], cent[1], f"field/analogs/{r2a}.json",
-            r6s[0], "field_analogs")
-        analog = (shard or {}).get("cells", {}).get(r5s[0])
+        try:
+            r2a = h3.cell_to_parent(r5s[0], 2)
+            shard = await src.json_shard(
+                cent[0], cent[1], f"field/analogs/{r2a}.json",
+                r6s[0], "field_analogs")
+            analog = (shard or {}).get("cells", {}).get(r5s[0])
+        except Exception:
+            analog = None  # malformed h3 ids in a replayed diagnosis
     try:
         out = run(diag, body.get("current"), priorities, constraints,
                   zone, analog=analog)
@@ -1050,9 +1118,10 @@ async def rotations(request: Request):
 async def explain(request: Request):
     from ..services.rotations import explain as explain_fn
     from ..services.ai_explain import ai_explain
-    body = await request.json()
-    if not isinstance(body, dict) or not isinstance(
-            body.get("strategies"), list):
+    body, err = await _json_body(request)
+    if err:
+        return err
+    if not isinstance(body.get("strategies"), list):
         return JSONResponse(status_code=400, content={
             "error": "invalid_input",
             "detail": "body must be the full rotations response"})

@@ -37,6 +37,16 @@ Cloudflare R2 (`https://pub-f3e35e60ad774d339f43297a54691092.r2.dev/v1/`).
    `sitemap.xml` y `robots.txt` con el dominio real; sin ella, esos
    archivos salen con un placeholder (`PENDIENTE-DOMINIO`).
 
+   Variables opcionales del backend (explicaciones con IA en
+   `/api/field/explain`; sin clave el endpoint usa la plantilla local):
+
+   | nombre | valor | entorno |
+   |---|---|---|
+   | `AI_PROVIDER` | `gemini` (default) o `anthropic` | Production + Preview |
+   | `GEMINI_API_KEY` | clave de Gemini (si provider=gemini) | Production + Preview |
+   | `ANTHROPIC_API_KEY` | clave de Anthropic (si provider=anthropic) | Production + Preview |
+   | `AI_MODEL` | override del modelo (opcional) | Production + Preview |
+
    Nota: `VITE_API_BASE` se deja vacío — las llamadas `/api/*` van al
    mismo dominio y `vercel.json` las reescribe a la función Python.
 
