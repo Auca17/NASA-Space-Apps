@@ -29,7 +29,7 @@ const reqRow = (r: Landing["brief"]["groups"][number]["rows"][number]) => `
 
 const reqGroup = (g: Landing["brief"]["groups"][number]) => `
   <section class="req-group" aria-labelledby="req-${g.title.slice(0, 1)}">
-    <h3>${g.title}</h3>
+    <h3 id="req-${g.title.slice(0, 1)}">${g.title}</h3>
     <div class="table-wrap" role="region" tabindex="0" aria-label="${g.title}">
       <table class="req-table">
         <thead><tr>
@@ -92,7 +92,7 @@ const pendingList = () => `
 
 const linksList = () => `
   <ul class="links">${c.team.links.map((l) => l.pending
-    ? `<li><span class="pending-link">${l.label}</span> <span class="pend-tag">[PENDIENTE]</span></li>`
+    ? `<li><span class="pending-link">${l.label}</span> <span class="pend-tag">${c.pendTag}</span></li>`
     : `<li><a href="${l.href}">${l.label}</a></li>`).join("")}
   </ul>`;
 
@@ -105,7 +105,7 @@ const block = (b: Landing["blocks"][number]) => `
     <p>${b.text}</p>
     ${b.figure ? `<figure class="chart"><img src="${b.figure.src}"
         alt="${b.figure.alt}" width="${b.figure.width}"
-        height="${b.figure.height}" loading="lazy" decoding="async" />
+        height="${b.figure.height}" decoding="async" />
       <figcaption>${b.figure.caption}</figcaption></figure>` : ""}
     ${b.stat ? `<p class="block-stat"><strong>${b.stat.value}</strong>
       <span>${b.stat.note}</span></p>` : ""}
@@ -138,7 +138,7 @@ document.getElementById("root")!.innerHTML = `
       <figure class="hero-shot">
         <img src="${c.hero.shot.src}" alt="${c.hero.shot.alt}"
              width="${c.hero.shot.width}" height="${c.hero.shot.height}"
-             decoding="async" />
+             fetchpriority="high" decoding="async" />
         <figcaption>${c.hero.shot.caption}</figcaption>
       </figure>
     </section>
@@ -147,9 +147,16 @@ document.getElementById("root")!.innerHTML = `
       ${c.blocks.map(block).join("")}
     </section>
 
-    <details class="brief-details">
+    <details class="brief-details" id="brief">
       <summary>
         <span class="summary-title">${c.details.summary}</span>
+        <span class="summary-score">${c.brief.groups.map((g) =>
+          `${g.short}: ${(["done", "partial", "not-included"] as Status[])
+            .map((s) => [s, g.rows.filter((r) => r.status === s).length] as const)
+            .filter(([, n]) => n > 0)
+            .map(([s, n]) => `${n} ${c.brief.statusLabel[s].toLowerCase()}`)
+            .join(c.details.scoreSep)}`
+        ).join(c.details.statusSep)}</span>
         <span class="summary-caption">${c.details.caption}</span>
       </summary>
       <div class="details-body">
@@ -221,3 +228,8 @@ document.getElementById("root")!.innerHTML = `
     <p class="foot-note">${c.footer.note}</p>
   </footer>
 `;
+
+// Deep link: /#brief and /es/#brief open the requirement/proof disclosure.
+if (location.hash === "#brief") {
+  document.getElementById("brief")?.setAttribute("open", "");
+}

@@ -69,6 +69,48 @@ describe("landing page", () => {
     expect(det!.hasAttribute("open")).toBe(false);
   });
 
+  it("the collapsed summary exposes a status scoreline before opening", async () => {
+    await render("en");
+    const score = document.querySelector("details.brief-details .summary-score");
+    expect(score?.textContent).toMatch(/Field Shift: \d+ done · \d+ partial/);
+    await render("es");
+    const scoreEs = document.querySelector("details.brief-details .summary-score");
+    expect(scoreEs?.textContent).toMatch(/hecho/i);
+  });
+
+  it("the brief details is deep-linkable via #brief", async () => {
+    await render("en");
+    const det = document.querySelector("details.brief-details");
+    expect(det?.id).toBe("brief");
+    location.hash = "#brief";
+    await render("en");
+    expect(document.querySelector("details.brief-details")?.hasAttribute("open")).toBe(true);
+    location.hash = "";
+  });
+
+  it("requirement groups label their sections with matching ids", async () => {
+    await render("en");
+    for (const sec of document.querySelectorAll(".req-group")) {
+      const id = sec.getAttribute("aria-labelledby");
+      expect(sec.querySelector(`#${id}`)).toBeTruthy();
+    }
+  });
+
+  it("hero image asks for high fetch priority", async () => {
+    await render("en");
+    const img = document.querySelector(".hero-shot img");
+    expect(img?.getAttribute("fetchpriority")).toBe("high");
+  });
+
+  it("pending markers are localized, never hardcoded Spanish", async () => {
+    await render("en");
+    const en = [...document.querySelectorAll(".pend-tag")].map((t) => t.textContent);
+    expect(en.every((t) => t === "[PENDING]")).toBe(true);
+    await render("es");
+    const es = [...document.querySelectorAll(".pend-tag")].map((t) => t.textContent);
+    expect(es.every((t) => t === "[PENDIENTE]")).toBe(true);
+  });
+
   it("hero offers exactly one primary and one example action", async () => {
     await render("es");
     const cta = document.querySelector(".hero-cta");

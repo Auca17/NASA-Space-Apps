@@ -289,14 +289,13 @@ tbody th { font-weight: 500; max-width: 22rem; }
 /* three short blocks below the hero */
 .blocks {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(2, 1fr);
   gap: 2.5rem;
   align-items: start;
 }
 .block h3 { margin-top: 0; }
 .block p { font-size: 0.98rem; }
 .block .chart { margin: 1rem 0 0; }
-.block figure { grid-column: 1 / -1; }
 .block-stat { display: flex; flex-direction: column; gap: 0.25rem; margin-top: 1rem; }
 .block-stat strong {
   font-family: var(--display);
@@ -329,6 +328,11 @@ tbody th { font-weight: 500; max-width: 22rem; }
   font-weight: 800; font-size: clamp(1.5rem, 3.5vw, 2.2rem);
   letter-spacing: -0.02em; line-height: 1.1;
 }
+.summary-score {
+  color: var(--accent);
+  font-size: 0.9rem; font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
 .summary-caption { color: var(--muted); font-size: 0.95rem; max-width: 60ch; }
 .details-body > section {
   padding-block: 3rem;
@@ -357,9 +361,12 @@ tbody th { font-weight: 500; max-width: 22rem; }
   .blocks { grid-template-columns: 1fr; gap: 2rem; }
   .details-body > section { padding-block: 2rem; }
   th, td { padding: 0.75rem 0.8rem; }
+}
 
-  /* requirement rows become stacked cards: title, status pill,
-   * honest limit, then what Ashfield does — no horizontal scroll */
+/* requirement rows become stacked cards below the table's 62rem
+ * minimum width: title, status pill, honest limit, then what
+ * Ashfield does — no horizontal scroll at tablet or phone width */
+@media (max-width: 991px) {
   .table-wrap { overflow-x: visible; border: 0; border-radius: 0;
     background: transparent; }
   .req-table { min-width: 0; }
