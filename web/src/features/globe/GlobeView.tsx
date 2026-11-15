@@ -5,22 +5,20 @@ import maplibregl from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 import { cellToBoundary, latLngToCell } from "h3-js";
 import { DEFAULT_VIEW } from "../../config";
+import { BASE_STYLE, LANDUSE_SOURCE } from "./baseStyle";
+import type { Landuse, LatLon, Poly } from "../../domain/selection";
+import type { Road } from "../../domain/split";
 
-const GIBS = "https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/" +
-  "BlueMarble_NextGeneration/default/2004-08/" +
-  "GoogleMapsCompatible_Level8/{z}/{y}/{x}.jpeg";
+/** Land use read from the map's vector tiles around a selection. */
+export type LandUseRead = { landuse: Landuse[]; buildings: LatLon[];
+                            roads: Road[]; zoom: number;
+                            /** visible map bounds [w, s, e, n] */
+                            bounds: [number, number, number, number] };
 
-const BASE_STYLE: maplibregl.StyleSpecification = {
-  version: 8,
-  sources: {
-    marble: { type: "raster", tiles: [GIBS], tileSize: 256, maxzoom: 8,
-      attribution: "NASA GIBS / Blue Marble" },
-  },
-  layers: [
-    { id: "bg", type: "background", paint: { "background-color": "#0a0f1c" } },
-    { id: "marble", type: "raster", source: "marble" },
-  ],
-};
+/** Shapes drawn over the map during selection review and in Mis campos. */
+export type ShapeKind = "piece-on" | "piece-off" | "excluded" | "original"
+  | "field" | "zone";
+export type Shape = { geom: Poly; kind: ShapeKind; color?: string };
 
 export function hexGeoJSON(cells: Map<string, number>): GeoJSON.FeatureCollection {
   const feats: GeoJSON.Feature[] = [];
@@ -42,13 +40,28 @@ export function hexGeoJSON(cells: Map<string, number>): GeoJSON.FeatureCollectio
 }
 
 export interface GlobeHandle {
-  flyTo(lat: number, lon: number, zoom?: number, padBottom?: number): void;
+  /** `bottomPx`: height covered by a bottom panel; the point is centred
+   * in the visible part of the map. */
+  flyTo(lat: number, lon: number, zoom?: number, bottomPx?: number): void;
   setCells(cells: Map<string, number>, colorExpr: unknown): void;
   setOutline(cells: string[], color?: string): void;
   setDraft(ring: [number, number][] | null): void;
+  /** Location reference (search hit, GPS, coordinates); null clears it. */
+  setMarker(p: [number, number] | null): void;
+  /** Zoom so the whole ring is visible. */
+  fitRing(ring: [number, number][], bottomPx?: number): void;
+  /** OpenStreetMap land use + buildings from the vector tiles in view;
+   * null when the tiles could not be read in time. */
+  readLandUse(timeoutMs?: number): Promise<LandUseRead | null>;
+  /** Replace the review/field shapes; [] clears them. */
+  setShapes(shapes: Shape[]): void;
+  setFieldSatellite(enabled: boolean): void;
+  /** Screen pixel (relative to the map) -> [lat, lon]. */
+  unproject(x: number, y: number): [number, number];
   onClick(cb: ((lat: number, lon: number) => void) | null): void;
+  /** Adds a listener for the end of each map move; returns its removal. */
   onMove(cb: (lat: number, lon: number, zoom: number,
-              bbox: [number, number, number, number]) => void): void;
+              bbox: [number, number, number, number]) => void): () => void;
   center(): { lat: number; lon: number; zoom: number };
   bounds(): [number, number, number, number];
   spin(enabled: boolean): void;
@@ -75,6 +88,13 @@ export function useGlobe(
     } catch {
       return; // WebGL unavailable
     }
+    let fieldSatellite = false;
+    const updateFieldBasemap = () => {
+      const visibility = fieldSatellite ? "visible" : "none";
+      for (const layer of ["field-satellite", "field-roads"]) {
+        if (map.getLayer(layer)) map.setLayoutProperty(layer, "visibility", visibility);
+      }
+    };
     map.on("load", () => {
       map.addSource("cells", { type: "geojson",
         data: { type: "FeatureCollection", features: [] } });
@@ -94,6 +114,45 @@ export function useGlobe(
         paint: { "line-color": "#ffffff", "line-width": 1.4,
           "line-opacity": 0.9 },
       });
+      // invisible OpenMapTiles layers: they make MapLibre load the
+      // landuse/building tiles that the urban check reads
+      map.addSource("omt", LANDUSE_SOURCE);
+      map.addLayer({ id: "omt-landuse", type: "fill", source: "omt",
+        "source-layer": "landuse", minzoom: 11,
+        paint: { "fill-opacity": 0 } });
+      map.addLayer({ id: "omt-roads", type: "line", source: "omt",
+        "source-layer": "transportation", minzoom: 11,
+        paint: { "line-opacity": 0 } });
+      map.addLayer({ id: "field-roads", type: "line", source: "omt",
+        "source-layer": "transportation", minzoom: 12,
+        layout: { visibility: "none", "line-cap": "round", "line-join": "round" },
+        filter: ["in", ["get", "class"], ["literal",
+          ["motorway", "trunk", "primary", "secondary", "tertiary",
+            "minor", "service", "track"]]],
+        paint: { "line-color": "#fff3d2", "line-opacity": 0.72,
+          "line-width": ["interpolate", ["linear"], ["zoom"], 12, 0.7, 17, 1.8] } });
+      map.addLayer({ id: "omt-building", type: "fill", source: "omt",
+        "source-layer": "building", minzoom: 13,
+        paint: { "fill-opacity": 0 } });
+      map.addSource("marker", { type: "geojson",
+        data: { type: "FeatureCollection", features: [] } });
+      map.addLayer({
+        id: "marker-halo", type: "circle", source: "marker",
+        paint: { "circle-radius": 14, "circle-color": "#1a56db",
+          "circle-opacity": 0.2 },
+      });
+      map.addLayer({
+        id: "marker-dot", type: "circle", source: "marker",
+        paint: { "circle-radius": 6, "circle-color": "#1a56db",
+          "circle-stroke-color": "#ffffff", "circle-stroke-width": 2 },
+      });
+      map.addSource("shapes", { type: "geojson",
+        data: { type: "FeatureCollection", features: [] } });
+      map.addLayer({ id: "shapes-fill", type: "fill", source: "shapes",
+        paint: { "fill-color": ["get", "fill"],
+                 "fill-opacity": ["get", "op"] } });
+      map.addLayer({ id: "shapes-line", type: "line", source: "shapes",
+        paint: { "line-color": ["get", "line"], "line-width": ["get", "w"] } });
       map.addSource("draft", { type: "geojson",
         data: { type: "FeatureCollection", features: [] } });
       map.addLayer({
@@ -104,6 +163,7 @@ export function useGlobe(
         id: "draft-line", type: "line", source: "draft",
         paint: { "line-color": "#1a56db", "line-width": 2 },
       });
+      updateFieldBasemap();
     });
 
     let clickCb: ((lat: number, lon: number) => void) | null = null;
@@ -111,17 +171,18 @@ export function useGlobe(
       clickCb?.(e.lngLat.lat, e.lngLat.lng);
     });
 
-    let moveCb: ((lat: number, lon: number, zoom: number,
-                  bbox: [number, number, number, number]) => void) | null = null;
+    const moveCbs = new Set<(lat: number, lon: number, zoom: number,
+                  bbox: [number, number, number, number]) => void>();
     let timer: ReturnType<typeof setTimeout> | null = null;
     map.on("moveend", () => {
       if (timer) clearTimeout(timer);
       timer = setTimeout(() => {
-        if (!moveCb) return;
         const c = map.getCenter();
         const b = map.getBounds();
-        moveCb(c.lat, c.lng, map.getZoom(),
-          [b.getWest(), b.getSouth(), b.getEast(), b.getNorth()]);
+        for (const cb of moveCbs) {
+          cb(c.lat, c.lng, map.getZoom(),
+             [b.getWest(), b.getSouth(), b.getEast(), b.getNorth()]);
+        }
       }, 300);
     });
 
@@ -129,10 +190,9 @@ export function useGlobe(
     const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
 
     const h: GlobeHandle = {
-      flyTo(lat, lon, zoom = 6, padBottom = 0) {
-        // padBottom keeps the target above a bottom sheet on mobile
+      flyTo(lat, lon, zoom = 6, bottomPx = 0) {
         map.flyTo({ center: [lon, lat], zoom, duration: 1600,
-                    padding: { bottom: padBottom } });
+                    offset: [0, -bottomPx / 2] });
       },
       setCells(cells, colorExpr) {
         const src = map.getSource("cells") as maplibregl.GeoJSONSource | undefined;
@@ -163,8 +223,93 @@ export function useGlobe(
               }],
             });
       },
+      setMarker(p) {
+        const src = map.getSource("marker") as maplibregl.GeoJSONSource | undefined;
+        src?.setData({ type: "FeatureCollection", features: p ? [{
+          type: "Feature", properties: {},
+          geometry: { type: "Point", coordinates: [p[1], p[0]] } }] : [] });
+      },
+      fitRing(ring, bottomPx = 0) {
+        if (ring.length < 2) return;
+        const la = ring.map((p) => p[0]), lo = ring.map((p) => p[1]);
+        map.fitBounds([[Math.min(...lo), Math.min(...la)],
+                       [Math.max(...lo), Math.max(...la)]],
+          { padding: { top: 60, left: 40, right: 40, bottom: 40 + bottomPx },
+            maxZoom: 16, duration: reduce ? 0 : 800 });
+      },
+      async readLandUse(timeoutMs = 8000) {
+        const t0 = Date.now();
+        // wait until the camera settled and the landuse tiles loaded
+        while (Date.now() - t0 < timeoutMs) {
+          if (!map.isMoving() && map.getSource("omt") &&
+              map.isSourceLoaded("omt")) break;
+          await new Promise((r) => setTimeout(r, 200));
+        }
+        if (!map.getSource("omt") || !map.isSourceLoaded("omt") ||
+            map.getZoom() < 13) return null;
+        const toRings = (g: GeoJSON.Geometry): LatLon[][] =>
+          g.type === "Polygon"
+            ? [g.coordinates[0].map(([x, y]) => [y, x] as LatLon)]
+            : g.type === "MultiPolygon"
+              ? g.coordinates.map((p) => p[0].map(([x, y]) => [y, x] as LatLon))
+              : [];
+        const toLines = (g: GeoJSON.Geometry): LatLon[][] =>
+          g.type === "LineString"
+            ? [g.coordinates.map(([x, y]) => [y, x] as LatLon)]
+            : g.type === "MultiLineString"
+              ? g.coordinates.map((l) => l.map(([x, y]) => [y, x] as LatLon))
+              : [];
+        try {
+          const tr = map.querySourceFeatures("omt",
+            { sourceLayer: "transportation" });
+          const b = map.getBounds();
+          const roads: Road[] = tr.flatMap((f) => toLines(f.geometry).map(
+            (line) => ({ cls: String(f.properties?.class ?? ""), line })));
+          const lu = map.querySourceFeatures("omt", { sourceLayer: "landuse" });
+          const bd = map.querySourceFeatures("omt", { sourceLayer: "building" });
+          return {
+            roads, zoom: map.getZoom(),
+            bounds: [b.getWest(), b.getSouth(), b.getEast(), b.getNorth()],
+            landuse: lu.map((f) => ({ cls: String(f.properties?.class ?? ""),
+                                      rings: toRings(f.geometry) })),
+            buildings: bd.flatMap((f) => toRings(f.geometry).slice(0, 1))
+              .map((r) => [r.reduce((a, p) => a + p[0], 0) / r.length,
+                           r.reduce((a, p) => a + p[1], 0) / r.length] as LatLon),
+          };
+        } catch { return null; }
+      },
+      setShapes(shapes) {
+        const st: Record<ShapeKind, { fill: string; op: number;
+                                       line: string; w: number }> = {
+          "piece-on": { fill: "#2e7d32", op: 0.35, line: "#1b5e20", w: 2 },
+          "piece-off": { fill: "#9e9e9e", op: 0.25, line: "#616161", w: 1 },
+          excluded: { fill: "#c62828", op: 0.45, line: "#c62828", w: 0.5 },
+          original: { fill: "#000000", op: 0, line: "#1a56db", w: 1.5 },
+          field: { fill: "#1a56db", op: 0.12, line: "#1a56db", w: 2 },
+          zone: { fill: "#f9a825", op: 0.35, line: "#e65100", w: 1.5 },
+        };
+        const src = map.getSource("shapes") as maplibregl.GeoJSONSource | undefined;
+        src?.setData({ type: "FeatureCollection", features: shapes
+          .filter((sh) => sh.geom.length && sh.geom[0].length >= 3)
+          .map((sh) => ({ type: "Feature",
+            properties: { ...st[sh.kind],
+                          ...(sh.color ? { fill: sh.color } : {}) },
+            // outer ring + holes, each closed, [lon, lat]
+            geometry: { type: "Polygon", coordinates: sh.geom
+              .filter((ring) => ring.length >= 3)
+              .map((ring) => [...ring.map(([la, lo]) => [lo, la]),
+                              [ring[0][1], ring[0][0]]]) } })) });
+      },
+      setFieldSatellite(enabled) {
+        fieldSatellite = enabled;
+        updateFieldBasemap();
+      },
+      unproject(x, y) {
+        const p = map.unproject([x, y]);
+        return [p.lat, p.lng];
+      },
       onClick(cb) { clickCb = cb; },
-      onMove(cb) { moveCb = cb; },
+      onMove(cb) { moveCbs.add(cb); return () => { moveCbs.delete(cb); }; },
       center() {
         const c = map.getCenter();
         return { lat: c.lat, lon: c.lng, zoom: map.getZoom() };

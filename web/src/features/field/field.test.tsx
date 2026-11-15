@@ -192,3 +192,60 @@ describe("scenario + AI label (tasks 17A/19)", () => {
     expect(screen.queryByText(/generada con IA/)).toBeNull();
   });
 });
+
+describe("reference scenario labels (No sé)", () => {
+  const rots: RotationsResponse = {
+    disclaimer: "", confidence: "high",
+    strategies: [
+      strat("soja-maiz", { is_current: true,
+        why: "Es tu rotación actual; sirve de referencia." }),
+      strat("trigo-soja"),
+    ],
+  };
+  const explain = {
+    "soja-maiz": "soja-maiz: es tu rotación actual; los cambios se miden contra ella.",
+    "trigo-soja": "trigo-soja: x. Cambios frente a la actual: Rastrojo +2.",
+  };
+
+  it("labels the baseline as Escenario de referencia in card, explanation and table", () => {
+    render(<RotationResults rots={rots} diag={patagonia}
+                            explain={explain} t={t} reference />);
+    const cur = document.querySelector(".strategy.current")!;
+    expect(cur.querySelector(".badge.role")).toHaveTextContent(
+      "Escenario de referencia");
+    expect(cur).not.toHaveTextContent(/tu rotación actual/i);
+    expect(cur).toHaveTextContent(/rotación más común en tu zona/);
+    expect(screen.getByText(/Comparada con el escenario de referencia/))
+      .toBeInTheDocument();
+    expect(document.querySelector("table.cmp thead th"))
+      .toHaveTextContent("Escenario de referencia: soja-maiz");
+    expect(screen.getByText(/frente al escenario de referencia/))
+      .toBeInTheDocument();
+    expect(document.body).not.toHaveTextContent(/frente a la actual/);
+  });
+
+  it("uses Tu rotación actual when the user picked their rotation", () => {
+    render(<RotationResults rots={rots} diag={patagonia}
+                            explain={explain} t={t} />);
+    const cur = document.querySelector(".strategy.current")!;
+    expect(cur.querySelector(".badge.role")).toHaveTextContent(
+      "Tu rotación actual");
+    expect(document.body).not.toHaveTextContent(/escenario de referencia/i);
+  });
+});
+
+describe("diagnosis tile values", () => {
+  it("shows backend ids such as flat or bajo as words", async () => {
+    const { DiagTileForTest } = await import("./FieldLens");
+    const fmt = new Intl.NumberFormat("es");
+    const c = (id: string, value: string) => ({ id, value, text: "",
+      source: "", confidence: "high" as const });
+    render(<>
+      <DiagTileForTest c={c("water_trend", "flat")} t={t} fmt={fmt} />
+      <DiagTileForTest c={c("fire", "muy_alto")} t={t} fmt={fmt} />
+    </>);
+    const vals = [...document.querySelectorAll(".dtile-value")]
+      .map((e) => e.textContent);
+    expect(vals).toEqual(["estable", "muy alto"]);
+  });
+});

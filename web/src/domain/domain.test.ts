@@ -179,3 +179,11 @@ describe("colors", () => {
     expect(rdBu(0)).toEqual([247, 247, 247]);
   });
 });
+
+describe("toCsv rounding", () => {
+  // found in the walkthrough: "130.89999999999998" in the export
+  it("writes monthly values with at most one decimal", () => {
+    expect(toCsv({ months: ["2000-12"], values: [130.89999999999998] }))
+      .toBe("month,n\n2000-12,130.9\n");
+  });
+});

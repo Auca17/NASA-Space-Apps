@@ -217,3 +217,15 @@ def test_cases_knowledge_loads():
     assert "San Genaro" in sg.place
     assert sg.source["url"].startswith("https://mdr.ar/")
     assert len(sg.lessons) == 3
+
+
+def test_measures_carry_english_name_and_reason():
+    from app.services.measures import evaluate
+    out = evaluate({"cards": {}, "risk_cat": "muy_alto",
+                    "calendar": [{"id": "burn_season",
+                                  "levels": [3] * 12}]})
+    assert out["measures"]
+    for m in out["measures"]:
+        assert m["name_en"] and m["name_en"] != m["name"]
+        assert m["why_en"]
+        assert "quemas" not in m["why_en"] and "riesgo" not in m["why_en"]

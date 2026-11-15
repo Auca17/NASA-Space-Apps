@@ -3,12 +3,39 @@ import { useT } from "./i18n";
 import { APP_NAME, DEMO_PLOT } from "./config";
 import { Welcome } from "./features/welcome/Welcome";
 import { MethodsDrawer } from "./features/methods/MethodsDrawer";
-import { useGlobe, type GlobeHandle } from "./features/globe/GlobeView";
+import { useGlobe, type GlobeHandle, type Shape } from "./features/globe/GlobeView";
 import { HistoricControls } from "./features/fire/HistoricControls";
 import { cellsInCircle } from "./domain/h3area";
 import { orinLots } from "./api";
 import type { OrinLots } from "./api/types";
-import type { DemoLot } from "./features/field/FieldLens";
+import { drawStatus } from "./domain/clarity";
+import { FieldPicker, type DrawMode } from "./features/field/FieldPicker";
+import { SelectionReview, AdjustPanel, type LandCheck, type Adjust }
+  from "./features/field/SelectionReview";
+import { FieldsList, FieldDetail } from "./features/field/FieldsPanel";
+import { useAreaLabel } from "./features/field/areaLabel";
+import { FreehandLayer } from "./features/field/FreehandLayer";
+import type { AnalysisTarget } from "./features/field/FieldLens";
+import {
+  classifyUrban, multiPoints, type LatLon, type Multi,
+} from "./domain/selection";
+import { splitSelection, clipZone, ROAD_HALF_WIDTH } from "./domain/split";
+import {
+  loadFields, saveField, renameField, deleteField, addZone, updateZone,
+  removeZone, fieldHa, analysisOptions, ZONE_COLORS, type Field,
+  type AreaOption,
+} from "./domain/fields";
+
+/** Field marked on the map, waiting for the user's confirmation.
+ * `checked`: land use already verified (pieces from Ajustar selección). */
+type Selection = { geom: Multi; approx: boolean; original: LatLon[];
+                   checked?: boolean };
+/** What a finished drawing is for: the field itself or a crop zone. */
+type Target = { kind: "selection" } | { kind: "zone"; fieldId: string };
+type FieldsView = null | "list" | { id: string };
+
+/** Zoom from which single plots can be told apart on the street map. */
+const DRAW_ZOOM = 14;
 
 const AreaPanel = lazy(() =>
   import("./features/fire/AreaPanel").then((m) => ({ default: m.AreaPanel })));
@@ -18,19 +45,43 @@ const FieldPanel = lazy(() =>
   import("./features/field/FieldLens").then((m) => ({ default: m.FieldPanel })));
 
 type Mode = "welcome" | "fire" | "live" | "field";
-type DrawMode = "none" | "draw" | "point";
 
 export default function App() {
   const { t, lang, setLang } = useT();
-  const [mode, setMode] = useState<Mode>("welcome");
+  const areaLabel = useAreaLabel();
+  const [mode, setModeState] = useState<Mode>("welcome");
+  // the map callbacks are registered once: they read the mode from a ref
+  const modeRef = useRef<Mode>("welcome");
+  const setMode = (m: Mode) => { modeRef.current = m; setModeState(m); };
   const [globe, setGlobe] = useState<GlobeHandle | null>(null);
   const [area, setArea] = useState<{ lat: number; lon: number; cells: string[] } | null>(null);
   const [panelOpen, setPanelOpen] = useState(false);
-  const [draw, setDraw] = useState<DrawMode>("none");
-  const [draft, setDraft] = useState<[number, number][]>([]);
-  const [ring, setRing] = useState<[number, number][] | null>(null);
+  const [zoom, setZoom] = useState(3);
+  const [satellite, setSatellite] = useState(true);
+  const [draw, setDrawState] = useState<DrawMode>("none");
+  const [draft, setDraftState] = useState<[number, number][]>([]);
+  // Map clicks read these refs: state updaters with side effects run
+  // twice under StrictMode, which added every tapped point twice.
+  const drawRef = useRef<DrawMode>("none");
+  const draftRef = useRef<[number, number][]>([]);
+  const setDraw = (d: DrawMode) => { drawRef.current = d; setDrawState(d); };
+  const setDraft = (pts: [number, number][]) => {
+    draftRef.current = pts; setDraftState(pts);
+  };
+  /** The exact area sent to the diagnosis (also drawn on the map). */
+  const [target, setTarget] = useState<AnalysisTarget | null>(null);
+  const [selection, setSelection] = useState<Selection | null>(null);
+  const [landCheck, setLandCheck] = useState<LandCheck>("checking");
+  const [adjust, setAdjust] = useState<Adjust | null>(null);
+  const [fields, setFields] = useState<Field[]>(() => loadFields());
+  const [fieldsView, setFieldsView] = useState<FieldsView>(null);
+  const [shownField, setShownField] = useState<string | null>(null);
+  const [areaChoice, setAreaChoice] = useState("all");
+  const [pendingZone, setPendingZone] =
+    useState<{ geom: Multi; ha: number } | null>(null);
+  const [freeError, setFreeError] = useState(false);
+  const targetRef = useRef<Target>({ kind: "selection" });
   const [fieldOpen, setFieldOpen] = useState(false);
-  const [lot, setLot] = useState<DemoLot | null>(null);
   const [lots, setLots] = useState<OrinLots["features"]>([]);
   const [playingMonth, setPlayingMonth] = useState<string | null>(null);
   const [methodsOpen, setMethodsOpen] = useState(false);
@@ -40,28 +91,27 @@ export default function App() {
   const globeRef = useRef<GlobeHandle | null>(null);
   const mapDiv = useRef<HTMLDivElement>(null);
 
+  const fireArea = (lat: number, lon: number) =>
+    setArea({ lat, lon, cells: cellsInCircle(lat, lon, 50) });
+
   const onGlobeReady = useCallback((h: GlobeHandle) => {
     globeRef.current = h;
     setGlobe(h);
     h.onMove((lat, lon, zoom, bbox) => {
       setView({ lat, lon, zoom, bbox });
-      if (mode !== "fire") return;
-      setArea({ lat, lon, cells: cellsInCircle(lat, lon, 50) });
+      setZoom(zoom);
+      if (modeRef.current === "fire") fireArea(lat, lon);
     });
     h.onClick((lat, lon) => {
-      setDraw((d) => {
-        if (d === "draw") {
-          setDraft((pts) => { const n = [...pts, [lat, lon] as [number, number]];
-            h.setDraft(n); return n; });
-        } else if (d === "point") {
-          const r = circleApprox(lat, lon);
-          setRing(r); setFieldOpen(true); h.setDraft(r);
-          return "none";
-        }
-        return d;
-      });
+      const d = drawRef.current;
+      if (d === "draw") {
+        const n = [...draftRef.current, [lat, lon] as [number, number]];
+        setDraft(n); h.setDraft(n);
+      } else if (d === "point") {
+        onShapeRef.current(circleApprox(lat, lon), true);
+      }
     });
-  }, [mode]);
+  }, []);
 
   // 50 ha square-ish ring (circle approximation gives right area)
   const circleApprox = (lat: number, lon: number): [number, number][] => {
@@ -78,6 +128,100 @@ export default function App() {
 
   useGlobe(mapDiv, onGlobeReady);
 
+  useEffect(() => {
+    globe?.setFieldSatellite(mode === "field" && satellite);
+  }, [globe, mode, satellite]);
+
+  /** A finished outline (points, freehand or tap): to review as a
+   * selection, or clipped into the open field as a new crop zone. */
+  const onShape = (r: LatLon[], approx: boolean) => {
+    const g = globeRef.current;
+    setDraw("none"); setDraft([]); g?.setDraft(null);
+    const tg = targetRef.current;
+    if (tg.kind === "zone") {
+      const f = fields.find((x) => x.id === tg.fieldId);
+      if (!f) return;
+      setPendingZone(clipZone([[r]], f.geom, f.zones.map((z) => z.geom)));
+      setFieldsView({ id: f.id });
+      return;
+    }
+    setAdjust(null);
+    setSelection({ geom: [[r]], approx, original: r });
+  };
+  const onShapeRef = useRef(onShape);
+  onShapeRef.current = onShape;
+
+  const refreshFields = () => setFields(loadFields());
+
+  /** Map height hidden by the bottom panel on narrow screens (0 when
+   * the panel sits beside the map). */
+  const coveredBottom = () => {
+    const el = document.querySelector(".map-wrap .controls");
+    const map = mapDiv.current;
+    if (!el || !map || innerWidth > 560) return 0;
+    return Math.max(0, map.getBoundingClientRect().bottom -
+      el.getBoundingClientRect().top);
+  };
+
+  // Review step: frame the selection and read OpenStreetMap land use
+  // from the vector tiles. Unknown land use never blocks confirming;
+  // pieces that come from Ajustar selección were already checked.
+  useEffect(() => {
+    if (!selection) return;
+    let live = true;
+    const g = globeRef.current;
+    g?.fitRing(multiPoints(selection.geom), coveredBottom());
+    if (selection.checked) { setLandCheck("ok"); return; }
+    setLandCheck("checking");
+    (async () => {
+      const read = g ? await g.readLandUse() : null;
+      if (!live) return;
+      if (!read) { setLandCheck("unknown"); return; }
+      const urban = selection.geom.some((p) =>
+        classifyUrban(p, read.landuse, read.buildings).urban);
+      setLandCheck(urban ? "urban" : "ok");
+    })();
+    return () => { live = false; };
+  }, [selection]);
+
+  const openField = fields.find((x) => x.id ===
+    (fieldsView && fieldsView !== "list" ? fieldsView.id : shownField));
+
+  // What the map shows for the current step (pieces, field, zones). The
+  // shapes of the field journey are cleared in every other mode.
+  useEffect(() => {
+    const g = globeRef.current;
+    if (!g) return;
+    const sh: Shape[] = [];
+    if (mode === "field") {
+      if (fieldOpen && target) {
+        target.geom.forEach((p) => sh.push({ geom: p, kind: "field" }));
+      } else if (adjust?.status === "ready" && adjust.result && selection) {
+        sh.push({ geom: [selection.original], kind: "original" });
+        adjust.result.excluded.forEach((p) => sh.push({ geom: p, kind: "excluded" }));
+        adjust.result.pieces.forEach((p, i) =>
+          sh.push({ geom: p.geom, kind: adjust.on[i] ? "piece-on" : "piece-off" }));
+      } else if (selection) {
+        selection.geom.forEach((p) => sh.push({ geom: p, kind: "field" }));
+      } else if (openField) {
+        openField.geom.forEach((p) => sh.push({ geom: p, kind: "field" }));
+        openField.zones.forEach((z, i) => z.geom.forEach((p) => sh.push({
+          geom: p, kind: "zone", color: ZONE_COLORS[i % ZONE_COLORS.length] })));
+        if (pendingZone) {
+          pendingZone.geom.forEach((p) => sh.push({ geom: p, kind: "piece-on" }));
+        } else if (fieldsView && fieldsView !== "list" && areaChoice !== "all") {
+          // highlight the area chosen for the analysis
+          analysisOptions(openField).find((o) => o.id === areaChoice)
+            ?.geom.forEach((p) => sh.push({ geom: p, kind: "piece-on" }));
+        }
+      }
+    }
+    g.setShapes(sh);
+    if (mode !== "field") { g.setDraft(null); g.setMarker(null); }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selection, adjust, fields, fieldsView, shownField, pendingZone,
+      fieldOpen, target, mode, areaChoice]);
+
   // clear fire hexagons when leaving fire mode (else the layer lingers)
   useEffect(() => {
     if (mode !== "fire") globeRef.current?.setCells(new Map(), null);
@@ -87,6 +231,7 @@ export default function App() {
   useEffect(() => {
     const m = location.hash.match(/^#(-?\d+(?:\.\d+)?),(-?\d+(?:\.\d+)?)$/);
     if (m) locate(Number(m[1]), Number(m[2]));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const locate = (lat: number, lon: number) => {
@@ -96,58 +241,214 @@ export default function App() {
       ? "AR" : null;
     setTimeout(() => {
       globeRef.current?.flyTo(lat, lon, 7);
-      setArea({ lat, lon, cells: cellsInCircle(lat, lon, 50) });
+      fireArea(lat, lon);
     }, 100);
+  };
+
+  /** Fire tab: the area panel starts from the current map centre and
+   * follows the map from then on. */
+  const openFire = () => {
+    setMode("fire"); setPanelOpen(true);
+    const c = globeRef.current?.center();
+    if (c) fireArea(c.lat, c.lon);
   };
 
   const startField = (dm: DrawMode) => {
     setMode("field");
-    setDraw(dm);
-    setDraft([]); setRing(null); setFieldOpen(false);
+    setDraw(dm); setFreeError(false);
+    setDraft([]); setTarget(null); setFieldOpen(false);
+    setFieldsView(null); setShownField(null);
+    targetRef.current = { kind: "selection" };
     globeRef.current?.setDraft(null);
   };
 
   const finishDraw = () => {
-    if (draft.length >= 3) {
-      setRing(draft); setFieldOpen(true);
+    if (!drawStatus(draft.length).canFinish) return;
+    onShape(draft, false);
+  };
+
+  /** Back to marking: a drawn outline keeps its points to adjust; an
+   * approximate point selection asks for a new point. */
+  const editSelection = () => {
+    if (!selection) return;
+    editRing(selection.approx ? null :
+      selection.geom.length === 1 ? selection.geom[0][0] : selection.original);
+  };
+
+  /** Back to point-by-point drawing with `r` as the starting outline
+   * (null: tap a new point for an approximate selection). */
+  const editRing = (r: LatLon[] | null) => {
+    targetRef.current = { kind: "selection" };
+    if (!r) {
+      setDraft([]); globeRef.current?.setDraft(null);
+      setDraw("point");
+    } else {
+      setDraft(r); globeRef.current?.setDraft(r);
+      setDraw("draw");
     }
-    setDraw("none");
+    setSelection(null); setAdjust(null);
+  };
+
+  const cancelSelection = () => {
+    setSelection(null); setAdjust(null); setDraw("none"); setDraft([]);
+    globeRef.current?.setDraft(null);
+  };
+
+  /** Only a confirmed area reaches the diagnosis API, and it is exactly
+   * the geometry on the map: every piece, holes left out. */
+  const analyze = (tg: AnalysisTarget) => {
+    setTarget(tg); setFieldOpen(true);
+    setSelection(null); setAdjust(null); setFieldsView(null);
+    globeRef.current?.setDraft(null);
+    globeRef.current?.fitRing(multiPoints(tg.geom), coveredBottom());
+  };
+
+  const confirmSelection = () => {
+    if (!selection) return;
+    analyze({ geom: selection.geom, areaLabel: t(selection.approx
+      ? "analyze.selectionApprox" : "analyze.selection") });
+  };
+
+  const analyzeOption = (f: Field, o: AreaOption) =>
+    analyze({ geom: o.geom, areaLabel: areaLabel(o), fieldName: f.name,
+              fieldHa: fieldHa(f) });
+
+  const saveSelection = (name: string) => {
+    if (!selection) return;
+    const f = saveField({ name, geom: selection.geom });
+    refreshFields();
+    setSelection(null); setAdjust(null);
+    setShownField(f.id); setFieldsView("list");
+  };
+
+  /** "Ajustar selección": read roads, tracks and built-up land from the
+   * OpenStreetMap vector tiles and cut the original outline into pieces.
+   * When nothing usable is left, nothing is offered in its place. */
+  const startAdjust = async () => {
+    if (!selection) return;
+    const g = globeRef.current;
+    setAdjust({ status: "loading", on: [], unverified: [] });
+    g?.fitRing(selection.original, coveredBottom());
+    const read = g ? await g.readLandUse() : null;
+    const unverified: string[] = [];
+    let roads = read?.roads ?? [];
+    if (!read) {
+      unverified.push("adjust.cov.none");
+    } else {
+      if (read.zoom < DRAW_ZOOM) unverified.push("adjust.cov.tracks");
+      const [w, so, e, n] = read.bounds;
+      if (selection.original.some(([la, lo]) =>
+          la < so || la > n || lo < w || lo > e)) {
+        unverified.push("adjust.cov.outside");
+      }
+      roads = roads.filter((r) => ROAD_HALF_WIDTH[r.cls]);
+    }
+    unverified.push("adjust.cov.osm");
+    const result = splitSelection([[selection.original]],
+      { roads, landuse: read?.landuse ?? [] });
+    setAdjust({ status: "ready", result,
+                on: result.pieces.map(() => true), unverified });
+  };
+
+  const applyAdjust = () => {
+    if (!adjust?.result || !selection) return;
+    const geom = adjust.result.pieces.filter((_, i) => adjust.on[i])
+      .map((p) => p.geom);
+    if (!geom.length) return;
+    setAdjust(null);
+    // a cut point selection is still approximate; land use was just read
+    setSelection({ ...selection, geom, checked: true });
+  };
+
+  /** Mis campos */
+  const openFields = () => {
+    setDraw("none"); setSelection(null); setAdjust(null);
+    refreshFields(); setFieldsView("list");
+  };
+  const showField = (f: Field) => {
+    setShownField(f.id);
+    globeRef.current?.fitRing(multiPoints(f.geom), coveredBottom());
+  };
+  const openDetail = (f: Field) => {
+    showField(f); setPendingZone(null); setAreaChoice("all");
+    setFieldsView({ id: f.id });
+  };
+  const drawZone = (fieldId: string, m: "free" | "draw") => {
+    targetRef.current = { kind: "zone", fieldId };
+    setPendingZone(null); setFreeError(false);
+    setDraft([]); setDraw(m);
+  };
+
+  const goTo = (lat: number, lon: number) => {
+    globeRef.current?.flyTo(lat, lon, DRAW_ZOOM - 1, coveredBottom());
+    globeRef.current?.setMarker([lat, lon]);
+  };
+
+  /** "Acercar para dibujar": zoom on the current centre. */
+  const zoomToDraw = () => {
+    const c = globeRef.current?.center();
+    if (c) globeRef.current?.flyTo(c.lat, c.lon, DRAW_ZOOM + 1);
+  };
+
+  const undoPoint = () => {
+    const n = draftRef.current.slice(0, -1);
+    setDraft(n);
+    globeRef.current?.setDraft(n.length ? n : null);
+  };
+
+  const cancelDraw = () => {
+    setDraw("none"); setDraft([]);
+    globeRef.current?.setDraft(null);
+    if (targetRef.current.kind === "zone") {
+      setFieldsView({ id: targetRef.current.fieldId });
+      targetRef.current = { kind: "selection" };
+    }
+  };
+
+  /** Back to the method chooser with no plot selected. */
+  const changePlot = () => {
+    setFieldOpen(false); setTarget(null); setSelection(null); setAdjust(null);
+    startField("none");
   };
 
   const demoPlot = () => {
     const r = circleApprox(DEMO_PLOT.lat, DEMO_PLOT.lon);
-    setMode("field"); setDraw("none"); setLot(null);
-    setRing(r); setFieldOpen(true);
-    globeRef.current?.flyTo(DEMO_PLOT.lat, DEMO_PLOT.lon, 11,
-      window.innerWidth < 600 ? Math.round(window.innerHeight * 0.45)
-        : 0);
-    globeRef.current?.setDraft(r);
+    setMode("field"); setDraw("none"); setSelection(null); setAdjust(null);
+    setFieldsView(null);
+    setTarget({ geom: [[r]], areaLabel: t("analyze.demo") });
+    setFieldOpen(true);
+    globeRef.current?.flyTo(DEMO_PLOT.lat, DEMO_PLOT.lon, 11);
     country.current = "AR";
   };
 
-  // Orin demo lots (contract 2.9): ring straight from the geojson
-  // polygon; the panel knows rotations don't cover these crops
-  const orinLot = (f: OrinLots["features"][number]) => {
-    const ring = (f.geometry.coordinates[0] ?? [])
-      .slice(0, -1)
-      .map(([lo, la]) => [la, lo] as [number, number]);
-    if (ring.length < 3) return;
-    const clat = ring.reduce((s, p) => s + p[0], 0) / ring.length;
-    const clon = ring.reduce((s, p) => s + p[1], 0) / ring.length;
-    setMode("field"); setDraw("none");
-    setLot({ name: f.properties.name,
-             crop_label: f.properties.crop_label,
-             synthetic: f.properties.synthetic });
-    setRing(ring); setFieldOpen(true);
-    globeRef.current?.flyTo(clat, clon, 13,
-      window.innerWidth < 600 ? Math.round(window.innerHeight * 0.45)
-        : 0);
-    globeRef.current?.setDraft(ring);
+  const zoneField = targetRef.current.kind === "zone"
+    ? fields.find((x) => targetRef.current.kind === "zone" &&
+                         x.id === targetRef.current.fieldId)
+    : undefined;
+
+  const orinLot = (feature: OrinLots["features"][number]) => {
+    const geom: Multi = [feature.geometry.coordinates.map((ring) =>
+      ring.slice(0, -1).map(([lon, lat]): LatLon => [lat, lon]))];
+    if ((geom[0][0]?.length ?? 0) < 3) return;
+    const { name, crop_label, synthetic } = feature.properties;
+    setMode("field");
+    setDraw("none");
     country.current = "AR";
+    analyze({
+      geom,
+      areaLabel: [name, crop_label].filter(Boolean).join(" · "),
+      demoLot: { name, crop_label, synthetic },
+    });
   };
 
   useEffect(() => {
-    orinLots().then((d) => setLots(d?.features ?? []));
+    orinLots().then((data) => setLots((data?.features ?? []).map((feature) => ({
+      ...feature,
+      properties: {
+        ...feature.properties,
+        synthetic: data?.synthetic || feature.properties.synthetic,
+      },
+    }))));
   }, []);
 
   return (
@@ -155,33 +456,52 @@ export default function App() {
       <header className="topbar">
         <h1>{APP_NAME}</h1>
         <nav>
-          <button aria-pressed={mode === "fire"}
-                  onClick={() => { setMode("fire"); setPanelOpen(true); }}>
+          <button aria-pressed={mode === "field"}
+                  onClick={() => startField("none")}>{t("nav.field")}</button>
+          <button aria-pressed={mode === "fire"} onClick={openFire}>
             {t("nav.fire")}</button>
           <button aria-pressed={mode === "live"}
                   onClick={() => setMode("live")}>{t("nav.live")}</button>
-          <button aria-pressed={mode === "field"}
-                  onClick={() => setMode("field")}>{t("nav.field")}</button>
         </nav>
         <div className="spacer" />
         <button className="meth-link"
                 onClick={() => setMethodsOpen(true)}>
           <span className="ml-long">{t("meth.link")}</span>
           <span className="ml-short">{t("meth.short")}</span></button>
-        <button onClick={() => setLang(lang === "es" ? "en" : "es")}
+        <button className="lang-btn"
+                onClick={() => setLang(lang === "es" ? "en" : "es")}
                 aria-label="language">{t("nav.lang")}</button>
       </header>
 
-      <div className="map-wrap">
+      <div className={`map-wrap${mode === "field" && draw !== "none" ? " marking" : ""}`}>
+        {mode === "field" && draw === "free" && (
+          <FreehandLayer
+            unproject={(x, y) => globeRef.current?.unproject(x, y) ?? [0, 0]}
+            onStroke={(pts) => globeRef.current?.setDraft(pts)}
+            onDone={(r) => {
+              if (r) { setFreeError(false); onShape(r, false); }
+              else { setFreeError(true); globeRef.current?.setDraft(null); }
+            }} />)}
         <div ref={mapDiv} className="map" role="application"
              aria-label="mapa" />
-        {mode !== "welcome" && <div className="reticle" aria-hidden="true" />}
+        {mode === "fire" && <div className="reticle" aria-hidden="true" />}
+        {mode === "field" && !fieldOpen && (
+          <div className="field-basemap" role="group" aria-label={t("field.map.style")}>
+            <button type="button" aria-pressed={satellite}
+                    onClick={() => setSatellite(true)}>{t("field.map.satellite")}</button>
+            <button type="button" aria-pressed={!satellite}
+                    onClick={() => setSatellite(false)}>{t("field.map.streets")}</button>
+          </div>
+        )}
 
         {mode === "welcome" && (
           <div className="welcome" style={{ position: "absolute", inset: 0,
             display: "flex", background: "var(--bg)" }}>
             <div style={{ margin: "auto" }}>
-              <Welcome onLocate={locate} onExplore={() => setMode("fire")} />
+              <Welcome onAnalyze={() => startField("none")} onDemo={demoPlot}
+                       onLocate={locate}
+                       onExplore={openFire}
+                       onLive={() => setMode("live")} />
             </div>
           </div>)}
 
@@ -194,31 +514,66 @@ export default function App() {
             <LiveControls globe={globe} country={country.current} />
           </Suspense>)}
 
-        {mode === "field" && !fieldOpen && (
-          <div className="controls">
-            <div className="row">
-              <strong>{t("field.cta")}</strong>
-            </div>
-            <p className="muted" style={{ margin: 0 }}>{t("field.how")}</p>
-            <div className="row">
-              <button onClick={() => startField("draw")}>{t("field.draw")}</button>
-              <button onClick={() => startField("point")}>{t("field.point")}</button>
-              <button onClick={demoPlot}>{t("field.demo")}</button>
-              {lots.map((f) => (
-                <button key={f.properties.id}
-                        onClick={() => orinLot(f)}>
-                  {f.properties.crop_label}</button>))}
-            </div>
-            {draw === "draw" && (
-              <div className="row">
-                <span className="muted">{draft.length} pts</span>
-                <button className="primary" onClick={finishDraw}
-                        disabled={draft.length < 3}>{t("field.finish")}</button>
-              </div>)}
-            <p className="muted" style={{ margin: 0 }}>{t("field.savedLocal")}</p>
-          </div>)}
-        {mode === "field" && draw !== "none" &&
-          <div className="draw-hint">{t("field.how")}</div>}
+        {mode === "field" && !fieldOpen && selection && adjust && (
+          <AdjustPanel adjust={adjust}
+            onToggle={(i) => setAdjust({ ...adjust,
+              on: adjust.on.map((v, k) => (k === i ? !v : v)) })}
+            onApply={applyAdjust}
+            onEditPiece={(i) => editRing(adjust.result!.pieces[i].geom[0])}
+            onOriginal={() => {
+              setAdjust(null);
+              setSelection({ ...selection, geom: [[selection.original]],
+                             checked: false });
+            }}
+            onRedraw={() => editRing(selection.approx ? null : selection.original)} />)}
+        {mode === "field" && !fieldOpen && selection && !adjust && (
+          <SelectionReview geom={selection.geom} approx={selection.approx}
+                           check={landCheck} onEdit={editSelection}
+                           onCancel={cancelSelection}
+                           onConfirm={confirmSelection}
+                           onAdjust={startAdjust} onSave={saveSelection} />)}
+        {mode === "field" && !fieldOpen && !selection && draw === "none" &&
+          fieldsView === "list" && (
+          <FieldsList fields={fields}
+            onOpen={showField}
+            onZones={openDetail}
+            onAnalyze={openDetail}
+            onRename={(f, n) => { renameField(f.id, n); refreshFields(); }}
+            onDelete={(f) => { deleteField(f.id); refreshFields();
+                               if (shownField === f.id) setShownField(null); }}
+            onClose={() => { setFieldsView(null); setShownField(null); }} />)}
+        {mode === "field" && !fieldOpen && !selection && draw === "none" &&
+          fieldsView && fieldsView !== "list" && openField && (
+          <FieldDetail key={openField.id} field={openField} pending={pendingZone}
+            choice={areaChoice} onChoose={setAreaChoice}
+            onAnalyze={(o) => analyzeOption(openField, o)}
+            onDrawZone={(m) => drawZone(openField.id, m)}
+            onSaveZone={(name, crop) => {
+              if (pendingZone) addZone(openField.id, { name, crop, geom: pendingZone.geom });
+              setPendingZone(null); refreshFields();
+            }}
+            onDiscardZone={() => setPendingZone(null)}
+            onUpdateZone={(id, p) => { updateZone(openField.id, id, p); refreshFields(); }}
+            onRemoveZone={(id) => { removeZone(openField.id, id); refreshFields(); }}
+            onBack={() => { setPendingZone(null); setAreaChoice("all");
+                            setFieldsView("list"); }} />)}
+        {mode === "field" && !fieldOpen && !selection &&
+          (draw !== "none" || !fieldsView) && (
+          <FieldPicker draw={draw} points={draft.length}
+                       onPick={startField} onDemo={demoPlot}
+                       demoLots={lots.map((feature) => ({
+                         id: feature.properties.id,
+                         label: feature.properties.crop_label || feature.properties.name,
+                         onOpen: () => orinLot(feature),
+                       }))}
+                       onFinish={finishDraw} onUndo={undoPoint}
+                       onCancel={cancelDraw} onGo={goTo}
+                       onFields={openFields} fieldsCount={fields.length}
+                       freeError={freeError}
+                       zoomLow={zoom < DRAW_ZOOM - 0.5} onZoomIn={zoomToDraw}
+                       context={zoneField
+                         ? t("zones.drawingFor", { name: zoneField.name })
+                         : undefined} />)}
       </div>
 
       {mode === "fire" && area && (
@@ -229,11 +584,9 @@ export default function App() {
         </Suspense>)}
       {mode === "field" && (
         <Suspense fallback={null}>
-          <FieldPanel ring={ring} open={fieldOpen} lot={lot}
-                      onMethods={() => setMethodsOpen(true)}
-                      onClose={() => { setFieldOpen(false); setRing(null);
-                        setLot(null);
-                        globeRef.current?.setDraft(null); }} />
+          <FieldPanel target={target} open={fieldOpen}
+                      onClose={changePlot} onChangePlot={changePlot}
+                      onMethods={() => setMethodsOpen(true)} />
         </Suspense>)}
       <MethodsDrawer open={methodsOpen}
                      onClose={() => setMethodsOpen(false)} />

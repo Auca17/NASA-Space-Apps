@@ -1,50 +1,72 @@
-/** Live mode: /api/live for the visible bbox, points or cells. */
-import { useEffect, useRef, useState } from "react";
+/** Live mode: /api/live for the visible bbox, as detections (points) or
+ * cells for large views. Queries again when the map stops moving or the
+ * time window changes; a late answer to an older query is ignored. */
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useT } from "../../i18n";
-import { apiLive } from "../../api";
-import type { LiveResponse } from "../../api/types";
+import { apiLiveResult } from "../../api";
+import { summarizeLive, type LiveSummary } from "../../domain/live";
 import { emergencyText } from "../../domain/risk";
 import type { GlobeHandle } from "../globe/GlobeView";
-import type maplibregl from "maplibre-gl";
+
+const COLORS = ["interpolate", ["linear"], ["get", "n"],
+  0, "#f6d746", 5, "#e0532a", 20, "#8c1d40"];
+
+type State =
+  | { kind: "loading" }
+  | { kind: "error" }
+  | { kind: "done"; sum: LiveSummary; at: Date };
 
 export function LiveControls({ globe, country }: {
   globe: GlobeHandle | null; country: string | null;
 }) {
-  const { t } = useT();
+  const { t, lang } = useT();
   const [window_, setWindow_] = useState("24h");
-  const [age, setAge] = useState<number | null>(null);
-  const [n, setN] = useState(0);
-  const mapRef = useRef<maplibregl.Map | null>(null);
+  const [state, setState] = useState<State>({ kind: "loading" });
+  const seq = useRef(0);
+  const windowRef = useRef(window_);
+  windowRef.current = window_;
 
-  const load = async (w: string) => {
+  const load = useCallback(async () => {
     if (!globe) return;
-    const bbox = globe.bounds();
-    const res: LiveResponse | null = await apiLive(w, bbox);
-    if (!res) { setN(0); return; }
-    const cells = new Map<string, number>();
-    if (res.mode === "cells" && res.cells) {
-      for (const cc of res.cells) cells.set(cc.h3, cc.n);
-    } else if (res.points) {
-      for (const p of res.points) {
-        const { latLngToCell } = await import("h3-js");
-        const h = latLngToCell(p.lat, p.lon, 5);
-        cells.set(h, (cells.get(h) ?? 0) + 1);
-      }
+    const id = ++seq.current;
+    setState({ kind: "loading" });
+    // never leave the previous view's hotspots on screen while waiting
+    globe.setCells(new Map(), COLORS);
+    const view = globe.bounds();
+    const res = await apiLiveResult(windowRef.current, view);
+    if (id !== seq.current) return; // a newer query is under way
+    if (!res.ok) {
+      setState({ kind: "error" });
+      return;
     }
-    globe.setCells(cells, [
-      "interpolate", ["linear"], ["get", "n"],
-      0, "#f6d746", 5, "#e0532a", 20, "#8c1d40",
-    ]);
-    setN(res.points?.length ?? res.cells?.length ?? 0);
-    if (res.generated_at) {
-      setAge(Math.max(0, Math.round(
-        (Date.now() - Date.parse(res.generated_at)) / 3_600_000)));
-    }
-    void mapRef;
-  };
+    let sum: LiveSummary;
+    try { sum = summarizeLive(res.data, view); }
+    catch { setState({ kind: "error" }); return; }
+    globe.setCells(sum.cells, COLORS);
+    setState({ kind: "done", sum, at: new Date() });
+  }, [globe]);
 
-  useEffect(() => { load(window_); // eslint-disable-next-line
-  }, [window_, globe]);
+  useEffect(() => { load(); }, [load, window_]);
+  useEffect(() => globe?.onMove(() => { load(); }), [globe, load]);
+  // leaving the mode: a pending answer must not paint the map
+  useEffect(() => () => { seq.current++; }, []);
+
+  const time = (d: Date) => d.toLocaleTimeString(lang === "en" ? "en" : "es",
+    { hour: "2-digit", minute: "2-digit" });
+
+  let msg: React.ReactNode;
+  if (state.kind === "loading") msg = t("live.loading");
+  else if (state.kind === "error") msg = t("live.error");
+  else {
+    const s = state.sum;
+    msg = <>
+      {s.count === 0 ? t("live.noData")
+        : s.unit === "cells"
+          ? t("live.cells", { n: s.count, d: s.detections })
+          : t("live.detections", { n: s.count })}
+      {" · "}{t("live.queriedAt", { t: time(state.at) })}
+    </>;
+  }
 
   return (
     <div className="controls">
@@ -56,11 +78,14 @@ export function LiveControls({ globe, country }: {
                     onClick={() => setWindow_(w)}>{w}</button>
           ))}
         </span>
-        <span className="muted" aria-live="polite">
-          {n === 0 ? t("live.noData") : `${n}`}
-          {age != null && ` · ${t("live.updated", { h: age })}`}
-        </span>
       </div>
+      <p className={`live-status${state.kind === "error" ? " err" : ""}`}
+         role="status" aria-live="polite">{msg}</p>
+      {state.kind === "error" && (
+        <button onClick={() => load()}>{t("live.retry")}</button>)}
+      {state.kind === "done" && state.sum.failed.length > 0 && (
+        <p className="notice" role="alert">
+          {t("live.partial", { s: state.sum.failed.join(", ") })}</p>)}
       <p className="notice" style={{ margin: 0 }}>
         {t("live.notice")}<br />{emergencyText(country, t)}
       </p>

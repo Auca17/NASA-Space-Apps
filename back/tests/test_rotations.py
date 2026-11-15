@@ -439,3 +439,43 @@ def test_harvest_extended_but_cycle_end_drives_water():
     # julio no aporta al ciclo del sorgo (madura 05-15, cosecha 07-15):
     # con lluvia plana el disponible es mayor que con el julio húmedo
     assert avail < avail_flat
+
+
+def test_strategies_carry_english_name():
+    from app.services.knowledge import KNOWLEDGE
+    import app.services.rotations as eng
+    out = eng.run(DIAG, None, {"soil": 5}, {}, ZONE)
+    assert out["strategies"]
+    by_id = {r.id: r for r in KNOWLEDGE.rotations}
+    for s in out["strategies"]:
+        if s["id"] in by_id and by_id[s["id"]].name.get("en"):
+            assert s["name_en"] == by_id[s["id"]].name["en"]
+
+
+# regression (review #6): "Maíz – soja" was said to add a winter crop
+def _rot(rid):
+    from app.services.knowledge import KNOWLEDGE
+    return next(r for r in KNOWLEDGE.rotations if r.id == rid)
+
+
+def test_why_describes_the_real_sequence_without_a_winter_crop():
+    from app.services.rotations import _why
+    w = _why(_rot("maiz-soja"), False, {"soil": 5}, DIAG, {})
+    assert "invierno" not in w.replace("sin cultivo de invierno", "")
+    assert "sin cultivo de invierno" in w
+    assert "Maíz (sep–mar)" in w and "Soja (nov–abr)" in w
+
+
+def test_why_names_the_winter_crop_when_there_is_one():
+    from app.services.rotations import _why
+    w = _why(_rot("trigo-soja2-maiz"), False, {"soil": 5}, DIAG, {})
+    assert "cultivo de invierno: Trigo (jun–dic)" in w
+    w2 = _why(_rot("soja-centeno"), False, {}, DIAG, {})
+    assert "Centeno (cobertura) (abr–sep)" in w2 and "cultivo de invierno" in w2
+
+
+def test_why_states_bare_soil_days_from_the_indicator():
+    from app.services.rotations import _why, indicators
+    rot = _rot("maiz-soja")
+    bare = indicators(rot, DIAG, None, {})["bare_soil_days"]
+    assert f"{bare} días" in _why(rot, False, {}, DIAG, {})

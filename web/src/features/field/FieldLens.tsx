@@ -14,18 +14,28 @@ import type {
 import type { EcostressDemo } from "../../api";
 import { OrinCard, SyntheticBanner } from "./OrinCard";
 import {
-  benefitValue, cardValueText, compareDeltas, deltaText, groupVariants,
-  groupedCards, indicatorLabelKey, irrigationNeedMm, measureReqPairs,
-  orderNote, prioWeights, rankNote,
-  seqSegments, summaryFacts, verdictDelta, PRIORITY_IDS,
+  benefitValue, benefitRows, cardValueText, compareDeltas, deltaText,
+  groupVariants, groupedCards, indicatorLabelKey, irrigationNeedMm,
+  measureReqPairs, orderNote, prioWeights, rankNote,
+  seqSegments, verdictDelta, PRIORITY_IDS,
   type Scenario,
 } from "../../domain/rotations";
+import { plainSummary, referenceText, localizeDiag } from "../../domain/clarity";
+import {
+  plotBody, multiHa, type Multi, type PlotBody,
+} from "../../domain/selection";
 
-type LatLonRing = [number, number][];
-/** Back contract: {polygon:{coordinates:[[[lon,lat],..closed]]}} or
- * {point:[lat,lon],ha}. */
-type PlotBody = { polygon: { coordinates: [number,number][][] } } |
-                { point: [number, number]; ha: number };
+/** The exact area sent to the diagnosis, and how to name it. */
+export type AnalysisTarget = {
+  geom: Multi;
+  /** "Todo el campo", "Pieza 2", "Zona Norte (maíz)", "Lote de ejemplo" */
+  areaLabel: string;
+  /** saved field name, when the area belongs to one */
+  fieldName?: string;
+  /** whole field area, to say how much of it is analysed */
+  fieldHa?: number;
+  demoLot?: DemoLot;
+};
 
 const LS_PLOTS = "fs_plots";
 
@@ -60,7 +70,7 @@ function RainChart({ card, t }: {
     t: (k: string, v?: Record<string, string | number>) => string }) {
   const mm = card.rain_monthly_mm;
   if (!mm || mm.length !== 12) return null;
-  const months = ["E", "F", "M", "A", "M", "J", "J", "A", "S", "O", "N", "D"];
+  const months = t("ui.monthInitials").split(",");
   const max = Math.max(...mm, 1);
   return (
     <div className="rain-chart">
@@ -113,7 +123,9 @@ function DiagTile({ c, t, fmt }: {
     c: DiagCard;
     t: (k: string, v?: Record<string, string | number>) => string;
     fmt: Intl.NumberFormat }) {
-  const val = cardValueText(c, fmt);
+  // string values are backend ids (bajo, flat…): show them as words
+  const vkey = typeof c.value === "string" ? `cardval.${c.value}` : null;
+  const val = vkey && t(vkey) !== vkey ? t(vkey) : cardValueText(c, fmt);
   return (
     <div className="dtile">
       <div className="dtile-head">
@@ -162,7 +174,7 @@ function Afinity({ score, t }: {
 function SeqBar({ s, t }: {
     s: Strategy;
     t: (k: string, v?: Record<string, string | number>) => string }) {
-  const months = ["E", "F", "M", "A", "M", "J", "J", "A", "S", "O", "N", "D"];
+  const months = t("ui.monthInitials").split(",");
   return (
     <div className="seqbars">
       {s.sequence.map((seq, i) => {
@@ -273,23 +285,40 @@ function Section({ title, count, open = false, children }: {
     </details>);
 }
 
-function StrategyCard({ s, t, current, variants, explain, rank }: {
+/** i18n key for a verdict, switched to its reference-scenario wording
+ * when the baseline is the zone's typical rotation. */
+const REF_VERDICT: Record<string, string> = {
+  "rot.verdict.current": "rot.verdict.reference",
+  "rot.verdict.parts": "rot.verdict.partsRef",
+  "rot.verdict.balanced": "rot.verdict.balancedRef",
+};
+
+function StrategyCard({ s, t, current, variants, explain, rank,
+                        reference = false }: {
     s: Strategy;
     t: (k: string, v?: Record<string, string | number>) => string;
     current?: Strategy | null;
     variants?: Strategy[];
     explain?: string;
-    rank?: { key: string; n?: number } | null }) {
+    rank?: { key: string; n?: number } | null;
+    reference?: boolean }) {
   const irr = irrigationNeedMm(s);
   const vd = verdictDelta(s, current);
+  const vkey = reference ? REF_VERDICT[vd.key] ?? vd.key : vd.key;
   const verdict = vd.key === "rot.verdict.parts"
-    ? t(vd.key, { parts: vd.parts.map((k) => t(k))
+    ? t(vkey, { parts: vd.parts.map((k) => t(k))
                              .join(` ${t("ui.and")} `) })
-    : t(vd.key);
+    : t(vkey);
+  const isRef = reference && s.is_current;
+  const why = isRef ? t("rot.ref.why") : s.why;
+  const explainText = isRef ? t("rot.ref.explain", { name: s.name })
+    : explain && referenceText(explain, reference);
   return (
     <article className={`card strategy${s.is_current ? " current" : ""}`}>
       <h3>{s.name}
-        {s.is_current && <span className="badge"> {t("rot.current")}</span>}
+        {s.is_current && (
+          <span className={`badge role${isRef ? " ref" : ""}`}>
+            {t(isRef ? "rot.reference" : "rot.current")}</span>)}
         {variants?.map((v) => (
           <span key={v.id} className="badge variante" title={v.why}>
             {" "}{t("rot.variante")}: {v.name}</span>))}
@@ -298,19 +327,17 @@ function StrategyCard({ s, t, current, variants, explain, rank }: {
       {rank && <p className="rank-note">{t(rank.key, { n: rank.n ?? "" })}</p>}
       <Afinity score={s.score} t={t} />
       <Section title={t("rot.why")} open>
-        <p>{s.why}</p>
-        {explain && <p className="muted">{explain}</p>}
+        <p>{why}</p>
+        {explainText && <p className="muted">{explainText}</p>}
       </Section>
-      {(s.benefits && Object.keys(s.benefits).length > 0 || irr != null) && (
-        <Section title={t("rot.benefits")} open>
+      {/* changes versus the baseline; the baseline itself has none */}
+      {!s.is_current &&
+        (s.benefits && Object.keys(s.benefits).length > 0 || irr != null) && (
+        <Section title={t(reference ? "rot.benefitsRef" : "rot.benefits")} open>
           <ul>
-            {Object.entries(s.benefits).map(([k, v]) => {
-              const lk = indicatorLabelKey(k);
-              const bv = benefitValue(v);
-              return lk == null ? null : (
-                <li key={k}>{t(lk)}: {bv.startsWith("field.")
-                  ? t(bv) : bv}</li>);
-            })}
+            {benefitRows(s.benefits ?? {}).map((b) => (
+              <li key={b.id}>{t(b.key)}: {b.value.startsWith("field.")
+                ? t(b.value) : b.value}</li>))}
             {irr != null && <li>{t("rot.irrigated", { mm: irr })}</li>}
           </ul>
         </Section>)}
@@ -342,8 +369,9 @@ function StrategyCard({ s, t, current, variants, explain, rank }: {
 
 /** Comparison table: each alternative vs the current rotation on the
  * four comparison indicators (arrows + words, never color alone). */
-function CmpTable({ strategies, t }: {
+function CmpTable({ strategies, t, reference = false }: {
     strategies: Strategy[];
+    reference?: boolean;
     t: (k: string, v?: Record<string, string | number>) => string }) {
   const current = strategies.find((s) => s.is_current);
   const alts = strategies.filter((s) => !s.is_current);
@@ -354,11 +382,13 @@ function CmpTable({ strategies, t }: {
           { d: Math.abs(d.delta) });
   return (
     <details className="sec cmp-wrap">
-      <summary>{t("rot.cmp.title")}
+      <summary>{t(reference ? "rot.cmp.titleRef" : "rot.cmp.title")}
         <span className="count"> {alts.length}</span></summary>
       <div style={{ overflowX: "auto" }}>
         <table className="cal cmp">
-          <thead><tr><th scope="col"></th>
+          <thead><tr><th scope="col">
+            {t(reference ? "rot.reference" : "rot.current")}: {current.name}
+          </th>
             {alts.map((a) => <th key={a.id} scope="col">{a.name}</th>)}
           </tr></thead>
           <tbody>
@@ -381,12 +411,15 @@ function CmpTable({ strategies, t }: {
 
 /** Rotations results block — exported for tests (Patagonia zero-state). */
 export function RotationResults({ rots, diag, explain, t,
-    explainMode, onMethods }: {
+    explainMode, onMethods, reference = false }: {
     rots: RotationsResponse;
     diag: DiagnoseResponse | null;
     explain: Record<string, string>;
     explainMode?: string;
     onMethods?: () => void;
+    /** true when the user answered "No sé": the baseline is the zone's
+     * typical rotation, shown as a reference scenario. */
+    reference?: boolean;
     t: (k: string, v?: Record<string, string | number>) => string }) {
   const current = rots.strategies.find((s) => s.is_current) ?? null;
   const groups = groupVariants(rots.strategies);
@@ -436,13 +469,18 @@ export function RotationResults({ rots, diag, explain, t,
           {rots.strategies.length === 1 &&
             rots.strategies[0].is_current && (
             <p className="muted">{t("rot.onlyCurrent")}</p>)}
-          <CmpTable strategies={rots.strategies} t={t} />
+          {reference && current && (
+            <p className="notice ref-note" role="status">
+              {t("rot.refNote")}</p>)}
+          <CmpTable strategies={rots.strategies} t={t}
+                    reference={reference} />
           <div className="strategies" ref={trackRef} onScroll={onScroll}>
             {groups.map((g) => (
               <StrategyCard key={g.primary.id} s={g.primary} t={t}
                             current={current} variants={g.variants}
                             explain={explain[g.primary.id]}
-                            rank={rankNote(g.primary.id, rots)} />))}
+                            rank={rankNote(g.primary.id, rots)}
+                            reference={reference} />))}
           </div>
           {groups.length > 1 && (
             <div className="carousel-dots">
@@ -474,11 +512,13 @@ export interface DemoLot {
   synthetic?: boolean;
 }
 
-export function FieldPanel({ ring, open, onClose, lot, onMethods }: {
-  ring: LatLonRing | null; open: boolean; onClose: () => void;
-  lot?: DemoLot | null;
+export function FieldPanel({ target, open, onClose, onChangePlot,
+                             onMethods }: {
+  target: AnalysisTarget | null; open: boolean; onClose: () => void;
+  onChangePlot: () => void;
   onMethods?: () => void;
 }) {
+  const lot = target?.demoLot;
   const { t, lang } = useT();
   const [diag, setDiag] = useState<DiagnoseResponse | null>(null);
   const [orin, setOrin] = useState<OrinValidation | null>(null);
@@ -494,6 +534,9 @@ export function FieldPanel({ ring, open, onClose, lot, onMethods }: {
   const [cons, setCons] = useState<Record<string, boolean>>({});
   const [step, setStep] = useState<1 | 2>(1);
   const [busy, setBusy] = useState(false);
+  /** Whether the shown results used the regional reference rotation. */
+  const [refRun, setRefRun] = useState(false);
+  const formRef = useRef<HTMLDivElement>(null);
   const fmt = useMemo(() =>
     new Intl.NumberFormat(lang === "en" ? "en" : "es",
       { maximumFractionDigits: 1 }), [lang]);
@@ -509,12 +552,9 @@ export function FieldPanel({ ring, open, onClose, lot, onMethods }: {
   }, [lang]);
 
   const body = useMemo<PlotBody | null>(() =>
-    ring ? {
-      polygon: { coordinates: [[
-        ...ring.map(([la, lo]) => [lo, la] as [number, number]),
-        [ring[0][1], ring[0][0]] as [number, number],
-      ]] },
-    } : null, [ring]);
+    target ? plotBody(target.geom) : null, [target]);
+  const fmtHa = (v: number) => fmt.format(v);
+  const targetHa = target ? multiHa(target.geom) : 0;
 
   useEffect(() => {
     if (!open || !body) return;
@@ -575,6 +615,7 @@ export function FieldPanel({ ring, open, onClose, lot, onMethods }: {
       },
     });
     setRots(r);
+    setRefRun(current === "unknown");
     if (r) {
       const e = await apiExplain(r); // explain takes the rotations response
       if (e) {
@@ -586,41 +627,79 @@ export function FieldPanel({ ring, open, onClose, lot, onMethods }: {
     setBusy(false);
   };
 
-  const facts = diag ? summaryFacts(diag) : [];
+  const summary = diag ? plainSummary(diag, lang) : [];
+  const view = useMemo(() => diag && localizeDiag(diag, lang), [diag, lang]);
+  const rotsView = useMemo<RotationsResponse | null>(() =>
+    rots && lang === "en" ? {
+      ...rots,
+      strategies: rots.strategies.map((s) => ({
+        ...s, name: s.name_en || s.name,
+        measures: s.measures?.map((m) => ({
+          ...m, name: m.name_en || m.name, why: m.why_en || m.why })),
+      })),
+    } : rots, [rots, lang]);
+  const tv = (vars: Record<string, string | number>) =>
+    Object.fromEntries(Object.entries(vars).map(([k, v]) =>
+      [k, typeof v === "string" && v.startsWith("risk.cat.") ? t(v) : v]));
+  const openCompare = () => {
+    setStep(2);
+    setTimeout(() => formRef.current?.scrollIntoView(
+      { behavior: "smooth", block: "start" }), 50);
+  };
 
   return (
     <BottomSheet open={open}>
       <div style={{ display: "flex", justifyContent: "space-between" }}>
-        <h3 style={{ margin: 0 }}>{t("field.cta")}</h3>
+        <h3 style={{ margin: 0 }}>{t("field.result.title")}</h3>
         <button onClick={onClose} aria-label={t("ui.close")}>✕</button>
       </div>
-      {lot && (
-        <p className="muted">{lot.name}{lot.crop_label
-          ? ` · ${lot.crop_label}` : ""}</p>)}
+      {target && (
+        <div className="analysis-scope">
+          <strong>{target.fieldName
+            ? `${target.fieldName} · ${target.areaLabel}` : target.areaLabel}</strong>
+          <div className="muted">
+            {target.fieldHa != null && Math.abs(target.fieldHa - targetHa) > 0.05
+              ? t("analyze.scopePart", { a: fmtHa(targetHa), b: fmtHa(target.fieldHa) })
+              : t("analyze.scopeAll", { a: fmtHa(targetHa) })}
+            {target.geom.length > 1 &&
+              <> · {t("analyze.scopePieces", { n: target.geom.length })}</>}
+          </div>
+        </div>)}
       {lot?.synthetic && <SyntheticBanner t={t} />}
       {busy && <p aria-live="polite">{t("field.diagnosing")}</p>}
       {!diag && !busy && <p className="muted">{t("panel.noData")}</p>}
 
       {diag && (
         <>
-          <p className="diag-summary">
-            {diag.zone
-              ? t("field.sum.l1z",
-                  { zone: t(`zone.${diag.zone}`),
-                    ha: fmt.format(diag.area_ha) })
-              : t("field.sum.l1", { ha: fmt.format(diag.area_ha) })}
-            <br />
-            {facts.map((f) => t(f.key, f.vars)).join("; ")}.
-          </p>
+          <section className="card plain-summary"
+                   aria-labelledby="plain-summary-h">
+            <h3 id="plain-summary-h">{t("field.plain.title")}</h3>
+            <p className="diag-summary">
+              {diag.zone
+                ? t("field.sum.l1z",
+                    { zone: t(`zone.${diag.zone}`),
+                      ha: fmt.format(diag.area_ha) })
+                : t("field.sum.l1", { ha: fmt.format(diag.area_ha) })}
+            </p>
+            {summary.length > 0 ? (
+              <dl className="plain-list">
+                {summary.map((g) => (
+                  <div key={g.group} className="plain-row">
+                    <dt>{t(g.group === "soil" ? "field.plain.soil.title"
+                      : `field.plain.${g.group}`)}</dt>
+                    <dd>{g.facts.map((f) => t(f.key, tv(f.vars))).join(" ")}</dd>
+                  </div>))}
+              </dl>
+            ) : <p className="muted">{t("field.noData")}</p>}
+            <p className="muted plain-scale">{t("field.plain.scale")}</p>
+          </section>
 
-          {groupedCards(diag.cards).map((g) => (
-            <section key={g.group} className="diag-group">
-              <h4>{t(`field.group.${g.group}`)}</h4>
-              <div className="diag-grid">
-                {g.cards.map((c) => (
-                  <DiagTile key={c.id} c={c} t={t} fmt={fmt} />))}
-              </div>
-            </section>))}
+          <div className="field-actions">
+            {step === 1 && !rots && !lot && (
+              <button className="primary" onClick={openCompare}>
+                {t("field.form.run")}</button>)}
+            <button onClick={onChangePlot}>{t("field.changePlot")}</button>
+          </div>
 
           <Card title={t("scen.title")} className="scen">
             <p className="muted">{t("scen.honest")}</p>
@@ -703,27 +782,62 @@ export function FieldPanel({ ring, open, onClose, lot, onMethods }: {
             </div>
           </Card>
 
-          {diag.measures && diag.measures.length > 0 && (
-            <MeasuresCard measures={diag.measures} cases={cases} t={t} />)}
+          {view?.measures && view.measures.length > 0 && (
+            <MeasuresCard measures={view.measures} cases={cases} t={t} />)}
 
-          <p className="muted">
-            {t("gloss.ndvi")}<Glossary term="ndvi" /> ·{" "}
-            {t("gloss.et")}<Glossary term="et" /> ·{" "}
-            {t("gloss.waterBalance")}<Glossary term="waterBalance" /> ·{" "}
-            {t("gloss.anomaly")}<Glossary term="anomaly" /> ·{" "}
-            {t("gloss.gdd")}<Glossary term="gdd" />
-          </p>
+          <details className="sec more">
+            <summary>{t("field.details")}</summary>
+            {groupedCards(view?.cards ?? []).map((g) => (
+              <section key={g.group} className="diag-group">
+                <h4>{t(`field.group.${g.group}`)}</h4>
+                <div className="diag-grid">
+                  {g.cards.map((c) => (
+                    <DiagTile key={c.id} c={c} t={t} fmt={fmt} />))}
+                </div>
+              </section>))}
+            <p className="muted">
+              {t("field.glossary")}:{" "}
+              {t("gloss.ndvi")}<Glossary term="ndvi" /> ·{" "}
+              {t("gloss.et")}<Glossary term="et" /> ·{" "}
+              {t("gloss.waterBalance")}<Glossary term="waterBalance" /> ·{" "}
+              {t("gloss.anomaly")}<Glossary term="anomaly" /> ·{" "}
+              {t("gloss.gdd")}<Glossary term="gdd" />
+            </p>
+          </details>
+
+          <details className="sec more">
+            <summary>{t("field.calendarMore")}</summary>
+            <div style={{ overflowX: "auto" }}>
+              <table className="cal" aria-label={t("calendar.aria")}>
+                <thead><tr><th></th>
+                  {(view ?? diag).calendar.months.map((m) =>
+                    <th key={m} scope="col">{m}</th>)}
+                </tr></thead>
+                <tbody>
+                  {diag.calendar.rows.map((row) => (
+                    <tr key={row.id}>
+                      <th scope="row">{t(`calendar.row.${row.id}`) !==
+                        `calendar.row.${row.id}`
+                        ? t(`calendar.row.${row.id}`)
+                        : row.label ?? row.id}</th>
+                      {row.levels.map((lv, i) => (
+                        <td key={i} style={{
+                          background: lv == null ? "transparent"
+                            : `color-mix(in srgb, var(--covered) ${lv * 30}%, var(--panel))`,
+                        }}>{levelText(lv)}</td>))}
+                    </tr>))}
+                </tbody>
+              </table>
+            </div>
+          </details>
 
           {lot && (
             <p className="notice" role="status">
               {t("orin.rot.none", { crop: lot.crop_label })}
             </p>)}
 
-          {step === 1 && !rots && !lot && (
-            <button className="primary" onClick={() => setStep(2)}>
-              {t("field.form.run")}</button>)}
-
-          {step === 2 && (
+          {step === 2 && !lot && (
+            <div ref={formRef}>
             <Card title={t("field.form.run")}>
               <label>{t("field.form.current")}
                 <select value={current}
@@ -733,6 +847,8 @@ export function FieldPanel({ ring, open, onClose, lot, onMethods }: {
                     <option key={r.id} value={r.id}>{r.label}</option>)}
                 </select>
               </label>
+              {current === "unknown" && (
+                <p className="muted">{t("field.form.dontKnowHint")}</p>)}
               <fieldset className="prio-set">
                 <legend>{t("prio.choose")}</legend>
                 <div className="prio-chips" role="group"
@@ -767,16 +883,20 @@ export function FieldPanel({ ring, open, onClose, lot, onMethods }: {
               <button className="primary" onClick={runRotations}
                       disabled={busy}>
                 {t("field.form.run")}</button>
-            </Card>)}
+            </Card>
+            </div>)}
         </>
       )}
 
-      {rots && <RotationResults rots={rots} diag={diag}
+      {rotsView && <RotationResults rots={rotsView} diag={diag}
                                 explain={explain} t={t}
                                 explainMode={explainMode ?? undefined}
-                                onMethods={onMethods} />}
+                                onMethods={onMethods}
+                                reference={refRun} />}
       {!rots && diag && <p className="notice">{t("rot.disclaimer")}</p>}
     </BottomSheet>
   );
 }
-export type { LatLonRing, PlotBody };
+export type { PlotBody };
+/** Exported for tests only. */
+export { DiagTile as DiagTileForTest };

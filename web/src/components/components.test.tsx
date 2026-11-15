@@ -52,6 +52,26 @@ describe("Glossary", () => {
 });
 
 describe("Welcome", () => {
+  it("leads with Analizar mi campo and offers the Pergamino demo", () => {
+    const onAnalyze = vi.fn(), onDemo = vi.fn(), onExplore = vi.fn(),
+          onLive = vi.fn();
+    render(
+      <I18nProvider>
+        <Welcome onAnalyze={onAnalyze} onDemo={onDemo} onLive={onLive}
+                 onLocate={() => {}} onExplore={onExplore} />
+      </I18nProvider>);
+    const primary = document.querySelector("button.primary");
+    expect(primary).toHaveTextContent("Analizar mi campo");
+    fireEvent.click(primary!);
+    expect(onAnalyze).toHaveBeenCalledOnce();
+    fireEvent.click(screen.getByRole("button", { name: /pergamino/i }));
+    expect(onDemo).toHaveBeenCalledOnce();
+    // fire and live stay reachable as secondary options
+    fireEvent.click(screen.getByRole("button", { name: /mapa de fuego/i }));
+    fireEvent.click(screen.getByRole("button", { name: /focos en vivo/i }));
+    expect(onExplore).toHaveBeenCalledOnce();
+    expect(onLive).toHaveBeenCalledOnce();
+  });
   it("falls back to city search when geolocation denied", async () => {
     // simulate geolocation denied
     const geo = { getCurrentPosition: vi.fn((_ok, err) => err?.({})) };
@@ -59,9 +79,10 @@ describe("Welcome", () => {
       value: geo, configurable: true });
     render(
       <I18nProvider>
-        <Welcome onLocate={() => {}} onExplore={() => {}} />
+        <Welcome onAnalyze={() => {}} onDemo={() => {}} onLive={() => {}}
+                 onLocate={() => {}} onExplore={() => {}} />
       </I18nProvider>);
-    fireEvent.click(screen.getByRole("button", { name: /ver mi zona/i }));
+    fireEvent.click(screen.getByRole("button", { name: /fuego cerca mío/i }));
     expect(await screen.findByText(/sin gps/i)).toBeInTheDocument();
     expect(screen.getByPlaceholderText(/buscar ciudad/i)).toBeInTheDocument();
   });

@@ -76,6 +76,8 @@ export function rowTotals(matrix: Map<number, number[]>):
 /** Downloadable CSV ("month,n") built in the browser. */
 export function toCsv(s: MonthlySeries): string {
   const lines = ["month,n"];
-  s.months.forEach((mo, i) => lines.push(`${mo},${s.values[i]}`));
+  // one decimal: monthly sums of fractional cell weights carry float noise
+  s.months.forEach((mo, i) =>
+    lines.push(`${mo},${Math.round(s.values[i] * 10) / 10}`));
   return lines.join("\n") + "\n";
 }
