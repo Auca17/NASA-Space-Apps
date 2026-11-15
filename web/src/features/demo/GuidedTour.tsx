@@ -1,32 +1,23 @@
-/** Guided demo tour (tasks 40 + 52): small hints anchored to real
+/** Guided demo tour (task 40): five small hints anchored to real
  * elements — the parcels, the fire/water badges, an alert, the
- * priorities, the calendar, the rotation cards and "Más información".
- * Steps come from demoTour.tourSteps per farm; `onStep` lets the
- * panel switch tabs while a step shows. It never blocks the map:
- * only the hint card itself takes pointer events. Escape or "Cerrar"
- * dismiss it for the session (sessionStorage). */
+ * priorities tab and "Más información". It never blocks the map: only
+ * the hint card itself takes pointer events. Escape or "Cerrar"
+ * dismiss it for good (localStorage). */
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useT } from "../../i18n";
-import { markTourSeen, type TourStep } from "./demoTour";
+import { markTourSeen, TOUR_STEPS } from "./demoTour";
 
 const MARGIN = 8;
 const HINT_W = 280;
 
-export function GuidedTour({ steps, onStep, onClose }: {
-  steps: readonly TourStep[];
-  /** Called when the visible step changes (index or tab hint). */
-  onStep?: (step: TourStep) => void;
-  onClose: () => void;
-}) {
+export function GuidedTour({ onClose }: { onClose: () => void }) {
   const { t } = useT();
   const [i, setI] = useState(0);
   const [pos, setPos] = useState<{ left: number; top: number } | null>(null);
   const hintRef = useRef<HTMLDivElement>(null);
-  const step = steps[i];
+  const step = TOUR_STEPS[i];
 
   const close = useCallback(() => { markTourSeen(); onClose(); }, [onClose]);
-
-  useEffect(() => { if (step) onStep?.(step); }, [step, onStep]);
 
   const place = useCallback((retried = false) => {
     const anchor = step ? document.querySelector(step.sel) : null;
@@ -58,13 +49,10 @@ export function GuidedTour({ steps, onStep, onClose }: {
   }, [step]);
 
   useEffect(() => {
-    // the tab switch for a step may take a render — retry placement
-    const retry = window.setTimeout(() => place(), 250);
     place();
     const onResize = () => place();
     window.addEventListener("resize", onResize);
-    return () => { window.removeEventListener("resize", onResize);
-                   window.clearTimeout(retry); };
+    return () => window.removeEventListener("resize", onResize);
   }, [place]);
 
   // Escape closes; focus the hint so screen readers announce the step.
@@ -84,13 +72,13 @@ export function GuidedTour({ steps, onStep, onClose }: {
            style={pos ? { left: pos.left, top: pos.top } :
                        { left: MARGIN, top: MARGIN, visibility: "hidden" }}>
         <p className="tour-step muted">
-          {t("demo.tour.step", { i: i + 1, n: steps.length })}</p>
+          {t("demo.tour.step", { i: i + 1, n: TOUR_STEPS.length })}</p>
         <p className="tour-text">{t(`${step.key}.title`)}</p>
         <p className="tour-sub muted">{t(`${step.key}.body`)}</p>
         <div className="row tour-actions">
           <button type="button" onClick={() => setI(i - 1)}
                   disabled={i === 0}>{t("demo.tour.back")}</button>
-          {i < steps.length - 1 ? (
+          {i < TOUR_STEPS.length - 1 ? (
             <button type="button" className="primary"
                     onClick={() => setI(i + 1)}>
               {t("demo.tour.next")}</button>

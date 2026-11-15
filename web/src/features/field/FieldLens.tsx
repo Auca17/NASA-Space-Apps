@@ -22,10 +22,9 @@ import type {
 import type { EcostressDemo } from "../../api";
 import { OrinCard, SyntheticBanner } from "./OrinCard";
 import {
-  benefitValue, benefitRows, compareDeltas, deriveRotPriorities, groupVariants,
-  groupedCards, humanizeGap, indicatorLabelKey, inferCurrentRotation,
-  irrigationNeedMm, measureReqPairs,
-  orderNote, prioWeights, PRIORITY_IDS, rankNote,
+  benefitValue, benefitRows, compareDeltas, groupVariants,
+  groupedCards, humanizeGap, indicatorLabelKey, irrigationNeedMm, measureReqPairs,
+  orderNote, prioWeights, rankNote,
   seqSegments, verdictDelta, type Scenario,
 } from "../../domain/rotations";
 import { plainSummary, referenceText, localizeDiag } from "../../domain/clarity";
@@ -66,35 +65,13 @@ export type AnalysisTarget = {
   parcels?: ParcelInput[];
   /** Needs step answers: null when skipped, undefined = ask first. */
   needs?: Needs | null;
-  /** Guided demo (tasks 40 + 52): seed the fictional producer's
-   * profile and economics instead of the stored ones. The saved real
-   * capture renders by default; `live` runs the API calls and keeps
-   * the capture as the labelled fallback. Demo targets never read or
-   * write localStorage. */
+  /** Guided demo (task 40): seed the fictional producer's profile and
+   * economics instead of the stored ones, and fall back to a cached
+   * real response when the live call fails. */
   demo?: {
-    /** Which demo farm ("pampa" | "mendoza") — picks the tour. */
-    farm?: string;
-    /** Dated saved parcels response (verbatim API capture). */
+    /** Dated cached response, shown only if the live call fails. */
     cached: ParcelsResponse;
     cachedDate: string;
-    /** Saved diagnose/rotations/explain captures, for the Rotaciones
-     * and "Más información" tabs. */
-    cachedDiag?: DiagnoseResponse;
-    cachedRotations?: RotationsResponse;
-    cachedExplain?: Record<string, string>;
-    /** Inference metadata the capture ran with (shown as the
-     * estimated current rotation / derived priorities). */
-    inferred?: { id: string; matched: boolean } | null;
-    derived?: { sel: string[]; warn: string[]; unmapped: string[] };
-    /** &live: hit the real API (the capture stays the fallback). */
-    live?: boolean;
-    /** i18n keys for the fictional producer line and farm story. */
-    producerKey?: string;
-    storyKey?: string;
-    /** The other demo farm, offered as "Otros ejemplos". */
-    other?: { hash: string; labelKey: string };
-    /** Perennial-crop note for the Rotaciones tab (Mendoza). */
-    rotationsNoteKey?: string;
   };
   profile?: Profile;
   econ?: Economics;
@@ -487,12 +464,8 @@ export interface DemoLot {
 }
 
 export function FieldPanel({ target, open, onClose, onChangePlot, onMethods, onResult, onEmergency, moistureSelection,
-  onMoistureZones, onMoistureSelect, onRecommendationArea, nearbyUse,
-  tourStep }: {
+  onMoistureZones, onMoistureSelect, onRecommendationArea, nearbyUse }: {
   target: AnalysisTarget | null; open: boolean;
-  /** Guided-tour step currently shown: its `tab` opens the matching
-   * parcels tab. */
-  tourStep?: { tab?: "resumen" | "rotaciones" | "prioridades" | "mas" } | null;
   onClose?: () => void;
   onRecommendationArea?: (geom: Multi | null) => void;
   nearbyUse?: "urban" | "checked" | "unavailable";
@@ -524,10 +497,6 @@ export function FieldPanel({ target, open, onClose, onChangePlot, onMethods, onR
   const [eco, setEco] = useState<EcostressDemo | null>(null);
   const [prioSel, setPrioSel] = useState<string[]>([]);
   const [cons, setCons] = useState<Record<string, boolean>>({});
-  /** Rotation marked as the farmer's current one ("unknown" = the
-   * engine compares against the zone reference). */
-  const [current, setCurrent] = useState("unknown");
-  const formRef = useRef<HTMLDivElement>(null);
   const parcelFlow = !!target?.demo || !!target?.parcels?.length || target?.needs !== undefined;
   const [tab, setTab] = useState<"recommendations" | "details">(parcelFlow ? "details" : "recommendations");
   const [autoSections, setAutoSections] = useState<NonNullable<AnalysisTarget["sections"]> | null>(null);
@@ -548,21 +517,12 @@ export function FieldPanel({ target, open, onClose, onChangePlot, onMethods, onR
   // kept in localStorage and sent inside the parcels request
   const [profile, setProfile] = useState<Profile>(loadProfile);
   const [econ, setEcon] = useState<Economics>(loadEconomics);
-  const [parcelTab, setParcelTab] = useState<
-    "resumen" | "rotaciones" | "prioridades" | "mas">("resumen");
+  const [parcelTab, setParcelTab] = useState<"resumen" | "prioridades" | "mas">(
+    "resumen");
   const showDiagnosis = !parcelFlow || parcelTab === "mas";
-  // the guided demo loads the diagnosis eagerly so the Rotaciones tab
-  // is ready when the tour reaches it (live mode; the saved capture
-  // needs no fetch at all)
-  const needDiagnosis = tab === "recommendations" || showDiagnosis ||
-    parcelTab === "rotaciones" || !!target?.demo;
-  /** Demo targets keep everything in state: localStorage is neither
-   * read nor written while a demo is open (task 52 clean state). */
-  const isDemo = !!target?.demo;
-  const updateProfile = (p: Profile) => {
-    setProfile(p); if (!isDemo) saveProfile(p); };
-  const updateEcon = (e: Economics) => {
-    setEcon(e); if (!isDemo) saveEconomics(e); };
+  const needDiagnosis = tab === "recommendations" || showDiagnosis;
+  const updateProfile = (p: Profile) => { setProfile(p); saveProfile(p); };
+  const updateEcon = (e: Economics) => { setEcon(e); saveEconomics(e); };
   const [diagnosisProblem, setDiagnosisProblem] = useState<string>();
   const [comparing, setComparing] = useState(false);
   const [compareFailed, setCompareFailed] = useState(false);
@@ -659,36 +619,16 @@ export function FieldPanel({ target, open, onClose, onChangePlot, onMethods, onR
     setTab(parcelFlow ? "details" : "recommendations");
     setDiag(null); setRots(null); setCachedDate(null);
     setDiagnosisProblem(undefined);
-    // a demo target carries its own fictional profile/economics —
-    // never the stored ones
+    // a demo target carries its own fictional profile/economics
     setProfile(target?.profile ?? loadProfile());
     setEcon(target?.econ ?? loadEconomics());
-    setExplain({}); setPrioSel([]); setCurrent("unknown");
   }, [target, parcelFlow]);
-
-  // Guided demo without &live: the saved real capture renders
-  // directly — no API calls, identical every take.
-  useEffect(() => {
-    const d = target?.demo;
-    if (!open || !d || d.live) return;
-    setPres({ ok: true, res: d.cached, fixture: true });
-    setPReading(false);
-    setCachedDate(d.cachedDate);
-    if (d.cachedDiag) setDiag(d.cachedDiag);
-    if (d.cachedRotations) setRots(d.cachedRotations);
-    if (d.cachedExplain) setExplain(d.cachedExplain);
-    if (d.derived) setPrioSel(d.derived.sel);
-    setCurrent(d.inferred?.id ?? "unknown");
-    if (d.cached) onResult?.(d.cached, effParcels, true);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, target]);
 
   // POST /api/field/parcels — the main analysis.
   useEffect(() => {
     if (!open || !target || !effParcels.length || effNeeds === undefined) {
       return;
     }
-    if (target.demo && !target.demo.live) return; // saved capture
     let active = true;
     setPReading(true); setPres(null);
     apiParcels(
@@ -697,13 +637,13 @@ export function FieldPanel({ target, open, onClose, onChangePlot, onMethods, onR
       if (!active) return;
       let out = r;
       if (!r.ok && target.demo) {
-        // guided demo: the saved real response keeps the demo going
+        // guided demo: the cached real response keeps the demo going
         out = { ok: true, res: target.demo.cached, fixture: true };
         setCachedDate(target.demo.cachedDate);
       }
       setPres(out); setPReading(false);
       if (out.ok) {
-        if (body && !target.demo) savePlot(lot?.name ?? "lote", body);
+        if (body) savePlot(lot?.name ?? "lote", body);
         onResult?.(out.res, effParcels, out.fixture);
       }
     });
@@ -715,7 +655,6 @@ export function FieldPanel({ target, open, onClose, onChangePlot, onMethods, onR
   // fetches it when the user opens its detailed information.
   useEffect(() => {
     if (!open || !body || !needDiagnosis) return;
-    if (target?.demo && !target.demo.live) return; // saved capture
     const controller = new AbortController();
     const requests = comparisonRequests.current;
     const changed = lastDiagnosisBody.current !== body;
@@ -737,13 +676,13 @@ export function FieldPanel({ target, open, onClose, onChangePlot, onMethods, onR
       if (controller.signal.aborted) return;
       setDiag((old) => d ?? (scenario ? old : null)); setReading(false);
       setDiagnosisProblem(problem ?? (d || !scenario ? undefined : "scenario"));
-      if (d && !target?.demo) savePlot(lot?.name ?? "lote", body);
+      if (d) savePlot(lot?.name ?? "lote", body);
     });
     return () => {
       controller.abort();
       requests.latest++;
     };
-  }, [open, body, lot, retry, scenario, needDiagnosis, target?.demo]);
+  }, [open, body, lot, retry, scenario, needDiagnosis]);
 
   useEffect(() => {
     if (open && tab === "details") { orinValidation().then(setOrin);
@@ -774,8 +713,7 @@ export function FieldPanel({ target, open, onClose, onChangePlot, onMethods, onR
     return sel.length < 3 ? [...sel, p] : sel;
   });
 
-  const runRotations = async (cur: string | null = null,
-                              sel = prioSel) => {
+  const runRotations = async () => {
     const local = section ? (
       sectionResult?.geom === section.geom ? sectionResult.data : null
     ) : diag;
@@ -788,8 +726,8 @@ export function FieldPanel({ target, open, onClose, onChangePlot, onMethods, onR
     const r = await apiRotations({
       diagnosis: local,
       zone: local.zone,
-      current: cur && cur !== "unknown" ? { rotation_id: cur } : null,
-      priorities: prioWeights(sel),
+      current: null,
+      priorities: prioWeights(prioSel),
       constraints: {
         irrigation: cons.irrigation,
         livestock: cons.livestock,
@@ -809,22 +747,6 @@ export function FieldPanel({ target, open, onClose, onChangePlot, onMethods, onR
       }
     }
   };
-
-  /* Rotations in the parcels flow (task 52): the current rotation is
-   * inferred from the parcels' crops and the priorities derived from
-   * the hazard profile — the farmer can correct both in the form. A
-   * saved demo capture carries the same values precomputed. */
-  const hasEcon = Object.keys(econ.parcels ?? {}).length > 0;
-  const rotDerived = useMemo(
-    () => target?.demo?.derived ??
-      deriveRotPriorities(profile.order, hasEcon, profile.hidden ?? []),
-    [target, profile, hasEcon]);
-  const rotInferredId = useMemo(() => {
-    if (target?.demo && !target.demo.live) return target.demo.inferred ?? null;
-    if (!catalog) return null;
-    return inferCurrentRotation(
-      effParcels.map((p) => p.crop), catalog.rotations);
-  }, [target, catalog, effParcels]);
 
   const base = useMemo(() => diag ? { ...diag, ...diag.baseline } : null, [diag]);
   const summary = base ? plainSummary(base, lang) : [];
@@ -852,30 +774,6 @@ export function FieldPanel({ target, open, onClose, onChangePlot, onMethods, onR
   ) : base;
   const currentImage = detected?.geometry === recGeometry ? detected?.data : undefined;
 
-  /* In a parcels flow the rotations run automatically once the
-   * diagnosis and the catalog are in: current rotation inferred from
-   * the parcels, priorities derived from the hazard ranking (task
-   * 52). A saved demo capture skips this — `rots` is already set. */
-  const autoRotFor = useRef<string | null>(null);
-  useEffect(() => {
-    if (!open || !parcelFlow || !diag || !catalog || !canCompare ||
-        rots || comparing || reading) return;
-    const key = JSON.stringify(body);
-    if (autoRotFor.current === key) return;
-    autoRotFor.current = key;
-    const cur = rotInferredId?.id ?? "unknown";
-    setCurrent(cur);
-    setPrioSel(rotDerived.sel);
-    void runRotations(cur, rotDerived.sel);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, parcelFlow, diag, catalog, canCompare, rots, comparing,
-      reading, body, rotInferredId, rotDerived]);
-
-  // Guided-tour steps open their parcels tab (task 52).
-  useEffect(() => {
-    if (tourStep?.tab) setParcelTab(tourStep.tab);
-  }, [tourStep]);
-
   return (
     <div className="field-analysis-results" hidden={!open}>
       <header className="analysis-header">
@@ -900,15 +798,8 @@ export function FieldPanel({ target, open, onClose, onChangePlot, onMethods, onR
           </div>
           {target.demo && (
             <p className="muted demo-note">
-              <strong>{t(target.demo.producerKey ?? "demo.producer")}</strong>
-              {target.demo.storyKey && <><br />{t(target.demo.storyKey)}</>}
-              <br />{t("demo.disclaimer")}
-              {target.demo.other && (
-                <><br /><button type="button" className="linklike"
-                        data-tour="demo-other"
-                        onClick={() => { location.hash = target.demo!.other!.hash; }}>
-                  {t("demo.others")}: {t(target.demo.other.labelKey)}
-                </button></>)}
+              <strong>{t("demo.producer")}</strong><br />
+              {t("demo.disclaimer")}
             </p>)}
           {target.parcel && (
             <div className="muted">
@@ -984,8 +875,6 @@ export function FieldPanel({ target, open, onClose, onChangePlot, onMethods, onR
                   setParcelTab(id as typeof parcelTab)}
                 tabs={[
                   { id: "resumen", label: t("parcels.tab.summary") },
-                  { id: "rotaciones",
-                    label: t("parcels.tab.rotations") },
                   { id: "prioridades",
                     label: t("parcels.tab.priorities") },
                   { id: "mas", label: t("parcels.tab.more") },
@@ -996,125 +885,6 @@ export function FieldPanel({ target, open, onClose, onChangePlot, onMethods, onR
             <ParcelsResult res={pres.res} parcels={effParcels}
                            profile={profile} t={t} fmt={fmt}
                            onRetry={() => setPRetry((n) => n + 1)} />)}
-          {parcelTab === "rotaciones" && (
-            <section className="rotaciones" data-tour="rotaciones">
-              {target?.demo?.rotationsNoteKey && (
-                <p className="notice" role="status">
-                  {t(target.demo.rotationsNoteKey)}</p>)}
-              {lot && (
-                <p className="notice" role="status">
-                  {t("orin.rot.none", { crop: lot.crop_label })}</p>)}
-              {!lot && !canCompare && diag && (
-                <p className="muted">{t("field.coverage.noCompare")}</p>)}
-              {!lot && canCompare && (
-                <>
-                  {rotInferredId && current === rotInferredId.id && (
-                    <p className="muted rot-est">
-                      {t("rot.estCurrent", {
-                        rot: catalog?.rotations
-                          .find((r) => r.id === rotInferredId.id)
-                          ?.name[lang] ?? rotInferredId.id })}{" "}
-                      <button type="button" className="linklike"
-                              onClick={() => formRef.current
-                                ?.scrollIntoView({ behavior: "smooth",
-                                                   block: "start" })}>
-                        {t("rot.estChange")}</button>
-                    </p>)}
-                  <p className="muted rot-derived" role="note">
-                    {rotDerived.sel.length
-                      ? t("rot.derivedPrio", {
-                          list: rotDerived.sel
-                            .map((p) => t(`prio.${p}`)).join(", ") })
-                      : t("rot.derivedNone")}{" "}
-                    <button type="button" className="linklike"
-                            onClick={() => formRef.current
-                              ?.scrollIntoView({ behavior: "smooth",
-                                                 block: "start" })}>
-                      {t("rot.prioAdjust")}</button>
-                    {rotDerived.warn.length > 0 && (
-                      <span className="rot-note"
-                            title={t("rot.warnHint")}>
-                        {" "}{t("rot.warnConstraints", {
-                          list: rotDerived.warn
-                            .map((h) => t(`parcels.hz.${h}`))
-                            .join(", ") })}</span>)}
-                    {rotDerived.unmapped.length > 0 && (
-                      <span className="rot-note"
-                            title={t("rot.unmappedHint")}>
-                        {" "}{t("rot.unmapped", {
-                          list: rotDerived.unmapped
-                            .map((h) => t(`parcels.hz.${h}`))
-                            .join(", ") })}</span>)}
-                  </p>
-                  {(reading || comparing) && !rots && (
-                    <p role="status">{t("field.form.comparing")}</p>)}
-                  {compareFailed && (
-                    <p role="status">{t("field.form.failed")}{" "}
-                      <button type="button"
-                              onClick={() => void runRotations(
-                                current, prioSel)}>
-                        {t("field.diagnosis.retry")}</button></p>)}
-                  {!rots && !reading && !comparing && !compareFailed &&
-                    diag && <p className="notice">{t("rot.disclaimer")}</p>}
-                  {!rots && !reading && !comparing && !compareFailed &&
-                    !diag && !target?.demo && (
-                      <p className="muted">{t("field.diagnosing")}</p>)}
-                  {rotsView && (
-                    <RotationResults rots={rotsView} diag={diag}
-                                     explain={explain} t={t}
-                                     reference={!rotInferredId}
-                                     explainMode={explainMode ?? undefined}
-                                     onMethods={onMethods} />)}
-                  <div ref={formRef}>
-                  <Card title={t("field.form.run")}>
-                    <label>{t("field.form.current")}
-                      <select value={current}
-                              onChange={(e) => setCurrent(e.target.value)}>
-                        <option value="unknown">
-                          {t("field.form.dontKnow")}</option>
-                        {catalog?.rotations.map((r) =>
-                          <option key={r.id} value={r.id}>
-                            {r.name[lang] ?? r.name.es ?? r.id}</option>)}
-                      </select>
-                    </label>
-                    {catalogFailed && (
-                      <p role="status">
-                        {t("field.form.catalogFailed")}{" "}
-                        <button type="button" onClick={() =>
-                          setCatalogRetry((n) => n + 1)}>
-                          {t("field.diagnosis.retry")}
-                        </button>
-                      </p>)}
-                    {current === "unknown" && (
-                      <p className="muted">{t("field.form.dontKnowHint")}</p>)}
-                    <fieldset className="prio-set">
-                      <legend>{t("prio.choose")}</legend>
-                      <div className="prio-chips" role="group"
-                           aria-label={t("prio.choose")}>
-                        {PRIORITY_IDS.map((p) => {
-                          const rank = prioSel.indexOf(p);
-                          return (
-                            <button key={p} type="button" className="chip"
-                                    aria-pressed={rank >= 0}
-                                    onClick={() => togglePrio(p)}>
-                              {t(`prio.${p}`)}
-                              {rank >= 0 &&
-                                <span className="rank"> {rank + 1}</span>}
-                            </button>);
-                        })}
-                      </div>
-                      <p className="muted">{t("prio.hint")}</p>
-                    </fieldset>
-                    <button type="button" className="primary"
-                            disabled={!diag || comparing}
-                            onClick={() => void runRotations(
-                              current, prioSel)}>
-                      {t("field.form.run")}</button>
-                  </Card>
-                  </div>
-                </>
-              )}
-            </section>)}
           {parcelTab === "prioridades" && (
             <section className="card prio-card">
               <h4 style={{ marginTop: 0 }}>{t("parcels.prio.title")}</h4>
@@ -1130,7 +900,7 @@ export function FieldPanel({ target, open, onClose, onChangePlot, onMethods, onR
                 {t("parcels.rerun")}</button>
             </section>)}
           {parcelTab === "mas" && (
-            <div data-tour="masinfo">
+            <>
             <HiddenHazards res={pres.res} parcels={effParcels}
                            profile={profile} t={t} fmt={fmt} />
             {pres.res.parcels.some((p) => p.timeline) && (
@@ -1144,7 +914,7 @@ export function FieldPanel({ target, open, onClose, onChangePlot, onMethods, onR
                            ? parcelName(effParcels, p.id) : undefined} />))}
               </section>)}
             <SourcesBlock res={pres.res} t={t} />
-            </div>
+            </>
           )}
           </div>
         </>
@@ -1313,7 +1083,7 @@ export function FieldPanel({ target, open, onClose, onChangePlot, onMethods, onR
             </details>
           </details>
 
-          <details className="sec more" data-tour="calendar">
+          <details className="sec more">
             <summary>{t("field.calendarMore")}</summary>
             <Calendar
               months={(view ?? diag).calendar.months}
@@ -1385,7 +1155,7 @@ export function FieldPanel({ target, open, onClose, onChangePlot, onMethods, onR
           <p className="muted">{t("field.form.rotationReference")}</p>
           {comparing && <p role="status">{t("field.form.comparing")}</p>}
           {compareFailed && <p role="status">{t("field.form.failed")}</p>}
-          <button className="primary" onClick={() => void runRotations()} disabled={(!section && reading) || comparing}>
+          <button className="primary" onClick={runRotations} disabled={(!section && reading) || comparing}>
             {t("field.form.run")}
           </button>
         </details>}

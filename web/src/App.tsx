@@ -33,10 +33,11 @@ import {
 import { splitSelection, clipZone, detectParcels, ROAD_HALF_WIDTH } from "./domain/split";
 import { nearestMidpoint, nearestVertex } from "./domain/parcelsGeo";
 import {
-  DEMO_FARMS, demoForHash, type DemoRoute,
-} from "./features/demo/demoFarms";
+  isDemoHash, MENDOZA_BOUNDARY, MENDOZA_CACHED, MENDOZA_ECON,
+  MENDOZA_NEEDS, MENDOZA_PARCELS, MENDOZA_PROFILE,
+} from "./features/demo/mendozaFarm";
 import { GuidedTour } from "./features/demo/GuidedTour";
-import { tourSeen, tourSteps, type TourStep } from "./features/demo/demoTour";
+import { tourSeen } from "./features/demo/demoTour";
 import {
   loadFields, saveField, renameField, deleteField, addZone, updateZone,
   addZones, setFieldCrop, markCropSplit,
@@ -181,13 +182,6 @@ export default function App() {
     res: ParcelsResponse; parcels: ParcelInput[] } | null>(null);
   /** Guided demo tour: opens once the demo result is on the screen. */
   const [demoTour, setDemoTour] = useState(false);
-  /** Current tour step (drives the panel's tab); "&notour" skips the
-   * whole tour for this visit. */
-  const [tourStep, setTourStep] = useState<TourStep | null>(null);
-  const demoNotour = useRef(false);
-  /** ?rec=1 (or #demo&rec=1): recording mode — hides the tour, the
-   * "Otros ejemplos" control and the language button. */
-  const recMode = /[?&]rec=1\b/.test(location.search + location.hash);
   /** #demo can fire before the map exists: the farm frame is queued
    * here and applied once the globe reports ready. */
   const demoFitPending = useRef(false);
@@ -590,23 +584,17 @@ export default function App() {
       locationAccuracy, recommendationArea]);
 
   // deep-link: #lat,lon opens the field flow centred there (dev +
-  // sharing), #demo / #demo-pampa / #demo-mendoza open the guided
-  // examples (&live hits the API, &notour skips the tour)
+  // sharing), #demo opens the guided Mendoza example
   useEffect(() => {
-    const route = demoForHash(location.hash);
-    if (route) { startDemo(route); return; }
+    if (isDemoHash(location.hash)) { startDemo(); return; }
     const m = location.hash.match(/^#(-?\d+(?:\.\d+)?),(-?\d+(?:\.\d+)?)$/);
     if (m) locate(Number(m[1]), Number(m[2]));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // a demo hash typed (or tapped from "Otros ejemplos") while the app
-  // runs — switching farms is a hash change, no reload
+  // /app/#demo typed (or tapped from the landing) while the app runs
   useEffect(() => {
-    const on = () => {
-      const route = demoForHash(location.hash);
-      if (route) startDemo(route);
-    };
+    const on = () => { if (isDemoHash(location.hash)) startDemo(); };
     window.addEventListener("hashchange", on);
     return () => window.removeEventListener("hashchange", on);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -935,43 +923,26 @@ export default function App() {
     setFieldsView("list");
   };
 
-  /** One-tap guided demo (tasks 40 + 52): a fictional farm on a real
-   * rural location — parcels, producer profile and the saved real
-   * capture all come from features/demo/demoFarms. The saved capture
-   * renders by default; "&live" runs the real API calls. */
-  const startDemo = (route?: DemoRoute | null) => {
-    const r = route ?? { farm: "pampa", live: false, notour: false } as DemoRoute;
-    const farm = DEMO_FARMS[r.farm] ?? DEMO_FARMS.pampa;
-    demoNotour.current = r.notour;
+  /** One-tap guided demo (task 40): a fictional Mendoza farm on a real
+   * Valle de Uco location — parcels, producer profile and a cached
+   * fallback all come from features/demo/mendozaFarm. The analysis
+   * itself is the live /api/field/parcels call. */
+  const startDemo = () => {
     setMode("field"); setDraw("none"); setSelection(null); setAdjust(null);
     setFieldsView(null); setShownField(null); setPendingZone(null);
     setParcelRes(null); setParcelsWizard(false);
-    setDemoTour(false); setTourStep(null);
     demoFitPending.current = true;
     setEmergencyCountry("AR");
     analyze({
-      geom: farm.boundary,
-      areaLabel: t(farm.areaKey),
-      fieldName: t(farm.nameKey),
-      parcels: farm.parcels,
-      needs: farm.needs,
-      profile: farm.profile,
-      econ: farm.econ,
-      demo: {
-        farm: farm.id,
-        cached: farm.cached.res,
-        cachedDate: farm.cached.date,
-        cachedDiag: farm.cached.diag,
-        cachedRotations: farm.cached.rotations,
-        cachedExplain: farm.cached.explain,
-        inferred: farm.cached.inferred,
-        derived: farm.cached.derived,
-        live: r.live,
-        producerKey: farm.producerKey,
-        storyKey: farm.storyKey,
-        other: farm.other,
-        rotationsNoteKey: farm.rotationsNoteKey,
-      },
+      geom: MENDOZA_BOUNDARY,
+      areaLabel: t("demo.farmArea"),
+      fieldName: t("demo.farmName"),
+      parcels: MENDOZA_PARCELS,
+      needs: MENDOZA_NEEDS,
+      profile: MENDOZA_PROFILE,
+      econ: MENDOZA_ECON,
+      demo: { cached: MENDOZA_CACHED.res,
+              cachedDate: MENDOZA_CACHED.date },
     });
   };
 
@@ -1009,7 +980,7 @@ export default function App() {
   const sidePanel = (mode === "field" && fieldOpen) || emergOpen;
 
   return (
-    <div className={`app${analysisScreen ? " analysis-screen" : ""}${sidePanel ? " has-side-panel" : ""}${recMode ? " rec-mode" : ""}`}>
+    <div className={`app${analysisScreen ? " analysis-screen" : ""}${sidePanel ? " has-side-panel" : ""}`}>
       <header className="topbar">
         <h1>
           <button type="button" className="topbar-home"
@@ -1037,10 +1008,9 @@ export default function App() {
                 onClick={() => setMethodsOpen(true)}>
           <span className="ml-long">{t("meth.link")}</span>
           <span className="ml-short">{t("meth.short")}</span></button>
-        {!recMode && (
         <button className="lang-btn"
                 onClick={() => setLang(lang === "es" ? "en" : "es")}
-                aria-label={t("nav.langLabel")}>{t("nav.lang")}</button>)}
+                aria-label={t("nav.langLabel")}>{t("nav.lang")}</button>
         <button type="button" className="menu-btn"
                 aria-expanded={menuOpen} aria-controls="topbar-menu"
                 aria-label={t("shell.menu")}
@@ -1059,19 +1029,13 @@ export default function App() {
               setEmergOpen(true); setMenuOpen(false); }}>{t("emerg.nav")}</button>
             <button type="button" onClick={() => {
               setMethodsOpen(true); setMenuOpen(false); }}>{t("meth.link")}</button>
-            {!recMode && (
             <button type="button" onClick={() =>
               setLang(lang === "es" ? "en" : "es")}>
-              {t("nav.langLabel")} · {t("nav.lang")}</button>)}
+              {t("nav.langLabel")} · {t("nav.lang")}</button>
           </div>
         </>)}
 
       <div className={`map-wrap${mode === "field" && draw !== "none" && !movingMap ? " marking" : ""}`}>
-        {target?.demo && (
-          <>
-            <div className="demo-banner" role="note">{t("demo.banner")}</div>
-            <div className="demo-ribbon" aria-hidden="true">DEMO</div>
-          </>)}
         {mode === "field" && draw === "free" && !movingMap && !mapUnavailable && (
           <FreehandLayer
             unproject={(x, y) => globeRef.current?.unproject(x, y) ?? [0, 0]}
@@ -1253,12 +1217,8 @@ export default function App() {
             <ParcelsMapLayer globe={globe} parcels={parcelRes.parcels}
                              res={parcelRes.res} />
           </Suspense>)}
-        {demoTour && parcelRes && target?.demo && !recMode && (
-          <GuidedTour steps={tourSteps(
-                        (target.demo.farm as "pampa" | "mendoza") ??
-                        "pampa")}
-                      onStep={setTourStep}
-                      onClose={() => setDemoTour(false)} />)}
+        {demoTour && parcelRes && (
+          <GuidedTour onClose={() => setDemoTour(false)} />)}
         {mode === "field" && !fieldOpen && !selection &&
           (draw !== "none" || !fieldsView) && (
           <FieldPicker draw={mapUnavailable ? "none" : draw} points={draft.length}
@@ -1295,10 +1255,8 @@ export default function App() {
                       onClose={changePlot} onChangePlot={changePlot}
                       onResult={(res, parcels) => {
                         setParcelRes({ res, parcels });
-                        if (target?.demo && !demoNotour.current &&
-                            !recMode && !tourSeen()) setDemoTour(true);
+                        if (target?.demo && !tourSeen()) setDemoTour(true);
                       }}
-                      tourStep={tourStep}
                       onEmergency={() => setEmergOpen(true)}
                       moistureSelection={selectedMoisture} onMoistureZones={showMoisture}
                       onMoistureSelect={focusMoisture}

@@ -1,27 +1,11 @@
 {
   "captured_at": "2026-11-15",
-  "inferred_rotation": null,
-  "derived_priorities": {
-    "sel": [
-      "water",
-      "avoid_burning",
-      "income"
-    ],
-    "warn": [
-      "frost",
-      "heat"
-    ],
-    "unmapped": [
-      "snow",
-      "hail"
-    ]
-  },
   "response": {
     "parcels": [
       {
         "id": "vid",
         "crop": "vid",
-        "area_ha": 56.4,
+        "area_ha": 51.6,
         "indicators": {
           "fire": {
             "pct": 15,
@@ -105,312 +89,8 @@
           "infiltration": {
             "class": "media",
             "score": 61,
-            "basis": "Puntaje 0-100 a partir de textura Franco-arenoso, MO 12 g/kg, pendiente 3 %, 122 días/año de suelo desnudo (grupos hidrológicos de suelo USDA; fórmula en knowledge/README). Ordena el riesgo relativo, no es una medición. Esta parcela comparte la celda de datos climáticos con otra parcela del lote."
+            "basis": "Puntaje 0-100 a partir de textura Franco-arenoso, MO 12 g/kg, pendiente 3.2 %, 122 días/año de suelo desnudo (grupos hidrológicos de suelo USDA; fórmula en knowledge/README). Ordena el riesgo relativo, no es una medición. Esta parcela comparte la celda de datos climáticos con otra parcela del lote."
           }
-        },
-        "timeline": {
-          "months": [
-            "2024-11",
-            "2024-12",
-            "2025-01",
-            "2025-02",
-            "2025-03",
-            "2025-04",
-            "2025-05",
-            "2025-06",
-            "2025-07",
-            "2025-08",
-            "2025-09",
-            "2025-10",
-            "2025-11",
-            "2025-12",
-            "2026-01",
-            "2026-02",
-            "2026-03",
-            "2026-04",
-            "2026-05",
-            "2026-06",
-            "2026-07",
-            "2026-08",
-            "2026-09",
-            "2026-10",
-            "2026-11"
-          ],
-          "partial_last": true,
-          "series": {
-            "rain_mm": {
-              "values": [
-                1.18,
-                9.41,
-                25.51,
-                7.94,
-                22.76,
-                3.23,
-                21.02,
-                105.43,
-                2.03,
-                58.22,
-                3.76,
-                1.23,
-                17.74,
-                14.52,
-                60.13,
-                8.83,
-                25.69,
-                13.63,
-                2.15,
-                2.35,
-                39.04,
-                14.98,
-                11.44,
-                208.49,
-                null
-              ],
-              "normal": [
-                31.617,
-                33.575,
-                26.467,
-                18.875,
-                29.783,
-                28.721,
-                26.166,
-                21.155,
-                12.3,
-                16.009,
-                21.551,
-                20.363
-              ],
-              "anomaly_pct": [
-                -95,
-                -54,
-                -19,
-                -76,
-                -14,
-                -83,
-                -29,
-                267,
-                -92,
-                175,
-                -69,
-                -92,
-                -18,
-                -29,
-                90,
-                -74,
-                -3,
-                -28,
-                -93,
-                -92,
-                49,
-                -29,
-                -7,
-                1202,
-                null
-              ]
-            },
-            "tmax_c": {
-              "values": [
-                29.82,
-                30.77,
-                32.7,
-                35.1,
-                29.22,
-                25.14,
-                22.74,
-                15.7,
-                19.99,
-                17.91,
-                23.13,
-                26.3,
-                28.45,
-                30.58,
-                31.53,
-                31.69,
-                29.71,
-                25.46,
-                21.95,
-                18.98,
-                17.23,
-                17.73,
-                21.28,
-                17.92,
-                null
-              ],
-              "normal": [
-                31.805,
-                30.811,
-                28.989,
-                24.904,
-                20.406,
-                17.387,
-                16.505,
-                18.486,
-                21.203,
-                24.684,
-                28.028,
-                30.566
-              ],
-              "anomaly_c": [
-                1.8,
-                0.2,
-                0.9,
-                4.3,
-                0.2,
-                0.2,
-                2.3,
-                -1.7,
-                3.5,
-                -0.6,
-                1.9,
-                1.6,
-                0.4,
-                0,
-                -0.3,
-                0.9,
-                0.7,
-                0.6,
-                1.5,
-                1.6,
-                0.7,
-                -0.8,
-                0.1,
-                -6.8,
-                null
-              ]
-            },
-            "root_moisture": {
-              "values": [
-                0.28,
-                0.27,
-                0.28,
-                0.27,
-                0.28,
-                0.28,
-                0.28,
-                0.32,
-                0.33,
-                0.32,
-                0.33,
-                0.31,
-                0.3,
-                0.3,
-                0.3,
-                0.31,
-                0.3,
-                0.3,
-                0.29,
-                0.29,
-                0.29,
-                0.31,
-                0.3,
-                0.53,
-                null
-              ],
-              "normal": [
-                0.305,
-                0.308,
-                0.31,
-                0.311,
-                0.316,
-                0.323,
-                0.325,
-                0.329,
-                0.325,
-                0.317,
-                0.311,
-                0.304
-              ],
-              "anomaly_pct": [
-                -9,
-                -10,
-                -9,
-                -12,
-                -10,
-                -11,
-                -12,
-                0,
-                1,
-                -1,
-                3,
-                -3,
-                -2,
-                -2,
-                -1,
-                -1,
-                -3,
-                -4,
-                -8,
-                -10,
-                -9,
-                -6,
-                -7,
-                67,
-                null
-              ]
-            },
-            "heat_days_35": {
-              "values": [
-                0,
-                0,
-                6,
-                14,
-                0,
-                0,
-                0,
-                0,
-                0,
-                0,
-                0,
-                0,
-                0,
-                0,
-                3,
-                1,
-                0,
-                0,
-                0,
-                0,
-                0,
-                0,
-                0,
-                0,
-                null
-              ]
-            },
-            "frost_days": {
-              "values": [
-                0,
-                0,
-                0,
-                0,
-                0,
-                0,
-                0,
-                8,
-                0,
-                2,
-                0,
-                0,
-                0,
-                0,
-                0,
-                0,
-                0,
-                0,
-                0,
-                0,
-                6,
-                1,
-                1,
-                0,
-                null
-              ]
-            }
-          },
-          "normals_period": "2001-2020",
-          "basis": "Los 'normales' son la media del mismo mes del año entre 2001 y 2020 en esta celda.",
-          "source": "NASA POWER daily",
-          "headline": "En los últimos 3 meses llovió 375 % más de lo normal y el suelo está más húmedo que lo normal, y la primavera viene 2.5 °C más fría que lo normal."
         },
         "alerts": [
           {
@@ -434,30 +114,13 @@
             "hidden": true
           }
         ],
-        "accuracy": {
-          "temp_rmse_c": 4.5,
-          "temp_rmse_adjusted_c": 2.5,
-          "rain_bias_mm_month": 10.98,
-          "rain_rmse_mm_month": 31.35,
-          "rain_r": 0.42,
-          "stations": {
-            "temperature": 53,
-            "rain": 10
-          },
-          "elevation_correction_c": 9.4,
-          "note": "Qué tan bien le pegan los datos satelitales en mediciones de campo: temperatura con 53 estaciones Orin (Mendoza); lluvia regional (10 estaciones SIGA a menos de 200 km). Punto de referencia, no una garantía para este lote.",
-          "sources": [
-            "orin_validation",
-            "siga_rain_validation"
-          ]
-        },
         "economics": {
           "expected_yield_t_ha": 14,
           "yield_source": "user",
           "revenue_per_ha": 3080,
           "cost_per_ha": 2800,
           "margin_per_ha": 280,
-          "margin_total": 15783,
+          "margin_total": 14461,
           "break_even_yield_t_ha": 12.73,
           "risk_adjusted_margin_per_ha": 126,
           "basis": "Rinde declarado por el productor (14 t/ha). Margen ajustado con supuestos aproximados: alerta de fuego −5 % del ingreso. No es un pronóstico.",
@@ -467,7 +130,7 @@
       {
         "id": "olivo",
         "crop": "olivo",
-        "area_ha": 39,
+        "area_ha": 29.7,
         "indicators": {
           "fire": {
             "pct": 15,
@@ -516,34 +179,34 @@
             "basis": "0.4 días por año con lluvia fuerte (sobre 20 mm) y terreno con pendiente: el agua escurre, riesgo de anegamiento menor. Esta parcela comparte la celda de datos climáticos con otra parcela del lote."
           },
           "evaporation": {
-            "mm_per_year": 1564,
+            "mm_per_year": 1559,
             "monthly_mm": [
-              202.6,
-              161.7,
-              146.5,
-              103.3,
-              78.3,
-              73,
-              76.5,
-              94.3,
-              112.4,
-              149.1,
-              176.2,
-              204.8
+              202.1,
+              161.3,
+              146.1,
+              103,
+              78,
+              72.7,
+              76.2,
+              94,
+              112,
+              148.7,
+              175.8,
+              204.3
             ],
             "balance_mm": {
-              "1": -166.7,
-              "2": -129.4,
-              "3": -120.5,
-              "4": -86.8,
-              "5": -53.4,
-              "6": -45.5,
-              "7": -54,
-              "8": -73.3,
-              "9": -101.5,
-              "10": -122,
-              "11": -151.8,
-              "12": -177.2
+              "1": -166.2,
+              "2": -129,
+              "3": -120.1,
+              "4": -86.5,
+              "5": -53.1,
+              "6": -45.3,
+              "7": -53.7,
+              "8": -73,
+              "9": -101.2,
+              "10": -121.6,
+              "11": -151.3,
+              "12": -176.8
             },
             "basis": "Estimación de referencia ET0 FAO-56 (Penman-Monteith donde hay datos, Hargreaves en el resto) — EVLAND no está disponible en esta celda; el balance mensual es lluvia menos ET0 en mm. Esta parcela comparte la celda de datos climáticos con otra parcela del lote. Agua de cultivo ≈ ET0 × Kc 0.65 (FAO-56) del catálogo.",
             "crop_water_mm_day": 2.8
@@ -551,312 +214,8 @@
           "infiltration": {
             "class": "media",
             "score": 61,
-            "basis": "Puntaje 0-100 a partir de textura Franco-arenoso, MO 12 g/kg, pendiente 3.3 %, 122 días/año de suelo desnudo (grupos hidrológicos de suelo USDA; fórmula en knowledge/README). Ordena el riesgo relativo, no es una medición. Esta parcela comparte la celda de datos climáticos con otra parcela del lote."
+            "basis": "Puntaje 0-100 a partir de textura Franco-arenoso, MO 12 g/kg, pendiente 3.2 %, 122 días/año de suelo desnudo (grupos hidrológicos de suelo USDA; fórmula en knowledge/README). Ordena el riesgo relativo, no es una medición. Esta parcela comparte la celda de datos climáticos con otra parcela del lote."
           }
-        },
-        "timeline": {
-          "months": [
-            "2024-11",
-            "2024-12",
-            "2025-01",
-            "2025-02",
-            "2025-03",
-            "2025-04",
-            "2025-05",
-            "2025-06",
-            "2025-07",
-            "2025-08",
-            "2025-09",
-            "2025-10",
-            "2025-11",
-            "2025-12",
-            "2026-01",
-            "2026-02",
-            "2026-03",
-            "2026-04",
-            "2026-05",
-            "2026-06",
-            "2026-07",
-            "2026-08",
-            "2026-09",
-            "2026-10",
-            "2026-11"
-          ],
-          "partial_last": true,
-          "series": {
-            "rain_mm": {
-              "values": [
-                1.18,
-                9.41,
-                25.51,
-                7.94,
-                22.76,
-                3.23,
-                21.02,
-                105.43,
-                2.03,
-                58.22,
-                3.76,
-                1.23,
-                17.74,
-                14.52,
-                60.13,
-                8.83,
-                25.69,
-                13.63,
-                2.15,
-                2.35,
-                39.04,
-                14.98,
-                11.44,
-                208.49,
-                null
-              ],
-              "normal": [
-                31.617,
-                33.575,
-                26.467,
-                18.875,
-                29.783,
-                28.721,
-                26.166,
-                21.155,
-                12.3,
-                16.009,
-                21.551,
-                20.363
-              ],
-              "anomaly_pct": [
-                -95,
-                -54,
-                -19,
-                -76,
-                -14,
-                -83,
-                -29,
-                267,
-                -92,
-                175,
-                -69,
-                -92,
-                -18,
-                -29,
-                90,
-                -74,
-                -3,
-                -28,
-                -93,
-                -92,
-                49,
-                -29,
-                -7,
-                1202,
-                null
-              ]
-            },
-            "tmax_c": {
-              "values": [
-                29.92,
-                30.87,
-                32.8,
-                35.2,
-                29.32,
-                25.24,
-                22.84,
-                15.8,
-                20.09,
-                18.01,
-                23.23,
-                26.4,
-                28.55,
-                30.68,
-                31.63,
-                31.79,
-                29.81,
-                25.56,
-                22.05,
-                19.08,
-                17.33,
-                17.83,
-                21.38,
-                18.02,
-                null
-              ],
-              "normal": [
-                31.905,
-                30.911,
-                29.089,
-                25.004,
-                20.506,
-                17.487,
-                16.605,
-                18.586,
-                21.303,
-                24.784,
-                28.128,
-                30.666
-              ],
-              "anomaly_c": [
-                1.8,
-                0.2,
-                0.9,
-                4.3,
-                0.2,
-                0.2,
-                2.3,
-                -1.7,
-                3.5,
-                -0.6,
-                1.9,
-                1.6,
-                0.4,
-                0,
-                -0.3,
-                0.9,
-                0.7,
-                0.6,
-                1.5,
-                1.6,
-                0.7,
-                -0.8,
-                0.1,
-                -6.8,
-                null
-              ]
-            },
-            "root_moisture": {
-              "values": [
-                0.28,
-                0.27,
-                0.28,
-                0.27,
-                0.28,
-                0.28,
-                0.28,
-                0.32,
-                0.33,
-                0.32,
-                0.33,
-                0.31,
-                0.3,
-                0.3,
-                0.3,
-                0.31,
-                0.3,
-                0.3,
-                0.29,
-                0.29,
-                0.29,
-                0.31,
-                0.3,
-                0.53,
-                null
-              ],
-              "normal": [
-                0.305,
-                0.308,
-                0.31,
-                0.311,
-                0.316,
-                0.323,
-                0.325,
-                0.329,
-                0.325,
-                0.317,
-                0.311,
-                0.304
-              ],
-              "anomaly_pct": [
-                -9,
-                -10,
-                -9,
-                -12,
-                -10,
-                -11,
-                -12,
-                0,
-                1,
-                -1,
-                3,
-                -3,
-                -2,
-                -2,
-                -1,
-                -1,
-                -3,
-                -4,
-                -8,
-                -10,
-                -9,
-                -6,
-                -7,
-                67,
-                null
-              ]
-            },
-            "heat_days_35": {
-              "values": [
-                0,
-                0,
-                6,
-                14,
-                0,
-                0,
-                0,
-                0,
-                0,
-                0,
-                0,
-                0,
-                0,
-                0,
-                4,
-                1,
-                0,
-                0,
-                0,
-                0,
-                0,
-                0,
-                0,
-                0,
-                null
-              ]
-            },
-            "frost_days": {
-              "values": [
-                0,
-                0,
-                0,
-                0,
-                0,
-                0,
-                0,
-                6,
-                0,
-                2,
-                0,
-                0,
-                0,
-                0,
-                0,
-                0,
-                0,
-                0,
-                0,
-                0,
-                6,
-                1,
-                1,
-                0,
-                null
-              ]
-            }
-          },
-          "normals_period": "2001-2020",
-          "basis": "Los 'normales' son la media del mismo mes del año entre 2001 y 2020 en esta celda.",
-          "source": "NASA POWER daily",
-          "headline": "En los últimos 3 meses llovió 375 % más de lo normal y el suelo está más húmedo que lo normal, y la primavera viene 2.5 °C más fría que lo normal."
         },
         "alerts": [
           {
@@ -880,30 +239,13 @@
             "hidden": true
           }
         ],
-        "accuracy": {
-          "temp_rmse_c": 4.5,
-          "temp_rmse_adjusted_c": 2.5,
-          "rain_bias_mm_month": 10.98,
-          "rain_rmse_mm_month": 31.35,
-          "rain_r": 0.42,
-          "stations": {
-            "temperature": 53,
-            "rain": 10
-          },
-          "elevation_correction_c": 9.5,
-          "note": "Qué tan bien le pegan los datos satelitales en mediciones de campo: temperatura con 53 estaciones Orin (Mendoza); lluvia regional (10 estaciones SIGA a menos de 200 km). Punto de referencia, no una garantía para este lote.",
-          "sources": [
-            "orin_validation",
-            "siga_rain_validation"
-          ]
-        },
         "economics": {
           "expected_yield_t_ha": 9,
           "yield_source": "user",
           "revenue_per_ha": 3420,
           "cost_per_ha": 2400,
           "margin_per_ha": 1020,
-          "margin_total": 39804,
+          "margin_total": 30251,
           "break_even_yield_t_ha": 6.32,
           "risk_adjusted_margin_per_ha": 849,
           "basis": "Rinde declarado por el productor (9 t/ha). Margen ajustado con supuestos aproximados: alerta de fuego −5 % del ingreso. No es un pronóstico.",
@@ -911,9 +253,9 @@
         }
       },
       {
-        "id": "ajo",
-        "crop": "ajo",
-        "area_ha": 36.7,
+        "id": "frutal",
+        "crop": "frutal_carozo",
+        "area_ha": 20.3,
         "indicators": {
           "fire": {
             "pct": 15,
@@ -962,347 +304,173 @@
             "basis": "0.4 días por año con lluvia fuerte (sobre 20 mm) y terreno con pendiente: el agua escurre, riesgo de anegamiento menor. Esta parcela comparte la celda de datos climáticos con otra parcela del lote."
           },
           "evaporation": {
-            "mm_per_year": 1564,
+            "mm_per_year": 1559,
             "monthly_mm": [
-              202.6,
-              161.7,
-              146.5,
-              103.3,
-              78.3,
-              73,
-              76.5,
-              94.3,
-              112.4,
-              149.1,
-              176.2,
-              204.8
+              202.1,
+              161.3,
+              146.1,
+              103,
+              78,
+              72.7,
+              76.2,
+              94,
+              112,
+              148.7,
+              175.8,
+              204.3
             ],
             "balance_mm": {
-              "1": -166.7,
-              "2": -129.4,
-              "3": -120.5,
-              "4": -86.8,
-              "5": -53.4,
-              "6": -45.5,
-              "7": -54,
-              "8": -73.3,
-              "9": -101.5,
-              "10": -122,
-              "11": -151.8,
-              "12": -177.2
+              "1": -166.2,
+              "2": -129,
+              "3": -120.1,
+              "4": -86.5,
+              "5": -53.1,
+              "6": -45.2,
+              "7": -53.7,
+              "8": -73,
+              "9": -101.2,
+              "10": -121.6,
+              "11": -151.3,
+              "12": -176.8
+            },
+            "basis": "Estimación de referencia ET0 FAO-56 (Penman-Monteith donde hay datos, Hargreaves en el resto) — EVLAND no está disponible en esta celda; el balance mensual es lluvia menos ET0 en mm. Esta parcela comparte la celda de datos climáticos con otra parcela del lote. Agua de cultivo ≈ ET0 × Kc 0.9 (FAO-56) del catálogo.",
+            "crop_water_mm_day": 3.9
+          },
+          "infiltration": {
+            "class": "media",
+            "score": 61,
+            "basis": "Puntaje 0-100 a partir de textura Franco-arenoso, MO 12 g/kg, pendiente 3.2 %, 122 días/año de suelo desnudo (grupos hidrológicos de suelo USDA; fórmula en knowledge/README). Ordena el riesgo relativo, no es una medición. Esta parcela comparte la celda de datos climáticos con otra parcela del lote."
+          }
+        },
+        "alerts": [
+          {
+            "kind": "fire",
+            "severity": "high",
+            "text": "Riesgo de fuego alto en esta parcela: no quemes rastrojos, revisá los guardafuegos y ante fuego o humo llamá al 100."
+          },
+          {
+            "kind": "frost",
+            "severity": "medium",
+            "text": "El/La Frutales de carozo (durazno, ciruela, cereza) pasa su etapa más sensible entre 08-15 y 10-31; la última helada típica de esta zona cae el 08-31 — unos 16 días sensibles quedan expuestos a heladas tardías."
+          }
+        ],
+        "order": [
+          "frost",
+          "drought",
+          "fire",
+          "heat",
+          "enso",
+          "snow",
+          "hail"
+        ],
+        "extra": [
+          {
+            "id": "flood",
+            "hidden": true
+          }
+        ],
+        "economics": {
+          "expected_yield_t_ha": 22,
+          "yield_source": "user",
+          "revenue_per_ha": 9900,
+          "cost_per_ha": 2600,
+          "margin_per_ha": 7300,
+          "margin_total": 148135,
+          "break_even_yield_t_ha": 5.78,
+          "risk_adjusted_margin_per_ha": 6805,
+          "basis": "Rinde declarado por el productor (22 t/ha). Margen ajustado con supuestos aproximados: alerta de fuego −5 % del ingreso. No es un pronóstico.",
+          "currency": "USD"
+        }
+      },
+      {
+        "id": "ajo",
+        "crop": "ajo",
+        "area_ha": 19.5,
+        "indicators": {
+          "fire": {
+            "pct": 15,
+            "level": "alto",
+            "basis": "Probabilidad de fuego en los próximos 7 días según el modelo de la zona."
+          },
+          "water": {
+            "pct": 55,
+            "level": "humedo",
+            "basis": "Humedad de la raíz (NASA POWER GWETROOT), promedio de los últimos 30 días; está por encima del percentil 80 de noviembre en la historia de esta zona. Esta parcela comparte la celda de datos climáticos con otra parcela del lote."
+          },
+          "heat": {
+            "days_over_35": 17.8,
+            "basis": "Promedio anual de días por encima de 35 °C (serie diaria NASA POWER, con corrección por altura). Esta parcela comparte la celda de datos climáticos con otra parcela del lote."
+          },
+          "frost": {
+            "frost_free_days": 273,
+            "window": {
+              "start": "08-31",
+              "end": "05-31"
+            },
+            "basis": "Días del año entre la última helada de primavera y la primera de otoño (mediana de años completos, NASA POWER, con corrección por altura). Esta parcela comparte la celda de datos climáticos con otra parcela del lote."
+          },
+          "snow": {
+            "days_per_year": 21.2,
+            "pct_years_with_snow": 100,
+            "basis": "Días por año con nevada sobre 1 mm (NASA POWER PRECSNOLAND, 2001–hoy); nieva algunos años en esta zona. Esta parcela comparte la celda de datos climáticos con otra parcela del lote."
+          },
+          "hail": {
+            "available": false,
+            "basis": "No hay un dato satelital de granizo para tu zona en esta app; consultá el servicio meteorológico y tu aseguradora."
+          },
+          "enso": {
+            "phase_now": "el_nino",
+            "oni": 2.5,
+            "oni_period": "ASO 2026",
+            "rain_effect_pct": {
+              "el_nino": -4,
+              "la_nina": 0
+            },
+            "basis": "ENSO según el índice ONI de NOAA: ahora El Niño (+2.5 °C). En esta zona, los años El Niño llovieron -4 % y los La Niña +0 % respecto al promedio en octubre–marzo. Es una tendencia histórica, no un pronóstico."
+          },
+          "flood": {
+            "heavy_rain_days_yr": 0.4,
+            "low_slope": false,
+            "basis": "0.4 días por año con lluvia fuerte (sobre 20 mm) y terreno con pendiente: el agua escurre, riesgo de anegamiento menor. Esta parcela comparte la celda de datos climáticos con otra parcela del lote."
+          },
+          "evaporation": {
+            "mm_per_year": 1559,
+            "monthly_mm": [
+              202.1,
+              161.3,
+              146.1,
+              103,
+              78,
+              72.7,
+              76.2,
+              94,
+              112,
+              148.7,
+              175.8,
+              204.3
+            ],
+            "balance_mm": {
+              "1": -166.2,
+              "2": -129,
+              "3": -120.1,
+              "4": -86.5,
+              "5": -53.1,
+              "6": -45.2,
+              "7": -53.7,
+              "8": -73,
+              "9": -101.2,
+              "10": -121.6,
+              "11": -151.3,
+              "12": -176.8
             },
             "basis": "Estimación de referencia ET0 FAO-56 (Penman-Monteith donde hay datos, Hargreaves en el resto) — EVLAND no está disponible en esta celda; el balance mensual es lluvia menos ET0 en mm. Esta parcela comparte la celda de datos climáticos con otra parcela del lote. Agua de cultivo ≈ ET0 × Kc 1 (FAO-56) del catálogo.",
             "crop_water_mm_day": 4.3
           },
           "infiltration": {
-            "class": "alta",
-            "score": 67,
-            "basis": "Puntaje 0-100 a partir de textura Franco-arenoso, MO 12 g/kg, pendiente 2.9 %, 122 días/año de suelo desnudo (grupos hidrológicos de suelo USDA; fórmula en knowledge/README). Ordena el riesgo relativo, no es una medición. Esta parcela comparte la celda de datos climáticos con otra parcela del lote."
+            "class": "media",
+            "score": 61,
+            "basis": "Puntaje 0-100 a partir de textura Franco-arenoso, MO 12 g/kg, pendiente 3.2 %, 122 días/año de suelo desnudo (grupos hidrológicos de suelo USDA; fórmula en knowledge/README). Ordena el riesgo relativo, no es una medición. Esta parcela comparte la celda de datos climáticos con otra parcela del lote."
           }
-        },
-        "timeline": {
-          "months": [
-            "2024-11",
-            "2024-12",
-            "2025-01",
-            "2025-02",
-            "2025-03",
-            "2025-04",
-            "2025-05",
-            "2025-06",
-            "2025-07",
-            "2025-08",
-            "2025-09",
-            "2025-10",
-            "2025-11",
-            "2025-12",
-            "2026-01",
-            "2026-02",
-            "2026-03",
-            "2026-04",
-            "2026-05",
-            "2026-06",
-            "2026-07",
-            "2026-08",
-            "2026-09",
-            "2026-10",
-            "2026-11"
-          ],
-          "partial_last": true,
-          "series": {
-            "rain_mm": {
-              "values": [
-                1.18,
-                9.41,
-                25.51,
-                7.94,
-                22.76,
-                3.23,
-                21.02,
-                105.43,
-                2.03,
-                58.22,
-                3.76,
-                1.23,
-                17.74,
-                14.52,
-                60.13,
-                8.83,
-                25.69,
-                13.63,
-                2.15,
-                2.35,
-                39.04,
-                14.98,
-                11.44,
-                208.49,
-                null
-              ],
-              "normal": [
-                31.617,
-                33.575,
-                26.467,
-                18.875,
-                29.783,
-                28.721,
-                26.166,
-                21.155,
-                12.3,
-                16.009,
-                21.551,
-                20.363
-              ],
-              "anomaly_pct": [
-                -95,
-                -54,
-                -19,
-                -76,
-                -14,
-                -83,
-                -29,
-                267,
-                -92,
-                175,
-                -69,
-                -92,
-                -18,
-                -29,
-                90,
-                -74,
-                -3,
-                -28,
-                -93,
-                -92,
-                49,
-                -29,
-                -7,
-                1202,
-                null
-              ]
-            },
-            "tmax_c": {
-              "values": [
-                29.92,
-                30.87,
-                32.8,
-                35.2,
-                29.32,
-                25.24,
-                22.84,
-                15.8,
-                20.09,
-                18.01,
-                23.23,
-                26.4,
-                28.55,
-                30.68,
-                31.63,
-                31.79,
-                29.81,
-                25.56,
-                22.05,
-                19.08,
-                17.33,
-                17.83,
-                21.38,
-                18.02,
-                null
-              ],
-              "normal": [
-                31.905,
-                30.911,
-                29.089,
-                25.004,
-                20.506,
-                17.487,
-                16.605,
-                18.586,
-                21.303,
-                24.784,
-                28.128,
-                30.666
-              ],
-              "anomaly_c": [
-                1.8,
-                0.2,
-                0.9,
-                4.3,
-                0.2,
-                0.2,
-                2.3,
-                -1.7,
-                3.5,
-                -0.6,
-                1.9,
-                1.6,
-                0.4,
-                0,
-                -0.3,
-                0.9,
-                0.7,
-                0.6,
-                1.5,
-                1.6,
-                0.7,
-                -0.8,
-                0.1,
-                -6.8,
-                null
-              ]
-            },
-            "root_moisture": {
-              "values": [
-                0.28,
-                0.27,
-                0.28,
-                0.27,
-                0.28,
-                0.28,
-                0.28,
-                0.32,
-                0.33,
-                0.32,
-                0.33,
-                0.31,
-                0.3,
-                0.3,
-                0.3,
-                0.31,
-                0.3,
-                0.3,
-                0.29,
-                0.29,
-                0.29,
-                0.31,
-                0.3,
-                0.53,
-                null
-              ],
-              "normal": [
-                0.305,
-                0.308,
-                0.31,
-                0.311,
-                0.316,
-                0.323,
-                0.325,
-                0.329,
-                0.325,
-                0.317,
-                0.311,
-                0.304
-              ],
-              "anomaly_pct": [
-                -9,
-                -10,
-                -9,
-                -12,
-                -10,
-                -11,
-                -12,
-                0,
-                1,
-                -1,
-                3,
-                -3,
-                -2,
-                -2,
-                -1,
-                -1,
-                -3,
-                -4,
-                -8,
-                -10,
-                -9,
-                -6,
-                -7,
-                67,
-                null
-              ]
-            },
-            "heat_days_35": {
-              "values": [
-                0,
-                0,
-                6,
-                14,
-                0,
-                0,
-                0,
-                0,
-                0,
-                0,
-                0,
-                0,
-                0,
-                0,
-                4,
-                1,
-                0,
-                0,
-                0,
-                0,
-                0,
-                0,
-                0,
-                0,
-                null
-              ]
-            },
-            "frost_days": {
-              "values": [
-                0,
-                0,
-                0,
-                0,
-                0,
-                0,
-                0,
-                6,
-                0,
-                2,
-                0,
-                0,
-                0,
-                0,
-                0,
-                0,
-                0,
-                0,
-                0,
-                0,
-                6,
-                1,
-                1,
-                0,
-                null
-              ]
-            }
-          },
-          "normals_period": "2001-2020",
-          "basis": "Los 'normales' son la media del mismo mes del año entre 2001 y 2020 en esta celda.",
-          "source": "NASA POWER daily",
-          "headline": "En los últimos 3 meses llovió 375 % más de lo normal y el suelo está más húmedo que lo normal, y la primavera viene 2.5 °C más fría que lo normal."
         },
         "alerts": [
           {
@@ -1326,35 +494,131 @@
             "hidden": true
           }
         ],
-        "accuracy": {
-          "temp_rmse_c": 4.5,
-          "temp_rmse_adjusted_c": 2.5,
-          "rain_bias_mm_month": 10.98,
-          "rain_rmse_mm_month": 31.35,
-          "rain_r": 0.42,
-          "stations": {
-            "temperature": 53,
-            "rain": 10
-          },
-          "elevation_correction_c": 9.5,
-          "note": "Qué tan bien le pegan los datos satelitales en mediciones de campo: temperatura con 53 estaciones Orin (Mendoza); lluvia regional (10 estaciones SIGA a menos de 200 km). Punto de referencia, no una garantía para este lote.",
-          "sources": [
-            "orin_validation",
-            "siga_rain_validation"
-          ]
-        },
         "economics": {
           "expected_yield_t_ha": 8,
           "yield_source": "user",
           "revenue_per_ha": 7200,
           "cost_per_ha": 1800,
           "margin_per_ha": 5400,
-          "margin_total": 198083,
+          "margin_total": 105365,
           "break_even_yield_t_ha": 2,
           "risk_adjusted_margin_per_ha": 5040,
           "basis": "Rinde declarado por el productor (8 t/ha). Margen ajustado con supuestos aproximados: alerta de fuego −5 % del ingreso. No es un pronóstico.",
           "currency": "USD"
         }
+      },
+      {
+        "id": "monte",
+        "crop": "monte_nativo",
+        "area_ha": 11.1,
+        "indicators": {
+          "fire": {
+            "pct": 15,
+            "level": "alto",
+            "basis": "Probabilidad de fuego en los próximos 7 días según el modelo de la zona."
+          },
+          "water": {
+            "pct": 55,
+            "level": "humedo",
+            "basis": "Humedad de la raíz (NASA POWER GWETROOT), promedio de los últimos 30 días; está por encima del percentil 80 de noviembre en la historia de esta zona. Esta parcela comparte la celda de datos climáticos con otra parcela del lote."
+          },
+          "heat": {
+            "days_over_35": 17.8,
+            "basis": "Promedio anual de días por encima de 35 °C (serie diaria NASA POWER, con corrección por altura). Esta parcela comparte la celda de datos climáticos con otra parcela del lote."
+          },
+          "frost": {
+            "frost_free_days": 273,
+            "window": {
+              "start": "08-31",
+              "end": "05-31"
+            },
+            "basis": "Días del año entre la última helada de primavera y la primera de otoño (mediana de años completos, NASA POWER, con corrección por altura). Esta parcela comparte la celda de datos climáticos con otra parcela del lote."
+          },
+          "snow": {
+            "days_per_year": 21.2,
+            "pct_years_with_snow": 100,
+            "basis": "Días por año con nevada sobre 1 mm (NASA POWER PRECSNOLAND, 2001–hoy); nieva algunos años en esta zona. Esta parcela comparte la celda de datos climáticos con otra parcela del lote."
+          },
+          "hail": {
+            "available": false,
+            "basis": "No hay un dato satelital de granizo para tu zona en esta app; consultá el servicio meteorológico y tu aseguradora."
+          },
+          "enso": {
+            "phase_now": "el_nino",
+            "oni": 2.5,
+            "oni_period": "ASO 2026",
+            "rain_effect_pct": {
+              "el_nino": -4,
+              "la_nina": 0
+            },
+            "basis": "ENSO según el índice ONI de NOAA: ahora El Niño (+2.5 °C). En esta zona, los años El Niño llovieron -4 % y los La Niña +0 % respecto al promedio en octubre–marzo. Es una tendencia histórica, no un pronóstico."
+          },
+          "flood": {
+            "heavy_rain_days_yr": 0.4,
+            "low_slope": false,
+            "basis": "0.4 días por año con lluvia fuerte (sobre 20 mm) y terreno con pendiente: el agua escurre, riesgo de anegamiento menor. Esta parcela comparte la celda de datos climáticos con otra parcela del lote."
+          },
+          "evaporation": {
+            "mm_per_year": 1559,
+            "monthly_mm": [
+              202.1,
+              161.3,
+              146.1,
+              103,
+              78,
+              72.7,
+              76.2,
+              94,
+              112,
+              148.7,
+              175.8,
+              204.3
+            ],
+            "balance_mm": {
+              "1": -166.2,
+              "2": -129,
+              "3": -120.1,
+              "4": -86.5,
+              "5": -53.1,
+              "6": -45.3,
+              "7": -53.7,
+              "8": -73,
+              "9": -101.2,
+              "10": -121.6,
+              "11": -151.3,
+              "12": -176.8
+            },
+            "basis": "Estimación de referencia ET0 FAO-56 (Penman-Monteith donde hay datos, Hargreaves en el resto) — EVLAND no está disponible en esta celda; el balance mensual es lluvia menos ET0 en mm. Esta parcela comparte la celda de datos climáticos con otra parcela del lote. Agua de cultivo ≈ ET0 × Kc 0.6 (FAO-56) del catálogo.",
+            "crop_water_mm_day": 2.6
+          },
+          "infiltration": {
+            "class": "media",
+            "score": 61,
+            "basis": "Puntaje 0-100 a partir de textura Franco-arenoso, MO 12 g/kg, pendiente 3.2 %, 122 días/año de suelo desnudo (grupos hidrológicos de suelo USDA; fórmula en knowledge/README). Ordena el riesgo relativo, no es una medición. Esta parcela comparte la celda de datos climáticos con otra parcela del lote."
+          }
+        },
+        "alerts": [
+          {
+            "kind": "fire",
+            "severity": "high",
+            "text": "Riesgo de fuego alto en esta parcela: no quemes rastrojos, revisá los guardafuegos y ante fuego o humo llamá al 100."
+          }
+        ],
+        "order": [
+          "frost",
+          "drought",
+          "fire",
+          "heat",
+          "enso",
+          "snow",
+          "hail"
+        ],
+        "extra": [
+          {
+            "id": "flood",
+            "hidden": true
+          }
+        ]
       }
     ],
     "zones": [
@@ -1414,13 +678,9 @@
       "degraded": true
     },
     "summary": {
-      "headline": "Tenés que estar atento a las heladas en tus cultivos.",
-      "bullets": [
-        "Hay riesgo alto de fuego en vid, olivo y ajo: no quemes rastrojos y revisá los guardafuegos.",
-        "El suelo está húmedo con un 55% de humedad, bajo fase El Niño.",
-        "Esperamos márgenes de 280, 1020 y 5400 dólares por hectárea respectivamente."
-      ],
-      "source": "gemini"
+      "headline": "Hay focos o riesgo alto de fuego: vigilancia y guardafuegos al día.",
+      "bullets": [],
+      "source": "template"
     },
     "sources": [
       {
@@ -1454,1096 +714,5 @@
     ],
     "degraded": true,
     "degraded_reason": "los servicios cercanos (OpenStreetMap) no respondieron"
-  },
-  "diagnosis": {
-    "diagnosis_id": "dx_b77c5cb8a8a3",
-    "area_ha": 149.9,
-    "centroid": [
-      -33.7466,
-      -69.1225
-    ],
-    "zone": "cuyo",
-    "province": "Mendoza",
-    "country": "AR",
-    "elevation_m": 1029.2,
-    "power_cell_elevation_m": 2482.7513497053374,
-    "temp_adjust_c": 9.4,
-    "terrain_coverage": 1,
-    "land_cover": "grass",
-    "analysis_blocks": 1,
-    "coverage": {
-      "available_cards": 16,
-      "total_cards": 16,
-      "comparable": true,
-      "indicators": [
-        {
-          "id": "rain",
-          "source": "GPM IMERG",
-          "available": true
-        },
-        {
-          "id": "heavy_rain",
-          "source": "NASA POWER",
-          "available": true
-        },
-        {
-          "id": "frost",
-          "source": "NASA POWER · Temperatura corregida por altura: lote a 1.029,2 m, celda de NASA POWER a 2.482,7513497053374 m, ajuste +9,4 °C",
-          "available": true
-        },
-        {
-          "id": "heat",
-          "source": "NASA POWER · Temperatura corregida por altura: lote a 1.029,2 m, celda de NASA POWER a 2.482,7513497053374 m, ajuste +9,4 °C",
-          "available": true
-        },
-        {
-          "id": "gdd_year",
-          "source": "NASA POWER (T2M, base 10 °C, tope 30 °C)",
-          "available": true
-        },
-        {
-          "id": "soil_moisture",
-          "source": "NASA POWER (GWETROOT)",
-          "available": true
-        },
-        {
-          "id": "crop_water",
-          "source": "ET0 FAO-56 (Penman-Monteith donde hay datos, Hargreaves en el resto)",
-          "available": true
-        },
-        {
-          "id": "evaporation",
-          "source": "ET0 FAO-56 (Penman-Monteith donde hay datos, Hargreaves en el resto)",
-          "available": true
-        },
-        {
-          "id": "vigor_bare_soil",
-          "source": "MODIS MOD13C2 (field/grid)",
-          "available": true
-        },
-        {
-          "id": "slope",
-          "source": "AWS Terrain Tiles (SRTM)",
-          "available": true
-        },
-        {
-          "id": "soil",
-          "source": "ISRIC SoilGrids v2 (field/grid)",
-          "available": true
-        },
-        {
-          "id": "infiltration",
-          "source": "SoilGrids textura+MO, pendiente SRTM y suelo desnudo (fórmula en knowledge/README)",
-          "available": true
-        },
-        {
-          "id": "water_trend",
-          "source": "GRACE-FO",
-          "available": true
-        },
-        {
-          "id": "fire",
-          "source": "Serie armonizada MODIS+VIIRS",
-          "available": true
-        },
-        {
-          "id": "fire_weather",
-          "source": "NASA POWER",
-          "available": true
-        },
-        {
-          "id": "recent_weather",
-          "source": "NASA POWER",
-          "available": true
-        }
-      ]
-    },
-    "h3_r5": [
-      "85b2eabbfffffff"
-    ],
-    "h3_r6": [
-      "86b2eab97ffffff"
-    ],
-    "cards": [
-      {
-        "id": "rain",
-        "value": 375.1,
-        "unit": "mm/año",
-        "text": "375,1 mm/año; 1 de cada 4 años < 281,3 mm",
-        "text_en": "375,1 mm/año; 1 de cada 4 años < 281,3 mm",
-        "source": "GPM IMERG",
-        "resolution": "0,1°",
-        "confidence": "high",
-        "rain_monthly_mm": [
-          34.8,
-          33.6,
-          26.5,
-          16.9,
-          26.5,
-          28.5,
-          22.1,
-          21.2,
-          11.4,
-          17.1,
-          20.4,
-          20.8
-        ]
-      },
-      {
-        "id": "heavy_rain",
-        "value": 0,
-        "unit": "días/año",
-        "text": "0 días/año con más de 50 mm",
-        "text_en": "0 days/yr with more than 50 mm",
-        "source": "NASA POWER",
-        "resolution": "0.5°×0.625°",
-        "confidence": "high"
-      },
-      {
-        "id": "frost",
-        "value": 304,
-        "unit": "días",
-        "text": "Período libre de heladas: 23/08 – 11/06",
-        "text_en": "Frost-free period: 23/08 – 11/06",
-        "source": "NASA POWER · Temperatura corregida por altura: lote a 1.029,2 m, celda de NASA POWER a 2.482,7513497053374 m, ajuste +9,4 °C",
-        "resolution": "0.5°×0.625°",
-        "confidence": "medium"
-      },
-      {
-        "id": "heat",
-        "value": 9.3,
-        "unit": "días/año",
-        "text": "9.3 días/año por encima de 35 °C",
-        "text_en": "9.3 days/yr above 35 °C",
-        "source": "NASA POWER · Temperatura corregida por altura: lote a 1.029,2 m, celda de NASA POWER a 2.482,7513497053374 m, ajuste +9,4 °C",
-        "resolution": "0.5°×0.625°",
-        "confidence": "medium"
-      },
-      {
-        "id": "gdd_year",
-        "value": 3035,
-        "unit": "°C·día/año",
-        "text": "Este lote acumula 3.035 °C·día por año (base 10 °C)",
-        "text_en": "This plot accumulates ~3035 GDD/year (base 10 °C)",
-        "source": "NASA POWER (T2M, base 10 °C, tope 30 °C)",
-        "resolution": "0.5°×0.625°",
-        "confidence": "medium"
-      },
-      {
-        "id": "soil_moisture",
-        "value": 53,
-        "unit": "%",
-        "text": "Humedad de la zona de raíces: 53 %",
-        "text_en": "Root-zone moisture: 53 %",
-        "source": "NASA POWER (GWETROOT)",
-        "resolution": "0.5°×0.625°",
-        "confidence": "medium"
-      },
-      {
-        "id": "crop_water",
-        "value": 4.3,
-        "unit": "mm/día",
-        "text": "Demanda hídrica potencial: 4.3 mm/día",
-        "text_en": "Potential water demand (ET0 mixto): 4.3 mm/day",
-        "source": "ET0 FAO-56 (Penman-Monteith donde hay datos, Hargreaves en el resto)",
-        "resolution": "0.5°×0.625°",
-        "confidence": "medium"
-      },
-      {
-        "id": "evaporation",
-        "value": 1571,
-        "unit": "mm/año",
-        "text": "El suelo y las plantas pierden al aire unos 1.571,1532519491063 mm de agua por año (estimación ET0, no medida directa)",
-        "text_en": "Soil and plants lose ~1571 mm of water to the air per year (ET0 estimate)",
-        "source": "ET0 FAO-56 (Penman-Monteith donde hay datos, Hargreaves en el resto)",
-        "resolution": "0.5°×0.625°",
-        "confidence": "medium",
-        "monthly_mm": [
-          204.6,
-          163.4,
-          147.6,
-          103.6,
-          77.8,
-          71.7,
-          75.5,
-          93.6,
-          112.7,
-          150.5,
-          178.5,
-          207.2
-        ],
-        "balance_mm": {
-          "1": -168.4,
-          "2": -130.8,
-          "3": -121.4,
-          "4": -86.8,
-          "5": -52.5,
-          "6": -44.1,
-          "7": -52.7,
-          "8": -72.2,
-          "9": -101.3,
-          "10": -123.1,
-          "11": -153.7,
-          "12": -179.2
-        }
-      },
-      {
-        "id": "vigor_bare_soil",
-        "value": 121.99999999999999,
-        "unit": "días/año",
-        "text": "~122 días/año con suelo desnudo (NDVI mensual <0.2, precalculado)",
-        "text_en": "~122 days/yr with bare ground (monthly NDVI <0.2, precomputed)",
-        "source": "MODIS MOD13C2 (field/grid)",
-        "resolution": "0.05°",
-        "confidence": "low"
-      },
-      {
-        "id": "slope",
-        "value": 3.5,
-        "unit": "%",
-        "text": "Pendiente media: 3.5 %",
-        "text_en": "Average slope: 3.5 %",
-        "source": "AWS Terrain Tiles (SRTM)",
-        "resolution": "~30 m",
-        "confidence": "high"
-      },
-      {
-        "id": "soil",
-        "value": 12,
-        "unit": "g/kg",
-        "text": "Franco-arenoso; MO 12.0 g/kg",
-        "text_en": "sandy loam; OM 12.0 g/kg",
-        "source": "ISRIC SoilGrids v2 (field/grid)",
-        "resolution": "250 m",
-        "confidence": "medium"
-      },
-      {
-        "id": "infiltration",
-        "value": 61,
-        "unit": "0-100",
-        "text": "Infiltración media: cuánta agua de lluvia entra al suelo en vez de escurrir",
-        "text_en": "media infiltration: how much rain soaks in instead of running off",
-        "source": "SoilGrids textura+MO, pendiente SRTM y suelo desnudo (fórmula en knowledge/README)",
-        "resolution": "~250 m",
-        "confidence": "low"
-      },
-      {
-        "id": "water_trend",
-        "value": "flat",
-        "unit": null,
-        "text": "Agua subterránea: tendencia estable",
-        "text_en": "Groundwater: stable trend",
-        "source": "GRACE-FO",
-        "resolution": "regional",
-        "confidence": "medium"
-      },
-      {
-        "id": "fire",
-        "value": "alto",
-        "unit": null,
-        "text": "Temporada de quemas: jun–sep; riesgo 7 días: alto",
-        "text_en": "Burning season: Jun–Sep; 7-day risk: high",
-        "source": "Serie armonizada MODIS+VIIRS",
-        "resolution": "H3 res 5 (~250 km²)",
-        "confidence": "high",
-        "generated_at": "2026-11-15T05:10:44Z",
-        "valid_until": "2026-11-22T05:10:44+00:00"
-      },
-      {
-        "id": "fire_weather",
-        "value": "bajo",
-        "unit": null,
-        "text": "HR media 55 %; viento máx 1.7 m/s; T máx 33 °C; 2 días sin lluvia",
-        "text_en": "mean RH 55 %; max wind 1.7 m/s; max T 33 °C; 2 days without rain",
-        "source": "NASA POWER",
-        "resolution": "0.5°×0.625°",
-        "confidence": "high",
-        "stop_conditions": [],
-        "stop_detail": {},
-        "stop_detail_en": {}
-      },
-      {
-        "id": "recent_weather",
-        "value": 2,
-        "unit": "días",
-        "text": "Últimos 30 días: 151.7 mm (media histórica 19 mm); última lluvia >1 mm hace 2 días",
-        "text_en": "Last 30 days: 151.7 mm (long-term mean 19 mm); last rain >1 mm 2 days ago",
-        "source": "NASA POWER",
-        "resolution": "0.5°×0.625°",
-        "confidence": "high"
-      }
-    ],
-    "calendar": {
-      "months": [
-        "ene",
-        "feb",
-        "mar",
-        "abr",
-        "may",
-        "jun",
-        "jul",
-        "ago",
-        "sep",
-        "oct",
-        "nov",
-        "dic"
-      ],
-      "rows": [
-        {
-          "id": "bare_soil",
-          "label": "Suelo desnudo",
-          "levels": [
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null
-          ]
-        },
-        {
-          "id": "frost",
-          "label": "Heladas",
-          "levels": [
-            0,
-            0,
-            0,
-            0,
-            0,
-            1,
-            2,
-            1,
-            1,
-            0,
-            0,
-            0
-          ]
-        },
-        {
-          "id": "water_stress",
-          "label": "Estrés hídrico",
-          "levels": [
-            0,
-            0,
-            0,
-            1,
-            0,
-            0,
-            0,
-            0,
-            2,
-            1,
-            2,
-            2
-          ]
-        },
-        {
-          "id": "heat",
-          "label": "Calor",
-          "levels": [
-            2,
-            1,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            1
-          ]
-        },
-        {
-          "id": "burn_season",
-          "label": "Temporada de quemas",
-          "levels": [
-            2,
-            0,
-            0,
-            1,
-            1,
-            2,
-            3,
-            3,
-            3,
-            1,
-            1,
-            2
-          ]
-        }
-      ],
-      "scale": {
-        "0": "sin exposición",
-        "1": "baja",
-        "2": "media",
-        "3": "alta"
-      }
-    },
-    "timeline": {
-      "months": [
-        "2024-11",
-        "2024-12",
-        "2025-01",
-        "2025-02",
-        "2025-03",
-        "2025-04",
-        "2025-05",
-        "2025-06",
-        "2025-07",
-        "2025-08",
-        "2025-09",
-        "2025-10",
-        "2025-11",
-        "2025-12",
-        "2026-01",
-        "2026-02",
-        "2026-03",
-        "2026-04",
-        "2026-05",
-        "2026-06",
-        "2026-07",
-        "2026-08",
-        "2026-09",
-        "2026-10",
-        "2026-11"
-      ],
-      "partial_last": true,
-      "series": {
-        "rain_mm": {
-          "values": [
-            1.41,
-            9.24,
-            26.37,
-            8.5,
-            22.68,
-            3.43,
-            21.21,
-            105.47,
-            2.35,
-            59.62,
-            4.06,
-            1.32,
-            18.44,
-            14.52,
-            61.28,
-            8.59,
-            26.54,
-            13.64,
-            2.22,
-            2.41,
-            38.85,
-            16.02,
-            14.64,
-            204.32,
-            null
-          ],
-          "normal": [
-            31.882,
-            33.888,
-            26.754,
-            19.115,
-            30.122,
-            28.755,
-            26.321,
-            21.465,
-            12.691,
-            16.557,
-            21.694,
-            20.677
-          ],
-          "anomaly_pct": [
-            -94,
-            -55,
-            -17,
-            -75,
-            -15,
-            -82,
-            -30,
-            267,
-            -91,
-            178,
-            -68,
-            -92,
-            -15,
-            -30,
-            92,
-            -75,
-            -1,
-            -29,
-            -93,
-            -92,
-            48,
-            -25,
-            15,
-            1134,
-            null
-          ]
-        },
-        "tmax_c": {
-          "values": [
-            29.8,
-            30.78,
-            32.76,
-            35.11,
-            29.21,
-            25.13,
-            22.71,
-            15.69,
-            19.99,
-            17.88,
-            23.1,
-            26.28,
-            28.43,
-            30.61,
-            31.56,
-            31.7,
-            29.7,
-            25.46,
-            21.95,
-            18.96,
-            17.2,
-            17.67,
-            21.22,
-            18,
-            null
-          ],
-          "normal": [
-            31.829,
-            30.829,
-            28.998,
-            24.903,
-            20.386,
-            17.342,
-            16.463,
-            18.443,
-            21.175,
-            24.652,
-            28.016,
-            30.573
-          ],
-          "anomaly_c": [
-            1.8,
-            0.2,
-            0.9,
-            4.3,
-            0.2,
-            0.2,
-            2.3,
-            -1.7,
-            3.5,
-            -0.6,
-            1.9,
-            1.6,
-            0.4,
-            0,
-            -0.3,
-            0.9,
-            0.7,
-            0.6,
-            1.6,
-            1.6,
-            0.7,
-            -0.8,
-            0,
-            -6.6,
-            null
-          ]
-        },
-        "root_moisture": {
-          "values": [
-            0.29,
-            0.28,
-            0.28,
-            0.28,
-            0.28,
-            0.28,
-            0.28,
-            0.33,
-            0.33,
-            0.33,
-            0.34,
-            0.31,
-            0.31,
-            0.3,
-            0.31,
-            0.31,
-            0.3,
-            0.3,
-            0.3,
-            0.29,
-            0.3,
-            0.31,
-            0.31,
-            0.52,
-            null
-          ],
-          "normal": [
-            0.309,
-            0.312,
-            0.314,
-            0.315,
-            0.32,
-            0.327,
-            0.33,
-            0.334,
-            0.329,
-            0.321,
-            0.315,
-            0.308
-          ],
-          "anomaly_pct": [
-            -9,
-            -10,
-            -8,
-            -12,
-            -10,
-            -11,
-            -11,
-            0,
-            1,
-            -1,
-            3,
-            -3,
-            -2,
-            -2,
-            -1,
-            -1,
-            -3,
-            -3,
-            -8,
-            -10,
-            -9,
-            -6,
-            -6,
-            63,
-            null
-          ]
-        },
-        "heat_days_35": {
-          "values": [
-            0,
-            0,
-            6,
-            14,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            3,
-            1,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            null
-          ]
-        },
-        "frost_days": {
-          "values": [
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            8,
-            0,
-            2,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            6,
-            1,
-            2,
-            0,
-            null
-          ]
-        }
-      },
-      "normals_period": "2001-2020",
-      "basis": "Los 'normales' son la media del mismo mes del año entre 2001 y 2020 en esta celda.",
-      "source": "NASA POWER daily",
-      "headline": "En los últimos 3 meses llovió 363 % más de lo normal y el suelo está más húmedo que lo normal, y la primavera viene 2.5 °C más fría que lo normal."
-    },
-    "accuracy": {
-      "temp_rmse_c": 4.5,
-      "temp_rmse_adjusted_c": 2.5,
-      "rain_bias_mm_month": 10.98,
-      "rain_rmse_mm_month": 31.35,
-      "rain_r": 0.42,
-      "stations": {
-        "temperature": 53,
-        "rain": 10
-      },
-      "elevation_correction_c": 9.4,
-      "note": "Qué tan bien le pegan los datos satelitales en mediciones de campo: temperatura con 53 estaciones Orin (Mendoza); lluvia regional (10 estaciones SIGA a menos de 200 km). Punto de referencia, no una garantía para este lote.",
-      "sources": [
-        "orin_validation",
-        "siga_rain_validation"
-      ]
-    },
-    "measures": [
-      {
-        "id": "fire_response_protocol",
-        "name": "Protocolo de incendio para cada cosecha",
-        "factor": "initial_attack",
-        "why": "demora y confusión en los primeros minutos de un incendio: riesgo 7 días: alto",
-        "name_en": "Fire response protocol for each harvest",
-        "why_en": "7-day risk: alto",
-        "benefit": "cada persona sabe qué hacer mientras llegan los bomberos: dar la ubicación exacta y alejar a la gente de la máquina",
-        "requires": {
-          "people": null,
-          "machinery": [],
-          "downtime_h": 0,
-          "cost": "low",
-          "reference_width_m": null,
-          "reference_width_note": null
-        },
-        "cost": "low",
-        "source": "INTA / UIB Balcarce (S. Tourn) + Bomberos Tandil (D. Ibáñez), 'Pautas para evitar incendios durante la cosecha' (2023-12-28), https://www.argentina.gob.ar/node/413622"
-      },
-      {
-        "id": "maintain_firebreak",
-        "name": "Hacer cortafuegos dentro y fuera del lote",
-        "factor": "spread_boundary",
-        "why": "propagación desde o hacia lotes vecinos con vegetación seca continua: riesgo 7 días: alto",
-        "name_en": "Build firebreaks inside and around the field",
-        "why_en": "7-day risk: alto",
-        "benefit": "sectoriza el incendio: se quema solo una parte del cultivo",
-        "requires": {
-          "people": 2,
-          "machinery": [
-            "tractor con rastra o disco"
-          ],
-          "downtime_h": null,
-          "cost": "medium",
-          "reference_width_m": 30,
-          "reference_width_note": "referencia prudente para la región chaqueña; el diseño depende del combustible, la pendiente y el viento"
-        },
-        "cost": "medium",
-        "source": "INTA / UIB Balcarce (S. Tourn) + Bomberos Tandil (D. Ibáñez), 'Pautas para evitar incendios durante la cosecha' (2023-12-28), https://www.argentina.gob.ar/node/413622"
-      }
-    ],
-    "measures_gaps": [
-      "harvest_in_dry_season (falta rotación o calendario)",
-      "bare_soil_in_burn_season (falta rotación o calendario)"
-    ]
-  },
-  "rotations": {
-    "diagnosis_id": "dx_b77c5cb8a8a3",
-    "strategies": [
-      {
-        "id": "alfalfa4-maiz",
-        "name": "Pastura de alfalfa 4 años – maíz (bajo riego)",
-        "name_en": "4-yr alfalfa pasture – maize (irrigated)",
-        "is_current": true,
-        "score": 0.5,
-        "confidence": "high",
-        "indicators": {
-          "water_balance": 835,
-          "water_balance_mm": 835,
-          "pest_break": 0,
-          "families": 2,
-          "residue_t_ha_yr": 1.9,
-          "nitrogen": 4,
-          "bare_soil_days": 36,
-          "erosion_risk": "bajo",
-          "infiltration": "alta",
-          "income": "medium",
-          "forage": true,
-          "burns_avoided": 0,
-          "carbon": 1.9
-        },
-        "why": "Es tu rotación actual; sirve de referencia.",
-        "evidence": [
-          {
-            "text": "375,1 mm/año; 1 de cada 4 años < 281,3 mm",
-            "indicator": "rain",
-            "source": "GPM IMERG"
-          },
-          {
-            "text": "0 días/año con más de 50 mm",
-            "indicator": "heavy_rain",
-            "source": "NASA POWER"
-          },
-          {
-            "text": "Período libre de heladas: 23/08 – 11/06",
-            "indicator": "frost",
-            "source": "NASA POWER · Temperatura corregida por altura: lote a 1.029,2 m, celda de NASA POWER a 2.482,7513497053374 m, ajuste +9,4 °C"
-          },
-          {
-            "text": "En zonas análogas (seco, heladas cortas, suelo franco arenoso (1916 celdas)), maiz ocupa el 34 % del área sembrada y rinde ~3538 kg/ha",
-            "indicator": "analogs",
-            "source": "MAGyP 2024/2025"
-          },
-          {
-            "text": "maiz: consumo observado en el semiárido pampeano (INTA–FAUBA, 138 ensayos de secano): 487 mm (referencia FAO: 650 mm)",
-            "indicator": "water_balance",
-            "source": "el semiárido pampeano (INTA–FAUBA, 138 ensayos de secano)"
-          },
-          {
-            "text": "Maíz: este lote acumula ~3035 °C·día por año; necesita ~1700 para completar el ciclo (base 10 °C)",
-            "indicator": "gdd_year",
-            "source": "gdd_base10 del catálogo (FAO/INTA, pendiente de validación local)"
-          }
-        ],
-        "benefits": {
-          "water_balance": 0,
-          "water_balance_mm": 0,
-          "pest_break": 0,
-          "families": 0,
-          "residue_t_ha_yr": 0,
-          "nitrogen": 0,
-          "bare_soil_days": 0,
-          "erosion_risk": "bajo",
-          "infiltration": "alta",
-          "income": "medium",
-          "forage": 0,
-          "burns_avoided": 0,
-          "carbon": 0
-        },
-        "gaps": [
-          "alfalfa: aporte de carbono por raíz y corona: sin valor, depende del manejo y de la duración de la pastura",
-          "Días de lluvia fuerte tiene resolución 0.5°×0.625°: no distingue diferencias dentro del lote",
-          "Período sin heladas tiene resolución 0.5°×0.625°: no distingue diferencias dentro del lote",
-          "Días de calor extremo tiene resolución 0.5°×0.625°: no distingue diferencias dentro del lote"
-        ],
-        "risks": [
-          "Maíz: alta demanda de nitrógeno y de agua en floración.",
-          "Los cambios de rotación tardan 2-3 campañas en mostrar efecto en el suelo.",
-          "Verificar disponibilidad de semilla y maquinaria antes de decidir.",
-          "No viable: agua disponible ~280 mm < 1200 mm del ciclo",
-          "No viable: agua disponible ~154 mm < 650 mm del ciclo",
-          "Validar estas opciones con tu agrónomo de cabecera."
-        ],
-        "sequence": [
-          {
-            "crop": "alfalfa",
-            "start": "03-15",
-            "end": "03-14",
-            "cover": true
-          },
-          {
-            "crop": "alfalfa",
-            "start": "03-15",
-            "end": "03-14",
-            "cover": true
-          },
-          {
-            "crop": "alfalfa",
-            "start": "03-15",
-            "end": "03-14",
-            "cover": true
-          },
-          {
-            "crop": "alfalfa",
-            "start": "03-15",
-            "end": "03-14",
-            "cover": true
-          },
-          {
-            "crop": "maiz",
-            "start": "10-15",
-            "end": "04-15",
-            "cover": true
-          }
-        ],
-        "measures": [
-          {
-            "id": "fire_response_protocol",
-            "name": "Protocolo de incendio para cada cosecha",
-            "factor": "initial_attack",
-            "why": "demora y confusión en los primeros minutos de un incendio: riesgo 7 días: alto",
-            "name_en": "Fire response protocol for each harvest",
-            "why_en": "7-day risk: alto",
-            "benefit": "cada persona sabe qué hacer mientras llegan los bomberos: dar la ubicación exacta y alejar a la gente de la máquina",
-            "requires": {
-              "people": null,
-              "machinery": [],
-              "downtime_h": 0,
-              "cost": "low",
-              "reference_width_m": null,
-              "reference_width_note": null
-            },
-            "cost": "low",
-            "source": "INTA / UIB Balcarce (S. Tourn) + Bomberos Tandil (D. Ibáñez), 'Pautas para evitar incendios durante la cosecha' (2023-12-28), https://www.argentina.gob.ar/node/413622"
-          },
-          {
-            "id": "no_residue_burning",
-            "name": "No quemar rastrojos",
-            "factor": "residue_burning",
-            "why": "quema de rastrojo en época de alta propagación: suelo desnudo en meses de quemas: [6, 7, 8, 9]",
-            "name_en": "Do not burn stubble",
-            "why_en": "bare ground in burning months: [6, 7, 8, 9]",
-            "benefit": "conserva la cobertura del suelo y elimina un foco de ignición evitable; quemar sin autorización está prohibido. La Ley 26.562 exige autorización de la autoridad local competente para quemar, durante todo el año",
-            "requires": {
-              "people": 0,
-              "machinery": [],
-              "downtime_h": 0,
-              "cost": "low",
-              "reference_width_m": null,
-              "reference_width_note": null
-            },
-            "cost": "low",
-            "source": "Ley 26.562 (2009), presupuestos mínimos de protección ambiental para el control de actividades de quema: toda quema requiere autorización previa de la autoridad local"
-          },
-          {
-            "id": "maintain_firebreak",
-            "name": "Hacer cortafuegos dentro y fuera del lote",
-            "factor": "spread_boundary",
-            "why": "propagación desde o hacia lotes vecinos con vegetación seca continua: riesgo 7 días: alto",
-            "name_en": "Build firebreaks inside and around the field",
-            "why_en": "7-day risk: alto",
-            "benefit": "sectoriza el incendio: se quema solo una parte del cultivo",
-            "requires": {
-              "people": 2,
-              "machinery": [
-                "tractor con rastra o disco"
-              ],
-              "downtime_h": null,
-              "cost": "medium",
-              "reference_width_m": 30,
-              "reference_width_note": "referencia prudente para la región chaqueña; el diseño depende del combustible, la pendiente y el viento"
-            },
-            "cost": "medium",
-            "source": "INTA / UIB Balcarce (S. Tourn) + Bomberos Tandil (D. Ibáñez), 'Pautas para evitar incendios durante la cosecha' (2023-12-28), https://www.argentina.gob.ar/node/413622"
-          }
-        ],
-        "measures_gaps": []
-      }
-    ],
-    "disclaimer": "Herramienta de apoyo: no reemplaza tu experiencia ni la de un agrónomo local.",
-    "confidence": "high",
-    "priorities_used": {
-      "water": 5,
-      "soil": 0,
-      "erosion": 0,
-      "income": 3,
-      "forage": 0,
-      "nitrogen": 0,
-      "pests": 0,
-      "avoid_burning": 4
-    },
-    "mapping_note": "Para las rotaciones usamos tus prioridades explícitas.",
-    "gaps": [
-      "La corrección por altura usa un gradiente fijo de 6,5 °C por km; confirmá las heladas con una estación cercana"
-    ]
-  },
-  "explain": {
-    "alfalfa4-maiz": "Pastura de alfalfa 4 años – maíz (bajo riego): es tu rotación actual; los cambios se miden contra ella."
-  },
-  "catalog": {
-    "rotations": [
-      {
-        "id": "soja-soja",
-        "name": {
-          "es": "Soja – soja",
-          "en": "Soy – soy"
-        }
-      },
-      {
-        "id": "trigo-soja2-maiz",
-        "name": {
-          "es": "Trigo / soja 2ª – maíz",
-          "en": "Wheat / 2nd soy – maize"
-        }
-      },
-      {
-        "id": "maiz-soja-vicia",
-        "name": {
-          "es": "Maíz – vicia – soja",
-          "en": "Maize – vetch – soy"
-        }
-      },
-      {
-        "id": "sorgo-soja-trigo-soja2",
-        "name": {
-          "es": "Sorgo – soja – trigo / soja 2ª",
-          "en": "Sorghum – soy – wheat / 2nd soy"
-        }
-      },
-      {
-        "id": "maiz-soja",
-        "name": {
-          "es": "Maíz – soja",
-          "en": "Maize – soy"
-        }
-      },
-      {
-        "id": "trigo-soja2-maiz-soja",
-        "name": {
-          "es": "Trigo / soja 2ª – maíz – soja",
-          "en": "Wheat / 2nd soy – maize – soy"
-        }
-      },
-      {
-        "id": "soja-centeno",
-        "name": {
-          "es": "Soja + centeno de cobertura",
-          "en": "Soy + cereal rye cover"
-        }
-      },
-      {
-        "id": "girasol-trigo-soja2",
-        "name": {
-          "es": "Girasol – trigo / soja 2ª",
-          "en": "Sunflower – wheat / 2nd soy"
-        }
-      },
-      {
-        "id": "cebada-soja2-maiz",
-        "name": {
-          "es": "Cebada / soja 2ª – maíz",
-          "en": "Barley / 2nd soy – maize"
-        }
-      },
-      {
-        "id": "alfalfa3-maiz-trigo-soja2",
-        "name": {
-          "es": "Pastura de alfalfa 3 años – maíz – trigo / soja 2ª",
-          "en": "3-yr alfalfa pasture – maize – wheat / 2nd soy"
-        }
-      },
-      {
-        "id": "garbanzo-maiz",
-        "name": {
-          "es": "Garbanzo / maíz",
-          "en": "Chickpea / maize"
-        }
-      },
-      {
-        "id": "alfalfa4-maiz",
-        "name": {
-          "es": "Pastura de alfalfa 4 años – maíz (bajo riego)",
-          "en": "4-yr alfalfa pasture – maize (irrigated)"
-        }
-      }
-    ]
   }
 }
