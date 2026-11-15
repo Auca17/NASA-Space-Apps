@@ -5,7 +5,7 @@ import { useT } from "../../i18n";
 import { Card, BottomSheet, Legend } from "../../components/ui";
 import { Calendar } from "../../components/Calendar";
 import {
-  fireCal, fireDaily, apiRisk, pointsCsvUrl, meta as apiMeta,
+  fireCal, fireDaily, apiRiskResult, pointsCsvUrl, meta as apiMeta,
 } from "../../api";
 import {
   aggregateMonthly, yearMonthMatrix, fireSeasonMatrix,
@@ -16,14 +16,13 @@ import {
   type SemaphoreConfig,
 } from "../../domain/semaphore";
 import { groupByShard } from "../../domain/h3area";
-import { presentRisk, emergencyText } from "../../domain/risk";
+import {
+  presentRisk, emergencyText, riskReasonText, type RiskView,
+} from "../../domain/risk";
 import { EmergencyBlock } from "../emergency/EmergencyBlock";
 import { viridis, css } from "../../domain/colors";
 import { semaphorePeriod } from "../../domain/clarity";
 import type { MetaJson } from "../../api/types";
-
-const MONTH_NAMES = ["enero","febrero","marzo","abril","mayo","junio",
-  "julio","agosto","septiembre","octubre","noviembre","diciembre"];
 
 function downloadCsv(name: string, text: string) {
   const url = URL.createObjectURL(new Blob([text], { type: "text/csv" }));
@@ -66,7 +65,12 @@ export function AreaPanel({ lat, lon, cells, open, onClose, country,
 }) {
   const { t, lang } = useT();
   const [meta, setMeta] = useState<MetaJson | null>(null);
-  const [risk, setRisk] = useState<ReturnType<typeof presentRisk> | null>(null);
+  /** B1: a fetch failure is not "no data" — keep the states apart. */
+  const [riskStatus, setRiskStatus] =
+    useState<"loading" | "error" | "empty" | "data">("loading");
+  const [risk, setRisk] = useState<RiskView | null>(null);
+  /** Bump to re-run the risk query after a failure. */
+  const [riskTick, setRiskTick] = useState(0);
   /** ISO A2 from /api/risk — preferred over the app's geolocated guess. */
   const [riskCountry, setRiskCountry] = useState<string | null>(null);
   const [cal, setCal] = useState<{ months: string[]; values: number[] } | null>(null);
@@ -85,10 +89,22 @@ export function AreaPanel({ lat, lon, cells, open, onClose, country,
   useEffect(() => {
     if (!open) return;
     let dead = false;
-    apiRisk(lat, lon).then((r) => {
-      if (!dead) {
-        setRisk(r ? presentRisk(r) : null);
-        setRiskCountry(r?.country ?? null);
+    setRiskStatus("loading");
+    apiRiskResult(lat, lon).then((r) => {
+      if (dead) return;
+      if (!r.ok) {
+        // never leave the previous point's risk on screen after a failure
+        setRisk(null); setRiskCountry(null); setRiskStatus("error");
+        return;
+      }
+      if (r.data) {
+        setRisk(presentRisk(r.data));
+        setRiskCountry(r.data.country ?? null);
+        setRiskStatus("data");
+      } else {
+        setRisk(null);
+        setRiskCountry(null);
+        setRiskStatus("empty");
       }
     });
     (async () => {
@@ -118,7 +134,7 @@ export function AreaPanel({ lat, lon, cells, open, onClose, country,
       if (!dead) { setSem(s); setSemEnd(end); }
     })();
     return () => { dead = true; };
-  }, [open, lat, lon, cells, cellSet, shards, meta]);
+  }, [open, lat, lon, cells, cellSet, shards, meta, riskTick]);
 
   const calMatrix = useMemo(() => {
     if (!cal) return null;
@@ -140,8 +156,10 @@ export function AreaPanel({ lat, lon, cells, open, onClose, country,
   }, [calMatrix, lang]);
 
   const thisMonth = month ?? new Date().toISOString().slice(0, 7);
+  const monthFmt = new Intl.DateTimeFormat(lang === "en" ? "en" : "es",
+    { month: "long", year: "numeric", timeZone: "UTC" });
   const monthLabel = (m: string) =>
-    `${MONTH_NAMES[Number(m.slice(5)) - 1]} ${m.slice(0, 4)}`;
+    monthFmt.format(new Date(`${m}-01T00:00:00Z`));
   const curValue = cal && sem ? sem.value : null;
   // The semaphore always sums the last `window_days` up to today; it
   // must not borrow the month picked on the historic map.
@@ -169,14 +187,26 @@ export function AreaPanel({ lat, lon, cells, open, onClose, country,
 
       {sem && (
         <section className="lead" aria-live="polite">
-          <p className="lead-place">{lat.toFixed(2)}°, {lon.toFixed(2)}°</p>
+          <p className="lead-place">{t("panel.point",
+            { lat: lat.toFixed(2), lon: lon.toFixed(2) })}</p>
           <span className={`badge ${sem.category}`}>{t(`sem.${sem.category}`)}</span>
           <p className="lead-text">{t(`panel.lead.${sem.category}`, { d: windowDays })}</p>
         </section>
       )}
 
       <Card title={t("panel.risk7d")}>
-        {risk ? (
+        {riskStatus === "loading" && (
+          <p className="muted" role="status">{t("panel.loading")}</p>)}
+        {riskStatus === "error" && (
+          <div role="alert">
+            <p className="muted">{t("panel.riskError")}</p>
+            <button type="button"
+                    onClick={() => setRiskTick((k) => k + 1)}>
+              {t("ui.retry")}</button>
+          </div>)}
+        {riskStatus === "empty" && (
+          <p className="muted">{t("panel.noData")}</p>)}
+        {riskStatus === "data" && risk && (
           <>
             <div className="big">
               <span aria-hidden="true">{risk.icon} </span>
@@ -188,15 +218,15 @@ export function AreaPanel({ lat, lon, cells, open, onClose, country,
                   { x: risk.ratioText.replace("×", "") })}</span>}
             </div>
             <p className="muted">
-              {t("panel.prob", { p: risk.probPct })} —{" "}
+              {t("panel.prob", { p: risk.probText })} —{" "}
               {t(`panel.riskLevel.${risk.level}`)}
             </p>
             {risk.reasons.length > 0 && (
               <div><strong>{t("panel.reasons")}</strong>
-                <ul>{risk.reasons.map((r) => <li key={r}>{r}</li>)}</ul>
+                <ul>{risk.reasons.map((r) =>
+                  <li key={r}>{riskReasonText(r, t)}</li>)}</ul>
               </div>)}
-          </>
-        ) : <p className="muted">{t("panel.noData")}</p>}
+          </>)}
         <p className="notice">{t("panel.disclaimer")}<br />
           {emergencyText(effCountry, t)}</p>
       </Card>
@@ -248,6 +278,8 @@ export function AreaPanel({ lat, lon, cells, open, onClose, country,
                   {t("calendar.anomalies")}</button>
               </span>
             </div>
+            {anomalies && (
+              <p className="muted">{t("calendar.anomalies.hint")}</p>)}
             <div style={{ overflowX: "auto" }}>
               <Calendar compact
                 matrix={calMatrix}

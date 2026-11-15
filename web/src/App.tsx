@@ -641,7 +641,15 @@ export default function App() {
             }} />)}
         <div ref={mapDiv} className="map" role="application"
              aria-label={t("map.label")} />
-        {mode === "fire" && <div className="reticle" aria-hidden="true" />}
+        {(mode === "fire" || mode === "live") && (
+          /* marks the map centre — the exact point the fire risk is
+           * queried at and the reference live distances are measured
+           * from (B2/B4) */
+          <div className="reticle" aria-hidden="true" />)}
+        {mode === "fire" && area && !panelOpen && (
+          <button type="button" className="fire-reopen"
+                  onClick={() => setPanelOpen(true)}>
+            {t("panel.reopen")}</button>)}
         {mode === "field" && !fieldOpen && (
           <>
             {draw === "none" && !selection && !fieldsView && (

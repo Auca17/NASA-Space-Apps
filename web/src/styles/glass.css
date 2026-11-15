@@ -63,7 +63,7 @@ body:has(.app) { background: #0f110e; }
 /* small floating groups: solid glass, no blur (performance budget) */
 .app .field-basemap, .app .field-extents, .app .field-zoom,
 .app .field-guide small, .app .draw-hint, .app .meth-panel,
-.app .tooltip-pop {
+.app .fire-reopen, .app .tooltip-pop {
   background: var(--glass-bg-strong);
   border: 1px solid var(--glass-border);
   box-shadow: var(--glass-shadow);
@@ -190,9 +190,12 @@ body:has(.app) { background: #0f110e; }
 .app .badge.moderado, .app .badge.sobre_lo_normal {
   color: var(--warn); border-color: rgba(227, 193, 79, 0.5);
   background: rgba(227, 193, 79, 0.1); }
-.app .badge.alto, .app .badge.extremo, .app .badge.muy_alto {
+.app .badge.alto {
   color: var(--bad); border-color: rgba(240, 122, 98, 0.55);
   background: rgba(240, 122, 98, 0.12); }
+.app .badge.extremo, .app .badge.muy_alto {
+  color: var(--bg); border-color: var(--bad);
+  background: var(--bad); font-weight: 700; }
 .app .sec, .app details { border-color: var(--border); }
 .app table.cal th { background: transparent; }
 .app table.cal th, .app table.cal td { border-color: rgba(255, 255, 255, 0.06); }

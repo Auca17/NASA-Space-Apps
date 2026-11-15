@@ -4,8 +4,9 @@ import { monthlyBaseline } from "../domain/baseline";
 import { useT } from "../i18n";
 import type { MonthlySeries } from "../domain/fireSeries";
 
-const MONTHS = ["ene", "feb", "mar", "abr", "may", "jun",
-                "jul", "ago", "sep", "oct", "nov", "dic"];
+const monthShort = (lang: string, i: number) =>
+  new Intl.DateTimeFormat(lang, { month: "short", timeZone: "UTC" })
+    .format(new Date(Date.UTC(2024, i, 1)));
 
 export function Calendar({ matrix, mode, highlight, onPick, compact }: {
   matrix: Map<number, number[]>;
@@ -14,8 +15,13 @@ export function Calendar({ matrix, mode, highlight, onPick, compact }: {
   onPick?: (year: number, month: number, v: number) => void;
   compact?: boolean;
 }) {
-  const { t } = useT();
+  const { t, lang } = useT();
   const years = [...matrix.keys()].sort((a, b) => b - a);
+  // compact headers reuse the localized month-initials key
+  const initials = t("ui.monthInitials").split(",");
+  const months = [...Array(12)].map((_, i) =>
+    compact ? (initials[i] ?? monthShort(lang, i))
+            : monthShort(lang, i));
   // baseline for anomaly mode: median per month column across rows
   const series: MonthlySeries = { months: [], values: [] };
   for (const [y, row] of matrix) {
@@ -40,7 +46,7 @@ export function Calendar({ matrix, mode, highlight, onPick, compact }: {
       <thead>
         <tr>
           <th scope="col">{t("calendar.year")}</th>
-          {MONTHS.map((m) => <th key={m} scope="col">{compact ? m[0] : m}</th>)}
+          {months.map((m, i) => <th key={i} scope="col">{m}</th>)}
         </tr>
       </thead>
       <tbody>
@@ -59,7 +65,7 @@ export function Calendar({ matrix, mode, highlight, onPick, compact }: {
                              color: css(textOn(bg)) }}>
                   {onPick ? (
                     <button type="button"
-                            aria-label={`${MONTHS[m]} ${y}: ${ci.v}`}
+                            aria-label={`${monthShort(lang, m)} ${y}: ${ci.v}`}
                             onClick={() => onPick(y, m, v)}>
                       {ci.v}
                     </button>
