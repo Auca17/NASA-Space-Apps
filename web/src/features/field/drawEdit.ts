@@ -103,13 +103,32 @@ export class DrawSession {
     this.notify();
   }
 
-  /** Start dragging vertex `i` (pointer down on it, closed mode). */
+  /** Start dragging vertex `i` (pointer down on it, open or closed). */
   startDrag(i: number): boolean {
-    if (!this.state.closed || i < 0 || i >= this.state.ring.length) {
+    if (i < 0 || i >= this.state.ring.length || this.dragIndex != null) {
       return false;
     }
     this.dragFrom = this.state.ring.map((p) => [...p] as LatLon);
     this.dragIndex = i;
+    return true;
+  }
+
+  /** Pointer down on a midpoint handle: the vertex is inserted on its
+   * edge and dragged in the same gesture. `index` is the insertion
+   * position from `edgeMidpoints`; insert+drag is one undo step. */
+  startMidDrag(index: number): boolean {
+    const n = this.state.ring.length;
+    if (index < 1 || index > n || n < 2 || this.dragIndex != null) {
+      return false;
+    }
+    const a = this.state.ring[index - 1], b = this.state.ring[index % n];
+    this.dragFrom = this.state.ring.map((p) => [...p] as LatLon);
+    const ring = this.state.ring.slice();
+    ring.splice(index, 0,
+                [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2] as LatLon);
+    this.state = { ...this.state, ring };
+    this.dragIndex = index;
+    this.notify();
     return true;
   }
 

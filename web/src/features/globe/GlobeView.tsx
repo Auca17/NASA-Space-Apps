@@ -14,6 +14,8 @@ import {
 } from "./baseStyle";
 import type { Landuse, LatLon, Poly } from "../../domain/selection";
 import type { Road } from "../../domain/split";
+import { edgeMidpoints } from "../../domain/parcelsGeo";
+import { makeFillOverlay, type FillOverlay } from "./fillOverlay";
 
 /** Land use read from the map's vector tiles around a selection. */
 export type LandUseRead = { landuse: Landuse[]; buildings: LatLon[];
@@ -51,7 +53,8 @@ export interface GlobeHandle {
   flyTo(lat: number, lon: number, zoom?: number, bottomPx?: number): void;
   setCells(cells: Map<string, number>, colorExpr: unknown): void;
   setOutline(cells: string[], color?: string): void;
-  setDraft(ring: LatLon[] | null, showVertices?: boolean): void;
+  setDraft(ring: LatLon[] | null, showVertices?: boolean,
+           showMidpoints?: boolean): void;
   /** Location reference (search hit, GPS, coordinates); null clears it. */
   setMarker(p: [number, number] | null): void;
   /** Zoom so the whole ring is visible. */
@@ -67,6 +70,9 @@ export interface GlobeHandle {
   zoomBy(delta: number, bottomPx?: number): void;
   /** Screen pixel (relative to the map) -> [lat, lon]. */
   unproject(x: number, y: number): [number, number];
+  /** Pan off while a vertex is dragged on the open field outline;
+   * always call with `true` again when the gesture ends. */
+  setPanEnabled(on: boolean): void;
   onClick(cb: ((lat: number, lon: number) => void) | null): void;
   /** Adds a listener for the end of each map move; returns its removal. */
   onMove(cb: (lat: number, lon: number, zoom: number,
@@ -114,6 +120,8 @@ export function useGlobe(
     let guideEnabled = false;
     let ready = false;
     let protocol: Protocol | undefined;
+    const shapesFill = makeFillOverlay("shapes-fill");
+    const draftFill = makeFillOverlay("draft-fill");
     const updateFieldBasemap = () => {
       if (!ready) return;
       if (map.getLayer("field-overview")) {
@@ -193,17 +201,17 @@ export function useGlobe(
       });
       map.addSource("shapes", { type: "geojson",
         data: { type: "FeatureCollection", features: [] } });
-      map.addLayer({ id: "shapes-fill", type: "fill", source: "shapes",
-        paint: { "fill-color": ["get", "fill"],
-                 "fill-opacity": ["get", "op"] } });
+      /* Fills do NOT go through the GeoJSON pipeline: geojson-vt clips
+       * polygons per tile and its polygon clip is broken at high zoom
+       * (rectangular tile blocks instead of the outline). The custom
+       * overlay layers triangulate and draw the fills directly; the
+       * vector layers below only carry lines/points. */
+      map.addLayer(shapesFill);
       map.addLayer({ id: "shapes-line", type: "line", source: "shapes",
         paint: { "line-color": ["get", "line"], "line-width": ["get", "w"] } });
       map.addSource("draft", { type: "geojson",
         data: { type: "FeatureCollection", features: [] } });
-      map.addLayer({
-        id: "draft-fill", type: "fill", source: "draft",
-        paint: { "fill-color": "#1a56db", "fill-opacity": 0.2 },
-      });
+      map.addLayer(draftFill);
       map.addLayer({
         id: "draft-line", type: "line", source: "draft",
         paint: { "line-color": "#b7e6ff", "line-width": 3 },
@@ -211,7 +219,10 @@ export function useGlobe(
       map.addLayer({
         id: "draft-corners", type: "circle", source: "draft",
         filter: ["==", ["geometry-type"], "Point"],
-        paint: { "circle-color": "#1a56db", "circle-radius": 5,
+        // vertices solid, midpoint handles smaller and lighter
+        paint: { "circle-color": "#1a56db",
+          "circle-radius": ["case", ["==", ["get", "k"], "mid"], 3.5, 5],
+          "circle-opacity": ["case", ["==", ["get", "k"], "mid"], 0.55, 1],
           "circle-stroke-width": 2, "circle-stroke-color": "#ffffff" },
       });
       ready = true;
@@ -338,21 +349,34 @@ export function useGlobe(
         if (map.getLayer("outline-line"))
           map.setPaintProperty("outline-line", "line-color", color);
       },
-      setDraft(ring, showVertices = true) {
+      setDraft(ring, showVertices = true, showMidpoints = true) {
         const src = map.getSource("draft") as maplibregl.GeoJSONSource | undefined;
         if (!src) return;
         const coordinates = (ring ?? []).map(([lat, lon]) => [lon, lat]);
         const features: GeoJSON.Feature[] = [];
+        let fill: Parameters<FillOverlay["setPolys"]>[0] = [];
         if (coordinates.length >= 3 && showVertices) {
           features.push({ type: "Feature", properties: {},
             geometry: { type: "Polygon", coordinates: [[...coordinates, coordinates[0]]] } });
+          fill = [{ rings: [ring!], fill: "#1a56db", op: 0.2 }];
         } else if (coordinates.length >= 2) {
           features.push({ type: "Feature", properties: {},
             geometry: { type: "LineString", coordinates } });
         }
+        draftFill.setPolys(fill);
         if (showVertices && coordinates.length) {
-          features.push({ type: "Feature", properties: {},
+          features.push({ type: "Feature", properties: { k: "vert" },
             geometry: { type: "MultiPoint", coordinates } });
+          // midpoint handles on every drawn edge (the closing edge is
+          // drawn only when the preview is a polygon)
+          const mids = showMidpoints
+            ? edgeMidpoints(ring ?? [], coordinates.length >= 3)
+                .map((m) => [m.at[1], m.at[0]])
+            : [];
+          if (mids.length) {
+            features.push({ type: "Feature", properties: { k: "mid" },
+              geometry: { type: "MultiPoint", coordinates: mids } });
+          }
         }
         src.setData({ type: "FeatureCollection", features });
       },
@@ -422,8 +446,9 @@ export function useGlobe(
           zone: { fill: "#f9a825", op: 0.35, line: "#e65100", w: 1.5 },
         };
         const src = map.getSource("shapes") as maplibregl.GeoJSONSource | undefined;
-        src?.setData({ type: "FeatureCollection", features: shapes
-          .filter((sh) => sh.geom.length && sh.geom[0].length >= 3)
+        const good = shapes.filter(
+          (sh) => sh.geom.length && sh.geom[0].length >= 3);
+        src?.setData({ type: "FeatureCollection", features: good
           .map((sh) => ({ type: "Feature",
             properties: { ...st[sh.kind],
                           ...(sh.color ? { fill: sh.color } : {}) },
@@ -432,6 +457,9 @@ export function useGlobe(
               .filter((ring) => ring.length >= 3)
               .map((ring) => [...ring.map(([la, lo]) => [lo, la]),
                               [ring[0][1], ring[0][0]]]) } })) });
+        shapesFill.setPolys(good.map((sh) => ({
+          rings: sh.geom,
+          fill: sh.color ?? st[sh.kind].fill, op: st[sh.kind].op })));
       },
       setFieldBasemap(active, satellite, guide) {
         fieldActive = active;
@@ -450,6 +478,9 @@ export function useGlobe(
       unproject(x, y) {
         const p = map.unproject([x, y]);
         return [p.lat, p.lng];
+      },
+      setPanEnabled(on) {
+        if (on) map.dragPan.enable(); else map.dragPan.disable();
       },
       onClick(cb) { clickCb = cb; },
       onMove(cb) { moveCbs.add(cb); return () => { moveCbs.delete(cb); }; },

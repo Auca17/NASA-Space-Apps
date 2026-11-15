@@ -383,6 +383,39 @@ export function nearestEdge(ring: LatLon[], p: LatLon):
   return best;
 }
 
+/** Midpoint handle for every drawn edge; `index` is where the new
+ * vertex lands when the handle is dragged (insert before `index`).
+ * Open rings draw the closing edge once the preview is a polygon
+ * (3+ points), so it gets a handle too; a 2-point open path has only
+ * its single drawn segment. */
+export function edgeMidpoints(ring: LatLon[], closed: boolean):
+    { index: number; at: LatLon }[] {
+  const n = ring.length;
+  const edges = closed || n >= 3 ? n : n - 1;
+  const out: { index: number; at: LatLon }[] = [];
+  for (let i = 0; i < edges; i++) {
+    const a = ring[i], b = ring[(i + 1) % n];
+    out.push({ index: i + 1,
+               at: [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2] });
+  }
+  return out;
+}
+
+/** Nearest midpoint handle within `tolM` metres, or null. */
+export function nearestMidpoint(ring: LatLon[], closed: boolean,
+    p: LatLon, tolM: number): { index: number; at: LatLon } | null {
+  const f = toM(p[0]);
+  const [px, py] = f(p);
+  let best: { index: number; at: LatLon } | null = null;
+  let bd = tolM;
+  for (const m of edgeMidpoints(ring, closed)) {
+    const [x, y] = f(m.at);
+    const d = Math.hypot(x - px, y - py);
+    if (d <= bd) { bd = d; best = m; }
+  }
+  return best;
+}
+
 /** Nearest vertex of `ring` to `p` within `tolM` metres (index or -1). */
 export function nearestVertex(ring: LatLon[], p: LatLon,
                               tolM: number): number {
