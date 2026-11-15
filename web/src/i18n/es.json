@@ -515,5 +515,9 @@
   "field.coords.lon": "Longitud",
   "field.coords.go": "Usar este punto",
   "field.coords.invalid": "Coordenadas inválidas (lat −90…90, lon −180…180)",
-  "orin.detail.label": "Dataset y números"
+  "orin.detail.label": "Dataset y números",
+  "shell.home": "Ashfield, inicio",
+  "welcome.row.fire": "Historia de focos y riesgo de los próximos 7 días",
+  "welcome.row.live": "Focos que el satélite ve ahora, en todo el mundo",
+  "welcome.row.geo": "Usar tu ubicación para abrir el mapa de fuego"
 }

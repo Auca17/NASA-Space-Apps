@@ -1,8 +1,30 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { WindLogo } from "./WindLogo";
 
 describe("WindLogo", () => {
+  it("mounts the animated variant (the class the idle animation uses)", () => {
+    const { container } = render(<WindLogo />);
+    expect(container.querySelector("svg.wind-logo.anim")).not.toBeNull();
+  });
+
+  it("drives the idle sway: the flame transform changes per frame", () => {
+    const frames: FrameRequestCallback[] = [];
+    vi.spyOn(window, "requestAnimationFrame")
+      .mockImplementation((cb) => { frames.push(cb); return frames.length; });
+    const { container } = render(<WindLogo />);
+    const flame = () =>
+      container.querySelector('[data-part="flame"]')
+        ?.getAttribute("transform");
+    // run a few frames and compare: idle animation must move the mark
+    frames.shift()?.(0);
+    const first = flame();
+    frames.shift()?.(500);
+    frames.shift()?.(900);
+    expect(first).toBeTruthy();
+    expect(flame()).not.toBe(first);
+  });
+
   it("renders an accessible image with the flame and the leaf", () => {
     const { container } = render(<WindLogo size={40} title="Ashfield" />);
     const img = screen.getByRole("img", { name: "Ashfield" });

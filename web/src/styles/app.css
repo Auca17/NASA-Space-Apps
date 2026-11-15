@@ -45,7 +45,12 @@ input[type="range"] { min-height: var(--touch); }
 .topbar h1 { font-size: 1.05rem; margin: 0; font-weight: 700;
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
   max-width: 34vw; flex-shrink: 0; }
-.topbar h1 { display: flex; align-items: center; gap: 6px; }
+/* logo + name are the home control (task 33.1): one labelled button,
+ * no separate "Inicio" entry */
+.topbar-home { display: flex; align-items: center; gap: 6px;
+  min-width: 0; min-height: var(--touch); padding: 0 8px 0 4px;
+  border: 0; background: transparent; border-radius: 8px;
+  font: inherit; font-weight: inherit; }
 .topbar-name { overflow: hidden; text-overflow: ellipsis; }
 .wind-logo { flex: none; overflow: visible; }
 .topbar .spacer { flex: 1; min-width: 4px; }
@@ -69,7 +74,6 @@ input[type="range"] { min-height: var(--touch); }
 
 .map-wrap { position: relative; flex: 1; min-height: 0; }
 .map { position: absolute; inset: 0; background: #0a0d0b; }
-.home-button { font-size: 0.85rem; white-space: nowrap; }
 .field-extents, .field-map-tools { position: absolute; z-index: 8; top: 12px; }
 .field-extents { left: 12px; }
 .field-map-tools { right: 12px; display: grid; justify-items: end; gap: 8px; }
@@ -299,8 +303,26 @@ table.cal tr.current td { outline: 2px solid var(--accent); }
 .welcome-more summary { cursor: pointer; min-height: var(--touch);
   display: inline-flex; align-items: center; color: var(--muted);
   font-size: 0.9rem; }
-.welcome-more .row-actions { display: flex; gap: 8px; flex-wrap: wrap;
-  justify-content: center; margin: 10px 0; align-items: center; }
+/* "Otras vistas": aligned rows, not a pile of pills (task 33.3) */
+.welcome-alt { display: grid; gap: 6px; margin: 8px 0 4px;
+  list-style: none; padding: 0; }
+.welcome-alt > li { display: grid; }
+.welcome-row { display: grid; grid-template-columns: 26px 1fr auto;
+  gap: 10px; align-items: center; width: 100%; min-height: 48px;
+  padding: 6px 12px; text-align: left; }
+.welcome-row .row-ico { width: 22px; height: 22px; fill: var(--accent);
+  stroke: var(--accent); }
+.welcome-row .row-ico circle { fill: var(--accent); stroke: none; }
+.welcome-row .row-text { display: grid; gap: 1px; min-width: 0; }
+.welcome-row .row-text strong { font-weight: 600; }
+.welcome-row .row-text small { color: var(--muted); font-size: 0.8rem;
+  line-height: 1.25; }
+.welcome-row .row-chev { color: var(--muted); font-size: 1.15rem; }
+@media (min-width: 720px) {
+  .welcome-alt { grid-template-columns: 1fr 1fr; }
+  .welcome-alt > li:last-child { grid-column: 1 / -1; }
+  .welcome-alt > li:last-child .welcome-row { width: 100%; }
+}
 .coord-form { margin-top: 10px; }
 .coord-form .picker-how { margin-top: 0; }
 .coord-row { display: flex; gap: 8px; flex-wrap: wrap; align-items: flex-end; }

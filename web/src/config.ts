@@ -11,4 +11,4 @@ export const API_BASE: string =
 export const DEMO_PLOT = { lat: -33.89, lon: -60.57, ha: 50 };
 
 export const DEFAULT_VIEW = { lat: -38.4, lon: -63.6, zoom: 3.2 };
-export const WORLD_VIEW = { lat: 10, lon: 0, zoom: 0.5 };
+export const WORLD_VIEW = { lat: 10, lon: 0, zoom: 1.5 };

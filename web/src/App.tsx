@@ -150,6 +150,12 @@ export default function App() {
     globe?.setFieldBasemap(mode === "field", satellite, !fieldOpen && fieldGuide);
   }, [globe, mode, satellite, fieldGuide, fieldOpen]);
 
+  // World views cap the zoom low enough that nobody reaches featureless
+  // pixels; the field view keeps its deeper max for drawing plots.
+  useEffect(() => {
+    globe?.setZoomRange(1.5, mode === "field" ? 16.5 : 9);
+  }, [globe, mode]);
+
   /** A finished outline (points, freehand or tap): to review as a
    * selection, or clipped into the open field as a new crop zone. */
   const onShape = (r: LatLon[], approx: boolean) => {
@@ -489,17 +495,25 @@ export default function App() {
     }))));
   }, []);
 
+  // A right-side .panel is open: the map's top-right controls step
+  // left of it so nothing sits on the panel (task 33.2).
+  const sidePanel = (mode === "fire" && panelOpen) ||
+    (mode === "field" && fieldOpen) || emergOpen;
+
   return (
-    <div className="app">
+    <div className={`app${sidePanel ? " has-side-panel" : ""}`}>
       <header className="topbar">
-        <h1><WindLogo size={30} title={APP_NAME} />
-          <span className="topbar-name">{APP_NAME}</span></h1>
-        <button type="button" className="home-button"
-                onClick={() => {
-                  if (modeRef.current === "field") changePlot();
-                  setMode("welcome");
-                }}>
-          {t("nav.home")}</button>
+        <h1>
+          <button type="button" className="topbar-home"
+                  aria-label={t("shell.home")}
+                  onClick={() => {
+                    if (modeRef.current === "field") changePlot();
+                    setMode("welcome");
+                  }}>
+            <span aria-hidden="true"><WindLogo size={30} title={APP_NAME} /></span>
+            <span className="topbar-name">{APP_NAME}</span>
+          </button>
+        </h1>
         <nav>
           <button aria-pressed={mode === "field"}
                   onClick={() => {
