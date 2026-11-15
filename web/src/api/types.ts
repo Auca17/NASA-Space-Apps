@@ -45,6 +45,8 @@ export interface Card {
   value: number | string | null;
   unit?: string | null;
   text: string;
+  /** English rendering of `text` (the Spanish one feeds the engines). */
+  text_en?: string;
   source: string;
   resolution?: string;
   confidence: "high" | "medium" | "low";
@@ -56,6 +58,7 @@ export interface Card {
   /** fire_weather card: single INTA stop conditions met (last 3 days). */
   stop_conditions?: string[];
   stop_detail?: Record<string, string>;
+  stop_detail_en?: Record<string, string>;
 }
 
 export interface CalendarRow {
@@ -67,10 +70,15 @@ export interface CalendarRow {
 export interface Measure {
   id: string;
   name: string;
+  name_en?: string;
+  why_en?: string;
   factor?: string;
   why?: string;
   benefit?: string;
   requires?: Record<string, unknown>;
+  /** Extra checklist items (e.g. harvester checks from the INTA Chaco
+   * guide). */
+  checks?: string[];
   cost?: string;
   source?: string;
 }
@@ -102,6 +110,7 @@ export interface DiagnoseResponse {
 export interface Strategy {
   id: string;
   name: string;
+  name_en?: string;
   is_current: boolean;
   score: number;
   confidence: string;
@@ -124,6 +133,9 @@ export interface RotationsResponse {
   confidence?: string;
   /** Top-level gaps, e.g. "sin rotaciones validadas para esta zona". */
   gaps?: string[];
+  /** Documented rotation references for zones without a computed one
+   * (e.g. INTA Patagonia); shown in the empty state, never computed. */
+  zone_references?: { zone: string; text: string; source: string }[];
   /** Strategy ids ranked without scenario (diagnosis carried one). */
   baseline_order?: string[];
 }
@@ -144,6 +156,20 @@ export interface RotationEntry {
 export interface CropEntry {
   id: string;
   name: { es?: string; en?: string };
+}
+
+/** A documented incident shown next to the prevention measures
+ * (`knowledge/cases.json`, contract 3.4). kind news_report = a press
+ * report, not a worker testimony. */
+export interface CaseEntry {
+  id: string;
+  place: string;
+  date: string;
+  summary: string;
+  unknown?: string;
+  source: { title?: string; url?: string };
+  lessons?: string[];
+  kind?: string;
 }
 
 /* ------------------------------------------------- orin (contract 2.9) -- */

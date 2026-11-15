@@ -12,10 +12,11 @@
  */
 import { readFile } from "node:fs/promises";
 import { resolve } from "node:path";
+import { pathToFileURL } from "node:url";
 
 const FILES = ["orin/validation.json", "orin/lots.geojson"];
-const FIXTURES = resolve(import.meta.dirname, "..",
-  process.env.DATA_DIR ?? "../fixtures");
+const WEB_ROOT = resolve(import.meta.dirname, "..");
+const FIXTURES = resolve(WEB_ROOT, process.env.DATA_DIR ?? "../fixtures");
 
 /** True when a payload marks itself as invented: `synthetic: true` at
  * top level or on any geojson feature/property. */
@@ -42,10 +43,11 @@ async function fetchFile(base, name) {
   try {
     const res = await fetch(`${base.replace(/\/+$/, "")}/${name}`,
       { signal: AbortSignal.timeout(10_000) });
-    if (!res.ok) return { name, found: false, json: null };
+    if (res.status === 404) return { name, found: false, json: null };
+    if (!res.ok) return { name, failed: true };
     return { name, found: true, json: await res.json() };
   } catch {
-    return { name, found: false, json: null };
+    return { name, failed: true };
   }
 }
 
@@ -59,19 +61,26 @@ async function localFile(name) {
   }
 }
 
-const base = process.argv[2] ?? process.env.VITE_DATA_BASE_URL ?? "";
-const remote = /^https?:\/\//.test(base);
-const files = await Promise.all(FILES.map((f) =>
-  remote ? fetchFile(base, f) : localFile(f)));
-const { bad } = assessOrinFiles(files);
+if (process.argv[1] && pathToFileURL(resolve(process.argv[1])).href === import.meta.url) {
+  const { loadEnv } = await import("vite");
+  const base = process.argv[2] ??
+    loadEnv("production", WEB_ROOT).VITE_DATA_BASE_URL ?? "";
+  const remote = /^https?:\/\//.test(base);
+  const files = await Promise.all(FILES.map((f) =>
+    remote ? fetchFile(base, f) : localFile(f)));
+  const { bad } = assessOrinFiles(files);
+  const failed = files.filter((file) => file.failed).map((file) => file.name);
 
-if (bad.length && remote) {
-  console.error(`[check-no-synthetic] FAIL: ${base} sirve datos ` +
-    `inventados: ${bad.join(", ")}. ` +
-    `Quitarlos o subir los datos reales antes de publicar.`);
-  process.exit(1);
-}
-if (bad.length) {
-  console.warn(`[check-no-synthetic] aviso: ${bad.join(", ")} llevan ` +
-    `synthetic:true (OK en desarrollo local; fallaría contra http).`);
+  if (failed.length) {
+    console.warn(`[check-no-synthetic] aviso: no se pudieron verificar ${failed.join(", ")}.`);
+  }
+  if (bad.length && remote) {
+    console.error(`[check-no-synthetic] FAIL: el origen remoto sirve datos ` +
+      `inventados: ${bad.join(", ")}. ` +
+      `Quitarlos o subir los datos reales antes de publicar.`);
+    process.exitCode = 1;
+  } else if (bad.length) {
+    console.warn(`[check-no-synthetic] aviso: ${bad.join(", ")} llevan ` +
+      `synthetic:true (OK en desarrollo local; fallaría contra http).`);
+  }
 }

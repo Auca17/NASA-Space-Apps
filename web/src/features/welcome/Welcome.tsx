@@ -2,12 +2,18 @@ import { useState } from "react";
 import { useT } from "../../i18n";
 import { APP_NAME } from "../../config";
 import { apiUrl } from "../../api/client";
+import { WindLogo } from "../../components/WindLogo";
 
 type Hit = { lat: number; lon: number; name: string };
 
-export function Welcome({ onLocate, onExplore }: {
+/** First screen: the field analysis is the main path; fire and live
+ * hotspots stay one tap away as secondary views. */
+export function Welcome({ onAnalyze, onDemo, onLocate, onExplore, onLive }: {
+  onAnalyze: () => void;
+  onDemo: () => void;
   onLocate: (lat: number, lon: number) => void;
   onExplore: () => void;
+  onLive: () => void;
 }) {
   const { t } = useT();
   const [q, setQ] = useState("");
@@ -30,8 +36,7 @@ export function Welcome({ onLocate, onExplore }: {
       // same-origin proxy: public Nominatim sends no CORS header
       const r = await fetch(
         apiUrl(`/api/geocode?q=${encodeURIComponent(q)}`));
-      const j = (await r.json()) as
-        { hits: { lat: number; lon: number; name: string }[] };
+      const j = (await r.json()) as { hits: Hit[] };
       setHits(j.hits ?? []);
     } catch { setHits([]); }
     setBusy(false);
@@ -39,19 +44,31 @@ export function Welcome({ onLocate, onExplore }: {
 
   return (
     <div className="welcome">
-      <h2>{APP_NAME}</h2>
-      <p className="muted">{t("app.tagline")}</p>
-      <h3>{t("welcome.title")}</h3>
+      <div className="welcome-logo" aria-hidden="true"><WindLogo size={72} /></div>
+      <p className="welcome-brand">{APP_NAME}</p>
+      <h2>{t("welcome.title")}</h2>
       <p>{t("welcome.text")}</p>
       <div className="actions">
-        <button className="primary" onClick={geo}>{t("welcome.myZone")}</button>
-        <button onClick={onExplore}>{t("welcome.explore")}</button>
+        <button className="primary big-cta" onClick={onAnalyze}>
+          {t("welcome.analyze")}</button>
+        <button onClick={onDemo}>{t("welcome.demo")}</button>
+        <p className="muted demo-note">{t("welcome.demoNote")}</p>
       </div>
-      <p className="geo-note">{t("welcome.geoNote")}</p>
-      {(denied || hits.length >= 0) && (
-        <>
+
+      <section className="welcome-more" aria-labelledby="welcome-more-h">
+        <h3 id="welcome-more-h">{t("welcome.more")}</h3>
+        <p className="muted">{t("welcome.fireText")}</p>
+        <div className="row-actions">
+          <button onClick={onExplore}>{t("welcome.explore")}</button>
+          <button onClick={onLive}>{t("welcome.live")}</button>
+        </div>
+        <details>
+          <summary>{t("welcome.fireSearch")}</summary>
+          <button onClick={geo}>{t("welcome.myZone")}</button>
+          <p className="geo-note">{t("welcome.geoNote")}</p>
           {denied && <p className="muted">{t("welcome.noGps")}</p>}
-          <form className="search" onSubmit={(e) => { e.preventDefault(); search(); }}>
+          <form className="search"
+                onSubmit={(e) => { e.preventDefault(); search(); }}>
             <input value={q} onChange={(e) => setQ(e.target.value)}
                    placeholder={t("welcome.searchPlaceholder")}
                    aria-label={t("welcome.searchPlaceholder")} />
@@ -68,8 +85,8 @@ export function Welcome({ onLocate, onExplore }: {
               </li>
             ))}
           </ul>
-        </>
-      )}
+        </details>
+      </section>
     </div>
   );
 }

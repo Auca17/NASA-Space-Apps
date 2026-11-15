@@ -56,10 +56,58 @@ function fixturesMiddleware(): Plugin {
   };
 }
 
+// Public site base for canonical/hreflang/OG tags and sitemap.xml.
+// Set VITE_SITE_URL at build time (e.g. https://example.vercel.app);
+// unset keeps canonical URLs root-relative and sitemap uses a relative
+// placeholder noted in docs/DEPLOY.md.
+const SITE_URL = (process.env.VITE_SITE_URL ?? "").replace(/\/+$/, "");
+
+/** Multi-page build: landing at / and /es/, app at /app/. The html
+ * transform stamps %SITE_URL%; the emitter writes sitemap/robots on
+ * build only (emitFile is not supported in serve mode). */
+function landingSite(): Plugin[] {
+  const PAGES = ["/", "/es/", "/app/"];
+  const html: Plugin = {
+    name: "landing-site:html",
+    transformIndexHtml(h) {
+      return h.replaceAll("%SITE_URL%", SITE_URL);
+    },
+  };
+  const emit: Plugin = {
+    name: "landing-site:emit",
+    apply: "build",
+    generateBundle() {
+      const base = SITE_URL || "PENDIENTE-DOMINIO";
+      const xml = `<?xml version="1.0" encoding="UTF-8"?>\n` +
+        `<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n` +
+        PAGES.map((p) => `  <url><loc>${base}${p}</loc></url>\n`).join("") +
+        `</urlset>\n`;
+      this.emitFile({
+        type: "asset",
+        fileName: "sitemap.xml",
+        source: xml,
+      });
+      const robots = `User-agent: *\nAllow: /\n` +
+        (SITE_URL ? `Sitemap: ${SITE_URL}/sitemap.xml\n` : "");
+      this.emitFile({
+        type: "asset",
+        fileName: "robots.txt",
+        source: robots,
+      });
+    },
+  };
+  return [html, emit];
+}
+
 export default defineConfig({
-  plugins: [react(), fixturesMiddleware()],
+  plugins: [react(), fixturesMiddleware(), landingSite()],
   build: {
     rollupOptions: {
+      input: {
+        main: resolve(import.meta.dirname, "index.html"),
+        es: resolve(import.meta.dirname, "es/index.html"),
+        app: resolve(import.meta.dirname, "app/index.html"),
+      },
       output: {
         manualChunks: {
           maplibre: ["maplibre-gl"],

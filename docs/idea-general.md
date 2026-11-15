@@ -78,7 +78,7 @@ Se calibra por cobertura del suelo, latitud y mes, y se **valida** dejando 2023�
 
 | Componente | Qué hace |
 | --- | --- |
-| Riesgo de fuego en 7 días (Devin) | LightGBM con historial de fuego, estacionalidad, cobertura y clima (POWER). Tiene que superar a la línea base de climatología |
+| Riesgo de fuego en 7 días (Devin) | En el mundo: climatología + persistencia sin ML (D7). En Argentina: LightGBM con historial de fuego, estacionalidad, cobertura y clima (POWER). Tiene que superar a la línea base de climatología |
 | Zonas análogas | Agrupa celdas con clima, suelo y vegetación parecidos: "campos parecidos al tuyo". En Argentina se cruza con lo que se siembra en esas zonas (MAGyP) |
 | Patrones del calendario | Detecta suelo desnudo, transiciones y estrés en las series satelitales |
 | Explicación | LLM que convierte indicadores en texto para el productor, sin inventar datos |
@@ -110,7 +110,7 @@ Se calibra por cobertura del suelo, latitud y mes, y se **valida** dejando 2023�
 | Back | FastAPI (Python) en Vercel |
 | Front | Vite + React + TypeScript + MapLibre GL (globo 3D) + NASA GIBS |
 | Datos para la web | Cloudflare R2 (archivos por región) |
-| Jobs | GitHub Actions: live cada 3 h, riesgo diario |
+| Jobs | GitHub Actions: solo el job diario de riesgo (el modo live sale de `/api/live`, sin cron — D6) |
 | Deploy | Vercel (HTTPS, necesario para la ubicación) |
 
 ## Mobile-first y accesibilidad
@@ -126,9 +126,9 @@ Se calibra por cobertura del suelo, latitud y mes, y se **valida** dejando 2023�
 | # | Persona | Parte |
 | --- | --- | --- |
 | 1 | Ezequiel (+ Claude) | Lente Fuego: datos, armonización, back de fuego y deploy |
-| 2 | Compañero de Orin | Lente Campo: datos, base de cultivos, motor de rotaciones |
-| 3 | Compañero con Devin | IA: riesgo de fuego y zonas análogas; apoyo de front con Devin |
-| 4 | Cuarto integrante | Front, UX y presentación |
+| 2 | Augustus | Lente Campo + integrador: datos de Orin, base de cultivos, motor de rotaciones; back, R2, operación de Devin (D14) |
+| 3 | Ariel (Chucky) | Front (D14) |
+| 4 | Alex | Front y presentación desde la hora ~12 (D14) |
 
 ## Plan de 48 horas
 

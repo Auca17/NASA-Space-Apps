@@ -5,7 +5,7 @@ from pathlib import Path
 
 import pytest
 import respx
-from httpx import ASGITransport, AsyncClient
+from httpx import ASGITransport, AsyncClient, Response
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
@@ -280,6 +280,37 @@ async def test_geocode_proxy(respx_mock):
                 ).json()["hits"] == []
 
 
+@pytest.mark.asyncio
+async def test_field_catalog_uses_the_models_catalog_without_a_data_bucket():
+    from app.services.rotations import KNOWLEDGE
+
+    async with client() as c:
+        response = await c.get("/api/field/catalog")
+    assert response.status_code == 200
+    data = response.json()
+    assert {rot["id"] for rot in data["rotations"]} == {
+        rot.id for rot in KNOWLEDGE.rotations}
+    assert {crop["id"] for crop in data["crops"]} == set(KNOWLEDGE.crops)
+
+
+@pytest.mark.asyncio
+async def test_geocode_bias_keeps_global_results_and_retries_failures(respx_mock):
+    search = respx_mock.get("https://nominatim.openstreetmap.org/search")
+    search.side_effect = [
+        Response(503),
+        Response(200, json=[{"lat": "40.4", "lon": "-3.7",
+                            "display_name": "Madrid, España"}]),
+    ]
+    async with client() as c:
+        params = {"q": "Madrid, España", "bias": "ar"}
+        assert (await c.get("/api/geocode", params=params)).status_code == 502
+        r = await c.get("/api/geocode", params=params)
+        assert r.json()["hits"][0]["name"] == "Madrid, España"
+    req = search.calls.last.request
+    assert req.url.params["viewbox"] == "-74,-21,-53,-56"
+    assert "bounded" not in req.url.params
+
+
 @respx.mock
 async def test_diagnose_returns_zone(monkeypatch):
     """diagnose emits zone/province/country for the centroid."""
@@ -339,6 +370,140 @@ def test_stop_conditions_humidity_inta_note():
     power = {"RH2M": {end: 25}, "WS2M": {}, "T2M_MAX": {}}
     _, det = _stop_conditions(power, end)
     assert "umbral por confirmar con INTA" in det["rh_lt_30"]
+
+
+# ------------------------------------------------------ i18n (text_en) ----
+
+SPANISH = ("año", "días", "lluvia", "heladas", "Sin datos", "Período",
+           "Pendiente", "tendencia", "Temporada", "riesgo", "viento",
+           "humedad", "hace ", "Últimos", "suelo desnudo")
+
+
+@respx.mock
+async def test_diagnose_cards_carry_english_text(monkeypatch):
+    """Every card keeps its Spanish `text` (the rotations and measures
+    engines parse it) and adds an English `text_en` with no Spanish."""
+    monkeypatch.setenv("DATA_BASE_URL", FIXTURES.as_uri() + "/")
+    _mock_all_ok()
+    r = await client().post("/api/field/diagnose", json=PLOT)
+    body = r.json()
+    for c in body["cards"]:
+        assert c["text"], c["id"]
+        assert c.get("text_en"), c["id"]
+        assert not any(w in c["text_en"] for w in SPANISH), \
+            (c["id"], c["text_en"])
+    heat = next(c for c in body["cards"] if c["id"] == "heat")
+    assert "days/yr above 35" in heat["text_en"]
+    assert "días/año" in heat["text"]
+    for m in body.get("measures", []):
+        assert m.get("name_en") and m.get("why_en"), m["id"]
+
+
+def test_fire_weather_english_detail():
+    from app.routers.field import fire_weather_card
+    end = date(2025, 1, 10)
+    power = {"RH2M": {end: 25.0}, "WS2M": {end: 12.0},
+             "T2M_MAX": {end: 36.0}, "PRECTOTCORR": {end: 5.0}}
+    card = fire_weather_card(power, end)
+    assert "stop harvesting" in card["text_en"]
+    assert set(card["stop_detail_en"]) == set(card["stop_detail"])
+    assert "January 10" in card["stop_detail_en"]["temp_gt_35"]
+
+
+def test_null_card_english():
+    from app.routers.field import _null_card
+    assert _null_card("soil", "s", "r")["text_en"] == "No data available"
+
+
+# ------------------------------------------- polygons with holes / multi ----
+
+def _sq(lat, lon, half_deg):
+    """Closed [lon, lat] square ring."""
+    return [[lon - half_deg, lat - half_deg], [lon + half_deg, lat - half_deg],
+            [lon + half_deg, lat + half_deg], [lon - half_deg, lat + half_deg],
+            [lon - half_deg, lat - half_deg]]
+
+
+def test_parse_plot_polygon_with_hole_subtracts_it():
+    from app.routers.field import parse_plot
+    from app.services.geodesy import ring_area_ha
+    outer, hole = _sq(-33.96, -60.69, 0.005), _sq(-33.96, -60.69, 0.001)
+    (c, ha, *_), err = parse_plot({"polygon": {"type": "Polygon",
+                                               "coordinates": [outer, hole]}})
+    assert err is None
+    full = ring_area_ha(outer[:-1])
+    assert ha == pytest.approx(full - ring_area_ha(hole[:-1]), rel=1e-6)
+    assert ha < full
+
+
+def test_parse_plot_multipolygon_sums_pieces():
+    from app.routers.field import parse_plot
+    a, b = _sq(-33.96, -60.70, 0.003), _sq(-33.96, -60.68, 0.003)
+    (c, ha, r5, r6, bbox), err = parse_plot({"polygon": {
+        "type": "MultiPolygon", "coordinates": [[a], [b]]}})
+    assert err is None
+    (_, ha_a, *_), _ = parse_plot({"polygon": {"coordinates": [a]}})
+    assert ha == pytest.approx(2 * ha_a, rel=1e-3)
+    assert c[1] == pytest.approx(-60.69, abs=1e-3)   # between both pieces
+    assert bbox[0] < -60.70 < -60.68 < bbox[2]
+
+
+def test_parse_plot_keeps_old_single_ring_contract():
+    from app.routers.field import parse_plot
+    (_, ha, *_), err = parse_plot({"polygon": {
+        "coordinates": [_sq(-33.96, -60.69, 0.005)]}})
+    assert err is None and ha > 100
+
+
+def test_parse_plot_rejects_open_hole_and_bad_multi():
+    from app.routers.field import parse_plot
+    outer, hole = _sq(-33.96, -60.69, 0.005), _sq(-33.96, -60.69, 0.001)
+    _, err = parse_plot({"polygon": {"type": "Polygon",
+                                     "coordinates": [outer, hole[:-1]]}})
+    assert err is not None and err.status_code == 400
+    _, err = parse_plot({"polygon": {"type": "MultiPolygon",
+                                     "coordinates": [outer]}})
+    assert err is not None and err.status_code == 400
+
+# ------------------------------------------------------------- task 21 ----
+
+def test_stop_conditions_regional_nea_noa():
+    """NEA/NOA follow the INTA Chaco guide: wind >35 km/h, T>30 °C,
+    RH<30 % — looser than Balcarce, so a moderate day stops there and
+    not in the pampa."""
+    from app.routers.field import _stop_conditions
+    end = date(2025, 1, 10)
+    day = {"RH2M": {end: 50}, "WS2M": {end: 10.0},   # 36 km/h
+           "T2M_MAX": {end: 32.0}}
+    conds, det = _stop_conditions(day, end, zone="nea")
+    assert sorted(conds) == ["temp_gt_35", "wind_gt_40kmh"]
+    assert "Chaco" in det["wind_gt_40kmh"]
+    assert "35 km/h" in det["wind_gt_40kmh"]
+    assert det["wind_gt_40kmh"].endswith(
+        "confirmá con Bomberos locales si corresponde suspender")
+    conds2, _ = _stop_conditions(day, end, zone="noa")
+    assert sorted(conds2) == ["temp_gt_35", "wind_gt_40kmh"]
+    # the same day stays under the Balcarce thresholds in the pampa
+    conds3, _ = _stop_conditions(day, end, zone="pampa_humeda")
+    assert conds3 == []
+
+
+def test_stop_conditions_regional_other_zones():
+    """cuyo/patagonia/default use Balcarce + Bomberos Tandil and keep
+    the unconfirmed-humidity note; the Chaco guide does not."""
+    from app.routers.field import _stop_conditions
+    end = date(2025, 1, 10)
+    for z in ("cuyo", "patagonia", "otra"):
+        conds, det = _stop_conditions({"T2M_MAX": {end: 36.0}}, end,
+                                      zone=z)
+        assert conds == ["temp_gt_35"], z
+        assert "Balcarce" in det["temp_gt_35"]
+        assert det["temp_gt_35"].endswith(
+            "confirmá con Bomberos locales si corresponde suspender")
+    _, det = _stop_conditions({"RH2M": {end: 20.0}}, end, zone="noa")
+    assert "umbral por confirmar" not in det["rh_lt_30"]
+    _, det = _stop_conditions({"RH2M": {end: 20.0}}, end, zone="cuyo")
+    assert "umbral por confirmar" in det["rh_lt_30"]
 
 
 # --------------------------------------------------------------- scenario --

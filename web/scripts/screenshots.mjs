@@ -27,7 +27,7 @@ for (const s of SIZES) {
   };
 
   // 1. welcome
-  await page.goto(BASE, { waitUntil: "networkidle" }).catch(() => {});
+  await page.goto(BASE + "/app/", { waitUntil: "networkidle" }).catch(() => {});
   await snap("welcome", 800);
 
   // 2. explore -> globe + panel (reticle + historic controls)

@@ -29,7 +29,7 @@ const snap = async (name, ms = 1200) => {
 };
 
 // ---------- 1. welcome + mobile header -------------------------------------
-await page.goto(BASE, { waitUntil: "domcontentloaded" });
+await page.goto(BASE + "/app/", { waitUntil: "domcontentloaded" });
 await page.setViewportSize({ width: 390, height: 844 });
 await snap("11-header-mobile", 1500);
 await page.setViewportSize({ width: 1280, height: 800 });
@@ -53,7 +53,7 @@ say("globe canvas", nHex);
 await snap("11-globe-sphere", 500);
 
 // ---------- 3. Corrientes panel ---------------------------------------------
-await page.goto(BASE + "/?r=1#-27.95,-56.95",
+await page.goto(BASE + "/app/?r=1#-27.95,-56.95",
   { waitUntil: "domcontentloaded" });
 await page.waitForSelector(".panel", { timeout: 20000 }).catch(() => {});
 await page.waitForSelector("table.cal", { timeout: 30000 }).catch(() => {});
@@ -143,7 +143,7 @@ await cdp.send("Network.setCacheDisabled", { cacheDisabled: true });
 for (const [name, ll] of [["corrientes", "-27.95,-56.95"],
                           ["pergamino", "-33.89,-60.57"]]) {
   const t0 = Date.now();
-  await page.goto(BASE + `/?t=${name}#${ll}`,
+  await page.goto(BASE + `/app/?t=${name}#${ll}`,
     { waitUntil: "domcontentloaded" });
   await page.waitForSelector("table.cal", { timeout: 60000 })
     .catch(() => {});

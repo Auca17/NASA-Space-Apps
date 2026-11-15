@@ -1,0 +1,256 @@
+/* Map-first glass layer (docs/ui-style.md). Loaded after app.css: it only
+ * overrides presentation, never layout logic owned by components.
+ * The app is a map view, so it is always dark whatever the page theme. */
+
+@font-face {
+  font-family: "Archivo";
+  src: url("/fonts/archivo-var.woff2") format("woff2");
+  font-weight: 100 900;
+  font-stretch: 62% 125%;
+  font-display: swap;
+}
+
+.app {
+  /* local dark scope: every component inside reads light-on-dark */
+  --bg: #0f110e; --fg: #eef0ea; --panel: #1a1d18;
+  --muted: #a7ada2;
+  --border: rgba(255, 255, 255, 0.11);
+  --accent: #8cc06f; --accent-fg: #10140e;   /* the single action color */
+  --good: #8cc06f; --warn: #e3c14f; --bad: #f07a62;
+  --focus: #9ec5ff;
+  --bare: #6e6046; --covered: #44603a;
+  --logo-ember: #d4552d; --logo-ember-hot: #f0913f;
+  --logo-crop: #6f9e5f; --logo-stubble: #8f7f63;
+
+  --glass-bg: rgba(17, 19, 16, 0.74);
+  --glass-bg-strong: rgba(17, 19, 16, 0.9);
+  --glass-border: rgba(255, 255, 255, 0.10);
+  --glass-highlight: rgba(255, 255, 255, 0.05);
+  --glass-blur: 18px;
+  --glass-shadow: 0 14px 36px rgba(0, 0, 0, 0.38);
+  --surface: rgba(255, 255, 255, 0.045);
+  --surface-hover: rgba(255, 255, 255, 0.09);
+
+  --radius-panel: 22px; --radius-ctl: 12px; --radius-pill: 999px;
+  --top-safe: 78px;
+  --ease-out: cubic-bezier(0.2, 0.9, 0.25, 1);
+  --ease-spring: cubic-bezier(0.34, 1.4, 0.64, 1);
+
+  position: relative;
+  background: var(--bg);
+  color: var(--fg);
+  color-scheme: dark;
+  font-family: "Archivo", system-ui, -apple-system, "Segoe UI", sans-serif;
+  font-variant-numeric: tabular-nums;
+}
+body:has(.app) { background: #0f110e; }
+
+/* ---------- glass surfaces ---------- */
+.app .topbar,
+.app .panel,
+.app .controls {
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  box-shadow: inset 0 1px 0 var(--glass-highlight), var(--glass-shadow);
+}
+@supports (backdrop-filter: blur(1px)) {
+  .app .topbar, .app .panel, .app .controls {
+    backdrop-filter: blur(var(--glass-blur)) saturate(1.25);
+    -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(1.25);
+  }
+}
+/* small floating groups: solid glass, no blur (performance budget) */
+.app .field-basemap, .app .field-extents, .app .field-zoom,
+.app .field-guide small, .app .draw-hint, .app .meth-panel,
+.app .tooltip-pop {
+  background: var(--glass-bg-strong);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--glass-shadow);
+  color: var(--fg);
+}
+@media (max-width: 640px), (prefers-reduced-transparency: reduce) {
+  .app .topbar, .app .panel, .app .controls {
+    backdrop-filter: none; -webkit-backdrop-filter: none;
+    background: var(--glass-bg-strong);
+  }
+}
+
+/* ---------- floating top bar ---------- */
+.app .topbar {
+  position: absolute; top: 10px; left: 10px; right: 10px; z-index: 20;
+  border-radius: 18px; padding: 6px 8px 6px 12px; gap: 10px;
+}
+.app .map-wrap { flex: 1; }
+.app .topbar h1 { font-weight: 650; letter-spacing: -0.01em; }
+.app .home-button { border-radius: var(--radius-ctl); padding: 0 6px 0 2px;
+  transition: background-color 160ms var(--ease-out); }
+.app .home-button:hover { background: var(--surface); }
+.app .topbar-name { font-size: 1.05rem; }
+.app .topbar nav { background: var(--surface); border-radius: var(--radius-pill);
+  padding: 3px; gap: 2px; }
+.app .topbar nav button { border: 0; border-radius: var(--radius-pill);
+  background: transparent; min-height: 38px; padding: 0 14px;
+  color: var(--muted); font-weight: 550; }
+.app .topbar nav button:hover { color: var(--fg); background: var(--surface); }
+.app .topbar nav button[aria-pressed="true"] {
+  background: var(--accent); color: var(--accent-fg); }
+.app .topbar .meth-link, .app .topbar .lang-btn {
+  border-radius: var(--radius-pill); }
+@media (max-width: 480px) {
+  /* the nav wraps to its own row here (app.css), so the bar is ~2 rows */
+  .app { --top-safe: 112px; }
+  .app .topbar { top: 6px; left: 6px; right: 6px; border-radius: 16px;
+    padding: 4px 6px; gap: 4px; }
+  .app .topbar nav button { padding: 0 8px; min-height: 36px; }
+}
+
+/* things anchored to the top of the map clear the floating bar */
+.app .field-extents, .app .field-map-tools,
+.app .draw-hint { top: var(--top-safe); }
+
+/* ---------- controls ---------- */
+.app button {
+  border-radius: var(--radius-ctl);
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--fg);
+  font-weight: 500;
+  transition: background-color 160ms var(--ease-out),
+              border-color 160ms var(--ease-out),
+              transform 120ms var(--ease-out),
+              box-shadow 200ms var(--ease-out);
+}
+.app button:hover:not(:disabled) { background: var(--surface-hover); }
+/* squash on press: weight and immediate feedback (< 100 ms) */
+.app button:active:not(:disabled) { transform: scale(0.96); }
+.app button.primary {
+  background: var(--accent); color: var(--accent-fg);
+  border-color: transparent; font-weight: 650;
+  box-shadow: 0 6px 18px rgba(140, 192, 111, 0.22);
+}
+.app button.primary:hover:not(:disabled) {
+  background: #9dcd80; box-shadow: 0 8px 24px rgba(140, 192, 111, 0.32); }
+.app button[aria-pressed="true"] {
+  background: var(--accent); color: var(--accent-fg); border-color: transparent; }
+.app button:disabled { opacity: 0.45; cursor: not-allowed; }
+.app .link-btn, .app .linklike { background: transparent; border-color: transparent; }
+.app .link-btn:hover, .app .linklike:hover { background: var(--surface); }
+.app input, .app select {
+  background: rgba(0, 0, 0, 0.25); color: var(--fg);
+  border: 1px solid var(--border); border-radius: var(--radius-ctl);
+  transition: border-color 160ms var(--ease-out), box-shadow 160ms var(--ease-out);
+}
+.app input:focus, .app select:focus {
+  border-color: var(--accent); box-shadow: 0 0 0 3px rgba(140, 192, 111, 0.2);
+  outline: none; }
+.app input[type="range"] { accent-color: var(--accent); background: transparent;
+  border: 0; box-shadow: none; }
+.app :focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+.app a { color: #b9d8ff; }
+
+/* ---------- panel / bottom sheet ---------- */
+.app .panel { border-radius: var(--radius-panel); scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.18) transparent; }
+@media (min-width: 721px) {
+  .app .panel { top: var(--top-safe); right: 10px; bottom: 10px; width: 410px;
+    animation: panel-in-side 240ms var(--ease-out) both; }
+}
+@media (max-width: 720px) {
+  .app .panel { left: 6px; right: 6px; bottom: 6px; max-height: 58%;
+    border-radius: var(--radius-panel);
+    animation: panel-in-up 260ms var(--ease-out) both; }
+  .app .panel.collapsed { max-height: 48px; }
+}
+.app .panel-inner { padding: 16px; gap: 12px; }
+.app .grab::after { background: rgba(255, 255, 255, 0.28); }
+/* staging: content arrives in reading order, one beat apart */
+.app .panel-inner > * { animation: rise-in 280ms var(--ease-out) both; }
+.app .panel-inner > :nth-child(2) { animation-delay: 40ms; }
+.app .panel-inner > :nth-child(3) { animation-delay: 80ms; }
+.app .panel-inner > :nth-child(4) { animation-delay: 120ms; }
+.app .panel-inner > :nth-child(n+5) { animation-delay: 160ms; }
+
+.app .card { background: var(--surface); border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 16px; padding: 14px; }
+.app .card h3 { font-size: 0.82rem; font-weight: 600; color: var(--muted);
+  letter-spacing: 0.02em; margin-bottom: 8px; }
+.app .card .big { font-size: 1.55rem; font-weight: 600; letter-spacing: -0.01em; }
+.app .notice { border-color: var(--border); background: rgba(0, 0, 0, 0.18); }
+.app .badge { border-radius: var(--radius-pill); padding: 2px 10px; font-weight: 600; }
+.app .badge.bajo, .app .badge.normal {
+  color: var(--good); border-color: rgba(140, 192, 111, 0.5);
+  background: rgba(140, 192, 111, 0.1); }
+.app .badge.moderado, .app .badge.sobre_lo_normal {
+  color: var(--warn); border-color: rgba(227, 193, 79, 0.5);
+  background: rgba(227, 193, 79, 0.1); }
+.app .badge.alto, .app .badge.extremo, .app .badge.muy_alto {
+  color: var(--bad); border-color: rgba(240, 122, 98, 0.55);
+  background: rgba(240, 122, 98, 0.12); }
+.app .sec, .app details { border-color: var(--border); }
+.app table.cal th { background: transparent; }
+.app table.cal th, .app table.cal td { border-color: rgba(255, 255, 255, 0.06); }
+.app .meth-table th, .app .meth-table td { border-bottom-color: var(--border); }
+.app .meth-overlay { background: rgba(5, 6, 5, 0.6); }
+.app .meth-panel { border-radius: var(--radius-panel);
+  animation: rise-in 240ms var(--ease-out) both; }
+
+/* ---------- plain-language lead (AreaPanel) ---------- */
+.app .lead { display: grid; gap: 6px; padding: 16px;
+  border-radius: 16px; border: 1px solid var(--border);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.07), rgba(255, 255, 255, 0.02)); }
+.app .lead-place { margin: 0; font-size: 0.8rem; color: var(--muted); }
+.app .lead-text { margin: 0; font-size: 1.2rem; line-height: 1.3; font-weight: 550;
+  letter-spacing: -0.01em; }
+.app .lead .badge { justify-self: start; font-size: 0.85rem; }
+.app .detail-more > summary { font-weight: 600; }
+.app .panel-head { display: flex; justify-content: space-between;
+  align-items: center; gap: 8px; }
+.app .panel-head h3 { margin: 0; font-size: 1.05rem; }
+
+/* ---------- map furniture ---------- */
+.app .field-basemap, .app .field-extents, .app .field-zoom {
+  border-radius: 14px; padding: 4px; }
+.app .controls { border-radius: 18px; padding: 12px; left: 10px; bottom: 10px; }
+.app .reticle::before, .app .reticle::after { background: var(--logo-ember-hot);
+  box-shadow: 0 0 6px rgba(240, 145, 63, 0.7); }
+.app .maplibregl-ctrl-attrib { background: var(--glass-bg-strong) !important;
+  color: var(--muted); border-radius: var(--radius-pill) !important;
+  margin: 0 10px 10px 0 !important; padding: 2px 10px !important; }
+.app .maplibregl-ctrl-attrib a { color: var(--fg); }
+
+/* ---------- welcome over the globe ---------- */
+.app .welcome-overlay { position: absolute; inset: 0; z-index: 9;
+  display: flex; padding: var(--top-safe) 12px 12px; overflow-y: auto;
+  background: radial-gradient(ellipse at center, rgba(15, 17, 14, 0.35),
+                                                 rgba(15, 17, 14, 0.82)); }
+.app .welcome-overlay > .welcome {
+  margin: auto; max-width: 480px; width: 100%; padding: 28px 24px;
+  border-radius: 26px; text-align: center;
+  background: var(--glass-bg-strong); border: 1px solid var(--glass-border);
+  box-shadow: inset 0 1px 0 var(--glass-highlight), var(--glass-shadow);
+  animation: rise-in 360ms var(--ease-out) both; }
+.app .welcome-logo { display: flex; justify-content: center; margin-bottom: 4px; }
+.app .welcome-brand { color: var(--logo-ember-hot); letter-spacing: 0.12em; }
+.app .welcome h2 { font-size: 1.65rem; font-weight: 650; letter-spacing: -0.02em; }
+.app .welcome .big-cta { min-height: 54px; font-size: 1.08rem;
+  border-radius: 16px; }
+.app .welcome-more { border-top-color: var(--border); }
+
+/* ---------- motion ---------- */
+@keyframes rise-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes panel-in-side {
+  from { opacity: 0; transform: translateX(18px); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes panel-in-up {
+  from { opacity: 0; transform: translateY(24px); }
+  to { opacity: 1; transform: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .app *, .app *::before, .app *::after {
+    animation: none !important; transition: none !important; }
+  .app button:active:not(:disabled) { transform: none; }
+}

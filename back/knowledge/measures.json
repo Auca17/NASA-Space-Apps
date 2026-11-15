@@ -1,5 +1,55 @@
 {
   "version": "0.2",
+  "stop_thresholds": {
+    "nea": {
+      "wind_gt_kmh": 35,
+      "temp_gt_c": 30,
+      "rh_lt_pct": 30,
+      "guide": "guía de prevención de incendios de INTA para el Chaco",
+      "rh_unconfirmed": false,
+      "source": "INTA, guía de prevención y manejo del fuego en sistemas productivos del Chaco — fuente bibliográfica, pendiente de validación local"
+    },
+    "noa": {
+      "wind_gt_kmh": 35,
+      "temp_gt_c": 30,
+      "rh_lt_pct": 30,
+      "guide": "guía de prevención de incendios de INTA para el Chaco",
+      "rh_unconfirmed": false,
+      "source": "INTA, guía de prevención y manejo del fuego en sistemas productivos del Chaco — fuente bibliográfica, pendiente de validación local"
+    },
+    "pampa_humeda": {
+      "wind_gt_kmh": 40,
+      "temp_gt_c": 35,
+      "rh_lt_pct": 30,
+      "guide": "INTA / UIB Balcarce + Bomberos de Tandil",
+      "rh_unconfirmed": true,
+      "source": "INTA / UIB Balcarce (S. Tourn) + Bomberos Tandil (D. Ibáñez), 'Pautas para evitar incendios durante la cosecha' (2023-12-28), https://www.argentina.gob.ar/node/413622"
+    },
+    "cuyo": {
+      "wind_gt_kmh": 40,
+      "temp_gt_c": 35,
+      "rh_lt_pct": 30,
+      "guide": "INTA / UIB Balcarce + Bomberos de Tandil",
+      "rh_unconfirmed": true,
+      "source": "INTA / UIB Balcarce (S. Tourn) + Bomberos Tandil (D. Ibáñez), 'Pautas para evitar incendios durante la cosecha' (2023-12-28), https://www.argentina.gob.ar/node/413622"
+    },
+    "patagonia": {
+      "wind_gt_kmh": 40,
+      "temp_gt_c": 35,
+      "rh_lt_pct": 30,
+      "guide": "INTA / UIB Balcarce + Bomberos de Tandil",
+      "rh_unconfirmed": true,
+      "source": "INTA / UIB Balcarce (S. Tourn) + Bomberos Tandil (D. Ibáñez), 'Pautas para evitar incendios durante la cosecha' (2023-12-28), https://www.argentina.gob.ar/node/413622"
+    },
+    "default": {
+      "wind_gt_kmh": 40,
+      "temp_gt_c": 35,
+      "rh_lt_pct": 30,
+      "guide": "INTA / UIB Balcarce + Bomberos de Tandil",
+      "rh_unconfirmed": true,
+      "source": "INTA / UIB Balcarce (S. Tourn) + Bomberos Tandil (D. Ibáñez), 'Pautas para evitar incendios durante la cosecha' (2023-12-28), https://www.argentina.gob.ar/node/413622"
+    }
+  },
   "measures": [
     {
       "id": "clean_harvester",
@@ -18,11 +68,16 @@
         "downtime_h": 0.5,
         "cost": "low"
       },
+      "checks": [
+        "revisar pérdidas de gasoil y aceite",
+        "revisar el matachispas del escape"
+      ],
       "triggers": [
         "harvest_in_dry_season"
       ],
       "sources": [
-        "INTA / UIB Balcarce (S. Tourn) + Bomberos Tandil (D. Ibáñez), 'Pautas para evitar incendios durante la cosecha' (2023-12-28), https://www.argentina.gob.ar/node/413622"
+        "INTA / UIB Balcarce (S. Tourn) + Bomberos Tandil (D. Ibáñez), 'Pautas para evitar incendios durante la cosecha' (2023-12-28), https://www.argentina.gob.ar/node/413622",
+        "INTA, guía de prevención y manejo del fuego en sistemas productivos del Chaco, sección 5.5: revisar pérdidas de gasoil y aceite y el matachispas del escape — fuente bibliográfica, pendiente de validación local"
       ]
     },
     {
@@ -91,14 +146,17 @@
           "tractor con rastra o disco"
         ],
         "downtime_h": null,
-        "cost": "medium"
+        "cost": "medium",
+        "reference_width_m": 30,
+        "reference_width_note": "referencia prudente para la región chaqueña; el diseño depende del combustible, la pendiente y el viento"
       },
       "triggers": [
         "fire_weather_high",
         "risk_high"
       ],
       "sources": [
-        "INTA / UIB Balcarce (S. Tourn) + Bomberos Tandil (D. Ibáñez), 'Pautas para evitar incendios durante la cosecha' (2023-12-28), https://www.argentina.gob.ar/node/413622"
+        "INTA / UIB Balcarce (S. Tourn) + Bomberos Tandil (D. Ibáñez), 'Pautas para evitar incendios durante la cosecha' (2023-12-28), https://www.argentina.gob.ar/node/413622",
+        "INTA, guía de prevención y manejo del fuego en sistemas productivos del Chaco, sección 5.6: cortafuego de 30 m como referencia prudente para la región chaqueña — fuente bibliográfica, pendiente de validación local"
       ]
     },
     {

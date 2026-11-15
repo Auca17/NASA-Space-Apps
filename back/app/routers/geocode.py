@@ -19,23 +19,28 @@ TIMEOUT = httpx.Timeout(5.0)
 
 
 @router.get("/api/geocode")
-async def geocode(q: str = ""):
+async def geocode(q: str = "", bias: str = ""):
     q = q.strip()
     if len(q) < 3:
         return JSONResponse({"hits": []})
-    hit = CACHE.get(q.lower(), "geocode")
+    params = {"format": "json", "limit": "5", "q": q}
+    key = q.lower()
+    if bias == "ar":
+        params["viewbox"] = "-74,-21,-53,-56"
+        key = f"{key}\x00ar"
+    hit = CACHE.get(key, "geocode")
     if hit is not None:
         return JSONResponse({"hits": hit})
     try:
         async with httpx.AsyncClient(timeout=TIMEOUT) as c:
             r = await c.get(URL, headers={
                 "User-Agent": UA, "Accept-Language": "es"},
-                params={"format": "json", "limit": "5", "q": q})
+                params=params)
             r.raise_for_status()
             hits = [{"lat": float(h["lat"]), "lon": float(h["lon"]),
                      "name": h.get("display_name", "")[:120]}
                     for h in r.json()[:5]]
-    except Exception:
-        hits = []
-    CACHE.set(q.lower(), "geocode", hits, ttl_seconds=3600)
+    except (httpx.HTTPError, KeyError, TypeError, ValueError):
+        return JSONResponse({"error": "geocoding_unavailable"}, status_code=502)
+    CACHE.set(key, "geocode", hits, ttl_seconds=3600)
     return JSONResponse({"hits": hits})

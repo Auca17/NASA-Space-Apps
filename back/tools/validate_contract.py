@@ -192,31 +192,95 @@ SCHEMAS = [
         "properties": {"crops": {"type": "array", "minItems": 1,
                                  "items": {"type": "object", "required": [
                                      "id", "name", "family",
-                                     "water_mm_cycle", "sources"]}}}}),
+                                     "water_mm_cycle", "sources"],
+                                     "properties": {
+                                         "cycle_end": {
+                                             "type": "object",
+                                             "additionalProperties": {
+                                                 "type": "string",
+                                                 "pattern": MD}},
+                                         "gdd_base_c": {
+                                             "type": ["integer",
+                                                      "null"]},
+                                         "gdd_flowering_to_maturity": {
+                                             "type": ["array", "null"],
+                                             "items": {
+                                                 "type": "integer"}},
+                                         "water_mm_observed": NUM,
+                                         "water_observed_note": {
+                                             "type": ["string",
+                                                      "null"]},
+                                         "residue_note": {
+                                             "type": ["string",
+                                                      "null"]},
+                                         "root_carbon_note": {
+                                             "type": ["string",
+                                                      "null"]}}}}}}),
     (re.compile(r"^knowledge/rotations\.json$"), {
         "type": "object", "required": ["rotations"],
-        "properties": {"rotations": {
-            "type": "array", "minItems": 1,
-            "items": {
-                "type": "object",
-                "required": ["id", "name", "sequence", "sources"],
-                "properties": {
-                    "zones": {"type": "array",
-                              "items": {"enum": [
+        "properties": {
+            "rotations": {
+                "type": "array", "minItems": 1,
+                "items": {
+                    "type": "object",
+                    "required": ["id", "name", "sequence", "sources"],
+                    "properties": {
+                        "zones": {"type": "array",
+                                  "items": {"enum": [
+                                      "pampa_humeda", "nea", "noa",
+                                      "cuyo", "patagonia"]}},
+                        "typical_for": {"type": "array",
+                                        "items": {"enum": [
+                                            "pampa_humeda", "nea",
+                                            "noa", "cuyo",
+                                            "patagonia"]}}}}},
+            "zone_references": {
+                "type": "array",
+                "items": {"type": "object",
+                          "required": ["zone", "text", "source"],
+                          "properties": {
+                              "zone": {"enum": [
                                   "pampa_humeda", "nea", "noa", "cuyo",
-                                  "patagonia"]}},
-                    "typical_for": {"type": "array",
-                                    "items": {"enum": [
-                                        "pampa_humeda", "nea", "noa",
-                                        "cuyo", "patagonia"]}}}}}}}),
+                                  "patagonia"]},
+                              "text": STR, "source": STR}}}}}),
     (re.compile(r"^knowledge/measures\.json$"), {
         "type": "object", "required": ["measures"],
-        "properties": {"measures": {"type": "array", "minItems": 1,
-                                    "items": {"type": "object",
-                                              "required": [
-                                                  "id", "name", "factor",
-                                                  "triggers",
-                                                  "sources"]}}}}),
+        "properties": {
+            "measures": {"type": "array", "minItems": 1,
+                         "items": {"type": "object",
+                                   "required": [
+                                       "id", "name", "factor",
+                                       "triggers", "sources"],
+                                   "properties": {
+                                       "checks": {"type": "array",
+                                                  "items": STR}}}},
+            "stop_thresholds": {
+                "type": "object",
+                "additionalProperties": {
+                    "type": "object",
+                    "required": ["wind_gt_kmh", "temp_gt_c", "rh_lt_pct",
+                                 "guide", "source"],
+                    "properties": {
+                        "wind_gt_kmh": {"type": "number"},
+                        "temp_gt_c": {"type": "number"},
+                        "rh_lt_pct": {"type": "number"},
+                        "guide": STR,
+                        "rh_unconfirmed": {"type": "boolean"},
+                        "source": STR}}}}}),
+    (re.compile(r"^knowledge/cases\.json$"), {
+        "type": "object", "required": ["cases"],
+        "properties": {"cases": {"type": "array",
+                                 "items": {"type": "object",
+                                           "required": [
+                                               "id", "place", "date",
+                                               "summary", "source",
+                                               "kind"],
+                                           "properties": {
+                                               "kind": {"enum": [
+                                                   "news_report"]},
+                                               "lessons": {
+                                                   "type": "array",
+                                                   "items": STR}}}}}}),
 ]
 
 POINTS_HEADER = {"acq_date", "acq_time", "lat", "lon", "sensor",

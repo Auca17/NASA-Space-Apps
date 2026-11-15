@@ -24,11 +24,24 @@ router = APIRouter()
 TIMEOUT = httpx.Timeout(6.0)
 DIAG_BUDGET = 8.0  # total wall-time for the whole diagnosis (task 23)
 MIN_HA, MAX_HA = 0.5, 5_000.0
+# total vertices over all rings (freehand pieces + holes)
+MAX_VERTICES = 2_000
 NDVI_BARE = 0.25          # NDVI below this counts as bare soil
 POWER_RES = "0.5°×0.625°"
 MONTH_FULL_ES = ["enero", "febrero", "marzo", "abril", "mayo", "junio",
                  "julio", "agosto", "septiembre", "octubre", "noviembre",
                  "diciembre"]
+MONTH_FULL_EN = ["January", "February", "March", "April", "May", "June",
+                 "July", "August", "September", "October", "November",
+                 "December"]
+MONTHS_EN = ["Jan", "Feb", "Mar", "Apr", "May", "Jun",
+             "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
+# English for the Spanish values the cards carry (texture, risk, trend)
+TEXTURE_EN = {"Arcilloso": "clay", "Arenoso": "sandy",
+              "Franco-limoso": "silt loam", "Franco-arcilloso": "clay loam",
+              "Franco-arenoso": "sandy loam", "Franco": "loam"}
+CAT_EN = {"bajo": "low", "moderado": "moderate", "alto": "high",
+          "muy_alto": "very high"}
 MONTHS_ES = ["ene", "feb", "mar", "abr", "may", "jun",
              "jul", "ago", "sep", "oct", "nov", "dic"]
 
@@ -63,27 +76,63 @@ def parse_plot(body: dict):
                         f"ha must be between {MIN_HA} and {MAX_HA}")
         return ((lat, lon), ha, [h3_r5(lat, lon)], [h3_r6(lat, lon)], None), None
 
+    # Polygon: coordinates = [outer, hole...]; MultiPolygon: a list of
+    # those. A single closed ring (the original contract) still works.
+    kind = (polygon or {}).get("type") or "Polygon"
     coords = (polygon or {}).get("coordinates") or []
-    if not coords or not isinstance(coords[0], list):
+    if kind == "MultiPolygon":
+        polys_raw = coords
+    elif kind == "Polygon":
+        polys_raw = [coords]
+    else:
+        return _err("invalid_polygon", "type must be Polygon or MultiPolygon")
+    if not polys_raw or not all(
+            isinstance(pr, list) and pr and isinstance(pr[0], list)
+            and pr[0] and isinstance(pr[0][0], (list, tuple))
+            for pr in polys_raw):
         return _err("invalid_polygon", "polygon needs a coordinates ring")
-    ring = [[float(p[0]), float(p[1])] for p in coords[0]
-            if isinstance(p, (list, tuple)) and len(p) >= 2]
-    if len(ring) >= 2 and ring[0] == ring[-1]:
-        ring = ring[:-1]  # closed ring -> unclosed for h3
-    elif len(ring) >= 2:
-        return _err("invalid_polygon", "ring must be closed (first == last)")
-    if not (3 <= len(ring) <= 500):
-        return _err("invalid_polygon", "polygon needs 3..500 vertices")
-    if any(not (-90 <= p[1] <= 90 and -180 <= p[0] <= 180) for p in ring):
-        return _err("invalid_polygon", "vertex out of lat/lon range")
-    area_ha = ring_area_ha(ring)
+
+    polys: list[list[list[list[float]]]] = []  # [[outer, hole..], ..]
+    n_vertices = 0
+    for pr in polys_raw:
+        rings = []
+        for raw in pr:
+            ring = [[float(q[0]), float(q[1])] for q in raw
+                    if isinstance(q, (list, tuple)) and len(q) >= 2]
+            if len(ring) >= 2 and ring[0] == ring[-1]:
+                ring = ring[:-1]  # closed ring -> unclosed for h3
+            elif len(ring) >= 2:
+                return _err("invalid_polygon",
+                            "ring must be closed (first == last)")
+            if len(ring) < 3:
+                return _err("invalid_polygon", "each ring needs 3+ vertices")
+            if any(not (-90 <= q[1] <= 90 and -180 <= q[0] <= 180)
+                   for q in ring):
+                return _err("invalid_polygon", "vertex out of lat/lon range")
+            n_vertices += len(ring)
+            rings.append(ring)
+        polys.append(rings)
+    if n_vertices > MAX_VERTICES:
+        return _err("invalid_polygon",
+                    f"polygon needs at most {MAX_VERTICES} vertices")
+
+    areas = [max(0.0, ring_area_ha(rs[0]) - sum(ring_area_ha(h)
+                                               for h in rs[1:]))
+             for rs in polys]
+    area_ha = sum(areas)
     if not (MIN_HA <= area_ha <= MAX_HA):
         return _err("invalid_polygon",
                     f"area must be between {MIN_HA} and {MAX_HA} ha "
                     f"(got {area_ha:.1f})")
-    centroid = ring_centroid(ring)
+    # area-weighted centroid of the pieces (vertex mean inside each)
+    cents = [ring_centroid(rs[0]) for rs in polys]
+    w = area_ha or 1.0
+    centroid = (sum(c[0] * a for c, a in zip(cents, areas)) / w,
+                sum(c[1] * a for c, a in zip(cents, areas)) / w)
     try:
-        shape = h3.LatLngPoly([(p[1], p[0]) for p in ring])  # lat,lng
+        shape = h3.LatLngMultiPoly(*[
+            h3.LatLngPoly(*[[(q[1], q[0]) for q in r] for r in rs])
+            for rs in polys])
         r5 = sorted(h3.polygon_to_cells(shape, 5))
         r6 = sorted(h3.polygon_to_cells(shape, 6))
     except Exception:
@@ -91,7 +140,8 @@ def parse_plot(body: dict):
     # plots smaller than a cell contain no cell centre -> use centroid's cell
     r5 = r5 or [h3_r5(*centroid)]
     r6 = r6 or [h3_r6(*centroid)]
-    lats, lons = [p[1] for p in ring], [p[0] for p in ring]
+    outer = [q for rs in polys for q in rs[0]]
+    lats, lons = [q[1] for q in outer], [q[0] for q in outer]
     bbox = (min(lons), min(lats), max(lons), max(lats))
     return (centroid, area_ha, r5, r6, bbox), None
 
@@ -309,15 +359,23 @@ def recent_weather(series: dict):
 
 # ---------------------------------------------------------------- cards -----
 
-def _card(cid, value, unit, text, source, resolution, confidence):
+def _card(cid, value, unit, text, source, resolution, confidence,
+          text_en=None):
+    """`text` stays Spanish (the rotations/measures engines parse it);
+    `text_en` is the English rendering for the front."""
     return {"id": cid, "value": value, "unit": unit, "text": text,
+            "text_en": text_en or text,
             "source": source, "resolution": resolution,
             "confidence": confidence}
 
 
 def _null_card(cid, source, resolution):
     return _card(cid, None, None, "Sin datos disponibles",
-                 source, resolution, "low")
+                 source, resolution, "low", "No data available")
+
+
+def _texture_en(tex: str | None) -> str | None:
+    return TEXTURE_EN.get(tex, tex) if tex else tex
 
 
 LAPSE_C_PER_M = 0.0065  # 6.5 °C per km
@@ -342,7 +400,7 @@ def _fmt_es(v, dec=1):
 
 
 def build_cards(power, soilg, slope, ndvi, grid_cell, fire_cal,
-                risk_cell, r5, adj=None):
+                risk_cell, r5, adj=None, zone=None):
     P = (power or {}).get
     cards = []
 
@@ -365,7 +423,8 @@ def build_cards(power, soilg, slope, ndvi, grid_cell, fire_cal,
     elif rs:
         rain_card = _card("rain", rs[0], "mm/año",
                           f"{rs[0]} mm/año; 1 de cada 4 años < {rs[2]} mm",
-                          "NASA POWER", POWER_RES, "high")
+                          "NASA POWER", POWER_RES, "high",
+                          f"{rs[0]} mm/yr; 1 year in 4 below {rs[2]} mm")
         rm = rain_monthly_mm(P("PRECTOTCORR") or {})
         if rm:
             rain_card["rain_monthly_mm"] = rm
@@ -377,29 +436,35 @@ def build_cards(power, soilg, slope, ndvi, grid_cell, fire_cal,
     cards.append(
         _card("heavy_rain", heavy, "días/año",
               f"{heavy:g} días/año con más de 50 mm",
-              "NASA POWER", POWER_RES, "high")
+              "NASA POWER", POWER_RES, "high",
+              f"{heavy:g} days/yr with more than 50 mm")
         if heavy is not None
         else _null_card("heavy_rain", "NASA POWER", POWER_RES))
 
     fw = frost_free_window(P("T2M_MIN") or {})
     fw_text = f"Período libre de heladas: {fw[0]} – {fw[1]}" if fw else ""
+    fw_en = f"Frost-free period: {fw[0]} – {fw[1]}" if fw else ""
     if fw and fw[3]:
         fw_text += f"; sin heladas en {fw[3]} años"
+        fw_en += f"; no frost in {fw[3]} years"
     cards.append(
         _card("frost", fw[2], "días", fw_text,
-              "NASA POWER", POWER_RES, "high")
+              "NASA POWER", POWER_RES, "high", fw_en)
         if fw else
         _card("frost", None, None,
               "Sin heladas registradas en la serie"
               if P("T2M_MIN") else "Sin datos disponibles",
               "NASA POWER", POWER_RES,
-              "high" if P("T2M_MIN") else "low"))
+              "high" if P("T2M_MIN") else "low",
+              "No frost recorded in the series"
+              if P("T2M_MIN") else "No data available"))
 
     hot = days_per_year(P("T2M_MAX") or {}, lambda v: v > 35)
     cards.append(
         _card("heat", hot, "días/año",
               f"{hot:g} días/año por encima de 35 °C",
-              "NASA POWER", POWER_RES, "high")
+              "NASA POWER", POWER_RES, "high",
+              f"{hot:g} days/yr above 35 °C")
         if hot is not None else _null_card("heat", "NASA POWER", POWER_RES))
 
     # elevation transparency (task 20): note on temp cards + confidence cap
@@ -422,8 +487,9 @@ def build_cards(power, soilg, slope, ndvi, grid_cell, fire_cal,
         cards.append(_card("soil_moisture", sm, "%",
                            f"Hoy {abs(sm)} % "
                            f"{'bajo' if sm < 0 else 'sobre'} lo normal",
-                           "SMAP L3", "9 km",
-                           "high" if sm_days >= 20 else "low"))
+                           "SMAP L3", "9 km", "high" if sm_days >= 20 else "low",
+                           f"Today {abs(sm)} % "
+                           f"{'below' if sm < 0 else 'above'} normal"))
     else:
         gw = P("GWETROOT") or {}
         last = _last_valid_day(gw)
@@ -431,7 +497,8 @@ def build_cards(power, soilg, slope, ndvi, grid_cell, fire_cal,
             v = round(gw[last] * 100)
             cards.append(_card("soil_moisture", v, "%",
                                f"Humedad de la zona de raíces: {v} %",
-                               "NASA POWER (GWETROOT)", POWER_RES, "medium"))
+                               "NASA POWER (GWETROOT)", POWER_RES, "medium",
+                               f"Root-zone moisture: {v} %"))
         else:
             cards.append(_null_card("soil_moisture", "SMAP L3", "9 km"))
 
@@ -442,7 +509,8 @@ def build_cards(power, soilg, slope, ndvi, grid_cell, fire_cal,
             statistics.fmean(vs) for vs in et_years.values())
         cards.append(_card("crop_water", round(mean_et, 1), "mm/día",
                            f"Demanda hídrica potencial: {mean_et:.1f} mm/día",
-                           "NASA POWER (EVPTRNS)", POWER_RES, "medium"))
+                           "NASA POWER (EVPTRNS)", POWER_RES, "medium",
+                           f"Potential water demand: {mean_et:.1f} mm/day"))
     else:
         cards.append(_null_card("crop_water", "NASA POWER", POWER_RES))
 
@@ -452,7 +520,8 @@ def build_cards(power, soilg, slope, ndvi, grid_cell, fire_cal,
                              lambda v: v < NDVI_BARE)
         cards.append(_card("vigor_bare_soil", bare, "días/año",
                            f"{bare:g} días/año con suelo desnudo (NDVI<0.25)",
-                           "MODIS MOD13Q1", "250 m", "medium")
+                           "MODIS MOD13Q1", "250 m", "medium",
+                           f"{bare:g} days/yr with bare ground (NDVI<0.25)")
                      if bare is not None else
                      _null_card("vigor_bare_soil", "MODIS MOD13Q1", "250 m"))
     elif grid_bare is not None:
@@ -460,13 +529,16 @@ def build_cards(power, soilg, slope, ndvi, grid_cell, fire_cal,
             "vigor_bare_soil", grid_bare, "días/año",
             f"~{grid_bare:g} días/año con suelo desnudo "
             "(NDVI mensual <0.2, precalculado)",
-            "MODIS MOD13C2 (field/grid)", "0.05°", "low"))
+            "MODIS MOD13C2 (field/grid)", "0.05°", "low",
+            f"~{grid_bare:g} days/yr with bare ground "
+            "(monthly NDVI <0.2, precomputed)"))
     else:
         cards.append(_null_card("vigor_bare_soil", "MODIS MOD13Q1", "250 m"))
 
     cards.append(
         _card("slope", slope, "%", f"Pendiente media: {slope:g} %",
-              "AWS Terrain Tiles (SRTM)", "~30 m", "high")
+              "AWS Terrain Tiles (SRTM)", "~30 m", "high",
+              f"Average slope: {slope:g} %")
         if slope is not None
         else _null_card("slope", "AWS Terrain Tiles (SRTM)", "~30 m"))
 
@@ -475,17 +547,22 @@ def build_cards(power, soilg, slope, ndvi, grid_cell, fire_cal,
         tex = texture_class(soilg)
         soc = soilg.get("soc")
         parts = [t for t in (tex, f"MO {soc:.1f} g/kg" if soc else None) if t]
+        parts_en = [t for t in (_texture_en(tex),
+                                f"OM {soc:.1f} g/kg" if soc else None) if t]
         cards.append(_card("soil", round(soc, 1) if soc else None, "g/kg",
                            "; ".join(parts) or "Sin datos",
-                           "ISRIC SoilGrids v2", "250 m", "medium"))
+                           "ISRIC SoilGrids v2", "250 m", "medium",
+                           "; ".join(parts_en) or "No data"))
     elif grid_soil.get("texture") or grid_soil.get("soc_g_kg") is not None:
         soc = grid_soil.get("soc_g_kg")
         parts = [t for t in (grid_soil.get("texture"),
                              f"MO {soc:.1f} g/kg" if soc else None) if t]
+        parts_en = [t for t in (_texture_en(grid_soil.get("texture")),
+                                f"OM {soc:.1f} g/kg" if soc else None) if t]
         cards.append(_card("soil", soc, "g/kg",
                            "; ".join(parts) or "Sin datos",
                            "ISRIC SoilGrids v2 (field/grid)", "250 m",
-                           "medium"))
+                           "medium", "; ".join(parts_en) or "No data"))
     else:
         cards.append(_null_card("soil", "ISRIC SoilGrids v2", "250 m"))
 
@@ -495,7 +572,10 @@ def build_cards(power, soilg, slope, ndvi, grid_cell, fire_cal,
     cards.append(
         _card("water_trend", gt, None,
               f"Agua subterránea: tendencia {trend_txt}",
-              "GRACE-FO", "regional", "medium")
+              "GRACE-FO", "regional", "medium",
+              "Groundwater: " + {"down": "falling", "flat": "stable",
+                                 "up": "rising"}.get(gt or "", "")
+              + " trend")
         if gt else _null_card("water_trend", "GRACE-FO", "regional"))
 
     monthly, active = burn_season_months(fire_cal, r5)
@@ -503,27 +583,35 @@ def build_cards(power, soilg, slope, ndvi, grid_cell, fire_cal,
     if monthly is not None or cat:
         season = months_range_es(active) if active else "sin temporada marcada"
         text = f"Temporada de quemas: {season}"
+        text_en = "Burning season: " + (
+            months_range(active, MONTHS_EN) if active
+            else "no marked season")
         if cat:
             text += f"; riesgo 7 días: {cat}"
+            text_en += f"; 7-day risk: {CAT_EN.get(cat, cat)}"
         cards.append(_card("fire", cat, None, text,
                            "Serie armonizada MODIS+VIIRS",
-                           "H3 res 5 (~250 km²)", "high"))
+                           "H3 res 5 (~250 km²)", "high", text_en))
     else:
         cards.append(_null_card("fire", "Serie armonizada MODIS+VIIRS",
                                 "H3 res 5 (~250 km²)"))
 
     cards.append(fire_weather_card(power, _last_valid_day(
-        P("PRECTOTCORR") or {})))
+        P("PRECTOTCORR") or {}), zone=zone))
 
     rw = recent_weather(P("PRECTOTCORR") or {})
     if rw:
+        full = rw["b30"] is not None and rw["since"] is not None
         text = (f"Últimos 30 días: {rw['p30']:g} mm "
                 f"(media histórica {rw['b30']:.0f} mm); "
                 f"última lluvia >1 mm hace {rw['since']} días"
-                if rw["b30"] is not None and rw["since"] is not None else
-                "Sin datos recientes")
+                if full else "Sin datos recientes")
+        text_en = (f"Last 30 days: {rw['p30']:g} mm "
+                   f"(long-term mean {rw['b30']:.0f} mm); "
+                   f"last rain >1 mm {rw['since']} days ago"
+                   if full else "No recent data")
         cards.append(_card("recent_weather", rw["since"], "días", text,
-                           "NASA POWER", POWER_RES, "high"))
+                           "NASA POWER", POWER_RES, "high", text_en))
     else:
         cards.append(_null_card("recent_weather", "NASA POWER", POWER_RES))
     return cards, monthly
@@ -690,8 +778,11 @@ def texture_class(s: dict) -> str | None:
 
 
 def months_range_es(active: set[int]) -> str:
-    if not active:
-        return "sin temporada marcada"
+    return months_range(active, MONTHS_ES) if active \
+        else "sin temporada marcada"
+
+
+def months_range(active: set[int], names: list[str]) -> str:
     ms = sorted(active)
     # shortest contiguous arc wrapping the year
     best, cur = [ms[0]], [ms[0]]
@@ -700,8 +791,8 @@ def months_range_es(active: set[int]) -> str:
         if len(cur) > len(best):
             best = cur
     if len(best) == 1:
-        return MONTHS_ES[best[0] - 1]
-    return f"{MONTHS_ES[best[0] - 1]}–{MONTHS_ES[best[-1] - 1]}"
+        return names[best[0] - 1]
+    return f"{names[best[0] - 1]}–{names[best[-1] - 1]}"
 
 
 # --------------------------------------------------------------- calendar ---
@@ -757,25 +848,51 @@ def build_calendar(power, ndvi, monthly_burn):
                       "2": "media", "3": "alta"}}
 
 
-def _stop_conditions(power, end: date, n_days: int = 3):
-    """INTA single-condition harvest stop rules over the last n days.
+def _stop_conditions(power, end: date, n_days: int = 3,
+                     zone: str | None = None):
+    """Spanish (conds, detail); see `_stop_conditions_full`."""
+    conds, detail, _ = _stop_conditions_full(power, end, n_days, zone=zone)
+    return conds, detail
 
-    Any one condition alone stops work: wind > 40 km/h (WS2M > 11.1 m/s),
-    T > 35 °C, RH < 30 % (humidity threshold pending INTA confirmation).
+
+def _stop_conditions_full(power, end: date, n_days: int = 3,
+                     zone: str | None = None):
+    """Regional single-condition harvest stop rules over the last n days.
+
+    Thresholds come from `stop_thresholds` in knowledge/measures.json,
+    keyed by the plot zone — the guides disagree by region: NEA/NOA use
+    the INTA Chaco guide (T > 30 °C, RH < 30 %, mean wind > 35 km/h);
+    the other zones and the default use INTA Balcarce + Bomberos de
+    Tandil (wind > 40 km/h, T > 35 °C, RH < 30 %, humidity threshold
+    still unconfirmed there). Any one condition alone stops work.
     """
+    from ..services.knowledge import stop_thresholds_for
+    th = stop_thresholds_for(zone)
+    wind_kmh = th.wind_gt_kmh if th else 40.0
+    temp_c = th.temp_gt_c if th else 35.0
+    rh_pct = th.rh_lt_pct if th else 30.0
+    guide = th.guide if th else "INTA / UIB Balcarce + Bomberos de Tandil"
+    rh_note = (", umbral por confirmar con INTA"
+               if th is None or th.rh_unconfirmed else "")
+    confirm = "confirmá con Bomberos locales si corresponde suspender"
     P = (power or {}).get
     rh, ws, tx = P("RH2M") or {}, P("WS2M") or {}, P("T2M_MAX") or {}
     checks = (
-        ("wind_gt_40kmh", ws, lambda v: v > 11.1,
-         lambda v: f"viento {v:.1f} m/s (>40 km/h)"),
-        ("temp_gt_35", tx, lambda v: v > 35,
-         lambda v: f"{v:.0f} °C (>35 °C)"),
-        ("rh_lt_30", rh, lambda v: v < 30,
-         lambda v: f"humedad {v:.0f} % (<30 %, umbral "
-                   "por confirmar con INTA)"),
+        ("wind_gt_40kmh", ws, lambda v: v > wind_kmh / 3.6,
+         lambda v: f"viento {v:.1f} m/s (>{wind_kmh:g} km/h, {guide})",
+         lambda v: f"wind {v:.1f} m/s (>{wind_kmh:g} km/h, {guide})"),
+        ("temp_gt_35", tx, lambda v: v > temp_c,
+         lambda v: f"{v:.0f} °C (>{temp_c:g} °C, {guide})",
+         lambda v: f"{v:.0f} °C (>{temp_c:g} °C, {guide})"),
+        ("rh_lt_30", rh, lambda v: v < rh_pct,
+         lambda v: f"humedad {v:.0f} % (<{rh_pct:g} %{rh_note}, {guide})",
+         lambda v: f"humidity {v:.0f} % (<{rh_pct:g} %"
+                   + (", threshold pending INTA confirmation" if rh_note else "")
+                   + f", {guide})"),
     )
     conds, detail = [], {}
-    for name, series, pred, fmt in checks:
+    detail_en = {}
+    for name, series, pred, fmt, fmt_en in checks:
         # most recent day the condition was met inside the window;
         # only the last valid day raises the alert, earlier days are
         # context with dated, age-aware wording
@@ -785,21 +902,28 @@ def _stop_conditions(power, end: date, n_days: int = 3):
             if v is None or not pred(v):
                 continue
             day = f"{d.day} de {MONTH_FULL_ES[d.month - 1]}"
-            detail[name] = (f"hay {fmt(v)} el {day}" if i == 0 else
-                            f"hubo {fmt(v)} el {day} (hace {i} días)")
+            detail[name] = ((f"hay {fmt(v)} el {day}" if i == 0 else
+                             f"hubo {fmt(v)} el {day} (hace {i} días)")
+                            + f"; {confirm}")
+            day_en = f"{MONTH_FULL_EN[d.month - 1]} {d.day}"
+            detail_en[name] = (
+                f"{fmt_en(v)} on {day_en}" if i == 0 else
+                f"{fmt_en(v)} on {day_en} ({i} days ago)")
             if i == 0:
                 conds.append(name)
             break
-    return sorted(conds), detail
+    return sorted(conds), detail, detail_en
 
 
-def fire_weather_card(power, end: date | None):
+def fire_weather_card(power, end: date | None,
+                      zone: str | None = None):
     """Last 7 valid days: mean RH2M, max WS2M, max T2M_MAX + dry days.
 
     Level score (INTA harvest guidance: stop work at wind>40 km/h,
     T>35 °C, RH<30 %): +1 each for mean RH<30 %, max wind>11 m/s,
     max T>35 °C, >10 days since rain. 3+ alto, 2 moderado, else bajo.
-    `stop_conditions` lists each single condition met in the last 3 days.
+    `stop_conditions` lists each single condition met in the last 3
+    days, evaluated against the thresholds of the plot zone.
     """
     P = (power or {}).get
     rh, ws, tx = P("RH2M") or {}, P("WS2M") or {}, P("T2M_MAX") or {}
@@ -823,18 +947,28 @@ def fire_weather_card(power, end: date | None):
              f"viento máx {wsm:.1f} m/s" if wsm is not None else None,
              f"T máx {txm:.0f} °C" if txm is not None else None,
              f"{since} días sin lluvia" if since is not None else None]
-    conds, detail = _stop_conditions(power, end)
+    parts_en = [f"mean RH {rhm:.0f} %" if rhm is not None else None,
+                f"max wind {wsm:.1f} m/s" if wsm is not None else None,
+                f"max T {txm:.0f} °C" if txm is not None else None,
+                f"{since} days without rain" if since is not None else None]
+    conds, detail, detail_en = _stop_conditions_full(power, end, zone=zone)
     if conds:
         parts.append("parar la cosecha: " + "; ".join(detail[c]
                                                      for c in conds))
+        parts_en.append("stop harvesting: " + "; ".join(detail_en[c]
+                                                       for c in conds))
     ctx = [detail[c] for c in detail if c not in conds]
     if ctx:
         parts.append("días previos: " + "; ".join(ctx))
+        parts_en.append("previous days: " + "; ".join(
+            detail_en[c] for c in detail if c not in conds))
     card = _card("fire_weather", level, None,
                  "; ".join(p for p in parts if p),
-                 "NASA POWER", POWER_RES, "high")
+                 "NASA POWER", POWER_RES, "high",
+                 "; ".join(p for p in parts_en if p))
     card["stop_conditions"] = conds
     card["stop_detail"] = detail
+    card["stop_detail_en"] = detail_en
     return card
 
 
@@ -941,6 +1075,8 @@ async def diagnose(request: Request):
         risk = None
     risk_cell = (risk or {}).get("cells", {}).get(r5c)
 
+    from ..services.georef import zone_at
+    geo = zone_at(clat, clon)
     degraded = power is None
     adj = {"temp_adjust_c": temp_adjust, "elevation_m": elevation_m,
            "power_cell_elevation_m": cell_elev_m}
@@ -948,11 +1084,10 @@ async def diagnose(request: Request):
         cards, monthly_burn = degraded_cards(
             grid_cell, terr, soilg, fire_cal, risk_cell, r5c)
         calendar = build_calendar(None, ndvi, monthly_burn)
-        baseline = None
     else:
         cards, monthly_burn = build_cards(
             power, soilg, slope, ndvi, grid_cell, fire_cal, risk_cell,
-            r5c, adj=adj)
+            r5c, adj=adj, zone=geo["zone"])
     baseline = None
     if scenario and not degraded:
         baseline = {"cards": cards,
@@ -968,7 +1103,7 @@ async def diagnose(request: Request):
         base_map = {c["id"]: c["value"] for c in cards}
         cards, monthly_burn = build_cards(
             spower, soilg, slope, ndvi, sgrid, fire_cal, risk_cell,
-            r5c, adj=adj)
+            r5c, adj=adj, zone=geo["zone"])
         calendar = build_calendar(spower, ndvi, monthly_burn)
         for c in cards:
             bv = base_map.get(c["id"])
@@ -987,9 +1122,6 @@ async def diagnose(request: Request):
     msr = evaluate({"cards": card_map,
                     "calendar": calendar["rows"],
                     "risk_cat": (risk_cell or {}).get("cat")})
-
-    from ..services.georef import zone_at
-    geo = zone_at(clat, clon)
 
     return JSONResponse(
         {"diagnosis_id": f"dx_{dx}", "area_ha": round(area_ha, 1),
@@ -1012,6 +1144,17 @@ async def diagnose(request: Request):
 
 ROTATIONS_ZONES = {"pampa_humeda", "nea", "noa", "cuyo", "patagonia",
                    "other"}
+
+
+@router.get("/api/field/catalog")
+def field_catalog():
+    """Public catalog read from the same knowledge used by the rotation motor."""
+    from ..services.rotations import KNOWLEDGE
+
+    return {
+        "rotations": [rot.model_dump() for rot in KNOWLEDGE.rotations],
+        "crops": [crop.model_dump() for crop in KNOWLEDGE.crops.values()],
+    }
 
 
 @router.post("/api/field/rotations")
