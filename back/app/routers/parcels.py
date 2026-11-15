@@ -710,8 +710,9 @@ async def parcels(request: Request):
                      "fire_level": p["indicators"]["fire"]["level"],
                      "water_pct": p["indicators"]["water"]["pct"],
                      "water_level": p["indicators"]["water"]["level"],
-                     "hot_days_over_35":
+                     "hot_days_over_threshold":
                      p["indicators"]["heat"]["days_over_35"],
+                     "hot_threshold_c": 35,
                      "frost_free_days":
                      p["indicators"]["frost"]["frost_free_days"],
                      "alerts": [{"kind": a["kind"],
@@ -719,7 +720,7 @@ async def parcels(request: Request):
                                  "text": a["text"]}
                                 for a in p["alerts"]]}
                     for p in out_parcels],
-        "needs": needs}
+        "needs": needs, "fire_horizon_days": 7}
     from ..services.ai_explain import parcels_summary
     summ = None
     try:

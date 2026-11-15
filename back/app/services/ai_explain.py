@@ -55,7 +55,16 @@ PARCELS_SYSTEM_ES = (
     "estado de sus parcelas según los números del JSON de entrada. "
     "Reglas: el titular empieza por el fuego (riesgo o foco cercano); "
     "no inventés números — solo valores del JSON; no contradigas las "
-    "alertas; no menciones lugares ni coordenadas. Respondés "
+    "alertas; no menciones lugares ni coordenadas. Significado de "
+    "los campos: fire_pct es la probabilidad (en %) de que el satélite "
+    "detecte fuego en la zona en los próximos 7 días, NO una parte de "
+    "la parcela; water_pct es la humedad del suelo en la zona de las "
+    "raíces (en %), y water_level la compara con lo normal para ese "
+    "mes; hot_days_over_threshold son días por año con máxima sobre "
+    "hot_threshold_c; frost_free_days son días por año sin heladas. "
+    "Nombrá cada parcela por su cultivo. Sé breve: cada oración de "
+    "menos de 25 palabras, agrupá las parcelas con los mismos valores "
+    "y no repitas datos. Respondés "
     "estrictamente JSON: "
     '{"headline":"una oración","bullets":["máximo 3 oraciones"]}.')
 
@@ -64,7 +73,15 @@ PARCELS_SYSTEM_EN = (
     "parcels from the numbers in the input JSON. Rules: the headline "
     "leads with fire (risk or a nearby detection); never invent "
     "numbers — only values present in the JSON; do not contradict the "
-    "alerts; never mention places or coordinates. Answer strictly JSON: "
+    "alerts; never mention places or coordinates. Field meanings: "
+    "fire_pct is the probability (in %) that a satellite detects fire "
+    "in the area within 7 days, NOT a share of the parcel; water_pct is "
+    "root-zone soil wetness (in %), and water_level compares it with "
+    "normal for the month; hot_days_over_threshold are days per year "
+    "with a maximum above hot_threshold_c; frost_free_days are days per "
+    "year without frost. Name each parcel by its crop. Be brief: each "
+    "sentence under 25 words, group parcels with equal values, never "
+    "repeat data. Answer strictly JSON: "
     '{"headline":"one sentence","bullets":["at most 3 sentences"]}.')
 
 _cache: dict[str, tuple[float, dict]] = {}
@@ -214,15 +231,19 @@ async def _gemini_model(client: httpx.AsyncClient, key: str) -> str:
 async def _call_gemini(client: httpx.AsyncClient, key: str,
                        payload: dict, system: str = SYSTEM) -> dict:
     model = await _gemini_model(client, key)
+    gen = {"temperature": 0, "maxOutputTokens": MAX_TOKENS,
+           "responseMimeType": "application/json"}
+    if "flash" in model.lower():
+        # 2.5 flash models "think" by default and the thinking tokens
+        # count against maxOutputTokens, truncating the JSON answer.
+        gen["thinkingConfig"] = {"thinkingBudget": 0}
     r = await client.post(
         f"{GEMINI_URL}/models/{model}:generateContent",
         headers={"x-goog-api-key": key},
         json={"contents": [{"role": "user", "parts": [
             {"text": json.dumps(payload, ensure_ascii=False)}]}],
             "systemInstruction": {"parts": [{"text": system}]},
-            "generationConfig": {"temperature": 0,
-                                 "maxOutputTokens": MAX_TOKENS,
-                                 "responseMimeType": "application/json"}})
+            "generationConfig": gen})
     r.raise_for_status()
     cand = r.json()["candidates"][0]
     text = "".join(p.get("text", "")
