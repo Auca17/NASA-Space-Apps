@@ -92,7 +92,7 @@ function RainChart({ card, t }: {
         <summary>{t("field.rainTable")}</summary>
         <table className="cal">
           <tbody>
-            <tr>{months.map((m) => <th key={m} scope="col">{m}</th>)}</tr>
+            <tr>{months.map((m, i) => <th key={i} scope="col">{m}</th>)}</tr>
             <tr>{mm.map((v, i) => <td key={i}>{v}</td>)}</tr>
           </tbody>
         </table>

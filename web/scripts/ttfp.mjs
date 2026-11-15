@@ -14,7 +14,7 @@ for (const [name, ll] of [["corrientes", "-27.95,-56.95"],
                           ["pergamino", "-33.89,-60.57"]]) {
   await cdp.send("Network.setCacheDisabled", { cacheDisabled: true });
   const t0 = Date.now();
-  await page.goto(BASE + `/?t=${name}#${ll}`,
+  await page.goto(BASE + `/app/?t=${name}#${ll}`,
     { waitUntil: "domcontentloaded" });
   await page.waitForSelector("table.cal", { timeout: 90000 })
     .catch(() => console.log(`  ${name}: TIMEOUT`));
@@ -23,7 +23,7 @@ for (const [name, ll] of [["corrientes", "-27.95,-56.95"],
 // warm second pass (cache on)
 await cdp.send("Network.setCacheDisabled", { cacheDisabled: false });
 const t0 = Date.now();
-await page.goto(BASE + "/?t=warm#-33.89,-60.57",
+await page.goto(BASE + "/app/?t=warm#-33.89,-60.57",
   { waitUntil: "domcontentloaded" });
 await page.waitForSelector("table.cal", { timeout: 90000 }).catch(() => {});
 console.log(`pergamino warm: ${Date.now() - t0} ms`);

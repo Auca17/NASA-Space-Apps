@@ -157,7 +157,7 @@ npm install
 npm run dev
 ```
 
-Open http://localhost:5173 — the dev server serves `fixtures/` at `/data/v1/` so the app works without a backend; `/api/*` is proxied to `localhost:8000`.
+Open http://localhost:5173/app/ — the dev server serves `fixtures/` at `/data/v1/` so the app works without a backend; `/api/*` is proxied to `localhost:8000`. The landing page is at `/` (English) and `/es/` (Spanish).
 
 ## Deploy
 

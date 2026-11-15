@@ -16,12 +16,12 @@ const reqs = [];
 page.on("request", (r) => reqs.push(r.url()));
 const say = (k, v) => console.log(`${k}: ${v}`);
 
-await page.goto(BASE, { waitUntil: "domcontentloaded" });
+await page.goto(BASE + "/app/", { waitUntil: "domcontentloaded" });
 await page.waitForTimeout(2500);
 await page.screenshot({ path: `${OUT}13-r2-welcome.png` });
 
 // Corrientes panel
-await page.goto(BASE + "/?r2=1#-27.95,-56.95",
+await page.goto(BASE + "/app/?r2=1#-27.95,-56.95",
   { waitUntil: "domcontentloaded" });
 await page.waitForSelector("table.cal", { timeout: 60000 })
   .catch(() => say("corrientes panel", "TIMEOUT"));
@@ -29,7 +29,7 @@ await page.waitForTimeout(1500);
 await page.screenshot({ path: `${OUT}13-r2-corrientes.png` });
 
 // Pergamino field -> rotations (zone header must read Pampa húmeda)
-await page.goto(BASE + "/?r2=2#-33.89,-60.57",
+await page.goto(BASE + "/app/?r2=2#-33.89,-60.57",
   { waitUntil: "domcontentloaded" });
 await page.getByRole("button", { name: /analizar mi campo/i }).click()
   .catch(() => {});

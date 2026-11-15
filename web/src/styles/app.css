@@ -4,6 +4,8 @@
   --border: #d8d5cc; --good: #2e7d32; --warn: #9e5c00; --bad: #b3261e;
   --focus: #1a56db; --bare: #d9c9a8; --covered: #5d8a4e;
   --radius: 10px; --touch: 44px;
+  --logo-ember: #b3401e; --logo-ember-hot: #e0782f;
+  --logo-crop: #5d8a4e; --logo-stubble: #a8977a;
 }
 @media (prefers-color-scheme: dark) {
   :root {
@@ -12,6 +14,8 @@
     --border: #3a3a35; --bare: #6e6046; --covered: #44603a;
     --warn: #d99a2b; --good: #7fb069; --bad: #e06a63;
     --focus: #7aa2ff;
+    --logo-ember: #d4552d; --logo-ember-hot: #f0913f;
+    --logo-crop: #6f9e5f; --logo-stubble: #8f7f63;
   }
 }
 * { box-sizing: border-box; }
@@ -37,6 +41,9 @@ input[type="range"] { min-height: var(--touch); }
 .topbar h1 { font-size: 1.05rem; margin: 0; font-weight: 700;
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
   max-width: 34vw; flex-shrink: 0; }
+.topbar h1 { display: flex; align-items: center; gap: 6px; }
+.topbar-name { overflow: hidden; text-overflow: ellipsis; }
+.wind-logo { flex: none; overflow: visible; }
 .topbar .spacer { flex: 1; min-width: 4px; }
 .topbar nav { display: flex; gap: 4px; overflow-x: auto;
   scrollbar-width: none; flex-shrink: 1; }

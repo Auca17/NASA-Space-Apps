@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useT } from "../../i18n";
 import { APP_NAME } from "../../config";
 import { apiUrl } from "../../api/client";
+import { WindLogo } from "../../components/WindLogo";
 
 type Hit = { lat: number; lon: number; name: string };
 
@@ -43,6 +44,7 @@ export function Welcome({ onAnalyze, onDemo, onLocate, onExplore, onLive }: {
 
   return (
     <div className="welcome">
+      <div className="welcome-logo" aria-hidden="true"><WindLogo size={72} /></div>
       <p className="welcome-brand">{APP_NAME}</p>
       <h2>{t("welcome.title")}</h2>
       <p>{t("welcome.text")}</p>

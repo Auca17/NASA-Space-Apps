@@ -6,7 +6,7 @@ for (const w of [390, 1280]) {
   const ctx = await browser.newContext({
     viewport: { width: w, height: 800 }, locale: "es" });
   const page = await ctx.newPage();
-  await page.goto("http://localhost:5198/?r2=2#-33.89,-60.57",
+  await page.goto("http://localhost:5198/app/?r2=2#-33.89,-60.57",
     { waitUntil: "domcontentloaded" });
   await page.getByRole("button", { name: /analizar mi campo/i }).click().catch(()=>{});
   await page.getByRole("button", { name: /demo/i }).click().catch(()=>{});

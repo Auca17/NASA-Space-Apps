@@ -154,10 +154,18 @@ export function AreaPanel({ lat, lon, cells, open, onClose, country,
 
   return (
     <BottomSheet open={open}>
-      <div style={{ display: "flex", justifyContent: "space-between" }}>
-        <h3 style={{ margin: 0 }}>{lat.toFixed(2)}°, {lon.toFixed(2)}°</h3>
+      <div className="panel-head">
+        <h3>{t("panel.title")}</h3>
         <button onClick={onClose} aria-label={t("ui.close")}>✕</button>
       </div>
+
+      {sem && (
+        <section className="lead" aria-live="polite">
+          <p className="lead-place">{lat.toFixed(2)}°, {lon.toFixed(2)}°</p>
+          <span className={`badge ${sem.category}`}>{t(`sem.${sem.category}`)}</span>
+          <p className="lead-text">{t(`panel.lead.${sem.category}`, { d: windowDays })}</p>
+        </section>
+      )}
 
       <Card title={t("panel.risk7d")}>
         {risk ? (
@@ -204,6 +212,8 @@ export function AreaPanel({ lat, lon, cells, open, onClose, country,
         </Card>
       )}
 
+      <details className="sec more detail-more">
+      <summary>{t("panel.more")}</summary>
       <Card title={t("calendar.title")}>
         {calMatrix ? (
           <>
@@ -266,6 +276,7 @@ export function AreaPanel({ lat, lon, cells, open, onClose, country,
               {t("csv.rawPoints")}</a></p>)}
         </Card>
       )}
+      </details>
     </BottomSheet>
   );
 }
