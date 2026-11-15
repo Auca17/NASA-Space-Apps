@@ -1,4 +1,6 @@
-# [NOMBRE A DEFINIR] — Fuego y Campo
+# Ashfield — Fuego y Campo
+
+![Ashfield](web/public/brand/ashfield-lockup-light.svg)
 
 **NASA Space Apps Challenge 2026 · Challenge inscripto: Field Shift: Adapting Farms with NASA Data** — el proyecto también cubre **Harmonization of MODIS and VIIRS Hot Spots**.
 
@@ -171,7 +173,7 @@ web/         Front React + TypeScript + MapLibre GL (globo)
 api/         Punto de entrada de Vercel que reexporta la app del back
 fixtures/    Datos de ejemplo con la forma del contrato para correr el front
 docs/        PRD, contrato de datos, registro de decisiones, método, validación, caso de estudio, deploy
-tools/       Subida a R2, assets de marca
+tools/       Subida a R2, assets de marca (logo y paleta: ember #b3401e, verde cultivo, beige rastrojo)
 ```
 
 ## Equipo

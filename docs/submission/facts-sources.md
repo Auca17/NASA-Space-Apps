@@ -72,4 +72,4 @@ repo de donde se copió. **No publicar.**
 - URL del video.
 - Licencia del código (no hay archivo LICENSE en el repo).
 - URL de descarga del dataset armonizado publicado (GitHub Release / Zenodo).
-- Nombre del proyecto (`[NOMBRE A DEFINIR]`, decisión D20).
+- ~Nombre del proyecto~ — resuelto: **Ashfield** (actualización del equipo tras el brief; brand en `web/public/brand/` y `tools/brand/`).

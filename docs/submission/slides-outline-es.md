@@ -1,4 +1,4 @@
-# Outline de slides (español) — [NOMBRE A DEFINIR]
+# Outline de slides (español) — Ashfield
 
 Diez slides para la presentación. Cada una: título, máximo 3 bullets, el visual
 a usar (archivo del repo) y la nota del orador. Números solo de archivos del
@@ -8,12 +8,13 @@ repo; el mapeo figura → fuente está en `facts-sources.md` (interno).
 
 ## Slide 1 — Título
 
-- [NOMBRE A DEFINIR] — Fuego y Campo
+- Ashfield — Fuego y Campo
 - NASA Space Apps 2026 · Field Shift (también cubre Hot Spots)
 - Equipo: Ariel, Augustus, Ezequiel, Alex
 
-**Visual:** `web/public/brand/ashfield-cover.png` (portada de marca; si el nombre
-no está confirmado, usar solo el fondo sin el wordmark).
+**Visual:** `web/public/brand/ashfield-cover.png` (portada de marca; lockup en
+`web/public/brand/ashfield-lockup-light.svg`, paleta ember #b3401e, verde
+cultivo, beige rastrojo).
 
 **Nota:** Una sola frase de apertura: "Un motor de armonización que lleva datos
 de la NASA a una grilla común, visto desde dos lentes: el fuego cerca tuyo y la

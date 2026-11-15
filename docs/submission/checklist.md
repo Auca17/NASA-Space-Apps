@@ -48,7 +48,7 @@ persona — se marca donde aplica).
 | 25 | Puntos técnicos Frente A E2–E3 por discutir (18 bandas vs. 36 del brief; tramo baja confianza hasta 2012-01; celda de control `85a9441bfffffff`; shards `fire/daily` > 800 KB; riesgo `cat` con `ratio = null`) | Ezequiel | en curso | `docs/decisions.md` §Pendientes (E2–E3); D27, D28, D29, D30 ya registran la mayoría |
 | 26 | Puntos Frente A E4 por discutir (`type` inferido en NRT; S-NPP 2026 no descargado; persistencia solo en la celda vs. "celda o vecinas" de D29) | Ezequiel | en curso | `docs/decisions.md` §Pendientes (E4); `pipeline/README.md` §2026 |
 | 27 | Contrato 3.2 sin `zones` por rotación y 3.3 sin `applies_when`: agregar si el front lo necesita | Augustus + Alex | pendiente | `docs/decisions.md` §Pendientes (Frente B) |
-| 28 | Nombre del proyecto (`[NOMBRE A DEFINIR]`) | equipo / Alex | pendiente | `docs/decisions.md` D20; `web/src/config.ts` sigue en "Nombre a definir" (ver nota sobre assets "ashfield" en el reporte del brief 22) |
+| 28 | Nombre del proyecto | equipo / Alex | hecho | **Ashfield** (actualización del equipo); assets en `web/public/brand/ashfield-*` y `tools/brand/`; ojo: `web/src/config.ts` y `docs/decisions.md` D20 aún figuran "a definir" |
 | 29 | Challenge(s) de inscripción confirmado con la sede | Ezequiel | hecho | `docs/decisions.md` D1: inscripto en Field Shift, se construyen ambas lentes |
 | 30 | Licencia del código | equipo | pendiente | No hay `LICENSE` en el repo → `[PENDIENTE: licencia del código]` en `README.md` |
 
