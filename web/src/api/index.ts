@@ -30,12 +30,9 @@ export const gridShard = (r2: string) =>
   fetchJson<{ cells: Record<string, unknown> }>(
     dataUrl(`field/grid/${r2}.json`));
 
-export const knowledgeRotations = () =>
-  fetchJson<{ rotations: RotationEntry[] }>(
-    dataUrl("knowledge/rotations.json"));
-
-export const knowledgeCrops = () =>
-  fetchJson<{ crops: CropEntry[] }>(dataUrl("knowledge/crops.json"));
+export const apiFieldCatalog = () =>
+  fetchJson<{ rotations: RotationEntry[]; crops: CropEntry[] }>(
+    apiUrl("/api/field/catalog"));
 
 export const orinValidation = () =>
   fetchJson<OrinValidation>(dataUrl("orin/validation.json"));

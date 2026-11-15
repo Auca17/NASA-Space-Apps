@@ -4,12 +4,11 @@ import { useT } from "../../i18n";
 import { Card, BottomSheet, Tooltip } from "../../components/ui";
 import { Glossary } from "../../components/Glossary";
 import {
-  apiDiagnose, apiRotations, apiExplain, knowledgeRotations,
-  knowledgeCrops, orinValidation,
+  apiDiagnose, apiRotations, apiExplain, apiFieldCatalog, orinValidation,
 } from "../../api";
 import type {
-  Card as DiagCard, DiagnoseResponse, OrinValidation,
-  RotationsResponse, Strategy,
+  Card as DiagCard, CropEntry, DiagnoseResponse, OrinValidation,
+  RotationEntry, RotationsResponse, Strategy,
 } from "../../api/types";
 import { OrinCard, SyntheticBanner } from "./OrinCard";
 import {
@@ -439,12 +438,19 @@ export function FieldPanel({ target, open, onClose, onChangePlot }: {
   const [orin, setOrin] = useState<OrinValidation | null>(null);
   const [rots, setRots] = useState<RotationsResponse | null>(null);
   const [explain, setExplain] = useState<Record<string, string>>({});
-  const [rotList, setRotList] = useState<{ id: string; label: string }[]>([]);
+  const [catalog, setCatalog] =
+    useState<{ rotations: RotationEntry[]; crops: CropEntry[] } | null>(null);
+  const [catalogFailed, setCatalogFailed] = useState(false);
+  const [catalogRetry, setCatalogRetry] = useState(0);
   const [current, setCurrent] = useState("unknown");
   const [prioSel, setPrioSel] = useState<string[]>([]);
   const [cons, setCons] = useState<Record<string, boolean>>({});
   const [step, setStep] = useState<1 | 2>(1);
-  const [busy, setBusy] = useState(false);
+  const [reading, setReading] = useState(false);
+  const [retry, setRetry] = useState(0);
+  const [comparing, setComparing] = useState(false);
+  const [compareFailed, setCompareFailed] = useState(false);
+  const comparisonRequests = useRef({ latest: 0 });
   /** Whether the shown results used the regional reference rotation. */
   const [refRun, setRefRun] = useState(false);
   const formRef = useRef<HTMLDivElement>(null);
@@ -453,14 +459,16 @@ export function FieldPanel({ target, open, onClose, onChangePlot }: {
       { maximumFractionDigits: 1 }), [lang]);
 
   useEffect(() => {
-    knowledgeRotations().then((k) => {
-      if (!k) return;
-      setRotList(k.rotations.map((r) => ({
-        id: r.id,
-        label: r.name[lang as "es" | "en"] ?? r.name.es ?? r.id,
-      })));
+    if (!open) return;
+    let active = true;
+    setCatalogFailed(false);
+    apiFieldCatalog().then((data) => {
+      if (!active) return;
+      setCatalog(data);
+      setCatalogFailed(!data);
     });
-  }, [lang]);
+    return () => { active = false; };
+  }, [open, catalogRetry]);
 
   const body = useMemo<PlotBody | null>(() =>
     target ? plotBody(target.geom) : null, [target]);
@@ -469,13 +477,21 @@ export function FieldPanel({ target, open, onClose, onChangePlot }: {
 
   useEffect(() => {
     if (!open || !body) return;
-    setBusy(true); setDiag(null); setRots(null); setExplain({});
+    let active = true;
+    const requests = comparisonRequests.current;
+    setReading(true); setDiag(null); setRots(null); setExplain({});
+    setComparing(false); setCompareFailed(false);
     setStep(1);
     apiDiagnose(body).then((d) => {
-      setDiag(d); setBusy(false);
+      if (!active) return;
+      setDiag(d); setReading(false);
       if (d) savePlot(lot?.name ?? "lote", body);
     });
-  }, [open, body, lot]);
+    return () => {
+      active = false;
+      requests.latest++;
+    };
+  }, [open, body, lot, retry]);
 
   useEffect(() => {
     if (open) orinValidation().then(setOrin);
@@ -487,11 +503,12 @@ export function FieldPanel({ target, open, onClose, onChangePlot }: {
   });
 
   const runRotations = async () => {
-    if (!diag) return;
-    setBusy(true);
-    const cropIds = await knowledgeCrops()
-      .then((k) => (k?.crops ?? []).map((c) => c.id))
-      .catch(() => [] as string[]);
+    if (!diag || comparing) return;
+    const requests = comparisonRequests.current;
+    const version = ++requests.latest;
+    setComparing(true);
+    setCompareFailed(false);
+    setExplain({});
     const r = await apiRotations({
       diagnosis: diag,
       zone: diag.zone,
@@ -501,19 +518,21 @@ export function FieldPanel({ target, open, onClose, onChangePlot }: {
         irrigation: Boolean(cons.irrigation),
         livestock: Boolean(cons.livestock),
         machinery: Boolean(cons.machinery),
-        markets: cons.markets ? cropIds : [],
+        markets: cons.markets ? catalog?.crops.map((c) => c.id) ?? [] : [],
       },
     });
+    if (version !== requests.latest) return;
+    setComparing(false);
+    setCompareFailed(!r);
     setRots(r);
     setRefRun(current === "unknown");
     if (r) {
       const e = await apiExplain(r); // explain takes the rotations response
-      if (e) {
+      if (e && version === requests.latest) {
         setExplain(Object.fromEntries(
           e.strategies.map((s) => [s.id, s.text])));
       }
     }
-    setBusy(false);
   };
 
   const summary = diag ? plainSummary(diag, lang) : [];
@@ -555,8 +574,14 @@ export function FieldPanel({ target, open, onClose, onChangePlot }: {
           </div>
         </div>)}
       {lot?.synthetic && <SyntheticBanner t={t} />}
-      {busy && <p aria-live="polite">{t("field.diagnosing")}</p>}
-      {!diag && !busy && <p className="muted">{t("panel.noData")}</p>}
+      {reading && <p role="status">{t("field.diagnosing")}</p>}
+      {!diag && !reading && target && (
+        <div className="card">
+          <p role="status">{t("field.diagnosis.failed")}</p>
+          <button type="button" onClick={() => setRetry((n) => n + 1)}>
+            {t("field.diagnosis.retry")}
+          </button>
+        </div>)}
 
       {diag && (
         <>
@@ -586,7 +611,7 @@ export function FieldPanel({ target, open, onClose, onChangePlot }: {
           <div className="field-actions">
             {step === 1 && !rots && !lot && (
               <button className="primary" onClick={openCompare}>
-                {t("field.form.run")}</button>)}
+                {t("field.form.open")}</button>)}
             <button onClick={onChangePlot}>{t("field.changePlot")}</button>
           </div>
 
@@ -664,10 +689,17 @@ export function FieldPanel({ target, open, onClose, onChangePlot }: {
                 <select value={current}
                         onChange={(e) => setCurrent(e.target.value)}>
                   <option value="unknown">{t("field.form.dontKnow")}</option>
-                  {rotList.map((r) =>
-                    <option key={r.id} value={r.id}>{r.label}</option>)}
+                  {catalog?.rotations.map((r) =>
+                    <option key={r.id} value={r.id}>{r.name[lang] ?? r.name.es ?? r.id}</option>)}
                 </select>
               </label>
+              {catalogFailed && (
+                <p role="status">
+                  {t("field.form.catalogFailed")}{" "}
+                  <button type="button" onClick={() => setCatalogRetry((n) => n + 1)}>
+                    {t("field.diagnosis.retry")}
+                  </button>
+                </p>)}
               {current === "unknown" && (
                 <p className="muted">{t("field.form.dontKnowHint")}</p>)}
               <fieldset className="prio-set">
@@ -701,8 +733,10 @@ export function FieldPanel({ target, open, onClose, onChangePlot }: {
                     </label>))}
                 </div>
               </fieldset>
+              {comparing && <p role="status">{t("field.form.comparing")}</p>}
+              {compareFailed && <p role="status">{t("field.form.failed")}</p>}
               <button className="primary" onClick={runRotations}
-                      disabled={busy}>
+                      disabled={comparing}>
                 {t("field.form.run")}</button>
             </Card>
             </div>)}

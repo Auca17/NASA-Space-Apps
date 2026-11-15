@@ -17,7 +17,7 @@ describe("PlaceFinder", () => {
         ok({ coords: { latitude: -34.1, longitude: -59.9 } })) } });
     const onGo = renderFinder();
     fireEvent.click(screen.getByRole("button", { name: /usar mi ubicación/i }));
-    expect(onGo).toHaveBeenCalledWith(-34.1, -59.9);
+    expect(onGo).toHaveBeenCalledWith(-34.1, -59.9, true);
   });
 
   it("says so when the location is denied, and keeps the search", async () => {
@@ -32,7 +32,7 @@ describe("PlaceFinder", () => {
   });
 
   it("searches a place on OpenStreetMap and flies to the picked hit", async () => {
-    const fetchMock = vi.fn().mockResolvedValue({ json: async () => ({
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => ({
       hits: [{ lat: -33.89, lon: -60.57, name: "Pergamino, Buenos Aires" }] }) });
     vi.stubGlobal("fetch", fetchMock);
     const onGo = renderFinder();
@@ -41,18 +41,28 @@ describe("PlaceFinder", () => {
     fireEvent.click(screen.getByRole("button", { name: /buscar/i }));
     fireEvent.click(await screen.findByRole("button",
       { name: /pergamino, buenos aires/i }));
-    expect(fetchMock.mock.calls[0][0]).toContain("/api/geocode?q=Pergamino");
+    expect(fetchMock.mock.calls[0][0]).toContain("/api/geocode?q=Pergamino&bias=ar");
     expect(onGo).toHaveBeenCalledWith(-33.89, -60.57);
   });
 
   it("tells the user when nothing was found", async () => {
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue(
-      { json: async () => ({ hits: [] }) }));
+      { ok: true, json: async () => ({ hits: [] }) }));
     renderFinder();
     fireEvent.change(screen.getByRole("textbox"), { target: { value: "zzz" } });
     fireEvent.click(screen.getByRole("button", { name: /buscar/i }));
     expect(await screen.findByText(/no encontramos ese lugar/i))
       .toBeInTheDocument();
+  });
+
+  it("shows a retryable error when the search service is unavailable", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: false, status: 503 }));
+    renderFinder();
+    fireEvent.change(screen.getByRole("textbox"), { target: { value: "Rafaela" } });
+    fireEvent.click(screen.getByRole("button", { name: /buscar/i }));
+    expect(await screen.findByText(/no pudimos buscar/i)).toBeInTheDocument();
+    expect(screen.queryByText(/no encontramos ese lugar/i)).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /buscar/i })).toBeEnabled();
   });
 });
 
@@ -64,7 +74,7 @@ describe("PlaceFinder coordinates", () => {
     fireEvent.change(screen.getByRole("textbox"),
       { target: { value: "-33.9600, -60.6900" } });
     fireEvent.click(screen.getByRole("button", { name: /buscar/i }));
-    expect(onGo).toHaveBeenCalledWith(-33.96, -60.69);
+    expect(onGo).toHaveBeenCalledWith(-33.96, -60.69, true);
     expect(fetchMock).not.toHaveBeenCalled();
   });
 });

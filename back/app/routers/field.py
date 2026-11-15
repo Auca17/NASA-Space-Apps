@@ -829,6 +829,17 @@ ROTATIONS_ZONES = {"pampa_humeda", "nea", "noa", "cuyo", "patagonia",
                    "other"}
 
 
+@router.get("/api/field/catalog")
+def field_catalog():
+    """Public catalog read from the same knowledge used by the rotation motor."""
+    from ..services.rotations import KNOWLEDGE
+
+    return {
+        "rotations": [rot.model_dump() for rot in KNOWLEDGE.rotations],
+        "crops": [crop.model_dump() for crop in KNOWLEDGE.crops.values()],
+    }
+
+
 @router.post("/api/field/rotations")
 async def rotations(request: Request):
     from ..services.rotations import run, PRIORITY_MAP

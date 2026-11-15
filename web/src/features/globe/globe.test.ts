@@ -2,6 +2,9 @@ import { describe, it, expect } from "vitest";
 import { BASE_STYLE } from "./baseStyle";
 
 describe("base map", () => {
+  it("uses a flat north-up map projection", () => {
+    expect(BASE_STYLE.projection).toEqual({ type: "mercator" });
+  });
   it("adds OpenStreetMap streets for close zooms, with attribution", () => {
     const osm = BASE_STYLE.sources.osm as { tiles: string[];
       maxzoom: number; attribution: string };

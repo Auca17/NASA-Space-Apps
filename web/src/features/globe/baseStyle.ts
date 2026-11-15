@@ -16,6 +16,7 @@ const SENTINEL = "https://tiles.maps.eox.at/wmts/1.0.0/" +
 
 export const BASE_STYLE: StyleSpecification = {
   version: 8,
+  projection: { type: "mercator" },
   sources: {
     marble: { type: "raster", tiles: [GIBS], tileSize: 256, maxzoom: 8,
       attribution: "NASA GIBS / Blue Marble" },
@@ -29,6 +30,8 @@ export const BASE_STYLE: StyleSpecification = {
   layers: [
     { id: "bg", type: "background", paint: { "background-color": "#0a0f1c" } },
     { id: "marble", type: "raster", source: "marble" },
+    { id: "field-overview", type: "raster", source: "osm",
+      maxzoom: 9.5, layout: { visibility: "none" } },
     { id: "osm", type: "raster", source: "osm", minzoom: 7.5,
       paint: { "raster-opacity":
         ["interpolate", ["linear"], ["zoom"], 7.5, 0, 9.5, 1] } },
@@ -42,4 +45,10 @@ export const BASE_STYLE: StyleSpecification = {
 export const LANDUSE_SOURCE: VectorSourceSpecification = {
   type: "vector", url: "https://tiles.openfreemap.org/planet",
   attribution: "© OpenMapTiles © OpenStreetMap contributors",
+};
+
+export const FIELD_GUIDE_SOURCE: VectorSourceSpecification = {
+  type: "vector",
+  url: "pmtiles://https://data.source.coop/ftw/global-data-2e/vector/2025/fields-2025.pmtiles",
+  attribution: '<a href="https://source.coop/ftw/global-data-2e">Fields of The World 2025</a> (CC BY 4.0)',
 };

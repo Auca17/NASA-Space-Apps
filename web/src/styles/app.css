@@ -52,11 +52,23 @@ input[type="range"] { min-height: var(--touch); }
 
 .map-wrap { position: relative; flex: 1; min-height: 0; }
 .map { position: absolute; inset: 0; }
-.field-basemap { position: absolute; z-index: 8; top: 12px; right: 12px;
+.home-button { border: 0; background: transparent; padding: 0;
+  display: inline-flex; align-items: center; gap: 8px;
+  font-weight: inherit; color: inherit; }
+.field-extents, .field-map-tools { position: absolute; z-index: 8; top: 12px; }
+.field-extents { left: 12px; }
+.field-map-tools { right: 12px; display: grid; justify-items: end; gap: 8px; }
+.field-basemap, .field-extents, .field-zoom {
   display: flex; gap: 4px; padding: 4px; border: 1px solid var(--border);
   border-radius: var(--radius); background: var(--panel); }
-.field-basemap button[aria-pressed="true"] { background: var(--accent);
-  color: #141413; border-color: transparent; }
+.field-zoom { flex-direction: column; }
+.field-zoom button { padding: 0; font-size: 1.25rem; }
+.field-guide { display: grid; justify-items: end; gap: 4px; }
+.field-guide small { background: var(--panel); color: var(--fg); padding: 4px 6px;
+  border: 1px solid var(--border); border-radius: 6px; }
+.field-basemap button[aria-pressed="true"], .field-guide button[aria-pressed="true"] {
+  background: var(--accent);
+  color: var(--accent-fg); border-color: transparent; }
 .reticle { position: absolute; left: 50%; top: 42%; width: 28px; height: 28px;
   transform: translate(-50%, -50%); pointer-events: none; z-index: 5; }
 .reticle::before, .reticle::after { content: ""; position: absolute;
@@ -321,6 +333,11 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
 .place-more .place-title { display: none; }
 .place-more .place-finder { border-bottom: 0; padding-bottom: 0; }
 .picker { max-height: calc(100% - 24px); overflow-y: auto; }
+.field-chooser { max-height: min(60%, 31rem); }
+#field-chooser-options:not([hidden]) { display: grid; gap: 8px; }
+.field-examples > summary { cursor: pointer; min-height: var(--touch);
+  padding: 10px 0; }
+.field-examples > .row { margin-bottom: 4px; }
 
 /* While drawing or tapping a point, the map shows a crosshair instead of
  * the grab hand, so it is clear that a click marks the field. */
@@ -384,8 +401,6 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
   align-items: center; min-height: 36px; }
 .zones-h { margin: 6px 0 0; font-size: 0.95rem; }
 .analysis-scope { margin: 0; font-size: 0.9rem; }
-.zoom-hint { margin: 0; display: flex; gap: 8px; align-items: center;
-  flex-wrap: wrap; font-size: 0.85rem; color: var(--warn); }
 .live-status { margin: 0; font-size: 0.9rem; }
 .live-status.err { color: var(--bad); }
 
@@ -398,6 +413,17 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
   .topbar nav { order: 3; flex: 1 1 100%; overflow-x: visible; gap: 4px; }
   .topbar nav button { flex: 1 1 auto; padding: 0 6px; font-size: 0.85rem;
     min-width: 0; }
+  .field-extents, .field-map-tools { top: 8px; }
+  .field-extents { left: 8px; }
+  .field-map-tools { right: 8px; }
+  .field-extents button, .field-basemap button { padding: 0 8px; font-size: 0.85rem; }
+  .field-chooser { left: 8px; right: 8px; bottom: 8px;
+    max-width: none; max-height: 48%; overscroll-behavior: contain; }
+  .field-chooser .picker-head { position: sticky; top: -10px;
+    display: grid; grid-template-columns: minmax(0, 1fr) auto;
+    background: var(--panel); z-index: 1; }
+  .field-chooser .picker-head button { font-size: 0.85rem; padding: 0 8px; }
+  .field-chooser .picker-options li > span { display: none; }
 }
 
 /* Task 16: Orin validation card + synthetic banner */

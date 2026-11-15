@@ -1,11 +1,12 @@
-/** MapLibre globe: Blue Marble base, res-3 globe cells, res-5 on zoom,
+/** MapLibre map: Blue Marble base, res-3 overview cells, res-5 on zoom,
  * center reticle, debounced panel updates, reduced-motion aware. */
 import { useEffect, useRef } from "react";
 import maplibregl from "maplibre-gl";
+import { Protocol } from "pmtiles";
 import "maplibre-gl/dist/maplibre-gl.css";
 import { cellToBoundary, latLngToCell } from "h3-js";
 import { DEFAULT_VIEW } from "../../config";
-import { BASE_STYLE, LANDUSE_SOURCE } from "./baseStyle";
+import { BASE_STYLE, FIELD_GUIDE_SOURCE, LANDUSE_SOURCE } from "./baseStyle";
 import type { Landuse, LatLon, Poly } from "../../domain/selection";
 import type { Road } from "../../domain/split";
 
@@ -45,7 +46,7 @@ export interface GlobeHandle {
   flyTo(lat: number, lon: number, zoom?: number, bottomPx?: number): void;
   setCells(cells: Map<string, number>, colorExpr: unknown): void;
   setOutline(cells: string[], color?: string): void;
-  setDraft(ring: [number, number][] | null): void;
+  setDraft(ring: LatLon[] | null, showVertices?: boolean): void;
   /** Location reference (search hit, GPS, coordinates); null clears it. */
   setMarker(p: [number, number] | null): void;
   /** Zoom so the whole ring is visible. */
@@ -55,7 +56,8 @@ export interface GlobeHandle {
   readLandUse(timeoutMs?: number): Promise<LandUseRead | null>;
   /** Replace the review/field shapes; [] clears them. */
   setShapes(shapes: Shape[]): void;
-  setFieldSatellite(enabled: boolean): void;
+  setFieldBasemap(active: boolean, satellite: boolean, guide: boolean): void;
+  zoomBy(delta: number, bottomPx?: number): void;
   /** Screen pixel (relative to the map) -> [lat, lon]. */
   unproject(x: number, y: number): [number, number];
   onClick(cb: ((lat: number, lon: number) => void) | null): void;
@@ -64,7 +66,6 @@ export interface GlobeHandle {
               bbox: [number, number, number, number]) => void): () => void;
   center(): { lat: number; lon: number; zoom: number };
   bounds(): [number, number, number, number];
-  spin(enabled: boolean): void;
   destroy(): void;
 }
 
@@ -81,18 +82,48 @@ export function useGlobe(
         style: BASE_STYLE,
         center: [DEFAULT_VIEW.lon, DEFAULT_VIEW.lat],
         zoom: DEFAULT_VIEW.zoom,
-        // @ts-expect-error maplibre v5 globe projection
-        projection: { type: "globe" },
+        bearing: 0,
+        pitch: 0,
+        maxPitch: 0,
+        dragRotate: false,
+        touchPitch: false,
+        pitchWithRotate: false,
         attributionControl: { compact: true },
       });
     } catch {
       return; // WebGL unavailable
     }
-    let fieldSatellite = false;
+    map.touchZoomRotate.disableRotation();
+    map.keyboard.disableRotation();
+
+    let fieldActive = false;
+    let fieldSatellite = true;
+    let guideEnabled = false;
+    let ready = false;
+    let protocol: Protocol | undefined;
     const updateFieldBasemap = () => {
-      const visibility = fieldSatellite ? "visible" : "none";
+      if (!ready) return;
+      if (map.getLayer("field-overview")) {
+        map.setLayoutProperty("field-overview", "visibility", fieldActive ? "visible" : "none");
+      }
+      const visibility = fieldActive && fieldSatellite ? "visible" : "none";
       for (const layer of ["field-satellite", "field-roads"]) {
         if (map.getLayer(layer)) map.setLayoutProperty(layer, "visibility", visibility);
+      }
+      const showGuide = fieldActive && guideEnabled;
+      if (showGuide && !map.getSource("field-guide")) {
+        protocol = new Protocol();
+        maplibregl.addProtocol("pmtiles", protocol.tile);
+        map.addSource("field-guide", FIELD_GUIDE_SOURCE);
+        map.addLayer({
+          id: "field-guide-line", type: "line", source: "field-guide",
+          "source-layer": "fields", minzoom: 13,
+          paint: { "line-color": "#43edd5", "line-width": 2,
+            "line-opacity": 0.9, "line-dasharray": [2, 1] },
+        }, "shapes-fill");
+      }
+      if (map.getLayer("field-guide-line")) {
+        map.setLayoutProperty("field-guide-line", "visibility", showGuide ? "visible" : "none");
       }
     };
     map.on("load", () => {
@@ -161,8 +192,15 @@ export function useGlobe(
       });
       map.addLayer({
         id: "draft-line", type: "line", source: "draft",
-        paint: { "line-color": "#1a56db", "line-width": 2 },
+        paint: { "line-color": "#b7e6ff", "line-width": 3 },
       });
+      map.addLayer({
+        id: "draft-corners", type: "circle", source: "draft",
+        filter: ["==", ["geometry-type"], "Point"],
+        paint: { "circle-color": "#1a56db", "circle-radius": 5,
+          "circle-stroke-width": 2, "circle-stroke-color": "#ffffff" },
+      });
+      ready = true;
       updateFieldBasemap();
     });
 
@@ -186,7 +224,6 @@ export function useGlobe(
       }, 300);
     });
 
-    let spinning: ReturnType<typeof setInterval> | null = null;
     const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
 
     const h: GlobeHandle = {
@@ -208,20 +245,23 @@ export function useGlobe(
         if (map.getLayer("outline-line"))
           map.setPaintProperty("outline-line", "line-color", color);
       },
-      setDraft(ring) {
+      setDraft(ring, showVertices = true) {
         const src = map.getSource("draft") as maplibregl.GeoJSONSource | undefined;
         if (!src) return;
-        src.setData(!ring || ring.length < 3
-          ? { type: "FeatureCollection", features: [] }
-          : {
-              type: "FeatureCollection",
-              features: [{
-                type: "Feature", properties: {},
-                geometry: { type: "Polygon",
-                  coordinates: [[...ring.map(([la, lo]) => [lo, la]),
-                    [ring[0][1], ring[0][0]]]] },
-              }],
-            });
+        const coordinates = (ring ?? []).map(([lat, lon]) => [lon, lat]);
+        const features: GeoJSON.Feature[] = [];
+        if (coordinates.length >= 3 && showVertices) {
+          features.push({ type: "Feature", properties: {},
+            geometry: { type: "Polygon", coordinates: [[...coordinates, coordinates[0]]] } });
+        } else if (coordinates.length >= 2) {
+          features.push({ type: "Feature", properties: {},
+            geometry: { type: "LineString", coordinates } });
+        }
+        if (showVertices && coordinates.length) {
+          features.push({ type: "Feature", properties: {},
+            geometry: { type: "MultiPoint", coordinates } });
+        }
+        src.setData({ type: "FeatureCollection", features });
       },
       setMarker(p) {
         const src = map.getSource("marker") as maplibregl.GeoJSONSource | undefined;
@@ -300,9 +340,16 @@ export function useGlobe(
               .map((ring) => [...ring.map(([la, lo]) => [lo, la]),
                               [ring[0][1], ring[0][0]]]) } })) });
       },
-      setFieldSatellite(enabled) {
-        fieldSatellite = enabled;
+      setFieldBasemap(active, satellite, guide) {
+        fieldActive = active;
+        fieldSatellite = satellite;
+        guideEnabled = guide;
         updateFieldBasemap();
+      },
+      zoomBy(delta, bottomPx = 0) {
+        const { clientWidth, clientHeight } = map.getContainer();
+        const around = map.unproject([clientWidth / 2, (clientHeight - bottomPx) / 2]);
+        map.easeTo({ zoom: map.getZoom() + delta, around, duration: reduce ? 0 : 250 });
       },
       unproject(x, y) {
         const p = map.unproject([x, y]);
@@ -318,33 +365,15 @@ export function useGlobe(
         const b = map.getBounds();
         return [b.getWest(), b.getSouth(), b.getEast(), b.getNorth()];
       },
-      spin(enabled) {
-        if (spinning) { clearInterval(spinning); spinning = null; }
-        if (!enabled || reduce) return;
-        spinning = setInterval(() => {
-          map.setCenter([map.getCenter().lng + 0.15, map.getCenter().lat]);
-        }, 50);
-      },
       destroy() { map.remove(); handleRef.current = null; },
     };
     handleRef.current = h;
     onReady(h);
 
-    // keyboard: arrows rotate, +/- zoom
-    const key = (e: KeyboardEvent) => {
-      const tag = (e.target as HTMLElement).tagName;
-      if (tag === "INPUT" || tag === "SELECT" || tag === "TEXTAREA") return;
-      if (e.key === "ArrowLeft") map.panBy([-60, 0]);
-      else if (e.key === "ArrowRight") map.panBy([60, 0]);
-      else if (e.key === "ArrowUp") map.panBy([0, -60]);
-      else if (e.key === "ArrowDown") map.panBy([0, 60]);
-      else if (e.key === "+") map.zoomIn();
-      else if (e.key === "-") map.zoomOut();
-    };
-    window.addEventListener("keydown", key);
     return () => {
-      window.removeEventListener("keydown", key);
+      if (timer) clearTimeout(timer);
       map.remove();
+      if (protocol) maplibregl.removeProtocol("pmtiles");
       handleRef.current = null;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps

@@ -1,7 +1,7 @@
 /** Take the map to the user's area before marking a field: current
  * location (browser geolocation) or a place searched on OpenStreetMap
  * (Nominatim, through the same-origin /api/geocode proxy). */
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useT } from "../../i18n";
 import { apiUrl } from "../../api/client";
 import { parseLatLon } from "../../domain/selection";
@@ -9,7 +9,7 @@ import { parseLatLon } from "../../domain/selection";
 type Hit = { lat: number; lon: number; name: string };
 
 export function PlaceFinder({ onGo }: {
-  onGo: (lat: number, lon: number) => void;
+  onGo: (lat: number, lon: number, precise?: boolean) => void;
 }) {
   const { t } = useT();
   const [q, setQ] = useState("");
@@ -17,30 +17,46 @@ export function PlaceFinder({ onGo }: {
   const [busy, setBusy] = useState(false);
   const [locating, setLocating] = useState(false);
   const [denied, setDenied] = useState(false);
+  const [failed, setFailed] = useState(false);
+  const searchRevision = useRef(0);
+  const resetSearch = () => {
+    searchRevision.current++;
+    setHits(null);
+    setFailed(false);
+    setBusy(false);
+  };
 
   const useMyLocation = () => {
     setDenied(false);
+    resetSearch();
     if (!("geolocation" in navigator)) { setDenied(true); return; }
     setLocating(true);
     navigator.geolocation.getCurrentPosition(
       (p) => { setLocating(false);
-               onGo(p.coords.latitude, p.coords.longitude); },
+               onGo(p.coords.latitude, p.coords.longitude, true); },
       () => { setLocating(false); setDenied(true); },
       { timeout: 8000 });
   };
 
   const search = async () => {
-    if (!q.trim()) return;
-    // pasted coordinates go straight to the map, no lookup
-    const ll = parseLatLon(q);
-    if (ll) { setHits(null); onGo(ll[0], ll[1]); return; }
+    const input = q.trim();
+    if (!input || busy) return;
+    resetSearch();
+    const revision = searchRevision.current;
+    setDenied(false);
+    const ll = parseLatLon(input);
+    if (ll) { onGo(ll[0], ll[1], true); return; }
     setBusy(true);
     try {
-      const r = await fetch(apiUrl(`/api/geocode?q=${encodeURIComponent(q)}`));
+      const r = await fetch(apiUrl(`/api/geocode?q=${encodeURIComponent(input)}&bias=ar`));
+      if (!r.ok) throw new Error("Geocoding request failed");
       const j = (await r.json()) as { hits?: Hit[] };
-      setHits(j.hits ?? []);
-    } catch { setHits([]); }
-    setBusy(false);
+      if (revision === searchRevision.current) setHits(j.hits ?? []);
+    } catch {
+      if (revision === searchRevision.current) setFailed(true);
+    } finally {
+      if (revision === searchRevision.current) setBusy(false);
+    }
   };
 
   const pick = (h: Hit) => { setHits(null); setQ(h.name); onGo(h.lat, h.lon); };
@@ -53,7 +69,7 @@ export function PlaceFinder({ onGo }: {
           {locating ? t("place.locating") : t("place.myLocation")}</button>
         <form className="search"
               onSubmit={(e) => { e.preventDefault(); search(); }}>
-          <input value={q} onChange={(e) => setQ(e.target.value)}
+          <input value={q} onChange={(e) => { resetSearch(); setQ(e.target.value); }}
                  placeholder={t("place.placeholder")}
                  aria-label={t("place.placeholder")} />
           <button type="submit" disabled={busy}
@@ -62,6 +78,7 @@ export function PlaceFinder({ onGo }: {
         </form>
       </div>
       {denied && <p className="muted" role="status">{t("place.denied")}</p>}
+      {failed && <p className="muted" role="status">{t("place.failed")}</p>}
       {hits && hits.length === 0 && (
         <p className="muted" role="status">{t("place.none")}</p>)}
       {hits && hits.length > 0 && (

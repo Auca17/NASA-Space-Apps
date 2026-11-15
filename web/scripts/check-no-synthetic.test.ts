@@ -18,10 +18,11 @@ const run = (args: string[]) => new Promise<{
   p.on("close", (status) => res({ status, out, err }));
 });
 
-const serve = (body: object | null) => new Promise<{
+const serve = (body: object | null, status = body === null ? 404 : 200) => new Promise<{
     url: string; close: () => Promise<void> }>((res) => {
   const s: Server = createServer((_q, r) => {
-    if (body == null) { r.statusCode = 404; r.end(); return; }
+    r.statusCode = status;
+    if (body == null) { r.end(); return; }
     r.setHeader("Content-Type", "application/json");
     r.end(JSON.stringify(body));
   }).listen(0, "127.0.0.1", () => {
@@ -70,9 +71,17 @@ describe("check-no-synthetic guard", () => {
     } finally { await s2.close(); }
   });
   it("only warns on the local fixtures base (exit 0)", () => {
-    const r = spawnSync(process.execPath, [SCRIPT],
-                        { encoding: "utf-8" });
+    const r = spawnSync(process.execPath, [SCRIPT, "/data/v1/"], {
+      encoding: "utf-8", env: { ...process.env, DATA_DIR: "../fixtures" } });
     expect(r.status).toBe(0);
     expect(r.stderr + r.stdout).toMatch(/synthetic:true|aviso|warning/i);
+  });
+  it("does not treat an unavailable remote origin as verified", async () => {
+    const s = await serve(null, 503);
+    try {
+      const r = await run([SCRIPT, s.url]);
+      expect(r.status).toBe(0);
+      expect(r.err).toMatch(/no se pudieron verificar/);
+    } finally { await s.close(); }
   });
 });

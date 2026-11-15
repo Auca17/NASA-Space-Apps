@@ -1,6 +1,6 @@
 import { Suspense, lazy, useRef, useState, useCallback, useEffect } from "react";
 import { useT } from "./i18n";
-import { APP_NAME, DEMO_PLOT } from "./config";
+import { APP_NAME, DEFAULT_VIEW, DEMO_PLOT, WORLD_VIEW } from "./config";
 import { Welcome } from "./features/welcome/Welcome";
 import { useGlobe, type GlobeHandle, type Shape } from "./features/globe/GlobeView";
 import { HistoricControls } from "./features/fire/HistoricControls";
@@ -35,6 +35,7 @@ type FieldsView = null | "list" | { id: string };
 
 /** Zoom from which single plots can be told apart on the street map. */
 const DRAW_ZOOM = 14;
+const ARGENTINA_FRAME: LatLon[] = [[-55.2, -73.7], [-21.7, -53.5]];
 
 const AreaPanel = lazy(() =>
   import("./features/fire/AreaPanel").then((m) => ({ default: m.AreaPanel })));
@@ -55,15 +56,26 @@ export default function App() {
   const [globe, setGlobe] = useState<GlobeHandle | null>(null);
   const [area, setArea] = useState<{ lat: number; lon: number; cells: string[] } | null>(null);
   const [panelOpen, setPanelOpen] = useState(false);
-  const [zoom, setZoom] = useState(3);
+  const [zoom, setZoom] = useState(DEFAULT_VIEW.zoom);
   const [satellite, setSatellite] = useState(true);
+  const [fieldGuide, setFieldGuide] = useState(false);
   const [draw, setDrawState] = useState<DrawMode>("none");
+  const [movingMap, setMovingMapState] = useState(false);
   const [draft, setDraftState] = useState<[number, number][]>([]);
   // Map clicks read these refs: state updaters with side effects run
   // twice under StrictMode, which added every tapped point twice.
   const drawRef = useRef<DrawMode>("none");
+  const movingMapRef = useRef(false);
   const draftRef = useRef<[number, number][]>([]);
-  const setDraw = (d: DrawMode) => { drawRef.current = d; setDrawState(d); };
+  const setMovingMap = (moving: boolean) => {
+    movingMapRef.current = moving;
+    setMovingMapState(moving);
+  };
+  const setDraw = (d: DrawMode) => {
+    drawRef.current = d;
+    setDrawState(d);
+    setMovingMap(false);
+  };
   const setDraft = (pts: [number, number][]) => {
     draftRef.current = pts; setDraftState(pts);
   };
@@ -86,6 +98,7 @@ export default function App() {
   const country = useRef<string | null>(null);
   const globeRef = useRef<GlobeHandle | null>(null);
   const mapDiv = useRef<HTMLDivElement>(null);
+  const frameArgentinaOnOpen = useRef(false);
 
   const fireArea = (lat: number, lon: number) =>
     setArea({ lat, lon, cells: cellsInCircle(lat, lon, 50) });
@@ -98,6 +111,7 @@ export default function App() {
       if (modeRef.current === "fire") fireArea(lat, lon);
     });
     h.onClick((lat, lon) => {
+      if (modeRef.current !== "field" || movingMapRef.current) return;
       const d = drawRef.current;
       if (d === "draw") {
         const n = [...draftRef.current, [lat, lon] as [number, number]];
@@ -124,8 +138,8 @@ export default function App() {
   useGlobe(mapDiv, onGlobeReady);
 
   useEffect(() => {
-    globe?.setFieldSatellite(mode === "field" && satellite);
-  }, [globe, mode, satellite]);
+    globe?.setFieldBasemap(mode === "field", satellite, !fieldOpen && fieldGuide);
+  }, [globe, mode, satellite, fieldGuide, fieldOpen]);
 
   /** A finished outline (points, freehand or tap): to review as a
    * selection, or clipped into the open field as a new crop zone. */
@@ -157,6 +171,12 @@ export default function App() {
     return Math.max(0, map.getBoundingClientRect().bottom -
       el.getBoundingClientRect().top);
   };
+
+  useEffect(() => {
+    if (!globe || mode !== "field" || !frameArgentinaOnOpen.current) return;
+    frameArgentinaOnOpen.current = false;
+    globe.fitRing(ARGENTINA_FRAME, coveredBottom());
+  }, [globe, mode]);
 
   // Review step: frame the selection and read OpenStreetMap land use
   // from the vector tiles. Unknown land use never blocks confirming;
@@ -249,9 +269,11 @@ export default function App() {
   };
 
   const startField = (dm: DrawMode) => {
+    if (modeRef.current !== "field") frameArgentinaOnOpen.current = true;
     setMode("field");
     setDraw(dm); setFreeError(false);
     setDraft([]); setTarget(null); setFieldOpen(false);
+    setSelection(null); setAdjust(null);
     setFieldsView(null); setShownField(null);
     targetRef.current = { kind: "selection" };
     globeRef.current?.setDraft(null);
@@ -374,15 +396,27 @@ export default function App() {
     setDraft([]); setDraw(m);
   };
 
-  const goTo = (lat: number, lon: number) => {
-    globeRef.current?.flyTo(lat, lon, DRAW_ZOOM - 1, coveredBottom());
+  const goTo = (lat: number, lon: number, precise = false) => {
+    globeRef.current?.flyTo(lat, lon, precise ? DRAW_ZOOM + 1 : DRAW_ZOOM - 1,
+                          coveredBottom());
     globeRef.current?.setMarker([lat, lon]);
   };
 
-  /** "Acercar para dibujar": zoom on the current centre. */
+  /** Jump straight to field detail, keeping the visible part centred. */
   const zoomToDraw = () => {
-    const c = globeRef.current?.center();
-    if (c) globeRef.current?.flyTo(c.lat, c.lon, DRAW_ZOOM + 1);
+    if (!globe) return;
+    const delta = DRAW_ZOOM - globe.center().zoom;
+    if (delta > 0) globe.zoomBy(delta, coveredBottom());
+  };
+
+  const showArgentina = () => {
+    globeRef.current?.setMarker(null);
+    globeRef.current?.fitRing(ARGENTINA_FRAME, coveredBottom());
+  };
+
+  const showWorld = () => {
+    globeRef.current?.setMarker(null);
+    globeRef.current?.flyTo(WORLD_VIEW.lat, WORLD_VIEW.lon, WORLD_VIEW.zoom, coveredBottom());
   };
 
   const undoPoint = () => {
@@ -449,10 +483,20 @@ export default function App() {
   return (
     <div className="app">
       <header className="topbar">
-        <h1>{APP_NAME}</h1>
+        <h1><button type="button" className="home-button"
+                    aria-label={t("nav.home")} onClick={() => {
+                      if (modeRef.current === "field") changePlot();
+                      setMode("welcome");
+                    }}>
+          <img src={`${import.meta.env.BASE_URL}brand/ashfield-mark-light.svg`}
+               alt="" width={24} height={24} />
+          {APP_NAME}
+        </button></h1>
         <nav>
           <button aria-pressed={mode === "field"}
-                  onClick={() => startField("none")}>{t("nav.field")}</button>
+                  onClick={() => {
+                    if (modeRef.current !== "field") startField("none");
+                  }}>{t("nav.field")}</button>
           <button aria-pressed={mode === "fire"} onClick={openFire}>
             {t("nav.fire")}</button>
           <button aria-pressed={mode === "live"}
@@ -464,11 +508,11 @@ export default function App() {
                 aria-label="language">{t("nav.lang")}</button>
       </header>
 
-      <div className={`map-wrap${mode === "field" && draw !== "none" ? " marking" : ""}`}>
-        {mode === "field" && draw === "free" && (
+      <div className={`map-wrap${mode === "field" && draw !== "none" && !movingMap ? " marking" : ""}`}>
+        {mode === "field" && draw === "free" && !movingMap && (
           <FreehandLayer
             unproject={(x, y) => globeRef.current?.unproject(x, y) ?? [0, 0]}
-            onStroke={(pts) => globeRef.current?.setDraft(pts)}
+            onStroke={(pts) => globeRef.current?.setDraft(pts, false)}
             onDone={(r) => {
               if (r) { setFreeError(false); onShape(r, false); }
               else { setFreeError(true); globeRef.current?.setDraft(null); }
@@ -477,12 +521,34 @@ export default function App() {
              aria-label="mapa" />
         {mode === "fire" && <div className="reticle" aria-hidden="true" />}
         {mode === "field" && !fieldOpen && (
-          <div className="field-basemap" role="group" aria-label={t("field.map.style")}>
-            <button type="button" aria-pressed={satellite}
-                    onClick={() => setSatellite(true)}>{t("field.map.satellite")}</button>
-            <button type="button" aria-pressed={!satellite}
-                    onClick={() => setSatellite(false)}>{t("field.map.streets")}</button>
-          </div>
+          <>
+            {draw === "none" && !selection && !fieldsView && (
+              <div className="field-extents" role="group" aria-label={t("field.map.extent")}>
+                <button type="button" onClick={showArgentina}>Argentina</button>
+                <button type="button" onClick={showWorld}>{t("field.map.world")}</button>
+              </div>)}
+            <div className="field-map-tools">
+              {zoom >= 8 && <div className="field-basemap" role="group" aria-label={t("field.map.style")}>
+                <button type="button" aria-pressed={satellite}
+                        onClick={() => setSatellite(true)}>{t("field.map.satellite")}</button>
+                <button type="button" aria-pressed={!satellite}
+                        onClick={() => setSatellite(false)}>{t("field.map.streets")}</button>
+              </div>}
+              <div className="field-zoom" role="group" aria-label={t("field.map.zoom")}>
+                <button type="button" aria-label={t("field.map.zoomIn")}
+                        onClick={() => globe?.zoomBy(1, coveredBottom())}>+</button>
+                <button type="button" aria-label={t("field.map.zoomOut")}
+                        onClick={() => globe?.zoomBy(-1, coveredBottom())}>−</button>
+              </div>
+              {zoom >= DRAW_ZOOM - 0.5 && (
+                <div className="field-guide">
+                  <button type="button" aria-pressed={fieldGuide}
+                          onClick={() => setFieldGuide(!fieldGuide)}>
+                    {t("field.map.guide")}</button>
+                  {fieldGuide && <small>{t("field.map.guideNote")}</small>}
+                </div>)}
+            </div>
+          </>
         )}
 
         {mode === "welcome" && (
@@ -560,6 +626,11 @@ export default function App() {
                        onCancel={cancelDraw} onGo={goTo}
                        onFields={openFields} fieldsCount={fields.length}
                        freeError={freeError}
+                       movingMap={movingMap}
+                       onToggleMove={() => {
+                         if (draw === "free") globeRef.current?.setDraft(null);
+                         setMovingMap(!movingMap);
+                       }}
                        zoomLow={zoom < DRAW_ZOOM - 0.5} onZoomIn={zoomToDraw}
                        context={zoneField
                          ? t("zones.drawingFor", { name: zoneField.name })

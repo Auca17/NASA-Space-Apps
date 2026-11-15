@@ -5,7 +5,7 @@ from pathlib import Path
 
 import pytest
 import respx
-from httpx import ASGITransport, AsyncClient
+from httpx import ASGITransport, AsyncClient, Response
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
@@ -278,6 +278,37 @@ async def test_geocode_proxy(respx_mock):
         assert r.json()["hits"][0]["lat"] == -33.9
         assert (await c.get("/api/geocode", params={"q": "x"})
                 ).json()["hits"] == []
+
+
+@pytest.mark.asyncio
+async def test_field_catalog_uses_the_models_catalog_without_a_data_bucket():
+    from app.services.rotations import KNOWLEDGE
+
+    async with client() as c:
+        response = await c.get("/api/field/catalog")
+    assert response.status_code == 200
+    data = response.json()
+    assert {rot["id"] for rot in data["rotations"]} == {
+        rot.id for rot in KNOWLEDGE.rotations}
+    assert {crop["id"] for crop in data["crops"]} == set(KNOWLEDGE.crops)
+
+
+@pytest.mark.asyncio
+async def test_geocode_bias_keeps_global_results_and_retries_failures(respx_mock):
+    search = respx_mock.get("https://nominatim.openstreetmap.org/search")
+    search.side_effect = [
+        Response(503),
+        Response(200, json=[{"lat": "40.4", "lon": "-3.7",
+                            "display_name": "Madrid, España"}]),
+    ]
+    async with client() as c:
+        params = {"q": "Madrid, España", "bias": "ar"}
+        assert (await c.get("/api/geocode", params=params)).status_code == 502
+        r = await c.get("/api/geocode", params=params)
+        assert r.json()["hits"][0]["name"] == "Madrid, España"
+    req = search.calls.last.request
+    assert req.url.params["viewbox"] == "-74,-21,-53,-56"
+    assert "bounded" not in req.url.params
 
 
 @respx.mock
