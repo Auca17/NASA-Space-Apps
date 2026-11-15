@@ -320,7 +320,7 @@ def _null_card(cid, source, resolution):
 
 
 def build_cards(power, soilg, slope, ndvi, grid_cell, fire_cal,
-                risk_cell, r5):
+                risk_cell, r5, zone=None):
     P = (power or {}).get
     cards = []
 
@@ -461,7 +461,7 @@ def build_cards(power, soilg, slope, ndvi, grid_cell, fire_cal,
                                 "H3 res 5 (~250 km²)"))
 
     cards.append(fire_weather_card(power, _last_valid_day(
-        P("PRECTOTCORR") or {})))
+        P("PRECTOTCORR") or {}), zone=zone))
 
     rw = recent_weather(P("PRECTOTCORR") or {})
     if rw:
@@ -562,22 +562,36 @@ def build_calendar(power, ndvi, monthly_burn):
                       "2": "media", "3": "alta"}}
 
 
-def _stop_conditions(power, end: date, n_days: int = 3):
-    """INTA single-condition harvest stop rules over the last n days.
+def _stop_conditions(power, end: date, n_days: int = 3,
+                     zone: str | None = None):
+    """Regional single-condition harvest stop rules, last n days.
 
-    Any one condition alone stops work: wind > 40 km/h (WS2M > 11.1 m/s),
-    T > 35 °C, RH < 30 % (humidity threshold pending INTA confirmation).
+    Thresholds come from `stop_thresholds` in knowledge/measures.json,
+    keyed by the plot zone — the guides disagree by region: NEA/NOA use
+    the INTA Chaco guide (T > 30 °C, RH < 30 %, mean wind > 35 km/h);
+    the other zones and the default use INTA Balcarce + Bomberos de
+    Tandil (wind > 40 km/h, T > 35 °C, RH < 30 %, humidity threshold
+    still unconfirmed there). Any one condition alone stops work.
     """
+    from ..services.knowledge import stop_thresholds_for
+    th = stop_thresholds_for(zone)
+    wind_kmh = th.wind_gt_kmh if th else 40.0
+    temp_c = th.temp_gt_c if th else 35.0
+    rh_pct = th.rh_lt_pct if th else 30.0
+    guide = th.guide if th else "INTA / UIB Balcarce + Bomberos de Tandil"
+    rh_note = (", umbral por confirmar con INTA"
+               if th is None or th.rh_unconfirmed else "")
+    confirm = "confirmá con Bomberos locales si corresponde suspender"
     P = (power or {}).get
     rh, ws, tx = P("RH2M") or {}, P("WS2M") or {}, P("T2M_MAX") or {}
     checks = (
-        ("wind_gt_40kmh", ws, lambda v: v > 11.1,
-         lambda v: f"viento {v:.1f} m/s (>40 km/h)"),
-        ("temp_gt_35", tx, lambda v: v > 35,
-         lambda v: f"{v:.0f} °C (>35 °C)"),
-        ("rh_lt_30", rh, lambda v: v < 30,
-         lambda v: f"humedad {v:.0f} % (<30 %, umbral "
-                   "por confirmar con INTA)"),
+        ("wind_gt_40kmh", ws, lambda v: v > wind_kmh / 3.6,
+         lambda v: f"viento {v:.1f} m/s (>{wind_kmh:g} km/h, {guide})"),
+        ("temp_gt_35", tx, lambda v: v > temp_c,
+         lambda v: f"{v:.0f} °C (>{temp_c:g} °C, {guide})"),
+        ("rh_lt_30", rh, lambda v: v < rh_pct,
+         lambda v: f"humedad {v:.0f} % (<{rh_pct:g} %{rh_note}, "
+                   f"{guide})"),
     )
     conds, detail = [], {}
     for name, series, pred, fmt in checks:
@@ -590,21 +604,24 @@ def _stop_conditions(power, end: date, n_days: int = 3):
             if v is None or not pred(v):
                 continue
             day = f"{d.day} de {MONTH_FULL_ES[d.month - 1]}"
-            detail[name] = (f"hay {fmt(v)} el {day}" if i == 0 else
-                            f"hubo {fmt(v)} el {day} (hace {i} días)")
+            detail[name] = ((f"hay {fmt(v)} el {day}" if i == 0 else
+                             f"hubo {fmt(v)} el {day} (hace {i} días)")
+                            + f"; {confirm}")
             if i == 0:
                 conds.append(name)
             break
     return sorted(conds), detail
 
 
-def fire_weather_card(power, end: date | None):
+def fire_weather_card(power, end: date | None,
+                      zone: str | None = None):
     """Last 7 valid days: mean RH2M, max WS2M, max T2M_MAX + dry days.
 
     Level score (INTA harvest guidance: stop work at wind>40 km/h,
     T>35 °C, RH<30 %): +1 each for mean RH<30 %, max wind>11 m/s,
     max T>35 °C, >10 days since rain. 3+ alto, 2 moderado, else bajo.
-    `stop_conditions` lists each single condition met in the last 3 days.
+    `stop_conditions` lists each single condition met in the last 3
+    days, evaluated against the thresholds of the plot zone.
     """
     P = (power or {}).get
     rh, ws, tx = P("RH2M") or {}, P("WS2M") or {}, P("T2M_MAX") or {}
@@ -628,7 +645,7 @@ def fire_weather_card(power, end: date | None):
              f"viento máx {wsm:.1f} m/s" if wsm is not None else None,
              f"T máx {txm:.0f} °C" if txm is not None else None,
              f"{since} días sin lluvia" if since is not None else None]
-    conds, detail = _stop_conditions(power, end)
+    conds, detail = _stop_conditions(power, end, zone=zone)
     if conds:
         parts.append("parar la cosecha: " + "; ".join(detail[c]
                                                      for c in conds))
@@ -681,8 +698,12 @@ async def diagnose(request: Request):
         risk = None
     risk_cell = (risk or {}).get("cells", {}).get(r5c)
 
+    from ..services.georef import zone_at
+    geo = zone_at(clat, clon)
+
     cards, monthly_burn = build_cards(power, soilg, slope, ndvi, grid_cell,
-                                      fire_cal, risk_cell, r5c)
+                                      fire_cal, risk_cell, r5c,
+                                      zone=geo["zone"])
     calendar = build_calendar(power, ndvi, monthly_burn)
     dx = hashlib.sha256(
         (";".join(sorted(r6s)) + "|" + utc_today()).encode()).hexdigest()[:8]
@@ -692,9 +713,6 @@ async def diagnose(request: Request):
     msr = evaluate({"cards": card_map,
                     "calendar": calendar["rows"],
                     "risk_cat": (risk_cell or {}).get("cat")})
-
-    from ..services.georef import zone_at
-    geo = zone_at(clat, clon)
 
     return JSONResponse(
         {"diagnosis_id": f"dx_{dx}", "area_ha": round(area_ha, 1),

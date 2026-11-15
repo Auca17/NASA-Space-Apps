@@ -68,6 +68,9 @@ export interface Measure {
   why?: string;
   benefit?: string;
   requires?: Record<string, unknown>;
+  /** Extra checklist items (e.g. harvester checks from the INTA Chaco
+   * guide). */
+  checks?: string[];
   cost?: string;
   source?: string;
 }
@@ -114,6 +117,9 @@ export interface RotationsResponse {
   confidence?: string;
   /** Top-level gaps, e.g. "sin rotaciones validadas para esta zona". */
   gaps?: string[];
+  /** Documented rotation references for zones without a computed one
+   * (e.g. INTA Patagonia); shown in the empty state, never computed. */
+  zone_references?: { zone: string; text: string; source: string }[];
 }
 
 export interface ExplainResponse {
@@ -130,6 +136,20 @@ export interface RotationEntry {
 export interface CropEntry {
   id: string;
   name: { es?: string; en?: string };
+}
+
+/** A documented incident shown next to the prevention measures
+ * (`knowledge/cases.json`, contract 3.4). kind news_report = a press
+ * report, not a worker testimony. */
+export interface CaseEntry {
+  id: string;
+  place: string;
+  date: string;
+  summary: string;
+  unknown?: string;
+  source: { title?: string; url?: string };
+  lessons?: string[];
+  kind?: string;
 }
 
 /* ------------------------------------------------- orin (contract 2.9) -- */

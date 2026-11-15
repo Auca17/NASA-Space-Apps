@@ -79,7 +79,8 @@ export function benefitValue(v: unknown): string {
 export function measureReqPairs(requires?: Record<string, unknown>):
     { key: string; value: string }[] {
   return Object.entries(requires ?? {})
-    .filter(([k, v]) => k !== "cost" && v != null && v !== "")
+    .filter(([k, v]) => k !== "cost" && !k.endsWith("_note") &&
+            v != null && v !== "")
     .map(([k, v]) => ({ key: `measure.req.${k}`, value: benefitValue(v) }))
     .filter((p) => p.value !== "");
 }

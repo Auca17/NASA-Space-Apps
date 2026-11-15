@@ -11,21 +11,21 @@ found.
 
 | Item | Current draft | Basis | Ask |
 |---|---|---|---|
-| `water_mm_cycle` soja, maiz, trigo, girasol, sorgo, mani, algodon, arveja | 575, 650, 550, 800, 550, 600, 1000, 425 | FAO-33 range midpoints (Doorenbos & Kassam 1979) | Are FAO-33 midpoints OK for rainfed Argentina? Girasol 800 and algodón 1000 look high. |
+| `water_mm_cycle` soja, maiz, trigo, girasol, sorgo, mani, algodon, arveja | 575, 650, 550, 800, 550, 600, 1000, 425 | FAO-33 range midpoints (Doorenbos & Kassam 1979) — kept as the FAO reference the engine uses. Observed use added: `water_mm_observed` maiz 487, trigo 319, girasol 443 (INTA–FAUBA, 138 ensayos de secano, semiárido pampeano) — **respondido con fuente**, pendiente de validación local. Algodón 1000 (FAO 700–1300) y colza 440 quedan **sin valor local — sigue pendiente de validación local**. | Girasol 800 and algodón 1000 still look high; validate FAO midpoints for rainfed Argentina. |
 | `water_mm_cycle` alfalfa | 1200 (per year) | FAO-33 800–1600 | Perennial: engine compares it with rain over the sowing→last-cut window only (see Pendientes). |
-| `water_mm_cycle` cebada, colza | 400, 440 | Alberta Agri-Facts 2011 (Canadian conditions) | Replace with an Argentine source (INTA Anguil / Balcarce). |
-| `water_mm_cycle` garbanzo | 268 | Zhang et al. 2000 (Syria, rainfed) | Argentine value (NOA / Córdoba). |
+| `water_mm_cycle` cebada, colza | 400, 440 | Cebada: INTA Anguil 380–400 mm — **respondido con fuente**, pendiente de validación local. Colza 440 queda **sin valor local — sigue pendiente de validación local**. | Colza: Argentine source still needed. |
+| `water_mm_cycle` garbanzo | 300 (era 268) | EEAOC / NOA — **respondido con fuente**, pendiente de validación local. Además `water_mm_observed` 328 (simulación CROPWAT-FAO Córdoba). | — |
 | `water_mm_cycle` avena, centeno, vicia | 194, 194, 175 | Cover-crop consumptive use to desiccation (Scianca UNS thesis 88–299 mm; INTA Gral. Villegas 110–241 mm) | Not a full grain cycle. Confirm that cover-crop use is what we want. |
-| `residue_t_ha` (all crops except alfalfa) | soja 3.4, maiz 7.5, trigo 4.5, girasol 3.7, sorgo 6.1, cebada 4.3, mani 2.0, algodon 3.0, avena 3.0, colza 3.0, garbanzo 1.5, arveja 2.0 | Our estimate: yield × (1 − HI) / HI. Assumed yields (t/ha): soja 2.8, maiz 7.5, trigo 3.0, girasol 2.0, sorgo 5.0, cebada 3.5, avena 2.0. Assumed HI: 0.45, 0.50, 0.40, 0.35, 0.45, 0.45, 0.40. mani, algodon, colza, garbanzo and arveja are rough. | Replace with the AAPRESID-INTA *Red de Brechas de Carbono* 2023–24 per-crop coefficients. |
-| `residue_t_ha` centeno 5.0, vicia 4.0 | | Cover biomass at desiccation, order of magnitude only | INTA cover-crop trial data. |
-| `residue_t_ha` alfalfa 0.0 | | Aboveground biomass is removed by cutting or grazing | Is 0 right, or should root and crown carbon count? |
+| `residue_t_ha` (all crops except alfalfa) | soja 3.30, maiz 9.52, trigo 4.62, girasol 3.74, sorgo 11.23 | Ensayos CEI Barrow / INTA: t MS/ha por cosecha, de ensayos con sus propios rindes (`residue_note`) — **respondido con fuente**, pendiente de validación local. cebada 4.3, mani 2.0, algodon 3.0, avena 3.0, colza 3.0, garbanzo 1.5, arveja 2.0 siguen siendo estimación rinde × (1 − IC) / IC — **sigue pendiente de validación local** (idealmente AAPRESID-INTA *Red de Brechas de Carbono* 2023–24). | — |
+| `residue_t_ha` centeno 5.0, vicia 4.0 | | Cover biomass at desiccation, order of magnitude only — sigue pendiente de validación local | INTA cover-crop trial data. |
+| `residue_t_ha` alfalfa 0.0 | `root_carbon_note`: "aporte de carbono por raíz y corona: sin valor, depende del manejo y de la duración de la pastura" | Aboveground biomass is removed by cutting or grazing; root/crown carbon has no value — **sin valor, sigue pendiente**; se muestra como vacío de información cuando alfalfa aparece. | Confirm whether root and crown carbon should count. |
 | `market_ar` (15 crops) | high: soja, maiz, trigo. medium: girasol, sorgo, cebada, mani, algodon, alfalfa, garbanzo. low: avena, centeno, vicia, colza, arveja | Qualitative, MAGyP area and exports | Producer view. Trigo was "medium" in the placeholder. |
 | `frost_tolerance` (only `high` skips the frost check) | high: trigo, cebada, alfalfa, centeno, vicia | FAO ECOCROP (qualitative) | Garbanzo, arveja and colza are `medium`, so they fail the frost check on winter cycles. Is that right? |
 
 ## Priority 2 — sowing and harvest windows (`sowing`, `harvest` per zone)
 
 - **All 15 crops, all zones:** windows are general agronomic knowledge. Bases: MAGyP Estimaciones Agrícolas, Bolsa de Cereales PAS, USDA IPAD calendar (wheat: May–Jul sowing, Nov–Jan harvest) and INTA 2024 maize zoning (chicharrita). Validate each one per zone.
-- **Maíz `pampa_humeda` harvest end is 06-15, sorgo 06-15.** Late maize is harvested into July. The window was cut at 06-15 because the engine treats sowing start → harvest end as the crop cycle and would flag maize as out of the frost-free window (see Pendientes).
+- **Maíz `pampa_humeda` harvest end es 07-31, sorgo 07-15.** Respondido: se agregó `cycle_end` por zona (maíz 04-30, sorgo 05-15) — fin fisiológico del ciclo que el motor usa para heladas y agua de ciclo; `harvest` quedó como la ventana real de cosecha y dispara las reglas de cosecha. El maíz tardío queda viable con ventana libre de heladas hasta el 11/06. **Respondido con fuente**, pendiente de validación local.
 - **Zones per crop.** Check presence and absence:
   - cuyo: maiz, alfalfa only.
   - patagonia: alfalfa only.
@@ -57,13 +57,22 @@ found.
 | garbanzo-maiz | noa | |
 | alfalfa4-maiz | cuyo (irrigated) | cuyo |
 
-- **Patagonia has no rotation.** The engine falls back to soja-soja. Which rotation should it be?
-- Is soja-soja really the typical current rotation for NEA and NOA? PRD 7.3 says "la típica de la zona según MAGyP".
+- **Patagonia has no rotation.** The engine falls back to soja-soja. Which rotation should it be? → **Respondido con fuente (parcial):** `zone_references` (raíz de `rotations.json`) lleva la referencia de INTA para el Valle Inferior del Río Negro bajo riego (4 a 5 ciclos de pastura de alfalfa, 2 de cebolla y 2 de maíz). No se calcula rotación para Patagonia: el motor sigue devolviendo confianza baja y sin fallback; el front muestra la referencia en el estado vacío. Sigue pendiente una rotación validada para la zona.
+- Is soja-soja really the typical current rotation for NEA and NOA? PRD 7.3 says "la típica de la zona según MAGyP". → **Sigue pendiente de validación local:** la respuesta "no sé" sigue usando soja-soja, pero el motor agrega el vacío "La rotación típica de esta zona no está validada con datos por subzona; elegí la tuya si la conocés (fuentes: INTA, EEAOC)" cuando la usa en NEA/NOA.
+- **Soja de segunda:** ambas rotaciones con soja 2ª citan INTA RIA 2018 (siembra 02-12 tras cebada, 16-12 tras trigo) — respondido con fuente, sin cambiar fechas ni valores.
+- **Garbanzo–maíz (NOA):** fuentes EEAOC agregadas (maíz sucesor principal de verano 2017/2018; cosecha de garbanzo fines de oct–mediados de nov) — respondido con fuente, sin cambiar la rotación.
 - `bare_soil_days` = (years × 365 − days with a live crop) / years. Standing stubble is not subtracted. Confirm the definition.
 - All sequence dates fall inside the crop windows (checked by script). Confirm the dates themselves, especially soja 2ª after trigo and cebada, and garbanzo / maíz in NOA as a double crop.
 
 ## Measures (`measures.json`) — validate with the producer contact
 
+- **Stop thresholds are now regional (`stop_thresholds`, raíz del archivo):**
+  - NEA y NOA: viento > 35 km/h, temperatura > 30 °C, humedad < 30 % — guía de prevención de incendios de INTA para el Chaco. **Respondido con fuente**, pendiente de validación local.
+  - `pampa_humeda`, `cuyo`, `patagonia` y `default`: viento > 40 km/h, temperatura > 35 °C, humedad < 30 % — INTA/UIB Balcarce + Bomberos Tandil; el umbral de humedad queda "por confirmar con INTA" (`rh_unconfirmed`). **Respondido con fuente**, pendiente de validación local.
+  - Cada condición detallada termina con "confirmá con Bomberos locales si corresponde suspender".
+- **`maintain_firebreak`:** `reference_width_m: 30` — guía INTA del Chaco, sección 5.6 (referencia prudente para la región chaqueña; el diseño depende del combustible, la pendiente y el viento). **Respondido con fuente**, pendiente de validación local.
+- **`clean_harvester`:** se agregaron `checks` — "revisar pérdidas de gasoil y aceite" y "revisar el matachispas del escape" (guía INTA del Chaco, sección 5.5); sigue en 30 min con sus fuentes. **Respondido con fuente**, pendiente de validación local.
+- **`cases.json` (nuevo):** incendio de cosechadora en San Genaro, Santa Fe (2026-05-04) — reporte periodístico (MDR), no testimonio de trabajadores. Se muestra como "Un caso real" cuando aparece `clean_harvester` o `harvest_timing`. **Respondido con fuente**; el reporte no dice qué equipamiento ni cortafuegos había (`unknown`).
 - **Facts sourced from INTA / UIB Balcarce + Bomberos Tandil (2023-12-28):**
   - stop work at wind > 40 km/h, temperature > 35 °C or RH < 30 %;
   - motor > 600 °C, about 80 % of fires start at the motor;
