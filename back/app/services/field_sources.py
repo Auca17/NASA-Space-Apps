@@ -42,7 +42,21 @@ TIMEOUT = httpx.Timeout(3.0)
 
 _NULL = object()  # cached negative result marker
 
-NEGATIVE_TTL = 600  # failed fetches retry after 10 min, not the full TTL
+NEGATIVE_TTL = 600  # permanent-looking failures (404, bad data)
+TRANSIENT_TTL = 20  # 429 / 5xx / timeouts: retry much sooner
+
+
+def _negative_ttl(exc: Exception) -> float:
+    """Negative-cache TTL by failure kind (task 29): transient upstream
+    problems (429, 5xx, timeouts, connection errors) get a short TTL so a
+    retry really re-calls the source; 404 and bad-data parse failures
+    keep the long one."""
+    st = getattr(getattr(exc, "response", None), "status_code", None)
+    if isinstance(exc, (httpx.TimeoutException, httpx.TransportError)):
+        return TRANSIENT_TTL
+    if st is not None and (st == 429 or st >= 500):
+        return TRANSIENT_TTL
+    return NEGATIVE_TTL
 
 # In-flight de-duplication (task 23): concurrent diagnoses for the same
 # (h3_r6, source) share one upstream call instead of one call each.
@@ -71,18 +85,20 @@ async def _cached(h3_r6: str, name: str, fetch, ttl: float = 21_600):
 async def _fetch_and_store(h3_r6: str, name: str, fetch,
                            ttl: float = 21_600):
     t0 = time.monotonic()
+    fail_ttl = NEGATIVE_TTL
     try:
         value = await fetch()
     except Exception as exc:
         log.warning("%s failed after %.2fs: %s",
                     name, time.monotonic() - t0, type(exc).__name__)
+        fail_ttl = _negative_ttl(exc)
         value = None
     log.info("%s fetched in %.2fs -> %s", name, time.monotonic() - t0,
              "ok" if value is not None else "null")
     # cache every upstream response, including failures (brief: same-day
     # replays must not hit upstreams again)
     CACHE.set(h3_r6, name, _NULL if value is None else value,
-              ttl_seconds=ttl if value is not None else NEGATIVE_TTL)
+              ttl_seconds=ttl if value is not None else fail_ttl)
     return value
 
 

@@ -1,7 +1,9 @@
 """Task 23.1: POWER 429/5xx resilience — retry, de-dup, degraded
 fallback to field/grid, 8 s budget. No real network."""
 import asyncio
+import time
 
+import httpx
 import pytest
 
 from back.app.services import field_sources as src
@@ -18,9 +20,9 @@ class Resp:
 
     def raise_for_status(self):
         if self.status_code >= 400:
-            import httpx
             raise httpx.HTTPStatusError(
-                "x", request=None, response=None)
+                "x", request=httpx.Request("GET", "http://x"),
+                response=httpx.Response(self.status_code))
 
     def json(self):
         return self._body
@@ -178,3 +180,35 @@ async def test_diagnose_budget(monkeypatch):
                          json={"point": [LAT, LON], "ha": 50})
     assert r.status_code == 200
     assert r.json().get("degraded") is True
+
+
+@pytest.mark.asyncio
+async def test_429_negative_ttl_is_short_and_retry_refetches():
+    """429 -> 20 s negative cache; a retry after that window really
+    calls POWER again (task 29)."""
+    c = StubClient([Resp(429), Resp(429)])      # both attempts fail
+    out = await src.power_daily(c, LAT, LON, R6 + "e")
+    assert out is None
+    key = next(k for k in src.CACHE._store if k[0] == R6 + "e")
+    exp, val = src.CACHE._store[key]
+    assert val is src._NULL
+    assert exp - time.monotonic() <= src.TRANSIENT_TTL + 1
+    # inside the TTL window the cached failure is served, not upstream
+    c.script = [Resp(200, POWER_BODY)]
+    assert await src.power_daily(c, LAT, LON, R6 + "e") is None
+    assert c.calls == 2
+    # after the TTL expires the fetch really re-calls POWER
+    src.CACHE._store[key] = (time.monotonic() - 1, src._NULL)
+    out3 = await src.power_daily(c, LAT, LON, R6 + "e")
+    assert out3 is not None and c.calls == 3
+
+
+@pytest.mark.asyncio
+async def test_404_negative_ttl_stays_long():
+    """Permanent-looking failures (404) keep the 10 min cache."""
+    c = StubClient([Resp(404)])
+    out = await src.power_daily(c, LAT, LON, R6 + "f")
+    assert out is None
+    key = next(k for k in src.CACHE._store if k[0] == R6 + "f")
+    exp, _ = src.CACHE._store[key]
+    assert exp - time.monotonic() > src.TRANSIENT_TTL + 100
