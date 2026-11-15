@@ -187,3 +187,15 @@ def test_trigger_harvest_stop_conditions():
         {"cards": {"fire_weather": {"value": "bajo",
                                     "stop_conditions": []}}})["measures"]}
     assert "harvest_timing" not in ids
+
+
+def test_measures_carry_english_name_and_reason():
+    from app.services.measures import evaluate
+    out = evaluate({"cards": {}, "risk_cat": "muy_alto",
+                    "calendar": [{"id": "burn_season",
+                                  "levels": [3] * 12}]})
+    assert out["measures"]
+    for m in out["measures"]:
+        assert m["name_en"] and m["name_en"] != m["name"]
+        assert m["why_en"]
+        assert "quemas" not in m["why_en"] and "riesgo" not in m["why_en"]

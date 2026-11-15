@@ -147,3 +147,19 @@ describe("seqSegments", () => {
     expect(seqSegments("03-01", "06-30")).toEqual([{ from: 2, to: 5 }]);
   });
 });
+
+// regression (review #6): water and stubble showed twice with one value
+describe("benefitRows", () => {
+  it("shows each indicator once, as a signed change", async () => {
+    const { benefitRows } = await import("./rotations");
+    const rows = benefitRows({ water_balance: -35, water_balance_mm: -35,
+      residue_t_ha_yr: 2.1, carbon: 2.1, bare_soil_days: 0,
+      erosion_risk: "bajo" });
+    expect(rows.map((r) => r.key)).toEqual([
+      "ind.waterBalance", "ind.residue", "ind.bareSoil", "ind.erosion"]);
+    expect(rows.map((r) => r.value)).toEqual(["−35", "+2.1", "=", "bajo"]);
+  });
+  it("hides the mm twin of the water indicator", () => {
+    expect(indicatorLabelKey("water_balance_mm")).toBeNull();
+  });
+});

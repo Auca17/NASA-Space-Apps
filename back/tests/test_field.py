@@ -339,3 +339,97 @@ def test_stop_conditions_humidity_inta_note():
     power = {"RH2M": {end: 25}, "WS2M": {}, "T2M_MAX": {}}
     _, det = _stop_conditions(power, end)
     assert "umbral por confirmar con INTA" in det["rh_lt_30"]
+
+
+# ------------------------------------------------------ i18n (text_en) ----
+
+SPANISH = ("año", "días", "lluvia", "heladas", "Sin datos", "Período",
+           "Pendiente", "tendencia", "Temporada", "riesgo", "viento",
+           "humedad", "hace ", "Últimos", "suelo desnudo")
+
+
+@respx.mock
+async def test_diagnose_cards_carry_english_text(monkeypatch):
+    """Every card keeps its Spanish `text` (the rotations and measures
+    engines parse it) and adds an English `text_en` with no Spanish."""
+    monkeypatch.setenv("DATA_BASE_URL", FIXTURES.as_uri() + "/")
+    _mock_all_ok()
+    r = await client().post("/api/field/diagnose", json=PLOT)
+    body = r.json()
+    for c in body["cards"]:
+        assert c["text"], c["id"]
+        assert c.get("text_en"), c["id"]
+        assert not any(w in c["text_en"] for w in SPANISH), \
+            (c["id"], c["text_en"])
+    heat = next(c for c in body["cards"] if c["id"] == "heat")
+    assert "days/yr above 35" in heat["text_en"]
+    assert "días/año" in heat["text"]
+    for m in body.get("measures", []):
+        assert m.get("name_en") and m.get("why_en"), m["id"]
+
+
+def test_fire_weather_english_detail():
+    from app.routers.field import fire_weather_card
+    end = date(2025, 1, 10)
+    power = {"RH2M": {end: 25.0}, "WS2M": {end: 12.0},
+             "T2M_MAX": {end: 36.0}, "PRECTOTCORR": {end: 5.0}}
+    card = fire_weather_card(power, end)
+    assert "stop harvesting" in card["text_en"]
+    assert set(card["stop_detail_en"]) == set(card["stop_detail"])
+    assert "January 10" in card["stop_detail_en"]["temp_gt_35"]
+
+
+def test_null_card_english():
+    from app.routers.field import _null_card
+    assert _null_card("soil", "s", "r")["text_en"] == "No data available"
+
+
+# ------------------------------------------- polygons with holes / multi ----
+
+def _sq(lat, lon, half_deg):
+    """Closed [lon, lat] square ring."""
+    return [[lon - half_deg, lat - half_deg], [lon + half_deg, lat - half_deg],
+            [lon + half_deg, lat + half_deg], [lon - half_deg, lat + half_deg],
+            [lon - half_deg, lat - half_deg]]
+
+
+def test_parse_plot_polygon_with_hole_subtracts_it():
+    from app.routers.field import parse_plot
+    from app.services.geodesy import ring_area_ha
+    outer, hole = _sq(-33.96, -60.69, 0.005), _sq(-33.96, -60.69, 0.001)
+    (c, ha, *_), err = parse_plot({"polygon": {"type": "Polygon",
+                                               "coordinates": [outer, hole]}})
+    assert err is None
+    full = ring_area_ha(outer[:-1])
+    assert ha == pytest.approx(full - ring_area_ha(hole[:-1]), rel=1e-6)
+    assert ha < full
+
+
+def test_parse_plot_multipolygon_sums_pieces():
+    from app.routers.field import parse_plot
+    a, b = _sq(-33.96, -60.70, 0.003), _sq(-33.96, -60.68, 0.003)
+    (c, ha, r5, r6, bbox), err = parse_plot({"polygon": {
+        "type": "MultiPolygon", "coordinates": [[a], [b]]}})
+    assert err is None
+    (_, ha_a, *_), _ = parse_plot({"polygon": {"coordinates": [a]}})
+    assert ha == pytest.approx(2 * ha_a, rel=1e-3)
+    assert c[1] == pytest.approx(-60.69, abs=1e-3)   # between both pieces
+    assert bbox[0] < -60.70 < -60.68 < bbox[2]
+
+
+def test_parse_plot_keeps_old_single_ring_contract():
+    from app.routers.field import parse_plot
+    (_, ha, *_), err = parse_plot({"polygon": {
+        "coordinates": [_sq(-33.96, -60.69, 0.005)]}})
+    assert err is None and ha > 100
+
+
+def test_parse_plot_rejects_open_hole_and_bad_multi():
+    from app.routers.field import parse_plot
+    outer, hole = _sq(-33.96, -60.69, 0.005), _sq(-33.96, -60.69, 0.001)
+    _, err = parse_plot({"polygon": {"type": "Polygon",
+                                     "coordinates": [outer, hole[:-1]]}})
+    assert err is not None and err.status_code == 400
+    _, err = parse_plot({"polygon": {"type": "MultiPolygon",
+                                     "coordinates": [outer]}})
+    assert err is not None and err.status_code == 400

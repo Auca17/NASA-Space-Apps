@@ -49,7 +49,9 @@ export function indicatorLabelKey(id: string): string | null {
     case "residue_t_ha_yr": return "ind.residue";
     case "bare_soil_days": return "ind.bareSoil";
     case "water_balance": return "ind.waterBalance";
-    case "water_balance_mm": return "ind.waterBalance";
+    // numeric twin of water_balance (equal unless irrigated, where the
+    // irrigation line already shows the mm): shown once
+    case "water_balance_mm": return null;
     case "nitrogen": return "ind.nitrogen";
     case "erosion_risk": return "ind.erosion";
     case "pest_break": return "ind.pestBreak";
@@ -251,4 +253,23 @@ export function seqSegments(start: string, end: string):
   const a = mo(start), b = mo(end);
   if (a <= b) return [{ from: a, to: b }];
   return [{ from: a, to: 11 }, { from: 0, to: b }];
+}
+
+/** Benefit lines of a strategy versus the baseline: one per indicator,
+ * numeric changes signed ("+2.1", "−35", "=" for no change). Text values
+ * are returned as given (caller maps level words). */
+export function benefitRows(b: Record<string, unknown>):
+    { id: string; key: string; value: string }[] {
+  const seen = new Set<string>();
+  const out: { id: string; key: string; value: string }[] = [];
+  for (const [id, v] of Object.entries(b)) {
+    const key = indicatorLabelKey(id);
+    if (!key || seen.has(key)) continue;
+    seen.add(key);
+    const value = typeof v === "number"
+      ? (v === 0 ? "=" : v > 0 ? `+${v}` : `−${Math.abs(v)}`)
+      : benefitValue(v);
+    out.push({ id, key, value });
+  }
+  return out;
 }
