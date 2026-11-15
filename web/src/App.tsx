@@ -5,6 +5,8 @@ import { Welcome } from "./features/welcome/Welcome";
 import { useGlobe, type GlobeHandle, type Shape } from "./features/globe/GlobeView";
 import { HistoricControls } from "./features/fire/HistoricControls";
 import { cellsInCircle } from "./domain/h3area";
+import { orinLots } from "./api";
+import type { OrinLots } from "./api/types";
 import { drawStatus } from "./domain/clarity";
 import { FieldPicker, type DrawMode } from "./features/field/FieldPicker";
 import { SelectionReview, AdjustPanel, type LandCheck, type Adjust }
@@ -79,6 +81,7 @@ export default function App() {
   const [freeError, setFreeError] = useState(false);
   const targetRef = useRef<Target>({ kind: "selection" });
   const [fieldOpen, setFieldOpen] = useState(false);
+  const [lots, setLots] = useState<OrinLots["features"]>([]);
   const [playingMonth, setPlayingMonth] = useState<string | null>(null);
   const country = useRef<string | null>(null);
   const globeRef = useRef<GlobeHandle | null>(null);
@@ -418,6 +421,31 @@ export default function App() {
                          x.id === targetRef.current.fieldId)
     : undefined;
 
+  const orinLot = (feature: OrinLots["features"][number]) => {
+    const geom: Multi = [feature.geometry.coordinates.map((ring) =>
+      ring.slice(0, -1).map(([lon, lat]): LatLon => [lat, lon]))];
+    if ((geom[0][0]?.length ?? 0) < 3) return;
+    const { name, crop_label, synthetic } = feature.properties;
+    setMode("field");
+    setDraw("none");
+    country.current = "AR";
+    analyze({
+      geom,
+      areaLabel: [name, crop_label].filter(Boolean).join(" · "),
+      demoLot: { name, crop_label, synthetic },
+    });
+  };
+
+  useEffect(() => {
+    orinLots().then((data) => setLots((data?.features ?? []).map((feature) => ({
+      ...feature,
+      properties: {
+        ...feature.properties,
+        synthetic: data?.synthetic || feature.properties.synthetic,
+      },
+    }))));
+  }, []);
+
   return (
     <div className="app">
       <header className="topbar">
@@ -523,6 +551,11 @@ export default function App() {
           (draw !== "none" || !fieldsView) && (
           <FieldPicker draw={draw} points={draft.length}
                        onPick={startField} onDemo={demoPlot}
+                       demoLots={lots.map((feature) => ({
+                         id: feature.properties.id,
+                         label: feature.properties.crop_label || feature.properties.name,
+                         onOpen: () => orinLot(feature),
+                       }))}
                        onFinish={finishDraw} onUndo={undoPoint}
                        onCancel={cancelDraw} onGo={goTo}
                        onFields={openFields} fieldsCount={fields.length}

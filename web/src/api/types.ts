@@ -137,3 +137,44 @@ export interface CropEntry {
   id: string;
   name: { es?: string; en?: string };
 }
+
+/* ------------------------------------------------- orin (contract 2.9) -- */
+
+export interface OrinVariable {
+  id: string;                       // temp_max | temp_min | ndvi | soil_moisture
+  satellite: { dataset: string; resolution: string; period: string };
+  field: { source: string; n_sites: number };
+  n: number;
+  rmse: number;
+  bias: number;                     // satellite minus field
+  r: number;
+  unit: string;
+  quality: "good" | "fair" | "poor";
+}
+
+export interface OrinValidation {
+  version: string;
+  synthetic?: boolean;
+  generated_at?: string;
+  source?: string;
+  variables: OrinVariable[];
+}
+
+export interface OrinLotProps {
+  id: string;
+  name: string;
+  crop_label: string;
+  zone: string;
+  synthetic?: boolean;
+  real_data_available?: boolean;
+}
+
+export interface OrinLots {
+  type: "FeatureCollection";
+  synthetic?: boolean;
+  features: {
+    type: "Feature";
+    geometry: { type: "Polygon"; coordinates: number[][][] };
+    properties: OrinLotProps;
+  }[];
+}

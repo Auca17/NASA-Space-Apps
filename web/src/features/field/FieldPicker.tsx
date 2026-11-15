@@ -10,11 +10,13 @@ export type DrawMode = "none" | "draw" | "point" | "free";
 export function FieldPicker({ draw, points, onPick, onDemo, onFinish,
                               onUndo, onCancel, onGo, onFields = () => {},
                               fieldsCount = 0, context, freeError = false,
-                              zoomLow = false, onZoomIn = () => {} }: {
+                              zoomLow = false, onZoomIn = () => {},
+                              demoLots = [] }: {
   draw: DrawMode;
   points: number;
   onPick: (m: "draw" | "point" | "free") => void;
   onDemo: () => void;
+  demoLots?: { id: string; label: string; onOpen: () => void }[];
   onFinish: () => void;
   onUndo: () => void;
   onCancel: () => void;
@@ -126,6 +128,10 @@ export function FieldPicker({ draw, points, onPick, onDemo, onFinish,
           <button onClick={onDemo}>{t("field.demo")}</button>
           <span className="muted">{t("field.opt.demoText")}</span>
         </li>
+        {demoLots.map(({ id, label, onOpen }) => (
+          <li key={id}>
+            <button onClick={onOpen}>{label}</button>
+          </li>))}
       </ul>
       <p className="muted" style={{ margin: 0 }}>
         {t("field.choose.zoom")} {t("field.osmNote")} {t("field.savedLocal")}</p>

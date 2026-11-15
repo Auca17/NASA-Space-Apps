@@ -1,6 +1,6 @@
 # Fuego y Campo – Space Apps 2026
 
-Nov 14, 2026 · Equipo de 4 · *Nombre de trabajo*
+Nov 14, 2026 · Equipo de 4 · **Ashfield**
 
 Unimos dos challenges de NASA en un solo producto: **Harmonization of MODIS and VIIRS Hot Spots** y **Field Shift: Adapting Farms with NASA Data**. Es una web mobile-first, de alcance mundial y con un globo 3D, que convierte datos satelitales de NASA en decisiones para quien está en el territorio: **cuánto fuego hay y habrá cerca mío** y **qué rotación le conviene a mi campo**. El detalle técnico completo está en el [PRD](PRD.md).
 
@@ -160,4 +160,4 @@ El jurado evalúa virtualmente con lo que entregamos. Los criterios valen igual:
 - [ ] Confirmar el rol del cuarto integrante.
 - [ ] Elegir un lote pampeano para la demo de rotaciones.
 - [ ] Exportar los datos de Orin (lotes, muestreos, estaciones).
-- [ ] Elegir el LLM y el nombre del proyecto.
+- [ ] Elegir el LLM (Gemini Flash por defecto, D32 pendiente de registrar). Nombre del proyecto: **Ashfield** (D20).

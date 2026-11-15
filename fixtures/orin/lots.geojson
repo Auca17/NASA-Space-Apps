@@ -1,0 +1,10 @@
+{
+  "type": "FeatureCollection",
+  "synthetic": true,
+  "features": [
+    {"type": "Feature", "properties": {"id": "mock-lujan", "name": "Lote de ejemplo, Luján de Cuyo", "crop_label": "Viña (ejemplo)", "zone": "cuyo", "synthetic": true, "real_data_available": false},
+     "geometry": {"type": "Polygon", "coordinates": [[[-68.9120, -33.0350], [-68.9060, -33.0350], [-68.9060, -33.0395], [-68.9120, -33.0395], [-68.9120, -33.0350]]]}},
+    {"type": "Feature", "properties": {"id": "mock-tupungato", "name": "Lote de ejemplo, Tupungato", "crop_label": "Olivo (ejemplo)", "zone": "cuyo", "synthetic": true, "real_data_available": false},
+     "geometry": {"type": "Polygon", "coordinates": [[[-69.1500, -33.3700], [-69.1440, -33.3700], [-69.1440, -33.3745], [-69.1500, -33.3745], [-69.1500, -33.3700]]]}}
+  ]
+}

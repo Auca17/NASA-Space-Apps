@@ -399,3 +399,33 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
   .topbar nav button { flex: 1 1 auto; padding: 0 6px; font-size: 0.85rem;
     min-width: 0; }
 }
+
+/* Task 16: Orin validation card + synthetic banner */
+.orin-banner { display: flex; align-items: center; gap: 8px;
+  margin: 4px 0; padding: 8px 10px; border: 1px solid var(--warn);
+  border-radius: 8px; color: var(--warn); font-weight: 600;
+  font-size: 0.8rem; }
+.orin-banner-icon { font-size: 1rem; line-height: 1; }
+.orin-synth { opacity: 0.75; }
+.orin-synth p, .orin-synth strong, .orin-synth li { color: var(--muted); }
+.orin-row { padding: 8px 0; border-top: 1px solid var(--border); }
+.orin-row:first-of-type { border-top: 0; }
+.orin-row p { margin: 2px 0; font-size: 0.8rem; }
+.orin-row-head { display: flex; align-items: center; gap: 8px;
+  font-size: 0.85rem; }
+.badge.q-good { color: var(--good); border-color: var(--good); }
+.badge.q-fair { color: var(--warn); border-color: var(--warn); }
+.badge.q-poor { color: var(--bad); border-color: var(--bad); }
+.qbar { display: inline-block; width: 48px; height: 6px;
+  border-radius: 3px; background: var(--border); overflow: hidden; }
+.qbar i { display: block; height: 100%; background: currentColor;
+  border-radius: 3px; }
+.badge.q-good + .qbar i { color: var(--good); }
+.badge.q-fair + .qbar i { color: var(--warn); }
+.badge.q-poor + .qbar i { color: var(--bad); }
+.orin-details { font-size: 0.78rem; }
+.orin-details summary { min-height: 44px; display: flex;
+  align-items: center; cursor: pointer; }
+.orin-details ul { margin: 4px 0; padding-left: 18px; }
+.orin-take { font-size: 0.85rem; font-weight: 600;
+  margin: 8px 0 2px !important; }

@@ -12,7 +12,11 @@ Fuentes dentro del repo de Orin:
   vesta/lib/geo/activeParcel.ts        lote de demo (bbox)
   vesta/components/FieldSamplingModal.tsx   punto de demo en Valle de Uco
 
-Uso:  python pipeline/orin_export.py <ruta al repo de Orin>
+Uso:  python pipeline/orin_export.py <ruta al repo de Orin> [<carpeta orin_export de Firestore>]
+
+Con la carpeta de Firestore (export de un usuario de la app, ver
+~/spaceapps-fuego/orin-client-export/export.mjs) se suman los polígonos reales de
+los lotes, los índices satelitales que Orin calculó por lote y los muestreos.
 Salida: data/orin/ (no va a git)
 """
 
@@ -111,6 +115,54 @@ def nearest_zone(lat: float, lon: float, stations: list[dict]) -> str | None:
     return best["zona"] if best else None
 
 
+def firestore_plots(fs_dir: Path, stations: list[dict]) -> list[dict]:
+    feats = []
+    for l in json.loads((fs_dir / "lotes.json").read_text()):
+        pts = l["polygon"]["rings"][0]["points"]
+        ring = [[p["lon"], p["lat"]] for p in pts]
+        if ring[0] != ring[-1]:
+            ring.append(ring[0])
+        cx = sum(p[0] for p in ring[:-1]) / (len(ring) - 1)
+        cy = sum(p[1] for p in ring[:-1]) / (len(ring) - 1)
+        name = l.get("name") or l["parcel_id"]
+        feats.append({"type": "Feature", "geometry": {"type": "Polygon", "coordinates": [ring]},
+                      "properties": {"id": l["parcel_id"], "nombre": name, "cultivo_actual": "vid",
+                                     "zona": nearest_zone(cy, cx, stations), "area_ha": l.get("areaHa"),
+                                     "prueba": "prueb" in name.lower() or "prubas" in name.lower(),
+                                     "geometria": "polígono real dibujado en Orin",
+                                     "fuente": "Orin, Firestore users/{uid}/parcels"}})
+    return feats
+
+
+def firestore_observations(fs_dir: Path) -> int:
+    rows = json.loads((fs_dir / "observaciones.json").read_text())
+    cols = ["lote_id", "fecha", "plataforma", "fuente", "confiable", "cobertura_valida_pct",
+            "pixeles_validos", "ndvi_medio", "ndvi_p10", "ndvi_p50", "ndvi_p90", "ndvi_desvio",
+            "ndmi_medio", "ndre_medio"]
+    with open(OUT / "observaciones_satelitales.csv", "w", newline="") as f:
+        w = csv.writer(f)
+        w.writerow(cols)
+        for o in sorted(rows, key=lambda r: (r["parcel_id"], r["fecha"])):
+            nd = o.get("ndvi") or {}
+            w.writerow([o["parcel_id"], o.get("fecha_toma") or o["fecha"], o.get("plataforma"), o.get("fuente"),
+                        o.get("confiable"), o.get("cobertura_valida_pct"), o.get("pixeles_validos"),
+                        nd.get("medio"), nd.get("p10"), nd.get("p50"), nd.get("p90"), nd.get("desvio"),
+                        o.get("ndmi_medio"), o.get("ndre_medio")])
+    return len(rows)
+
+
+def firestore_samples(fs_dir: Path) -> int:
+    rows = json.loads((fs_dir / "muestreos.json").read_text())
+    units = {"peso_poda": "kg", "rendimiento_kg": "kg", "solidos_solubles": "°Brix", "ndvi_dron": "adimensional"}
+    with open(OUT / "muestreos.csv", "w", newline="") as f:
+        w = csv.writer(f)
+        w.writerow(["lote_id", "fecha", "variable", "valor", "unidad", "metodo"])
+        for m in rows:
+            w.writerow([m.get("id_parcela"), (m.get("fecha_registro") or "")[:10], m.get("variable"),
+                        m.get("valor"), units.get(m.get("variable")), m.get("metodo")])
+    return len(rows)
+
+
 def main():
     if len(sys.argv) < 2:
         raise SystemExit("uso: python pipeline/orin_export.py <ruta al repo de Orin>")
@@ -139,11 +191,19 @@ def main():
     (OUT / "umbrales_helada.json").write_text(json.dumps(frost, indent=2, ensure_ascii=False))
     (OUT / "umbrales_agronomicos.json").write_text(json.dumps(rules, indent=2, ensure_ascii=False))
 
+    fs_dir = Path(sys.argv[2]).expanduser() if len(sys.argv) > 2 else None
     lotes = demo_plots(src, stations)
+    if fs_dir:
+        lotes["features"] = firestore_plots(fs_dir, stations) + lotes["features"]
     (OUT / "lotes.geojson").write_text(json.dumps(lotes, indent=2, ensure_ascii=False))
 
-    with open(OUT / "muestreos.csv", "w", newline="") as f:
-        csv.writer(f).writerow(["lote_id", "fecha", "variable", "valor", "unidad", "metodo"])
+    n_obs_sat = n_samples = 0
+    if fs_dir:
+        n_obs_sat = firestore_observations(fs_dir)
+        n_samples = firestore_samples(fs_dir)
+    else:
+        with open(OUT / "muestreos.csv", "w", newline="") as f:
+            csv.writer(f).writerow(["lote_id", "fecha", "variable", "valor", "unidad", "metodo"])
 
     pro = OUT / "prospectivo"
     shutil.rmtree(pro, ignore_errors=True)
@@ -163,9 +223,10 @@ Orin es un proyecto previo de monitoreo satelital y calibración para viñedos d
 | `estaciones.csv` | Temperatura mínima y máxima diaria medida en las estaciones (formato del brief B3; `precip_mm` y `hr` vacíos: no están en el repo) | {dates[0]} → {dates[-1]} ({len(readings)} estaciones, {n_obs} observaciones) | Observaciones diarias DCC Mendoza (`obs_diaria.csv`), recorte de 14 días que Orin guarda en su repo |
 | `umbrales_helada.json` | {len(frost)} umbrales de helada para vid, por estado fenológico, con su fuente | — | Investigación de Orin (INIA Chile, FAO 2005 y otras fuentes citadas en cada regla) |
 | `umbrales_agronomicos.json` | Las {len(rules)} reglas completas (helada, calor, humedad, enfermedades, NDVI) con fuente | — | Idem |
-| `lotes.geojson` | {len(lotes['features'])} lugares de demo: el rectángulo de un viñedo en Luján/Maipú y un punto en Valle de Uco | — | Configuración de demo de Orin |
+| `lotes.geojson` | {len(lotes['features'])} lugares: los lotes dibujados en Orin con su polígono real (si se pasó el export de Firestore; `prueba = true` marca los de prueba) y los dos lugares de demo de la configuración | — | Firestore de Orin (`users/{{uid}}/parcels`) y configuración de demo |
+| `observaciones_satelitales.csv` | {n_obs_sat} observaciones de índices Sentinel-2 por lote y fecha (NDVI con percentiles, NDMI, NDRE, cobertura válida), calculadas por Orin | {'ver archivo' if n_obs_sat else '—'} | Firestore de Orin (`observaciones`), Sentinel-2 L2A vía Copernicus Data Space |
 | `prospectivo/` | Pronóstico de temperatura mínima calibrado con sesgos por estación y por zona (3 noches) y pronóstico horario | emitido 2026-09-27 | Validación prospectiva de Orin |
-| `muestreos.csv` | **Vacío (solo encabezado)** | — | Ver "Qué falta" |
+| `muestreos.csv` | {n_samples} muestreos de campo{' (solo encabezado: la cuenta exportada no tiene muestreos)' if n_samples == 0 else ''} | — | Firestore de Orin (`users/{{uid}}/muestreos`) |
 
 ## Cómo se recolectaron
 
@@ -173,10 +234,10 @@ Orin es un proyecto previo de monitoreo satelital y calibración para viñedos d
 - Los umbrales son una revisión bibliográfica: cada regla tiene su fuente y un nivel de confianza.
 - El pronóstico prospectivo compara pronósticos numéricos con las estaciones para estimar el sesgo de cada estación y zona.
 
-## Qué falta (vive en Firestore de Orin)
+## Qué falta
 
-- **Polígonos reales de los lotes** (`lotes.geojson` solo tiene los de demo).
-- **Muestreos de campo** (NDVI, temperatura y humedad del suelo medidos por agrónomos).
+- **Muestreos de campo** (peso de poda, rendimiento, sólidos solubles, NDVI de dron): la cuenta de Orin exportada no tiene ninguno. Si existen, están en otra cuenta de Orin.
+- **Lotes de otras cuentas:** el export de Firestore se hizo con un usuario de la app, que solo puede leer sus propios lotes.
 - **Historial completo de estaciones:** acá hay 14 días; el historial está en `obs_diaria.csv` del proyecto `disenodebasesdedatos2`.
 
 ## Uso previsto

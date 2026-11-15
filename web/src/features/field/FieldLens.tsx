@@ -5,11 +5,13 @@ import { Card, BottomSheet, Tooltip } from "../../components/ui";
 import { Glossary } from "../../components/Glossary";
 import {
   apiDiagnose, apiRotations, apiExplain, knowledgeRotations,
-  knowledgeCrops,
+  knowledgeCrops, orinValidation,
 } from "../../api";
 import type {
-  Card as DiagCard, DiagnoseResponse, RotationsResponse, Strategy,
+  Card as DiagCard, DiagnoseResponse, OrinValidation,
+  RotationsResponse, Strategy,
 } from "../../api/types";
+import { OrinCard, SyntheticBanner } from "./OrinCard";
 import {
   benefitValue, benefitRows, cardValueText, compareDeltas, groupVariants,
   groupedCards, indicatorLabelKey, irrigationNeedMm, measureReqPairs,
@@ -30,6 +32,7 @@ export type AnalysisTarget = {
   fieldName?: string;
   /** whole field area, to say how much of it is analysed */
   fieldHa?: number;
+  demoLot?: DemoLot;
 };
 
 const LS_PLOTS = "fs_plots";
@@ -418,12 +421,22 @@ export function RotationResults({ rots, diag, explain, t,
     </>);
 }
 
+/** A demo plot from orin/lots.geojson: rotations are not available for
+ * its crop, only diagnosis + validation card. */
+export interface DemoLot {
+  name: string;
+  crop_label: string;
+  synthetic?: boolean;
+}
+
 export function FieldPanel({ target, open, onClose, onChangePlot }: {
   target: AnalysisTarget | null; open: boolean; onClose: () => void;
   onChangePlot: () => void;
 }) {
+  const lot = target?.demoLot;
   const { t, lang } = useT();
   const [diag, setDiag] = useState<DiagnoseResponse | null>(null);
+  const [orin, setOrin] = useState<OrinValidation | null>(null);
   const [rots, setRots] = useState<RotationsResponse | null>(null);
   const [explain, setExplain] = useState<Record<string, string>>({});
   const [rotList, setRotList] = useState<{ id: string; label: string }[]>([]);
@@ -460,9 +473,13 @@ export function FieldPanel({ target, open, onClose, onChangePlot }: {
     setStep(1);
     apiDiagnose(body).then((d) => {
       setDiag(d); setBusy(false);
-      if (d) savePlot("lote", body);
+      if (d) savePlot(lot?.name ?? "lote", body);
     });
-  }, [open, body]);
+  }, [open, body, lot]);
+
+  useEffect(() => {
+    if (open) orinValidation().then(setOrin);
+  }, [open]);
 
   const togglePrio = (p: string) => setPrioSel((sel) => {
     if (sel.includes(p)) return sel.filter((x) => x !== p);
@@ -537,6 +554,7 @@ export function FieldPanel({ target, open, onClose, onChangePlot }: {
               <> · {t("analyze.scopePieces", { n: target.geom.length })}</>}
           </div>
         </div>)}
+      {lot?.synthetic && <SyntheticBanner t={t} />}
       {busy && <p aria-live="polite">{t("field.diagnosing")}</p>}
       {!diag && !busy && <p className="muted">{t("panel.noData")}</p>}
 
@@ -566,11 +584,13 @@ export function FieldPanel({ target, open, onClose, onChangePlot }: {
           </section>
 
           <div className="field-actions">
-            {!rots && (
+            {step === 1 && !rots && !lot && (
               <button className="primary" onClick={openCompare}>
                 {t("field.form.run")}</button>)}
             <button onClick={onChangePlot}>{t("field.changePlot")}</button>
           </div>
+
+          <OrinCard data={orin} t={t} fmt={fmt} />
 
           {view?.measures && view.measures.length > 0 && (
             <Card title={t("measures.title")}>
@@ -632,7 +652,12 @@ export function FieldPanel({ target, open, onClose, onChangePlot }: {
             </div>
           </details>
 
-          {step === 2 && (
+          {lot && (
+            <p className="notice" role="status">
+              {t("orin.rot.none", { crop: lot.crop_label })}
+            </p>)}
+
+          {step === 2 && !lot && (
             <div ref={formRef}>
             <Card title={t("field.form.run")}>
               <label>{t("field.form.current")}
