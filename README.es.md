@@ -21,7 +21,7 @@ Un solo motor de armonización que lleva datos de NASA de distintos sensores y r
 ## Qué hace la app
 
 - **Lente Fuego (Hot Spots):** un globo 3D con modo histórico animado mes a mes desde noviembre de 2000 hasta hoy, modo live con las detecciones de las últimas 24 h / 48 h / 7 d sobre la imagen satelital del día, calendario de fuego año × mes, semáforo que compara el mes actual contra la línea base 2003–2022, riesgo de fuego en 7 días con 2–3 razones y descarga en CSV.
-- **Lente Campo (Field Shift):** el productor dibuja su lote, lo divide en **parcelas con su cultivo**, ordena los ocho riesgos que más le preocupan (fuego, sequía, El Niño, heladas, calor, nevadas, granizo, inundación) y, si quiere, agrega acceso al agua, distancia a emergencias y costos, precios y márgenes por parcela. El diagnóstico le da a cada parcela un porcentaje de fuego y uno de agua **con el motivo de cada número**, alertas y las zonas de riesgo de fuego, suelo seco y suelo desnudo en el mapa — después su **rotación actual + 3 alternativas**, cada tarjeta con las cinco secciones que pide el brief: por qué, evidencia, beneficios, vacíos de información y riesgos a validar con un agrónomo. Un resumen opcional con IA (Gemini) pone los números en palabras simples; los teléfonos de emergencia están a un toque y nunca se marcan solos.
+- **Lente Campo (Field Shift):** el productor dibuja su lote, lo divide en **parcelas con su cultivo**, ordena los ocho riesgos que más le preocupan (fuego, sequía, El Niño, heladas, calor, nevadas, granizo, inundación) y, si quiere, agrega acceso al agua, distancia a emergencias y costos, precios y márgenes por parcela. El diagnóstico le da a cada parcela un porcentaje de fuego y uno de agua **con el motivo de cada número**, evaporación/evapotranspiración (`EVLAND` de NASA POWER, con respaldo ET0 FAO-56 Penman-Monteith o Hargreaves donde POWER la enmascara), un puntaje de infiltración del suelo (grupos hidrológicos USDA desde textura de SoilGrids, materia orgánica, pendiente y días de suelo desnudo), alertas y las zonas de riesgo de fuego, suelo seco y suelo desnudo en el mapa — después su **rotación actual + 3 alternativas**, cada una con su efecto de infiltración y las cinco secciones que pide el brief: por qué, evidencia, beneficios, vacíos de información y riesgos a validar con un agrónomo. Un resumen opcional con IA (Gemini) pone los números en palabras simples; los teléfonos de emergencia están a un toque y nunca se marcan solos.
 - **Planeado:** alertas proactivas cuando el riesgo de una parcela sube (el aviso con los contactos de emergencia ya está; el aviso tipo notificación todavía no).
 
 **Recorrido de demo de dos minutos:** bienvenida → **"Ver mi zona"** (ubicación, el globo vuela a una vista de 50 km) → modo histórico reproduciendo **Corrientes 2022** → riesgo y semáforo en el panel del área → **"Analizar mi campo"** → elegir el **lote de demo de Pergamino** → comparar la rotación actual con las 3 alternativas, incluidos los sliders de escenario climático (lluvia −20 %, +1 °C).
@@ -40,7 +40,7 @@ Todas las fuentes satelitales de NASA son globales. La resolución y el período
 | NASA POWER (diario) | Heladas, calor, lluvia, clima de fuego, features del modelo | 0,5° × 0,625° (≈55 × 60 km) | 2001 → ayer (MERRA-2; cola desde GEOS-IT) |
 | NASA POWER `GWETROOT` | Humedad del suelo en raíz (el indicador de agua por parcela) | 0,5° × 0,625° | Igual que POWER |
 | NOAA CPC ONI | Tendencia El Niño / La Niña por parcela | Índice estacional | En curso |
-| GPM IMERG | Lluvia satelital | 0,1°, semiborario | **Pendiente** — acuerdo de uso en GES DISC; la lluvia sale de POWER mientras tanto |
+| GPM IMERG (mensual V07) | Lluvia mensual de la grilla de campo argentina | 0,1°, mensual | 2015 → 2024 (precalculada) |
 | OpenStreetMap (Nominatim + Overpass) | Búsqueda de lugares, servicios de emergencia y agua cercanos | Datos de punto | En vivo |
 | Google Gemini (Flash) | Resumen opcional del diagnóstico en lenguaje simple | — | Requiere clave en el servidor |
 | SMAP L3 (SPL3SMP_E) | Anomalía de humedad del suelo | 9 km | Calculada pero rechazada por las pruebas de calidad; la tarjeta usa POWER `GWETROOT` (ver limitaciones) |
@@ -55,7 +55,7 @@ Todas las fuentes satelitales de NASA son globales. La resolución y el período
 | Datos de campo de Orin | Validación satélite contra campo | 53 estaciones meteorológicas, Mendoza | 2026-10-04 → 2026-10-20 |
 | IGN / Natural Earth | Provincias, departamentos, país | Polígonos | — |
 
-**No se usa, y por qué:** los datasets de campo sugeridos para EE. UU. (SSURGO, NASS/CDL, NLDAS/PRISM, NAIP, CoCoRaHS, OpenET) cubren solo Estados Unidos; se reemplazan por SoilGrids, MAGyP, POWER y los datos de Orin para que la herramienta funcione en Argentina y en el mundo. **GPM IMERG** está pendiente de un acuerdo de uso en GES DISC — las tarjetas de lluvia salen de NASA POWER. **FAO GAEZ** está pendiente de un paso manual de licencia. **El granizo** no tiene un producto satelital usable, así que la app dice «sin dato satelital» en vez de adivinar. Landsat/HLS y Sentinel-2 quedan solo para lotes de demo (cobertura parcial). ERA5/GLDAS queda como respaldo de clima. Las consultas a demanda de SoilGrids y MODIS de ORNL superan el presupuesto de latencia, así que esas tarjetas usan la grilla precalculada.
+**No se usa, y por qué:** los datasets de campo sugeridos para EE. UU. (SSURGO, NASS/CDL, NLDAS/PRISM, NAIP, CoCoRaHS, OpenET) cubren solo Estados Unidos; se reemplazan por SoilGrids, MAGyP, POWER y los datos de Orin para que la herramienta funcione en Argentina y en el mundo. **FAO GAEZ** está pendiente de un paso manual de licencia. **El granizo** no tiene un producto satelital usable, así que la app dice «sin dato satelital» en vez de adivinar. Landsat/HLS y Sentinel-2 quedan solo para lotes de demo (cobertura parcial). ERA5/GLDAS queda como respaldo de clima. Las consultas a demanda de SoilGrids y MODIS de ORNL superan el presupuesto de latencia, así que esas tarjetas usan la grilla precalculada.
 
 ## Método
 
@@ -109,6 +109,15 @@ El R² log1p es más bajo porque le da el mismo peso a cada celda y la mayoría 
 
 El error lo explica la altura: una celda de POWER (~55 × 60 km) tiene una sola altura media — 2.485 m en la celda que incluye la cordillera en el Valle de Uco — mientras esas estaciones están entre 1.000 y 1.500 m, lo que produce un sesgo de −6,7 °C en la máxima allí. Corregir POWER con la altura real del lote (SRTM, 6,5 °C/km) reduce el RMSE casi a la mitad (máxima: 2,82 °C; mínima: 2,28 °C); excluyendo las 10 estaciones dentro de la celda con cordillera da 3,32 / 2,31 °C. Lección que la app reporta con honestidad: en llanura POWER sirve para patrones, pero un error de 2–3 °C en la mínima cambia si la noche hiela — confirmá las decisiones de helada con una estación cercana o con tu agrónomo.
 
+**Satélite contra pluviómetros (INTA SIGA).** Lluvia mensual de IMERG y POWER contra **25 estaciones automáticas INTA SIGA**, 2015–2024 (1.346 estación-meses) — `docs/validation/rain-siga/`:
+
+| Producto | Sesgo | RMSE | r |
+|---|---|---|---|
+| IMERG | +22,1 mm/mes | 51,2 mm/mes | 0,59 |
+| POWER | +22,4 mm/mes | 49,4 mm/mes | 0,62 |
+
+Ambos productos marcan de más en promedio, concentrado en la Mendoza árida: la estación es un pluviómetro puntual en el valle seco mientras el píxel satelital promedia toda la celda, incluida la lluvia orográfica que el pluviómetro no ve — una limitación punto vs píxel, no un producto roto. El acuerdo mensual no prueba la climatología de largo plazo; el registro completo de pares está en `pairs.csv`.
+
 ## Limitaciones
 
 - **2000-11 → 2012-01 es el tramo de menor confianza** (marcado en la app): esos años son MODIS convertido a un sensor más sensible, y un fuego chico que MODIS no vio no se puede reconstruir. Junio y julio de 2001 llevan una marca extra de baja confianza porque Terra no registró nada entre el 15/06/2001 y el 03/07/2001 (modo seguro), antes de que existiera Aqua.
@@ -124,6 +133,8 @@ El error lo explica la altura: una celda de POWER (~55 × 60 km) tiene una sola 
 - **Los focos NRT infieren `type`** con una máscara de fuentes fijas (descarta 5,7 % del NRT de NOAA-20 contra 8,6 % con el flag real); una fuente industrial nueva podría pasar en los últimos meses.
 - **La base de conocimiento de cultivos es un borrador en revisión agronómica** (`docs/revision-agronomica.md`): varios valores de uso de agua y rastrojo esperan fuentes argentinas, y Patagonia no tiene rotación validada.
 - **Las rotaciones son apoyo a la decisión, no consejo agronómico** — la app lo dice en cada tarjeta y lista qué validar con un agrónomo local.
+- **La evaporación y el agua de cultivo son referencias, no mediciones** — `EVLAND` es la evaporación del suelo de POWER; donde viene enmascarada, la tarjeta usa ET0 FAO-56 Penman-Monteith (o Hargreaves si faltan datos de radiación), marcado como estimación de referencia. La demanda hídrica usa coeficientes `Kc` FAO genéricos pendientes de revisión agronómica local.
+- **El puntaje de infiltración es relativo y cualitativo** — grupos hidrológicos USDA derivados de textura de SoilGrids, materia orgánica, pendiente y días de suelo desnudo; ordena parcelas y alternativas de rotación, no mide infiltración.
 - El historial de fuego a 365 días del modelo de riesgo de Argentina no ve los focos de enero a octubre de 2026 hasta que se agregue el Parquet anual (flag `fires_365d_complete` en cada shard).
 - El piloto de pronóstico de heladas de Orin (una estación, primavera 2026, 24 noches completas) no registró ninguna helada, así que el valor de la alerta no se puede juzgar — y la corrección de sesgo por estación empeoró el RMSE en esa muestra (3,64 vs 3,07 °C): no es prueba de que la calibración ayude.
 
@@ -194,5 +205,5 @@ Ariel · Augustus · Ezequiel · Alex
 
 - **Licencia del código:** [PENDIENTE: licencia del código]
 - Dataset de fuego armonizado: se publica en Parquet + CSV con metadatos y `CITATION.cff` — [PENDIENTE: URL de descarga del dataset armonizado]
-- Datos: NASA FIRMS (MODIS, VIIRS S-NPP, VIIRS NOAA-20), NASA POWER, GPM IMERG, SMAP, MODIS (NDVI, cobertura), SRTM, GRACE-FO, NASA GIBS, FAO GAEZ, ISRIC SoilGrids, MAGyP Estimaciones Agrícolas (Argentina), IGN (Argentina), Natural Earth, INTA (medidas de prevención y parámetros de cultivos, en revisión), datos de campo de Orin (con autorización).
+- Datos: NASA FIRMS (MODIS, VIIRS S-NPP, VIIRS NOAA-20), NASA POWER, GPM IMERG, SMAP, MODIS (NDVI, cobertura), SRTM, GRACE-FO, NASA GIBS, FAO GAEZ, ISRIC SoilGrids, MAGyP Estimaciones Agrícolas (Argentina), IGN (Argentina), Natural Earth, INTA (medidas de prevención y parámetros de cultivos, en revisión; estaciones automáticas SIGA como verdad de campo para la validación de lluvia), datos de campo de Orin (con autorización).
 - Herramientas: MapLibre GL JS, OpenFreeMap, Uber H3, DuckDB, LightGBM, FastAPI, React/Vite, Cloudflare R2, Vercel.

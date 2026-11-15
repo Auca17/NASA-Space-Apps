@@ -18,16 +18,16 @@ backs it. Not for publication.
 
 | ID | Status | Source | Notes |
 |---|---|---|---|
-| F1 NASA data coverage | **partial** | `web/src/content/datasets.ts` (DATASETS_USED); `back/README.md` cards | POWER covers temp/rain/frost/heat; soil moisture via `GWETROOT` fallback (SMAP anomaly rejected); ECOSTRESS ET/LST demo-only on Orin plots → not general. |
+| F1 NASA data coverage | done | `back/app/routers/field.py` (`evaporation` card: POWER `EVLAND` + FAO-56 ET0 fallback via `back/app/services/et0.py`); `web/src/content/datasets.ts` (DATASETS_USED) | Verified live: `POST /api/field/diagnose` returns `evaporation`, `crop_water` cards. POWER covers temp/rain/frost/heat/evaporation; soil moisture via `GWETROOT` fallback (SMAP anomaly rejected); ECOSTRESS LST demo-only; Kc generic FAO pending local review. |
 | F2 local soil, crops, priorities | done | `back/app/routers/field.py` (PRIORITY_MAP, constraints); `back/knowledge/` (15 crops); `web/src/features/field/FieldLens.tsx` (CONSTRAINTS) | |
 | F3 ≥3 alternatives incl. current | done | `back/app/services/rotations.py` | `top += notviable[:3 - len(top)]` — current + up to 3 alternatives. |
 | F4 why/evidence/benefits/gaps/risks | done | `back/app/services/rotations.py`; `web/src/features/field/field.test.tsx` (five sections) | |
 | F5 bare-soil periods, vulnerable seasons | done | `back/README.md` (`bare_soil_days_yr` card, MOD13C2 monthly); agricultural calendar in `FieldLens` | |
-| F6 pests/water/infiltration/income indicators | done | `back/app/services/rotations.py` (`erosion_risk`, `pest_break`, `income`, `burns_avoided`) | Honest limit shown: indicators are relative/qualitative. |
+| F6 pests/water/infiltration/income indicators | done | `back/app/services/infiltration.py` + `back/app/routers/parcels.py` (`infiltration` card); `back/app/services/rotations.py` (`infiltration`, `erosion_risk`, `pest_break`, `income`, `burns_avoided`) | Verified live: diagnosis returns `infiltration` card; each alternative carries an infiltration effect. Honest limit shown: indicators are relative/qualitative (USDA hydrologic groups from SoilGrids texture, organic matter, slope, bare-soil days). |
 | F7 AI patterns, uncertainty, fusion | done | `back/app/services/ai_explain.py` (pluggable provider, Gemini default, strict validation, template fallback); `back/app/routers/field.py` (`mode: "ai"/"template"`); analog zones `back/README.md`; confidence/Patagonia `back/knowledge/REVIEW.md` + `back/README.md` | Limit shown: provider needs a server-side key; production enablement unverifiable (see "Could not verify"). |
 | F8 common grid harmonization | done | `docs/data-contract.md` (H3); `docs/decisions.md` D4 | |
 | F9 explain technical terms | done | `web/src/components/Glossary.tsx` | |
-| F10 satellite vs field validation | done | `docs/validation/orin/README.md`; `web/src/features/field/OrinCard.tsx` | Limit shown: temperature only, one farm, 14 days; no NDVI/soil-moisture field samples. |
+| F10 satellite vs field validation | **partial** | `docs/validation/orin/README.md` (temperature, 53 stations); `docs/validation/rain-siga/` (monthly rain, 25 INTA SIGA stations, 1,346 station-months 2015–2024); `web/src/features/field/OrinCard.tsx` | Limit shown: temperature one farm 14 days; rain monthly sums only, both products ~+22 mm/month wet concentrated in Mendoza (point vs pixel); still no NDVI/soil-moisture field samples. |
 | F11 climate scenarios | done | `back/app/routers/field.py` (`rain_pct -40..40`, `temp_delta_c -2..4`); `web/src/features/field/FieldLens.tsx` | Limit shown: scalings, not forecasts. |
 | F12 producer constraints | done | `web/src/features/field/FieldLens.tsx` (irrigation/livestock/machinery/markets); `back/app/services/rotations.py` (filters) | |
 | F13 support, not replace | done | `web/src/content/datasets.ts` LIMITATIONS; `back/knowledge/REVIEW.md` | |

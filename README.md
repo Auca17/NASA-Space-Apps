@@ -21,7 +21,7 @@ One harmonization engine that brings NASA data from different sensors and resolu
 ## What the app does
 
 - **Fire lens (Hot Spots):** a 3D globe with an animated month-by-month historic mode from November 2000 to today, a live mode with detections from the last 24 h / 48 h / 7 d over today's satellite image, a year × month fire calendar, a semaphore comparing the current month against its 2003–2022 baseline, a 7-day fire-risk level with 2–3 reasons, and CSV download.
-- **Field lens (Field Shift):** the producer draws their plot, splits it into **parcels with a crop each**, ranks the eight hazards that worry them most (fire, drought, El Niño, frost, heat, snow, hail, flood), and optionally adds water access, distance to emergency services, and per-parcel costs, prices and margins. The diagnosis gives each parcel a fire and a water percentage **with the reason for every number**, alerts, and fire-risk/dry/bare-soil zones on the map — then their **current rotation + 3 alternatives**, each card with the five sections the challenge asks for: why, evidence, benefits, information gaps, and risks to validate with an agronomist. An optional AI summary (Gemini) puts the numbers in plain words; emergency-service phones are a tap away, never dialed automatically.
+- **Field lens (Field Shift):** the producer draws their plot, splits it into **parcels with a crop each**, ranks the eight hazards that worry them most (fire, drought, El Niño, frost, heat, snow, hail, flood), and optionally adds water access, distance to emergency services, and per-parcel costs, prices and margins. The diagnosis gives each parcel a fire and a water percentage **with the reason for every number**, evaporation/evapotranspiration (NASA POWER `EVLAND`, with a FAO-56 Penman-Monteith or Hargreaves ET0 fallback where POWER is masked), a soil-infiltration score (USDA hydrologic groups from SoilGrids texture, organic matter, slope and bare-soil days), alerts, and fire-risk/dry/bare-soil zones on the map — then their **current rotation + 3 alternatives**, each with its infiltration effect and the five sections the challenge asks for: why, evidence, benefits, information gaps, and risks to validate with an agronomist. An optional AI summary (Gemini) puts the numbers in plain words; emergency-service phones are a tap away, never dialed automatically.
 - **Planned:** proactive alerts when a parcel's risk turns high (the alert banner and emergency contacts already ship; the push-style warning does not).
 
 **Two-minute demo path:** welcome → **"Ver mi zona"** (location, globe flies to a 50 km view) → historic mode playing **Corrientes 2022** → risk and semaphore in the area panel → **"Analizar mi campo"** → choose the **Pergamino demo plot** → compare the current rotation against the 3 alternatives, including the climate scenario sliders (rain −20 %, +1 °C).
@@ -40,7 +40,7 @@ All NASA satellite sources are global. Resolution and period are the source's ow
 | NASA POWER (daily) | Frosts, heat, rain, fire weather, model features | 0.5° × 0.625° (≈55 × 60 km) | 2001 → yesterday (MERRA-2; tail from GEOS-IT) |
 | NASA POWER `GWETROOT` | Root-zone soil moisture (the parcel water indicator) | 0.5° × 0.625° | Same as POWER |
 | NOAA CPC ONI | El Niño / La Niña tendency per parcel | Seasonal index | Ongoing |
-| GPM IMERG | Satellite rain | 0.1°, half-hourly | **Pending** — GES DISC data-use agreement; rain comes from POWER meanwhile |
+| GPM IMERG (monthly V07) | Monthly rain in the Argentina field grid | 0.1°, monthly | 2015 → 2024 (precomputed) |
 | OpenStreetMap (Nominatim + Overpass) | Place search, nearby emergency services and water | Point data | Live |
 | Google Gemini (Flash) | Optional plain-language summary of the diagnosis | — | Server key required |
 | SMAP L3 (SPL3SMP_E) | Soil moisture anomaly | 9 km | Computed but rejected by quality gates; the card uses POWER `GWETROOT` (see limitations) |
@@ -55,7 +55,7 @@ All NASA satellite sources are global. Resolution and period are the source's ow
 | Orin field data | Satellite-vs-field validation | 53 weather stations, Mendoza | 2026-10-04 → 2026-10-20 |
 | IGN / Natural Earth | Provinces, departments, country lookup | Polygons | — |
 
-**Not used, and why:** the field datasets suggested for the US (SSURGO, NASS/CDL, NLDAS/PRISM, NAIP, CoCoRaHS, OpenET) cover only the United States; they are replaced by SoilGrids, MAGyP, POWER and the Orin data so the tool works in Argentina and worldwide. **GPM IMERG** is pending a data-use agreement at GES DISC — rain cards come from NASA POWER instead. **FAO GAEZ** is pending a manual license step. **Hail** has no usable satellite product, so the app says "no satellite data" instead of guessing. Landsat/HLS and Sentinel-2 are kept for demo plots only (partial coverage). ERA5/GLDAS stay as a climate backup. On-demand SoilGrids and ORNL MODIS calls time out beyond the latency budget, so those cards fall back to the precomputed grid.
+**Not used, and why:** the field datasets suggested for the US (SSURGO, NASS/CDL, NLDAS/PRISM, NAIP, CoCoRaHS, OpenET) cover only the United States; they are replaced by SoilGrids, MAGyP, POWER and the Orin data so the tool works in Argentina and worldwide. **FAO GAEZ** is pending a manual license step. **Hail** has no usable satellite product, so the app says "no satellite data" instead of guessing. Landsat/HLS and Sentinel-2 are kept for demo plots only (partial coverage). ERA5/GLDAS stay as a climate backup. On-demand SoilGrids and ORNL MODIS calls time out beyond the latency budget, so those cards fall back to the precomputed grid.
 
 ## Method
 
@@ -109,6 +109,15 @@ The log1p R² is lower because it weighs every cell equally and most cells have 
 
 The error is driven by elevation: a POWER cell (~55 × 60 km) has one mean altitude — 2,485 m in the cell that includes the Andes in the Uco Valley — while those stations sit at 1,000–1,500 m, producing a −6.7 °C bias in max temperature there. Correcting POWER with the real plot elevation (SRTM, 6.5 °C/km) cuts RMSE almost in half (max: 2.82 °C, min: 2.28 °C); excluding the 10 stations inside the mountain cell gives 3.32 / 2.31 °C. Lesson reported honestly in the app: POWER is good for patterns on the plains, but a 2–3 °C error in minimum temperature changes whether a night frosts — confirm frost decisions with a nearby station or your agronomist.
 
+**Satellite vs rain gauges (INTA SIGA).** Monthly IMERG and POWER rain against **25 INTA SIGA automatic stations**, 2015–2024 (1,346 station-months) — `docs/validation/rain-siga/`:
+
+| Product | Bias | RMSE | r |
+|---|---|---|---|
+| IMERG | +22.1 mm/month | 51.2 mm/month | 0.59 |
+| POWER | +22.4 mm/month | 49.4 mm/month | 0.62 |
+
+Both products read wet on average, concentrated in arid Mendoza: a station is a point gauge on the dry valley floor while the satellite pixel averages the surrounding grid cell, including orographic rain the gauge never sees — a point-vs-pixel limitation, not a broken product. Monthly agreement does not prove long-term climatology; the full pairing record is in `pairs.csv`.
+
 ## Limitations
 
 - **2000-11 → 2012-01 is the low-confidence stretch** (marked in the app): those years are MODIS converted to a more sensitive sensor, and a small fire MODIS missed cannot be reconstructed. June–July 2001 carry an extra low-confidence flag because Terra recorded nothing between 2001-06-15 and 2001-07-03 (safe mode), before Aqua existed.
@@ -124,6 +133,8 @@ The error is driven by elevation: a POWER cell (~55 × 60 km) has one mean altit
 - **NRT hot spots infer `type`** with a fixed-source mask (discards 5.7 % of NOAA-20 NRT vs 8.6 % with the real flag); a new industrial source could slip through in recent months.
 - **The crop knowledge base is a draft under agronomic review** (`docs/revision-agronomica.md`): several water-use and residue figures await Argentine sources, and Patagonia has no validated rotation.
 - **Rotations are decision support, not agronomic advice** — the app says so on every card and lists what to validate with a local agronomist.
+- **Evaporation and crop-water estimates are references, not measurements** — `EVLAND` is POWER's land evaporation; where masked, the card falls back to FAO-56 Penman-Monteith (or Hargreaves when radiation inputs are missing) ET0, labeled as a reference estimate. Crop-water demand uses generic FAO `Kc` coefficients pending local agronomic review.
+- **The infiltration score is relative and qualitative** — USDA hydrologic groups derived from SoilGrids texture, organic matter, slope and bare-soil days; it ranks parcels and rotation alternatives, it does not measure infiltration.
 - The Argentina risk model's 365-day fire-history feature misses Jan–Oct 2026 fires until the next annual Parquet is added (`fires_365d_complete` flag on every shard).
 - The Orin frost-forecast pilot (one station, spring 2026, 24 complete nights) saw no frost, so the alert's value cannot be judged — and the station-based bias correction made RMSE worse in that sample (3.64 vs 3.07 °C), so it is not evidence that calibration helps.
 
@@ -194,5 +205,5 @@ Ariel · Augustus · Ezequiel · Alex
 
 - **Code license:** [PENDIENTE: licencia del código]
 - Harmonized fire dataset: released as Parquet + CSV with metadata and `CITATION.cff` — [PENDIENTE: URL de descarga del dataset armonizado]
-- Data: NASA FIRMS (MODIS, VIIRS S-NPP, VIIRS NOAA-20), NASA POWER, GPM IMERG, SMAP, MODIS (NDVI, land cover), SRTM, GRACE-FO, NASA GIBS, FAO GAEZ, ISRIC SoilGrids, MAGyP Estimaciones Agrícolas (Argentina), IGN (Argentina), Natural Earth, INTA (prevention measures and crop parameters, under review), Orin field data (with authorization).
+- Data: NASA FIRMS (MODIS, VIIRS S-NPP, VIIRS NOAA-20), NASA POWER, GPM IMERG, SMAP, MODIS (NDVI, land cover), SRTM, GRACE-FO, NASA GIBS, FAO GAEZ, ISRIC SoilGrids, MAGyP Estimaciones Agrícolas (Argentina), IGN (Argentina), Natural Earth, INTA (prevention measures and crop parameters, under review; SIGA automatic weather stations used as ground truth for the rain validation), Orin field data (with authorization).
 - Tools: MapLibre GL JS, OpenFreeMap, Uber H3, DuckDB, LightGBM, FastAPI, React/Vite, Cloudflare R2, Vercel.

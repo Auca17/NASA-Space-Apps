@@ -80,6 +80,7 @@ export interface Landing {
     orinText: string;
     orinImg: { src: string; alt: string; width: number; height: number; caption: string };
     orinHonest: string;
+    rainText: string;
   };
   data: {
     heading: string;
@@ -174,12 +175,11 @@ const en: Landing = {
         title: "Field Shift: Adapting Farms with NASA Data",
         short: "Field Shift",
         rows: [
-          { id: "F1", status: "partial",
+          { id: "F1", status: "done",
             requirement: "NASA Earth data: temperature, heat stress, precipitation, soil moisture, evaporation, frost, extremes, vegetation stress, long-term water availability",
-            does: "Daily NASA POWER for temperature, rain, frost and heat-stress days; root-zone wetness (GWETROOT) for soil moisture; MODIS NDVI for vigor and bare-soil days; GRACE-FO for the long-term water trend.",
+            does: "Daily NASA POWER for temperature, rain, frost, heat-stress days and land evaporation (EVLAND; where POWER returns it masked, a FAO-56 Penman-Monteith / Hargreaves ET0 fallback); root-zone wetness (GWETROOT) for soil moisture; MODIS NDVI for vigor and bare-soil days; GRACE-FO for the long-term water trend.",
             see: { label: "Draw a plot", href: "/app/" },
-            limit: "The SMAP 30-day anomaly was computed but failed quality gates, and ECOSTRESS surface temperature only covers the Orin demo plots." },
-          // TODO(task 39): evaporation + infiltration are being added by another terminal; revisit F1/F6 status when merged.
+            limit: "The SMAP 30-day anomaly was computed but failed quality gates, and ECOSTRESS surface temperature only covers the Orin demo plots. Crop-water Kc coefficients are generic FAO values pending local review." },
           { id: "F2", status: "done",
             requirement: "Include local conditions: soil, crop characteristics, producer priorities",
             does: "SoilGrids organic carbon and texture, a 15-crop catalog, parcels with a crop each, a ranked list of eight hazards (fire, drought, El Niño, frost, heat, snow, hail, flood), quick needs (water access, distance to emergency services, main worry), and optional costs, prices and estimated margins per parcel. El Niño is shown as a historical tendency — not a forecast — snow as days per year, and hail is honestly flagged 'no satellite data'.",
@@ -197,10 +197,10 @@ const en: Landing = {
             does: "An agricultural calendar marks planting, harvest and bare-soil months; a card reports bare-soil days per year from monthly MODIS NDVI.",
             limit: "The bare-soil card comes from a precomputed layer that covers Argentina only; elsewhere the card says there is no data.",
             see: { label: "Field diagnosis", href: "/app/" } },
-          { id: "F6", status: "partial",
+          { id: "F6", status: "done",
             requirement: "Indicate how each alternative affects pest cycles, water use, soil infiltration and extra income",
-            does: "Indicators per alternative: erosion risk (bare-soil days × heavy-rain days × slope), pest break (distinct families in the cycle), income bucket, burns avoided, water need.",
-            limit: "Indicators are relative and qualitative, not yield predictions. There is no explicit soil-infiltration indicator; erosion risk is the closest proxy." },
+            does: "Indicators per alternative: an explicit soil-infiltration score (USDA hydrologic groups from SoilGrids texture, organic matter, slope and bare-soil days — shown per parcel and per alternative), erosion risk (bare-soil days × heavy-rain days × slope), pest break (distinct families in the cycle), income bucket, burns avoided, water need.",
+            limit: "Indicators are relative and qualitative — they rank alternatives, they do not predict yields." },
           { id: "F7", status: "partial",
             requirement: "Use AI to detect patterns, communicate uncertainty, combine heterogeneous datasets",
             does: "Analog-zone detection finds departments with similar climates; every result carries a confidence level; an AI summary (Gemini) writes the plain-language explanation with strict output validation and a deterministic template fallback.",
@@ -216,8 +216,8 @@ const en: Landing = {
             see: { label: "In the app", href: "/app/" } },
           { id: "F10", status: "partial",
             requirement: "Validate satellite estimates against field measurement",
-            does: "NASA POWER is compared against 53 real stations on the Orin farm (742 station-days), before and after an elevation correction (chart below).",
-            limit: "Only temperature, one farm, fourteen days. No field samples of NDVI or soil moisture yet." },
+            does: "POWER temperature against 53 real stations on the Orin farm (742 station-days); monthly rain from IMERG and POWER against 25 INTA SIGA stations (1,346 station-months, 2015–2024).",
+            limit: "Temperature at one farm over fourteen days; rain at 25 stations, monthly sums — both products read ~+22 mm/month wet, concentrated in arid Mendoza (point gauge vs pixel average). Still no field samples for NDVI or soil moisture." },
           { id: "F11", status: "done",
             requirement: "Optional: let the producer explore climate scenarios (rain, temperature)",
             does: "Sliders re-run the diagnosis with rain −40 %…+40 % and temperature −2…+4 °C.",
@@ -300,7 +300,8 @@ const en: Landing = {
       width: 1500, height: 720,
       caption: "POWER vs. 53 Orin stations, raw and elevation-corrected. Source: docs/validation/orin/satelite_vs_estaciones.png.",
     },
-    orinHonest: "Honest gap: the field comparison covers temperature only. There are no field samples for NDVI or soil moisture yet.",
+    orinHonest: "Honest gap: no field samples for NDVI or soil moisture yet.",
+    rainText: "Rain is validated too — monthly IMERG and POWER against 25 INTA SIGA automatic stations (1,346 station-months, 2015–2024): IMERG bias +22.1 mm/month, RMSE 51.2, r 0.59; POWER bias +22.4, RMSE 49.4, r 0.62. The wet bias concentrates in arid Mendoza, where a pixel averages mountain rain a valley-floor gauge never sees — a point-vs-pixel effect, not a broken product. Source: docs/validation/rain-siga/.",
   },
   data: {
     heading: "Data used, and not used",
@@ -308,6 +309,7 @@ const en: Landing = {
     rows: [
       { name: "FIRMS MODIS + VIIRS", what: "Harmonized active-fire series", resolution: "1 km / 375 m", where: "Globe and fire panel" },
       { name: "NASA POWER", what: "Daily weather for diagnosis and the risk model", resolution: "0.5°", where: "Field diagnosis, risk" },
+      { name: "GPM IMERG", what: "Monthly rain in the Argentina field grid", resolution: "0.1° monthly", where: "Rain card (precomputed)" },
       { name: "GRACE-FO", what: "Long-term groundwater trend", resolution: "regional", where: "Water-trend card" },
       { name: "MODIS NDVI (MOD13C2; MOD13Q1 on demand)", what: "Months without live crop", resolution: "0.05° monthly / 250 m", where: "Vigor / bare-soil card" },
       { name: "MODIS MCD12Q1", what: "Land cover", resolution: "500 m", where: "Diagnosis context" },
@@ -320,7 +322,6 @@ const en: Landing = {
     ],
     pendingTitle: "Pending or rejected, and why",
     pending: [
-      { name: "GPM IMERG", why: "Pending a GES DISC data-use agreement; rain comes from NASA POWER meanwhile." },
       { name: "FAO GAEZ", why: "License requires a manual step." },
       { name: "SMAP moisture anomaly", why: "Computed (SPL3SMP_E, 9 km) but failed sanity gates: no positive relation to recent POWER rain. The card falls back to POWER GWETROOT." },
     ],
@@ -342,7 +343,7 @@ const en: Landing = {
       "The Argentina risk model's 365-day fire history is incomplete for January–October 2026 until the annual Parquet lands.",
       "The POWER mountain-cell elevation bias is corrected in the field diagnosis but not in the risk-model features.",
       "Climate scenarios are scalings of the historical series, not forecasts.",
-      "ECOSTRESS covers only the Orin demo plots; IMERG and GAEZ are pending; the SMAP anomaly was rejected by quality gates.",
+      "ECOSTRESS covers only the Orin demo plots; GAEZ is pending; the SMAP anomaly was rejected by quality gates.",
     ],
   },
   team: {
@@ -432,12 +433,11 @@ const es: Landing = {
         title: "Field Shift: Adapting Farms with NASA Data",
         short: "Field Shift",
         rows: [
-          { id: "F1", status: "partial",
+          { id: "F1", status: "done",
             requirement: "Datos NASA: temperatura, estrés por calor, precipitación, humedad del suelo, evaporación, heladas, extremos, estrés de la vegetación, agua a largo plazo",
-            does: "NASA POWER diario para temperatura, lluvia, heladas y días de estrés por calor; humedad en raíz (GWETROOT) para el suelo; NDVI de MODIS para vigor y suelo desnudo; GRACE-FO para la tendencia del agua.",
+            does: "NASA POWER diario para temperatura, lluvia, heladas, días de estrés por calor y evaporación del suelo (EVLAND; donde POWER la devuelve enmascarada, un respaldo ET0 FAO-56 Penman-Monteith / Hargreaves); humedad en raíz (GWETROOT) para el suelo; NDVI de MODIS para vigor y suelo desnudo; GRACE-FO para la tendencia del agua.",
             see: { label: "Dibujar un lote", href: "/app/" },
-            limit: "La anomalía SMAP a 30 días se calculó pero no superó los controles de calidad, y la temperatura ECOSTRESS solo cubre los lotes demo de Orin." },
-          // TODO(task 39): evaporación e infiltración las está agregando otra terminal; revisar el estado de F1/F6 cuando se fusione.
+            limit: "La anomalía SMAP a 30 días se calculó pero no superó los controles de calidad, y la temperatura ECOSTRESS solo cubre los lotes demo de Orin. Los coeficientes Kc de agua de cultivo son valores FAO genéricos pendientes de revisión local." },
           { id: "F2", status: "done",
             requirement: "Incluir condiciones locales: suelo, características del cultivo, prioridades del productor",
             does: "Carbono orgánico y textura de SoilGrids, catálogo de 15 cultivos, parcelas con su cultivo, una lista ordenable de ocho riesgos (fuego, sequía, El Niño, heladas, calor, nevadas, granizo, inundación), necesidades rápidas (acceso al agua, distancia a emergencias, preocupación principal) y costos, precios y márgenes estimados por parcela. El Niño se muestra como tendencia histórica —no pronóstico—, la nieve como días por año, y el granizo se marca honestamente «sin dato satelital».",
@@ -455,10 +455,10 @@ const es: Landing = {
             does: "Un calendario agrícola marca siembra, cosecha y meses de suelo desnudo; una tarjeta informa los días de suelo desnudo por año desde el NDVI mensual de MODIS.",
             limit: "La tarjeta de suelo desnudo sale de una capa precalculada que cubre solo Argentina; en otros países la tarjeta indica que no hay dato.",
             see: { label: "Diagnóstico del lote", href: "/app/" } },
-          { id: "F6", status: "partial",
+          { id: "F6", status: "done",
             requirement: "Indicar cómo cada alternativa afecta plagas, uso de agua, infiltración e ingreso extra",
-            does: "Indicadores por alternativa: riesgo de erosión (días de suelo desnudo × lluvias intensas × pendiente), corte de plagas (familias distintas en el ciclo), franja de ingreso, quemas evitadas, necesidad de agua.",
-            limit: "Los indicadores son relativos y cualitativos, no predicciones de rinde. No hay un indicador explícito de infiltración del suelo; el riesgo de erosión es lo más cercano." },
+            does: "Indicadores por alternativa: un puntaje explícito de infiltración del suelo (grupos hidrológicos USDA desde textura de SoilGrids, materia orgánica, pendiente y días de suelo desnudo — por parcela y por alternativa), riesgo de erosión (días de suelo desnudo × lluvias intensas × pendiente), corte de plagas (familias distintas en el ciclo), franja de ingreso, quemas evitadas, necesidad de agua.",
+            limit: "Los indicadores son relativos y cualitativos — ordenan alternativas, no predicen rindes." },
           { id: "F7", status: "partial",
             requirement: "Usar IA para detectar patrones, comunicar incertidumbre, combinar datasets heterogéneos",
             does: "Las zonas análogas encuentran departamentos con clima similar; cada resultado lleva un nivel de confianza; un resumen con IA (Gemini) redacta la explicación en lenguaje simple con validación estricta de salida y respaldo en plantillas deterministas.",
@@ -474,8 +474,8 @@ const es: Landing = {
             see: { label: "En la app", href: "/app/" } },
           { id: "F10", status: "partial",
             requirement: "Validar las estimaciones satelitales contra medición en campo",
-            does: "NASA POWER se compara contra 53 estaciones reales de la finca Orin (742 estación-días), antes y después de una corrección por altitud — gráfico más abajo.",
-            limit: "Solo temperatura, una finca, catorce días. Todavía no hay muestras de campo de NDVI ni de humedad del suelo." },
+            does: "Temperatura de POWER contra 53 estaciones reales de la finca Orin (742 estación-días); lluvia mensual de IMERG y POWER contra 25 estaciones automáticas INTA SIGA (1.346 estación-meses, 2015–2024).",
+            limit: "Temperatura en una finca durante catorce días; lluvia en 25 estaciones, sumas mensuales — ambos productos marcan ~+22 mm/mes de más, concentrado en la Mendoza árida (pluviómetro puntual vs promedio de píxel). Todavía sin muestras de campo de NDVI ni humedad del suelo." },
           { id: "F11", status: "done",
             requirement: "Opcional: permitir explorar escenarios climáticos (lluvia, temperatura)",
             does: "Deslizadores recalculan el diagnóstico con lluvia −40 %…+40 % y temperatura −2…+4 °C.",
@@ -558,7 +558,8 @@ const es: Landing = {
       width: 1500, height: 720,
       caption: "POWER vs. 53 estaciones Orin, crudo y corregido por altitud. Fuente: docs/validation/orin/satelite_vs_estaciones.png.",
     },
-    orinHonest: "Brecha honesta: la comparación de campo cubre solo temperatura. Todavía no hay muestras de campo de NDVI ni de humedad del suelo.",
+    orinHonest: "Brecha honesta: todavía no hay muestras de campo de NDVI ni de humedad del suelo.",
+    rainText: "La lluvia también está validada — IMERG y POWER mensuales contra 25 estaciones automáticas INTA SIGA (1.346 estación-meses, 2015–2024): IMERG sesgo +22,1 mm/mes, RMSE 51,2, r 0,59; POWER sesgo +22,4, RMSE 49,4, r 0,62. El exceso se concentra en la Mendoza árida, donde el píxel promedia lluvia de montaña que el pluviómetro del valle no ve — efecto punto vs píxel, no un producto roto. Fuente: docs/validation/rain-siga/.",
   },
   data: {
     heading: "Datos usados — y no usados",
@@ -566,6 +567,7 @@ const es: Landing = {
     rows: [
       { name: "FIRMS MODIS + VIIRS", what: "Serie de focos de calor armonizada", resolution: "1 km / 375 m", where: "Globo y panel de focos" },
       { name: "NASA POWER", what: "Clima diario para el diagnóstico y el modelo de riesgo", resolution: "0,5°", where: "Diagnóstico del lote, riesgo" },
+      { name: "GPM IMERG", what: "Lluvia mensual de la grilla de campo argentina", resolution: "0,1° mensual", where: "Tarjeta de lluvia (precalculada)" },
       { name: "GRACE-FO", what: "Tendencia del agua subterránea a largo plazo", resolution: "regional", where: "Tarjeta de tendencia del agua" },
       { name: "NDVI MODIS (MOD13C2; MOD13Q1 a pedido)", what: "Meses sin cultivo vivo", resolution: "0,05° mensual / 250 m", where: "Tarjeta de vigor y suelo desnudo" },
       { name: "MODIS MCD12Q1", what: "Cobertura del suelo", resolution: "500 m", where: "Contexto del diagnóstico" },
@@ -578,7 +580,6 @@ const es: Landing = {
     ],
     pendingTitle: "Pendientes o rechazados — y por qué",
     pending: [
-      { name: "GPM IMERG", why: "Pendiente de acuerdo de uso en GES DISC; la lluvia sale de NASA POWER mientras tanto." },
       { name: "FAO GAEZ", why: "La licencia requiere un paso manual." },
       { name: "Anomalía de humedad SMAP", why: "Se calculó (SPL3SMP_E, 9 km) pero no superó los controles: sin relación positiva con la lluvia reciente de POWER. La tarjeta usa POWER GWETROOT." },
     ],
@@ -600,7 +601,7 @@ const es: Landing = {
       "El historial de fuego de 365 días del modelo de riesgo está incompleto para enero–octubre 2026 hasta que llegue el Parquet anual.",
       "El sesgo de altitud de la celda montañosa de POWER se corrige en el diagnóstico del lote pero no en las variables del modelo de riesgo.",
       "Los escenarios climáticos son reescalados de la serie histórica, no pronósticos.",
-      "ECOSTRESS cubre solo los lotes demo de Orin; IMERG y GAEZ están pendientes; la anomalía SMAP fue rechazada por los controles de calidad.",
+      "ECOSTRESS cubre solo los lotes demo de Orin; GAEZ está pendiente; la anomalía SMAP fue rechazada por los controles de calidad.",
     ],
   },
   team: {

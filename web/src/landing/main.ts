@@ -192,6 +192,7 @@ document.getElementById("root")!.innerHTML = `
       <h3>${c.trust.orinTitle}</h3>
       <p>${c.trust.orinText}</p>
       ${figure(c.trust.orinImg)}
+      <p>${c.trust.rainText}</p>
       <p class="note">${c.trust.orinHonest}</p>
     </section>
 
