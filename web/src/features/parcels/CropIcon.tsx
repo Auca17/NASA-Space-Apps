@@ -95,6 +95,48 @@ function Glyph({ kind }: { kind: string }) {
           <rect {...P} x="3.2" y="4.5" width="9.6" height="9" rx="1" />
           <path {...P} d="M8 7v4M6 9h4" />
         </>);
+    case "frost":
+      // thermometer down
+      return (
+        <>
+          <path {...P} d="M6.5 2.5a1.5 1.5 0 0 1 3 0v6a2.6 2.6 0 1 1-3 0Z" />
+          <path {...P} d="M8 5v4.8" />
+          <path {...P} d="M12.4 6.5l1.6-1M13.5 8l1.6-1" />
+        </>);
+    case "sun":
+      return (
+        <>
+          <circle {...P} cx="8" cy="8" r="3" />
+          <path {...P} d="M8 2v1.6M8 12.4V14M2 8h1.6M12.4 8H14M3.8 3.8l1.1 1.1M11.1 11.1l1.1 1.1M12.2 3.8l-1.1 1.1M4.9 11.1l-1.1 1.1" />
+        </>);
+    case "snow":
+      return (
+        <>
+          <path {...P} d="M8 2v12M2.8 5l10.4 6M13.2 5l-10.4 6" />
+          <path {...P} d="M8 2 6.6 3.4M8 2l1.4 1.4M8 14l-1.4-1.4M8 14l1.4-1.4" />
+        </>);
+    case "hail":
+      return (
+        <>
+          <path {...P} d="M4.5 9.5a3 3 0 0 1 .4-6 3.6 3.6 0 0 1 6.9 1.1 2.7 2.7 0 0 1-.3 4.9Z" />
+          <circle {...P} cx="5.5" cy="12.3" r="1" />
+          <circle {...P} cx="8" cy="13.8" r="1" />
+          <circle {...P} cx="10.5" cy="12.3" r="1" />
+        </>);
+    case "wave":
+      return (
+        <>
+          <path {...P} d="M2 6.5c1.6-1.8 3.2-1.8 4.8 0s3.2 1.8 4.8 0 2.4-1.2 2.4-.6" />
+          <path {...P} d="M2 10.5c1.6-1.8 3.2-1.8 4.8 0s3.2 1.8 4.8 0 2.4-1.2 2.4-.6" />
+        </>);
+    case "enso":
+      // warm/cool pool glyph: two waves offset
+      return (
+        <>
+          <path {...P} d="M2 5.5c2-2.4 4-2.4 6 0s4 2.4 6 0" />
+          <path {...P} d="M2 10.5c2-2.4 4-2.4 6 0s4 2.4 6 0" />
+          <circle cx="13" cy="8" r="1" fill="currentColor" />
+        </>);
   }
 }
 

@@ -162,3 +162,100 @@
 @media (prefers-reduced-motion: reduce) {
   .parcel-badge, .zone-chip { backdrop-filter: none; }
 }
+
+/* -------------------------------------------- priorities editor --- */
+
+.prio-details {
+  margin-top: 10px;
+  border-top: 1px solid var(--glass-border, rgba(255, 255, 255, 0.14));
+}
+.prio-details > summary {
+  padding: 9px 2px 6px; cursor: pointer;
+  font-weight: 600; font-size: 13.5px;
+}
+.prio-details > summary:focus-visible {
+  outline: 2px solid var(--act, #56b4e9); outline-offset: 2px;
+}
+.prio-list { list-style: none; margin: 6px 0 0; padding: 0; }
+.prio-row {
+  display: flex; align-items: center; gap: 8px;
+  min-height: 48px; padding: 4px 2px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+}
+.prio-row:last-child { border-bottom: 0; }
+.prio-row.off .prio-name { opacity: 0.45; }
+.prio-row.dragging { background: rgba(86, 180, 233, 0.12); }
+.prio-grip {
+  flex: none; min-width: 44px; min-height: 44px;
+  background: none; border: 0; color: inherit;
+  font-size: 15px; cursor: grab; touch-action: none; opacity: 0.7;
+}
+.prio-name { flex: 1; font-size: 14px; }
+.prio-rank { font-size: 11px; font-variant-numeric: tabular-nums; }
+.prio-btn {
+  flex: none; min-width: 44px; min-height: 44px;
+  font-size: 16px; line-height: 1;
+}
+
+/* -------------------------------------------- tabs ---------------- */
+
+.panel-tabs {
+  position: sticky; top: 0; z-index: 3;
+  display: flex; gap: 4px;
+  padding: 8px 0 6px;
+  background: var(--panel-bg, rgba(10, 14, 20, 0.94));
+}
+.panel-tabs [role="tab"] {
+  flex: 1; min-height: 44px;
+  padding: 8px 10px; font-size: 13.5px; font-weight: 600;
+  border: 1px solid var(--glass-border, rgba(255, 255, 255, 0.14));
+  border-radius: 10px;
+  background: transparent; color: inherit; opacity: 0.75;
+}
+.panel-tabs [role="tab"][aria-selected="true"] {
+  opacity: 1;
+  border-color: var(--act, #56b4e9);
+  background: rgba(86, 180, 233, 0.14);
+}
+.panel-tabs [role="tab"]:focus-visible {
+  outline: 2px solid var(--act, #56b4e9); outline-offset: 2px;
+}
+
+/* -------------------------------------------- profiled results ---- */
+
+.parcel-res-top {
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+}
+.parcel-inds {
+  display: flex; flex-wrap: wrap; gap: 4px 14px;
+  margin-top: 6px;
+}
+.parcel-ind .parcel-ind-word { font-weight: 600; }
+.hz-sub { margin: 4px 0 0; font-size: 12.5px; }
+.econ-line { margin: 6px 0 0; font-size: 12.5px; }
+.badge-hz { display: inline-flex; align-items: center; gap: 3px; }
+.badge-hz + .badge-hz { margin-left: 5px; }
+
+/* -------------------------------------------- economics form ------ */
+
+.econ-form .econ-currency {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 13.5px; margin: 6px 0 8px;
+}
+.econ-parcel { margin: 6px 0; }
+.econ-parcel > summary {
+  min-height: 44px; display: flex; align-items: center; gap: 8px;
+  cursor: pointer; font-weight: 600; font-size: 13.5px;
+}
+.econ-parcel > summary:focus-visible {
+  outline: 2px solid var(--act, #56b4e9); outline-offset: 2px;
+}
+.econ-fields { display: flex; flex-direction: column; gap: 8px;
+  padding: 4px 0 8px 4px; }
+.econ-fields label {
+  display: flex; flex-direction: column; gap: 3px;
+  font-size: 12.5px; font-weight: 500;
+}
+.econ-fields input { min-height: 40px; }
+.prio-card h4 { margin-bottom: 4px; }
+.prio-card .primary { margin-top: 12px; }

@@ -2,7 +2,8 @@
  * basis, nearby), zone shapes, the wizard's list+legend, and the
  * FieldPanel integration (needs first, results, "Ver más"). */
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { render, screen, fireEvent, waitFor, within }
+  from "@testing-library/react";
 import { I18nProvider } from "../../i18n";
 import es from "../../i18n/es.json";
 import { squareRing } from "../../domain/selection";
@@ -11,7 +12,10 @@ import { parcelsBody } from "../../domain/parcels";
 import { zoneShapes } from "./zoneShapes";
 import { NeedsForm } from "./NeedsForm";
 import { ParcelsWizard } from "./ParcelsWizard";
-import { FieldPanel, ParcelsResult } from "../field/FieldLens";
+import { DEFAULT_ECONOMICS, DEFAULT_PROFILE, profileBody,
+         type HazardId } from "../../domain/parcelsProfile";
+import { PrioritiesEditor } from "./PrioritiesEditor";
+import { FieldPanel, ParcelAlerts, ParcelsResult } from "../field/FieldLens";
 import type { GlobeHandle } from "../globe/GlobeView";
 import fixture from "./__fixtures__/parcels_example.json";
 
@@ -134,14 +138,15 @@ describe("NeedsForm", () => {
 
 describe("ParcelsResult", () => {
   it("leads with the summary, rows and nearby services", () => {
-    wrap(<ParcelsResult res={res} parcels={parcelsIn} t={t} fmt={fmt} />);
+    wrap(<ParcelsResult res={res} parcels={parcelsIn}
+                        profile={DEFAULT_PROFILE} t={t} fmt={fmt} />);
     // headline
     expect(screen.getByRole("heading",
       { name: /foco de fuego/ })).toBeInTheDocument();
     // one row per parcel with name + fire/water figures
     expect(screen.getByText("Lote norte")).toBeInTheDocument();
     expect(screen.getByText("Media")).toBeInTheDocument();
-    expect(screen.getAllByText("34%").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("34 %").length).toBeGreaterThan(0);
     // nearby services
     expect(screen.getByText("Bomberos Voluntarios de Pergamino"))
       .toBeInTheDocument();
@@ -149,8 +154,10 @@ describe("ParcelsResult", () => {
   });
 
   it("shows a prominent role=alert for high-severity fire", () => {
-    wrap(<ParcelsResult res={res} parcels={parcelsIn} t={t} fmt={fmt}
-                        onEmergency={vi.fn()} />);
+    wrap(<><ParcelAlerts res={res} parcels={parcelsIn} t={t}
+                   onEmergency={vi.fn()} />
+     <ParcelsResult res={res} parcels={parcelsIn}
+                    profile={DEFAULT_PROFILE} t={t} fmt={fmt} /></>);
     const alert = screen.getByRole("alert");
     expect(alert).toHaveClass("parcel-alert", "fire");
     expect(alert).toHaveTextContent("foco satelital");
@@ -161,9 +168,10 @@ describe("ParcelsResult", () => {
   });
 
   it("keeps every number's basis one tap away", () => {
-    wrap(<ParcelsResult res={res} parcels={parcelsIn} t={t} fmt={fmt} />);
+    wrap(<ParcelsResult res={res} parcels={parcelsIn}
+                        profile={DEFAULT_PROFILE} t={t} fmt={fmt} />);
     const info = screen.getAllByRole("button",
-      { name: es["parcels.basis.fire"] });
+      { name: es["parcels.hz.fire"] });
     expect(info.length).toBeGreaterThan(0);
     fireEvent.click(info[0]);
     expect(screen.getByRole("tooltip"))
@@ -300,26 +308,120 @@ describe("FieldPanel parcels flow", () => {
     const [, init] = spy.mock.calls[0] as unknown as [string, RequestInit];
     const body = JSON.parse(String(init.body));
     expect(body.parcels).toHaveLength(1);
-    expect(body.parcels[0].name).toBe("Campo Sur");
+    expect(body.parcels[0].name).toBe(es["parcels.wholeField"]);
     expect(body.parcels[0].crop).toBe("otro");
   });
 
-  it("keeps the detailed diagnosis behind Ver más", async () => {
+  it("keeps the detailed diagnosis behind Más información", async () => {
     parcelsFetch();
     wrap(<FieldPanel
       target={{ geom: fieldGeom, areaLabel: "Campo Sur",
                 parcels: parcelsIn, needs: null }}
       open onClose={() => {}} onChangePlot={() => {}} />);
     await screen.findByRole("alert");
-    // diagnosis cards hidden until the disclosure opens
+    // diagnosis cards hidden until the tab opens
     expect(screen.queryByText(es["field.plain.title"]))
       .not.toBeInTheDocument();
-    const det = screen.getByText(es["parcels.verMas"]).closest("details")!;
-    det.open = true;
-    fireEvent(det, new Event("toggle"));
+    fireEvent.click(screen.getByRole("tab",
+      { name: es["parcels.tab.more"] }));
     // the lazy diagnose call fired and failed (404) -> retry card
     await waitFor(() =>
       expect(screen.getByText(es["field.diagnosis.failed"]))
         .toBeInTheDocument());
+  });
+});
+
+/* ------------------------------------------- lead fixes: results -- */
+
+describe("result polish", () => {
+  const degradedNearby: ParcelsResponse = {
+    ...res,
+    degraded: true,
+    degraded_reason: "nearby: overpass unreachable",
+    nearby: { ...res.nearby, degraded: true,
+              fire_stations: [], hospitals: [], water: [] },
+  };
+
+  it("labels an unsplit field 'Todo el campo' and hides the crop", () => {
+    const whole: ParcelInput[] = [
+      { id: "p1", name: es["parcels.wholeField"], crop: "otro",
+        geom: [squareRing(-33.89, -60.60, 300)], wholeField: true },
+    ];
+    wrap(<ParcelsResult res={res} parcels={whole}
+                        profile={DEFAULT_PROFILE} t={t} fmt={fmt} />);
+    expect(screen.getByText(es["parcels.wholeField"]))
+      .toBeInTheDocument();
+    expect(screen.queryByText(es["parcels.cropOther"]))
+      .not.toBeInTheDocument();
+  });
+
+  it("shows nothing for a template summary, a note for gemini", () => {
+    const tpl: ParcelsResponse = {
+      ...res, summary: { ...res.summary, source: "template" } };
+    const { rerender } = wrap(<ParcelsResult res={tpl} parcels={parcelsIn}
+      profile={DEFAULT_PROFILE} t={t} fmt={fmt} />);
+    expect(screen.queryByText("template")).not.toBeInTheDocument();
+    expect(screen.queryByText(es["parcels.summary.gemini"]))
+      .not.toBeInTheDocument();
+    const gem: ParcelsResponse = {
+      ...res, summary: { ...res.summary, source: "gemini" } };
+    rerender(<I18nProvider><ParcelsResult res={gem} parcels={parcelsIn}
+      profile={DEFAULT_PROFILE} t={t} fmt={fmt} /></I18nProvider>);
+    expect(screen.getByText(es["parcels.summary.gemini"]))
+      .toBeInTheDocument();
+  });
+
+  it("keeps a nearby-only failure quiet, inside the nearby section", () => {
+    const retry = vi.fn();
+    wrap(<ParcelsResult res={degradedNearby} parcels={parcelsIn}
+                        profile={DEFAULT_PROFILE} t={t} fmt={fmt}
+                        onRetry={retry} />);
+    // quiet note + retry inside the nearby section
+    const sec = screen.getByText(es["parcels.nearby.failed"]);
+    expect(sec).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button",
+      { name: es["field.diagnosis.retry"] }));
+    expect(retry).toHaveBeenCalled();
+    // never "no services found" while the lookup failed
+    expect(screen.queryByText(es["parcels.nearby.empty"]))
+      .not.toBeInTheDocument();
+    // and no big "incomplete" card
+    expect(document.querySelector(".diag-degraded"))
+      .not.toBeInTheDocument();
+  });
+});
+
+/* ----------------------------------------------- farmer profile --- */
+
+describe("farmer profile", () => {
+  it("reorders and hides hazards via the editor", () => {
+    const onChange = vi.fn();
+    wrap(<PrioritiesEditor value={DEFAULT_PROFILE} onChange={onChange} />);
+    // keyboard move: second hazard up
+    const fireRow = screen.getByText(es["parcels.hz.drought"])
+      .closest("li")!;
+    fireEvent.click(within(fireRow).getByRole("button",
+      { name: es["parcels.prio.down"].replace("{name}", es["parcels.hz.drought"]) }));
+    expect(onChange).toHaveBeenCalled();
+    // hide toggle
+    const hide = screen.getAllByRole("button",
+      { name: es["parcels.prio.hide"] })[0];
+    fireEvent.click(hide);
+    const next = onChange.mock.calls.at(-1)![0];
+    expect(next.hidden.length).toBe(1);
+  });
+
+  it("persists and sends the profile in the request body", () => {
+    const p = { order: ["enso", "fire", "drought", "frost", "heat",
+                        "snow", "hail"] as HazardId[], hidden: ["hail" as HazardId] };
+    const e = { ...DEFAULT_ECONOMICS,
+                parcels: { p1: { cost_per_ha: 400, price_per_t: 280,
+                                 expected_yield_t_ha: 3.2 } } };
+    const b = parcelsBody(fieldGeom, parcelsIn, null, "es",
+                          profileBody(p, e));
+    const prof = b.profile!;
+    expect(prof.priorities[0]).toEqual({ id: "enso", rank: 1 });
+    expect(prof.hidden).toEqual(["hail"]);
+    expect(prof.economics!.parcels.p1.cost_per_ha).toBe(400);
   });
 });
