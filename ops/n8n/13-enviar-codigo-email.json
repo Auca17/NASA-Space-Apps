@@ -1,0 +1,114 @@
+{
+  "name": "Ashfield · Enviar código por email",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "send-code",
+        "authentication": "headerAuth",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "4eabcde6-f22a-4222-be0b-6427238c385a",
+      "name": "POST /send-code",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        0
+      ],
+      "webhookId": "e18e522f-c392-43b0-9960-fd7d4091773a"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "// Valida el pedido del back end antes de mandar nada.\nconst { email, code } = $json.body || {};\nif (!/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(email || '') || !/^\\d{6}$/.test(String(code || ''))) {\n  throw new Error('Pedido inválido: se espera { \"email\": \"nombre@dominio\", \"code\": \"123456\" }');\n}\nreturn { json: { email, code: String(code) } };"
+      },
+      "id": "c01c6d7e-62c3-4dee-afa6-bcdfc6a1239f",
+      "name": "Validar pedido",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        240,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "message",
+        "operation": "send",
+        "sendTo": "={{ $json.email }}",
+        "subject": "={{ $json.code }} es tu código de Ashfield",
+        "emailType": "text",
+        "message": "={{ $json.code }} es tu código de verificación de Ashfield. Vence en 10 minutos.\n\nSi no lo pediste, ignorá este correo.",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "id": "a1e9a9ff-e8de-4a0a-aced-79a6c1e63eb3",
+      "name": "Email (Gmail)",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        480,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { \"ok\": true } }}",
+        "options": {}
+      },
+      "id": "e7194e05-22ff-40a2-bff5-823fc3f9bd21",
+      "name": "Responder",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        720,
+        0
+      ]
+    }
+  ],
+  "connections": {
+    "POST /send-code": {
+      "main": [
+        [
+          {
+            "node": "Validar pedido",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validar pedido": {
+      "main": [
+        [
+          {
+            "node": "Email (Gmail)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Email (Gmail)": {
+      "main": [
+        [
+          {
+            "node": "Responder",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "America/Argentina/Buenos_Aires"
+  },
+  "pinData": {},
+  "active": false
+}
