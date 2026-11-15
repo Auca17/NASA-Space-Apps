@@ -220,6 +220,8 @@ Productor: Devin con los datos de Orin que entrega Ezequiel (B3). Consumidor: fr
 | `variables[].field` | objeto | `source`, `n_sites` |
 | `variables[].n` | entero | Pares comparados |
 | `variables[].rmse`, `bias`, `r` | decimales | Error cuadrático medio, sesgo (satélite menos campo) y correlación |
+| `variables[].rmse_adjusted`, `bias_adjusted`, `r_adjusted` | decimales | Opcional. Mismas métricas tras la corrección por altura |
+| `variables[].adjustment` | string | Opcional. Texto corto (ej. "Corrección por altura de 6,5 °C/km") |
 | `variables[].unit` | string | Unidad de `rmse` y `bias` |
 | `variables[].quality` | `good` \| `fair` \| `poor` | Juicio simple para el texto |
 
@@ -321,6 +323,9 @@ Salida (`fixtures/api/diagnose.response.json`):
 | `calendar.rows[]` | `id`, `label`, `levels` (12 enteros 0–3). Filas previstas: `bare_soil`, `frost`, `water_stress`, `heat`, `burn_season`, `current_rotation`. |
 | `calendar.scale` | Significado de 0–3. |
 | `zone` | Zona agronómica del centroide (`pampa_humeda`, `nea`, `noa`, `cuyo`, `patagonia`; `other` fuera de Argentina). Adición compatible 2026-11-14; `/rotations` la lee del diagnóstico cuando el request no trae `zone`. |
+| `elevation_m` | Elevación media del lote (Terrarium/SRTM); `null` si no resuelve. Adición compatible 2026-11-20. |
+| `power_cell_elevation_m` | Elevación de la celda POWER (tercera coordenada de la geometría). Adición compatible 2026-11-20. |
+| `temp_adjust_c` | Ajuste aplicado a `T2M_MAX`/`T2M_MIN` (−6,5 °C/km × diferencia de altura); 0 si la diferencia es < 100 m o falta alguna elevación. Adición compatible 2026-11-20. |
 | `province` | Provincia argentina del centroide (IGN `ign:provincia`); `null` fuera de Argentina. Adición compatible 2026-11-14. |
 | `country` | ISO A2 del país del centroide (Natural Earth admin-0); `null` si no resuelve. Adición compatible 2026-11-14. |
 

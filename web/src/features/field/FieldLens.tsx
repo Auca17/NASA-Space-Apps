@@ -4,19 +4,21 @@ import { useT } from "../../i18n";
 import { Card, BottomSheet, Tooltip } from "../../components/ui";
 import { Glossary } from "../../components/Glossary";
 import {
-  apiDiagnose, apiRotations, apiExplain, knowledgeRotations,
-  knowledgeCrops, knowledgeCases, orinValidation,
+  apiDiagnose, apiRotations, apiExplain, ecostressDemo,
+  knowledgeRotations, knowledgeCrops, knowledgeCases, orinValidation,
 } from "../../api";
 import type {
   Card as DiagCard, CaseEntry, DiagnoseResponse, Measure,
   OrinValidation, RotationsResponse, Strategy,
 } from "../../api/types";
+import type { EcostressDemo } from "../../api";
 import { OrinCard, SyntheticBanner } from "./OrinCard";
 import {
-  benefitValue, cardValueText, compareDeltas, groupVariants,
+  benefitValue, cardValueText, compareDeltas, deltaText, groupVariants,
   groupedCards, indicatorLabelKey, irrigationNeedMm, measureReqPairs,
-  prioWeights,
+  orderNote, prioWeights, rankNote,
   seqSegments, summaryFacts, verdictDelta, PRIORITY_IDS,
+  type Scenario,
 } from "../../domain/rotations";
 
 type LatLonRing = [number, number][];
@@ -120,6 +122,10 @@ function DiagTile({ c, t, fmt }: {
       </div>
       <div className="dtile-value">
         {val ?? <span className="muted">{t("field.noData")}</span>}
+        {deltaText(c, fmt) && (
+          <span className={`dtile-delta${c.delta! > 0 ? " up" : " down"}`}>
+            {" "}{c.delta! > 0 ? "↑" : "↓"} {deltaText(c, fmt)}
+          </span>)}
       </div>
       {c.text && <p className="muted">{c.text}</p>}
       {c.id === "rain" && <RainChart card={c} t={t} />}
@@ -267,12 +273,13 @@ function Section({ title, count, open = false, children }: {
     </details>);
 }
 
-function StrategyCard({ s, t, current, variants, explain }: {
+function StrategyCard({ s, t, current, variants, explain, rank }: {
     s: Strategy;
     t: (k: string, v?: Record<string, string | number>) => string;
     current?: Strategy | null;
     variants?: Strategy[];
-    explain?: string }) {
+    explain?: string;
+    rank?: { key: string; n?: number } | null }) {
   const irr = irrigationNeedMm(s);
   const vd = verdictDelta(s, current);
   const verdict = vd.key === "rot.verdict.parts"
@@ -288,6 +295,7 @@ function StrategyCard({ s, t, current, variants, explain }: {
             {" "}{t("rot.variante")}: {v.name}</span>))}
       </h3>
       <p className="verdict">{verdict}</p>
+      {rank && <p className="rank-note">{t(rank.key, { n: rank.n ?? "" })}</p>}
       <Afinity score={s.score} t={t} />
       <Section title={t("rot.why")} open>
         <p>{s.why}</p>
@@ -372,13 +380,17 @@ function CmpTable({ strategies, t }: {
 }
 
 /** Rotations results block — exported for tests (Patagonia zero-state). */
-export function RotationResults({ rots, diag, explain, t }: {
+export function RotationResults({ rots, diag, explain, t,
+    explainMode, onMethods }: {
     rots: RotationsResponse;
     diag: DiagnoseResponse | null;
     explain: Record<string, string>;
+    explainMode?: string;
+    onMethods?: () => void;
     t: (k: string, v?: Record<string, string | number>) => string }) {
   const current = rots.strategies.find((s) => s.is_current) ?? null;
   const groups = groupVariants(rots.strategies);
+  const on = orderNote(rots);
   const trackRef = useRef<HTMLDivElement>(null);
   const [carIdx, setCarIdx] = useState(0);
   const onScroll = () => {
@@ -394,6 +406,15 @@ export function RotationResults({ rots, diag, explain, t }: {
         <p className="zone-header">
           <strong>{t("rot.zone", { z: t(`zone.${diag.zone}`) })}</strong>
           {diag.province && <span className="muted"> · {diag.province}</span>}
+        </p>)}
+      {on && <p className="scen-order" role="status">
+        {t(on.key, on.vars)}</p>}
+      {explainMode === "ai" && (
+        <p className="explain-ai muted">
+          {t("explain.aiLabel")}
+          {onMethods && <>{" · "}
+            <button className="linklike" onClick={onMethods}>
+              {t("meth.link")}</button></>}
         </p>)}
       {rots.confidence === "low" && (
         <p className="notice" role="status">
@@ -420,7 +441,8 @@ export function RotationResults({ rots, diag, explain, t }: {
             {groups.map((g) => (
               <StrategyCard key={g.primary.id} s={g.primary} t={t}
                             current={current} variants={g.variants}
-                            explain={explain[g.primary.id]} />))}
+                            explain={explain[g.primary.id]}
+                            rank={rankNote(g.primary.id, rots)} />))}
           </div>
           {groups.length > 1 && (
             <div className="carousel-dots">
@@ -452,9 +474,10 @@ export interface DemoLot {
   synthetic?: boolean;
 }
 
-export function FieldPanel({ ring, open, onClose, lot }: {
+export function FieldPanel({ ring, open, onClose, lot, onMethods }: {
   ring: LatLonRing | null; open: boolean; onClose: () => void;
   lot?: DemoLot | null;
+  onMethods?: () => void;
 }) {
   const { t, lang } = useT();
   const [diag, setDiag] = useState<DiagnoseResponse | null>(null);
@@ -462,6 +485,9 @@ export function FieldPanel({ ring, open, onClose, lot }: {
   const [cases, setCases] = useState<CaseEntry[]>([]);
   const [rots, setRots] = useState<RotationsResponse | null>(null);
   const [explain, setExplain] = useState<Record<string, string>>({});
+  const [explainMode, setExplainMode] = useState<string | null>(null);
+  const [sc, setSc] = useState<Scenario | null>(null);
+  const [eco, setEco] = useState<EcostressDemo | null>(null);
   const [rotList, setRotList] = useState<{ id: string; label: string }[]>([]);
   const [current, setCurrent] = useState("unknown");
   const [prioSel, setPrioSel] = useState<string[]>([]);
@@ -493,15 +519,17 @@ export function FieldPanel({ ring, open, onClose, lot }: {
   useEffect(() => {
     if (!open || !body) return;
     setBusy(true); setDiag(null); setRots(null); setExplain({});
+    setExplainMode(null);
     setStep(1);
-    apiDiagnose(body).then((d) => {
+    apiDiagnose(sc ? { ...body, scenario: sc } : body).then((d) => {
       setDiag(d); setBusy(false);
       if (d) savePlot(lot?.name ?? "lote", body);
     });
-  }, [open, body, lot]);
+  }, [open, body, lot, sc]);
 
   useEffect(() => {
-    if (open) orinValidation().then(setOrin);
+    if (open) { orinValidation().then(setOrin);
+                ecostressDemo().then(setEco); }
   }, [open]);
 
   useEffect(() => {
@@ -509,6 +537,19 @@ export function FieldPanel({ ring, open, onClose, lot }: {
       knowledgeCases().then((k) => setCases(k?.cases ?? []));
     }
   }, [open]);
+
+  // ECOSTRESS demo tile: only for the two demo plots (task 18.3)
+  const ecoSite = (() => {
+    if (!diag || !eco) return null;
+    const [clat, clon] = diag.centroid;
+    for (const [name, s] of Object.entries(eco.sites)) {
+      const [w, so, e, n] = s.bbox;
+      if (clat >= so && clat <= n && clon >= w && clon <= e) {
+        return { name, ...s };
+      }
+    }
+    return null;
+  })();
 
   const togglePrio = (p: string) => setPrioSel((sel) => {
     if (sel.includes(p)) return sel.filter((x) => x !== p);
@@ -537,6 +578,7 @@ export function FieldPanel({ ring, open, onClose, lot }: {
     if (r) {
       const e = await apiExplain(r); // explain takes the rotations response
       if (e) {
+        setExplainMode(e.mode ?? null);
         setExplain(Object.fromEntries(
           e.strategies.map((s) => [s.id, s.text])));
       }
@@ -580,7 +622,64 @@ export function FieldPanel({ ring, open, onClose, lot }: {
               </div>
             </section>))}
 
+          <Card title={t("scen.title")} className="scen">
+            <p className="muted">{t("scen.honest")}</p>
+            <div className="scen-presets">
+              <button onClick={() => setSc({ rain_pct: -20,
+                                            temp_delta_c: 1 })}>
+                {t("scen.preset.dry")}</button>
+              <button onClick={() => setSc({ rain_pct: 0,
+                                            temp_delta_c: 2 })}>
+                {t("scen.preset.warm")}</button>
+              <button onClick={() => setSc({ rain_pct: 20,
+                                            temp_delta_c: 0 })}>
+                {t("scen.preset.wet")}</button>
+              <button onClick={() => setSc(null)}
+                      disabled={!sc}>
+                {t("scen.reset")}</button>
+            </div>
+            <label className="scen-slider">
+              {t("scen.rain")}: {sc ? `${sc.rain_pct}%` : "0%"}
+              <input type="range" min={-40} max={40} step={5}
+                     value={sc?.rain_pct ?? 0}
+                     aria-label={t("scen.rain")}
+                     onChange={(e) => setSc({
+                       rain_pct: Number(e.target.value),
+                       temp_delta_c: sc?.temp_delta_c ?? 0 })} />
+            </label>
+            <label className="scen-slider">
+              {t("scen.temp")}: {sc
+                ? `${sc.temp_delta_c > 0 ? "+" : ""}${sc.temp_delta_c} °C`
+                : "0 °C"}
+              <input type="range" min={-2} max={4} step={0.5}
+                     value={sc?.temp_delta_c ?? 0}
+                     aria-label={t("scen.temp")}
+                     onChange={(e) => setSc({
+                       rain_pct: sc?.rain_pct ?? 0,
+                       temp_delta_c: Number(e.target.value) })} />
+            </label>
+          </Card>
+
           <OrinCard data={orin} t={t} fmt={fmt} />
+
+          {ecoSite && ecoSite.n_scenes > 0 && (
+            <Card title={t("eco.title")} className="eco">
+              <p className="muted">{t("eco.demo")}</p>
+              <p><strong>
+                {fmt.format(ecoSite.scenes[0]?.lst_c ?? 0)} °C
+              </strong>{" "}
+                {t("eco.last", { n: ecoSite.n_scenes })}
+              </p>
+              {ecoSite.bias_c != null && (
+                <p className="muted">
+                  {t("eco.bias", { v: `${ecoSite.bias_c > 0 ? "+" : ""}${
+                    fmt.format(ecoSite.bias_c)}` })}
+                </p>)}
+              <details className="dtile-src">
+                <summary>{t("field.source")}</summary>
+                <p className="muted">ECOSTRESS ECO_L2T_LSTE · 70 m</p>
+              </details>
+            </Card>)}
 
           <Card title={t("field.calendar")}>
             <div style={{ overflowX: "auto" }}>
@@ -673,7 +772,9 @@ export function FieldPanel({ ring, open, onClose, lot }: {
       )}
 
       {rots && <RotationResults rots={rots} diag={diag}
-                                explain={explain} t={t} />}
+                                explain={explain} t={t}
+                                explainMode={explainMode ?? undefined}
+                                onMethods={onMethods} />}
       {!rots && diag && <p className="notice">{t("rot.disclaimer")}</p>}
     </BottomSheet>
   );

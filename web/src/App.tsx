@@ -2,6 +2,7 @@ import { Suspense, lazy, useRef, useState, useCallback, useEffect } from "react"
 import { useT } from "./i18n";
 import { APP_NAME, DEMO_PLOT } from "./config";
 import { Welcome } from "./features/welcome/Welcome";
+import { MethodsDrawer } from "./features/methods/MethodsDrawer";
 import { useGlobe, type GlobeHandle } from "./features/globe/GlobeView";
 import { HistoricControls } from "./features/fire/HistoricControls";
 import { cellsInCircle } from "./domain/h3area";
@@ -32,6 +33,9 @@ export default function App() {
   const [lot, setLot] = useState<DemoLot | null>(null);
   const [lots, setLots] = useState<OrinLots["features"]>([]);
   const [playingMonth, setPlayingMonth] = useState<string | null>(null);
+  const [methodsOpen, setMethodsOpen] = useState(false);
+  const [view, setView] = useState<{ lat: number; lon: number; zoom: number;
+    bbox: [number, number, number, number] } | null>(null);
   const country = useRef<string | null>(null);
   const globeRef = useRef<GlobeHandle | null>(null);
   const mapDiv = useRef<HTMLDivElement>(null);
@@ -39,7 +43,8 @@ export default function App() {
   const onGlobeReady = useCallback((h: GlobeHandle) => {
     globeRef.current = h;
     setGlobe(h);
-    h.onMove((lat, lon) => {
+    h.onMove((lat, lon, zoom, bbox) => {
+      setView({ lat, lon, zoom, bbox });
       if (mode !== "fire") return;
       setArea({ lat, lon, cells: cellsInCircle(lat, lon, 50) });
     });
@@ -113,7 +118,9 @@ export default function App() {
     const r = circleApprox(DEMO_PLOT.lat, DEMO_PLOT.lon);
     setMode("field"); setDraw("none"); setLot(null);
     setRing(r); setFieldOpen(true);
-    globeRef.current?.flyTo(DEMO_PLOT.lat, DEMO_PLOT.lon, 11);
+    globeRef.current?.flyTo(DEMO_PLOT.lat, DEMO_PLOT.lon, 11,
+      window.innerWidth < 600 ? Math.round(window.innerHeight * 0.45)
+        : 0);
     globeRef.current?.setDraft(r);
     country.current = "AR";
   };
@@ -132,7 +139,9 @@ export default function App() {
              crop_label: f.properties.crop_label,
              synthetic: f.properties.synthetic });
     setRing(ring); setFieldOpen(true);
-    globeRef.current?.flyTo(clat, clon, 13);
+    globeRef.current?.flyTo(clat, clon, 13,
+      window.innerWidth < 600 ? Math.round(window.innerHeight * 0.45)
+        : 0);
     globeRef.current?.setDraft(ring);
     country.current = "AR";
   };
@@ -155,6 +164,10 @@ export default function App() {
                   onClick={() => setMode("field")}>{t("nav.field")}</button>
         </nav>
         <div className="spacer" />
+        <button className="meth-link"
+                onClick={() => setMethodsOpen(true)}>
+          <span className="ml-long">{t("meth.link")}</span>
+          <span className="ml-short">{t("meth.short")}</span></button>
         <button onClick={() => setLang(lang === "es" ? "en" : "es")}
                 aria-label="language">{t("nav.lang")}</button>
       </header>
@@ -173,7 +186,8 @@ export default function App() {
           </div>)}
 
         {mode === "fire" &&
-          <HistoricControls globe={globe} onMonth={setPlayingMonth} />}
+          <HistoricControls globe={globe} onMonth={setPlayingMonth}
+                            view={view} />}
 
         {mode === "live" && (
           <Suspense fallback={null}>
@@ -216,10 +230,13 @@ export default function App() {
       {mode === "field" && (
         <Suspense fallback={null}>
           <FieldPanel ring={ring} open={fieldOpen} lot={lot}
+                      onMethods={() => setMethodsOpen(true)}
                       onClose={() => { setFieldOpen(false); setRing(null);
                         setLot(null);
                         globeRef.current?.setDraft(null); }} />
         </Suspense>)}
+      <MethodsDrawer open={methodsOpen}
+                     onClose={() => setMethodsOpen(false)} />
     </div>
   );
 }

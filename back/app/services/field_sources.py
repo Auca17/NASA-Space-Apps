@@ -79,8 +79,12 @@ async def power_daily(client: httpx.AsyncClient, lat: float, lon: float,
             "end": (today - timedelta(days=1)).strftime("%Y%m%d"),
             "format": "JSON"}, timeout=POWER_DAILY_TIMEOUT)
         r.raise_for_status()
-        param = r.json()["properties"]["parameter"]
+        body = r.json()
+        param = body["properties"]["parameter"]
         out = {}
+        coords = (body.get("geometry") or {}).get("coordinates") or []
+        if len(coords) >= 3 and coords[2] is not None:
+            out["_elev_m"] = float(coords[2])
         for name, series in param.items():
             out[name] = {
                 date(int(d[:4]), int(d[4:6]), int(d[6:8])):
@@ -130,9 +134,9 @@ def _tile_xy(lat: float, lon: float, z: int) -> tuple[float, float]:
     return x, y
 
 
-async def terrain_slope(client: httpx.AsyncClient, lat: float, lon: float,
-                        h3_r6: str, bbox=None) -> float | None:
-    """Mean slope % over the plot, from a Terrarium PNG tile (SRTM)."""
+async def terrain_stats(client: httpx.AsyncClient, lat: float, lon: float,
+                        h3_r6: str, bbox=None) -> dict | None:
+    """Mean slope % and mean elevation m over the plot (Terrarium, SRTM)."""
     async def go():
         from PIL import Image
         x, y = _tile_xy(lat, lon, TERRAIN_Z)
@@ -155,12 +159,16 @@ async def terrain_slope(client: httpx.AsyncClient, lat: float, lon: float,
             c1 = int(np.clip((max(x0, x1) - tx) * 256, 0, 255))
             r0 = int(np.clip((min(y0, y1) - ty) * 256, 0, 255))
             r1 = int(np.clip((max(y0, y1) - ty) * 256, 0, 255))
-            w = slope[r0:r1 + 1, c0:c1 + 1]
         else:  # point: 9x9 window around the centroid pixel
             c, rr = int(px * 256), int(py * 256)
-            w = slope[max(0, rr - 4):rr + 5, max(0, c - 4):c + 5]
-        return round(float(np.nanmean(w)), 1) if w.size else None
-    return await _cached(h3_r6, "terrain_slope", go)
+            r0, r1 = max(0, rr - 4), rr + 5
+            c0, c1 = max(0, c - 4), c + 5
+        ws, we = slope[r0:r1 + 1, c0:c1 + 1], elev[r0:r1 + 1, c0:c1 + 1]
+        if not ws.size:
+            return None
+        return {"slope": round(float(np.nanmean(ws)), 1),
+                "elevation_m": round(float(np.nanmean(we)))}
+    return await _cached(h3_r6, "terrain_stats", go)
 
 
 # ------------------------------------------------------------ ORNL MODIS ----

@@ -41,6 +41,12 @@ function VarRow({ v, t, fmt }: { v: OrinVariable; t: T;
       </p>
       <p>{t("orin.rmse", { v: fmt.format(v.rmse), u: v.unit })}
         {bias && <>; {t(bias.key, bias.vars)}</>}</p>
+      {v.rmse_adjusted != null && (
+        <p>{t("orin.rmseAdj", {
+          v: fmt.format(v.rmse_adjusted), u: v.unit,
+          raw: fmt.format(v.rmse) })}</p>)}
+      {v.adjustment && (
+        <p className="muted">{v.adjustment}. {t("orin.adjNote")}</p>)}
       <details className="orin-details">
         <summary>{t("orin.details")}</summary>
         <ul className="muted">

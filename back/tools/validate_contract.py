@@ -115,7 +115,18 @@ SCHEMAS = [
                     "frost_free": {"type": ["object", "null"], "properties": {
                         "start": {"type": "string", "pattern": MD},
                         "end": {"type": "string", "pattern": MD}}},
+                    "frost_free_raw": {"type": ["object", "null"],
+                                       "properties": {
+                        "start": {"type": "string", "pattern": MD},
+                        "end": {"type": "string", "pattern": MD}}},
+                    "hot_days_gt35_raw": {"type": ["number", "null"]},
+                    "elevation_m": {"type": ["number", "null"]},
+                    "temp_adjust_c": {"type": ["number", "null"]},
                     "grace_trend": {"enum": ["up", "flat", "down", None]},
+                    "sm_anom_pct": {"type": ["number", "null"]},
+                    "sm_anom_z": {"type": ["number", "null"]},
+                    "sm_valid_days": {"type": ["integer", "null"]},
+                    "sm_updated": {"type": ["string", "null"]},
                     "src": {"type": "object"}},
                 "required": ["src"]}}}}),
     (re.compile(rf"^field/analogs/{H3}\.json$"), {
@@ -128,6 +139,24 @@ SCHEMAS = [
                                "label": STR,
                                "n_cells": {"type": "integer"},
                                "ar_crops": {"type": "array"}}}}}}),
+    (re.compile(r"^orin/validation\.json$"), {
+        "type": "object", "required": ["synthetic", "variables"],
+        "properties": {
+            "version": STR,
+            "synthetic": {"type": "boolean"},
+            "variables": {"type": "array", "items": {
+                "type": "object",
+                "required": ["id", "rmse", "bias", "r", "unit",
+                             "quality", "n"],
+                "properties": {
+                    "id": STR,
+                    "rmse": NUM, "bias": NUM, "r": NUM,
+                    "rmse_adjusted": NUM, "bias_adjusted": NUM,
+                    "r_adjusted": NUM, "adjustment": STR,
+                    "unit": STR, "n": {"type": "integer"},
+                    "quality": {"enum": ["good", "fair", "poor"]},
+                    "satellite": {"type": "object"},
+                    "field": {"type": "object"}}}}}}),
     (re.compile(r"^api/diagnose\.response\.json$"), {
         "type": "object",
         "required": ["diagnosis_id", "area_ha", "centroid", "h3_r5",

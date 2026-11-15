@@ -253,3 +253,57 @@ export function seqSegments(start: string, end: string):
   if (a <= b) return [{ from: a, to: b }];
   return [{ from: a, to: 11 }, { from: 0, to: b }];
 }
+
+
+/* ------------------------------------------------- scenario helpers ------ */
+
+export interface Scenario { rain_pct: number; temp_delta_c: number }
+
+/** Current ranked order of strategy ids (score desc, current included). */
+export function strategyOrder(rots: {
+    strategies: { id: string; score: number }[] }): string[] {
+  return [...rots.strategies].sort((a, b) => b.score - a.score)
+    .map((s) => s.id);
+}
+
+/** One-line verdict comparing the scenario order with baseline_order. */
+export function orderNote(rots: {
+    strategies: { id: string; name: string; score: number }[];
+    baseline_order?: string[] }):
+    { key: string; vars?: { a: string; b: string } } | null {
+  const base = rots.baseline_order;
+  if (!base) return null;
+  const cur = strategyOrder(rots);
+  if (cur.join(",") === base.join(",")) {
+    return { key: "scen.order.same" };
+  }
+  const name = (id: string | undefined) =>
+    rots.strategies.find((s) => s.id === id)?.name ?? id ?? "?";
+  return { key: "scen.order.change",
+           vars: { a: name(base[0]), b: name(cur[0]) } };
+}
+
+/** Rank change of one strategy vs baseline_order (for the badge). */
+export function rankNote(id: string, rots: {
+    strategies: { id: string; score: number }[];
+    baseline_order?: string[] }):
+    { key: string; n?: number } | null {
+  const base = rots.baseline_order;
+  if (!base) return null;
+  const bi = base.indexOf(id);
+  const ci = strategyOrder(rots).indexOf(id);
+  if (bi < 0) return { key: "scen.rank.new" };
+  if (ci < 0) return { key: "scen.rank.out" };
+  if (ci < bi) return { key: "scen.rank.up", n: ci + 1 };
+  if (ci > bi) return { key: "scen.rank.down", n: ci + 1 };
+  return null;
+}
+
+/** Delta text next to a card value ("-196 mm respecto de lo normal"). */
+export function deltaText(c: { delta?: number; unit?: string | null },
+    fmt: Intl.NumberFormat): string | null {
+  if (c.delta == null || c.delta === 0) return null;
+  const sign = c.delta > 0 ? "+" : "−";
+  const v = `${sign}${fmt.format(Math.abs(c.delta))}`;
+  return c.unit ? `${v} ${c.unit}` : v;
+}

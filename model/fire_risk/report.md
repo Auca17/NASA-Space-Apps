@@ -38,3 +38,12 @@ FIRMS covers only the last ~30 days, so until a 2026 Parquet is added
 the 365-day lookback misses Jan-Oct 2026 fires. Every generated shard
 carries `fires_365d_complete`; it is `false` when the fire history
 does not reach 30 days before the run date.
+
+## Known limitation (elevation correction)
+
+`T2M_MAX`/`T2M_MIN` from NASA POWER are used as-is by the model. In
+Andean cells the POWER cell elevation can differ from the terrain by
+kilometres; the field diagnosis applies a −6.5 °C/km correction (task
+20), but the fire-risk features (`T2M`, `RH2M`, derived indices) remain
+uncorrected. Mountain cells may therefore underestimate heat and
+overestimate humidity; the model was not retrained.
