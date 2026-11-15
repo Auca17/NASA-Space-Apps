@@ -1,5 +1,6 @@
 /** Typed clients — one function per contract file/endpoint. */
 import { dataUrl, apiUrl, fetchJson, postJson } from "./client";
+import type { CropRecommendations } from "./types";
 import type { LiveBody } from "../domain/live";
 import type {
   MetaJson, GlobeShard, CalShard, DailyShard, RiskShard,
@@ -120,7 +121,8 @@ export async function apiDiagnose(body: unknown, signal?: AbortSignal):
     if (response.status === 400) {
       const error = await response.json() as { error?: string; detail?: string };
       return { diagnosis: null, problem: error.detail?.includes("area must") ? "area"
-        : error.error === "invalid_polygon" ? "polygon" : "invalid" };
+        : error.error === "invalid_polygon" ? "polygon"
+        : error.error === "no_land" ? "noLand" : "invalid" };
     }
   } catch {
     // The session may have been cancelled or the connection unavailable.
@@ -169,6 +171,15 @@ export function apiCropZones(body: unknown) {
 
 export function apiRotations(body: unknown) {
   return postJson<RotationsResponse>("/api/field/rotations", body);
+}
+
+export function apiCropRecommendations(body: unknown, signal: AbortSignal) {
+  return postJson<CropRecommendations>("/api/field/recommendations", body, signal);
+}
+
+export function apiRecommendationZones(body: unknown, signal: AbortSignal) {
+  return postJson<{ zones: import("./types").MoistureZone["geometry"][] }>(
+    "/api/field/recommendation-zones", body, signal);
 }
 
 export interface EcostressDemo {

@@ -1,16 +1,19 @@
+import { CropRecommendations } from "./CropRecommendations";
+import { moistureGeometry } from "../../domain/moisture";
 import { MoisturePanel } from "./MoisturePanel";
-import type { MoistureZone } from "../../api/types";
+import type { CurrentCrop, MoistureZone } from "../../api/types";
 /** Field lens: draw/tap plot -> diagnose -> rotations -> explain. */
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useT } from "../../i18n";
-import { Card, BottomSheet, Tooltip } from "../../components/ui";
+import { Card, Tooltip } from "../../components/ui";
 import { GlossDefs } from "../../components/Glossary";
 import { DiagTile } from "./DiagTile";
 import { Calendar, calendarCrops, type CatalogCrop } from "./Calendar";
 import { Timeline, TimelinePeek } from "./Timeline";
 import { SatelliteAccuracy } from "./SatelliteAccuracy";
 import {
-  apiDiagnose, apiRotations, apiExplain, apiFieldCatalog, ecostressDemo, knowledgeCases, orinValidation,
+  apiCurrentCrop, apiDiagnose, apiRecommendationZones, apiRotations, apiExplain,
+  apiFieldCatalog, ecostressDemo, knowledgeCases, orinValidation,
 } from "../../api";
 import type {
   CaseEntry, CropEntry, DiagnoseResponse, Measure, OrinValidation,
@@ -22,7 +25,7 @@ import {
   benefitValue, benefitRows, compareDeltas, groupVariants,
   groupedCards, humanizeGap, indicatorLabelKey, irrigationNeedMm, measureReqPairs,
   orderNote, prioWeights, rankNote,
-  seqSegments, verdictDelta, PRIORITY_IDS, type Scenario,
+  seqSegments, verdictDelta, type Scenario,
 } from "../../domain/rotations";
 import { plainSummary, referenceText, localizeDiag } from "../../domain/clarity";
 import {
@@ -72,11 +75,15 @@ export type AnalysisTarget = {
   };
   profile?: Profile;
   econ?: Economics;
+  declaredCrop?: string;
+  nearby?: boolean;
+  sections?: { name: string; geom: Multi; crop?: string }[];
+  /** a plot of a saved field: its crop is shown only when some source
+   * backs it (declared by the producer); otherwise «sin identificar» */
+  parcel?: { crop: string | null; source: string };
 };
 
 const LS_PLOTS = "fs_plots";
-
-const CONSTRAINTS = ["irrigation", "livestock", "markets"] as const;
 
 function savePlot(name: string, body: PlotBody) {
   try {
@@ -456,10 +463,12 @@ export interface DemoLot {
   synthetic?: boolean;
 }
 
-export function FieldPanel({ target, open, onClose, onChangePlot, onMethods,
-                             onResult, onEmergency, moistureSelection,
-                             onMoistureZones, onMoistureSelect }: {
-  target: AnalysisTarget | null; open: boolean; onClose: () => void;
+export function FieldPanel({ target, open, onClose, onChangePlot, onMethods, onResult, onEmergency, moistureSelection,
+  onMoistureZones, onMoistureSelect, onRecommendationArea, nearbyUse }: {
+  target: AnalysisTarget | null; open: boolean;
+  onClose?: () => void;
+  onRecommendationArea?: (geom: Multi | null) => void;
+  nearbyUse?: "urban" | "checked" | "unavailable";
   onChangePlot: () => void;
   moistureSelection?: number | null;
   onMoistureZones?: (zones: MoistureZone[]) => void;
@@ -486,10 +495,16 @@ export function FieldPanel({ target, open, onClose, onChangePlot, onMethods,
   const [sc, setSc] = useState<Scenario | null>(null);
   const [scenario, applyScenario] = useState<Scenario | null>(null);
   const [eco, setEco] = useState<EcostressDemo | null>(null);
-  const [current, setCurrent] = useState("unknown");
   const [prioSel, setPrioSel] = useState<string[]>([]);
   const [cons, setCons] = useState<Record<string, boolean>>({});
-  const [step, setStep] = useState<1 | 2>(1);
+  const parcelFlow = !!target?.demo || !!target?.parcels?.length || target?.needs !== undefined;
+  const [tab, setTab] = useState<"recommendations" | "details">(parcelFlow ? "details" : "recommendations");
+  const [autoSections, setAutoSections] = useState<NonNullable<AnalysisTarget["sections"]> | null>(null);
+  const [zoneDetectionFailed, setZoneDetectionFailed] = useState(false);
+  const [areaIndex, setAreaIndex] = useState(0);
+  const [sectionResult, setSectionResult] = useState<{ geom: Multi; data: DiagnoseResponse | null } | null>(null);
+  const [sectionRetry, setSectionRetry] = useState(0);
+  const [detected, setDetected] = useState<{ geometry: Multi; data: CurrentCrop | null } | null>(null);
   const [reading, setReading] = useState(false);
   const [retry, setRetry] = useState(0);
   // parcels flow (task 34): needs -> POST /api/field/parcels -> panel
@@ -502,10 +517,10 @@ export function FieldPanel({ target, open, onClose, onChangePlot, onMethods,
   // kept in localStorage and sent inside the parcels request
   const [profile, setProfile] = useState<Profile>(loadProfile);
   const [econ, setEcon] = useState<Economics>(loadEconomics);
-  const [tab, setTab] = useState<"resumen" | "prioridades" | "mas">(
+  const [parcelTab, setParcelTab] = useState<"resumen" | "prioridades" | "mas">(
     "resumen");
-  /** The detailed diagnosis loads only in the "Más información" tab. */
-  const verMas = tab === "mas";
+  const showDiagnosis = !parcelFlow || parcelTab === "mas";
+  const needDiagnosis = tab === "recommendations" || showDiagnosis;
   const updateProfile = (p: Profile) => { setProfile(p); saveProfile(p); };
   const updateEcon = (e: Economics) => { setEcon(e); saveEconomics(e); };
   const [diagnosisProblem, setDiagnosisProblem] = useState<string>();
@@ -513,15 +528,12 @@ export function FieldPanel({ target, open, onClose, onChangePlot, onMethods,
   const [compareFailed, setCompareFailed] = useState(false);
   const lastDiagnosisBody = useRef<PlotBody | null>(null);
   const comparisonRequests = useRef({ latest: 0 });
-  /** Whether the shown results used the regional reference rotation. */
-  const [refRun, setRefRun] = useState(false);
-  const formRef = useRef<HTMLDivElement>(null);
   const fmt = useMemo(() =>
     new Intl.NumberFormat(lang === "en" ? "en" : "es",
       { maximumFractionDigits: 1 }), [lang]);
 
   useEffect(() => {
-    if (!open || !verMas) return;
+    if (!open || !needDiagnosis) return;
     let active = true;
     setCatalogFailed(false);
     apiFieldCatalog().then((data) => {
@@ -530,10 +542,58 @@ export function FieldPanel({ target, open, onClose, onChangePlot, onMethods,
       setCatalogFailed(!data);
     });
     return () => { active = false; };
-  }, [open, catalogRetry, verMas]);
+  }, [open, catalogRetry, needDiagnosis]);
 
   const body = useMemo<PlotBody | null>(() =>
     target ? plotBody(target.geom) : null, [target]);
+  const definedSections = useMemo(() => target?.sections?.length ? target.sections :
+    target?.parcels?.map((parcel) => ({ name: parcel.name, geom: [parcel.geom],
+      crop: parcel.crop === "otro" ? undefined : parcel.crop })), [target]);
+  const autoPartition = !target?.parcel && !target?.demoLot && !definedSections?.length;
+  useEffect(() => {
+    setAutoSections(null);
+    setZoneDetectionFailed(false);
+    if (!open || !body || tab !== "recommendations" || !autoPartition) return;
+    const controller = new AbortController();
+    apiRecommendationZones(body, controller.signal).then((data) => {
+      if (controller.signal.aborted) return;
+      setZoneDetectionFailed(!data);
+      setAutoSections((data?.zones ?? []).map((geom) => ({
+        name: "", geom: moistureGeometry(geom),
+      })));
+    });
+    return () => controller.abort();
+  }, [body, open, tab, autoPartition]);
+
+  const sections = definedSections?.length ? definedSections : autoSections;
+  const section = sections?.[areaIndex];
+  const recGeometry = section?.geom ?? target?.geom;
+  const declaredCrop = section ? section.crop : target?.declaredCrop ??
+    (target?.parcel?.source === "manual" ? target.parcel.crop ?? undefined : undefined) ??
+    lot?.crop_label;
+  useEffect(() => {
+    if (!open || tab !== "recommendations" || !recGeometry || declaredCrop ||
+        (autoPartition && !sections) || zoneDetectionFailed) return;
+    let active = true;
+    apiCurrentCrop(plotBody(recGeometry)).then((data) => {
+      if (active) setDetected({ geometry: recGeometry, data });
+    });
+    return () => { active = false; };
+  }, [recGeometry, tab, open, autoPartition, sections, zoneDetectionFailed, declaredCrop]);
+
+  useEffect(() => {
+    if (!open || tab !== "recommendations" || !section) return;
+    const controller = new AbortController();
+    apiDiagnose(plotBody(section.geom), controller.signal).then(({ diagnosis }) => {
+      if (!controller.signal.aborted) setSectionResult({ geom: section.geom, data: diagnosis });
+    });
+    return () => controller.abort();
+  }, [section, open, tab, sectionRetry]);
+
+  useEffect(() => {
+    onRecommendationArea?.(open && tab === "recommendations" ? section?.geom ?? null : null);
+    return () => onRecommendationArea?.(null);
+  }, [section, open, tab, onRecommendationArea]);
   const fmtHa = (v: number) => fmt.format(v);
   const targetHa = target ? multiHa(target.geom) : 0;
 
@@ -555,13 +615,14 @@ export function FieldPanel({ target, open, onClose, onChangePlot, onMethods,
 
   // New target: reset the whole flow.
   useEffect(() => {
-    setNeeds(undefined); setPres(null); setTab("resumen");
-    setDiag(null); setStep(1); setRots(null); setCachedDate(null);
+    setNeeds(undefined); setPres(null); setParcelTab("resumen");
+    setTab(parcelFlow ? "details" : "recommendations");
+    setDiag(null); setRots(null); setCachedDate(null);
     setDiagnosisProblem(undefined);
     // a demo target carries its own fictional profile/economics
     setProfile(target?.profile ?? loadProfile());
     setEcon(target?.econ ?? loadEconomics());
-  }, [target]);
+  }, [target, parcelFlow]);
 
   // POST /api/field/parcels — the main analysis.
   useEffect(() => {
@@ -590,16 +651,20 @@ export function FieldPanel({ target, open, onClose, onChangePlot, onMethods,
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, target, effNeeds, effParcels, lang, pRetry, profile, econ]);
 
-  // The detailed diagnosis only loads behind "Ver más".
+  // Crop recommendations use the lighter diagnosis. The guided flow also
+  // fetches it when the user opens its detailed information.
   useEffect(() => {
-    if (!open || !body || !verMas) return;
+    if (!open || !body || !needDiagnosis) return;
     const controller = new AbortController();
     const requests = comparisonRequests.current;
     const changed = lastDiagnosisBody.current !== body;
     if (changed) {
       lastDiagnosisBody.current = body;
       setDiag(null);
-      setStep(1);
+      setPrioSel([]);
+      setCons({});
+      setAreaIndex(0);
+      setSectionResult(null);
       setSc(null);
       if (scenario) { applyScenario(null); return; }
     }
@@ -617,18 +682,18 @@ export function FieldPanel({ target, open, onClose, onChangePlot, onMethods,
       controller.abort();
       requests.latest++;
     };
-  }, [open, body, lot, retry, scenario, verMas]);
+  }, [open, body, lot, retry, scenario, needDiagnosis]);
 
   useEffect(() => {
-    if (open && verMas) { orinValidation().then(setOrin);
+    if (open && tab === "details") { orinValidation().then(setOrin);
                 ecostressDemo().then(setEco); }
-  }, [open, verMas]);
+  }, [open, tab]);
 
   useEffect(() => {
-    if (open && verMas) {
+    if (open && tab === "details") {
       knowledgeCases().then((k) => setCases(k?.cases ?? []));
     }
-  }, [open, verMas]);
+  }, [open, tab]);
 
   // ECOSTRESS demo tile: only for the two demo plots (task 18.3)
   const ecoSite = (() => {
@@ -649,16 +714,19 @@ export function FieldPanel({ target, open, onClose, onChangePlot, onMethods,
   });
 
   const runRotations = async () => {
-    if (!diag || diag.coverage?.comparable === false || reading || comparing) return;
+    const local = section ? (
+      sectionResult?.geom === section.geom ? sectionResult.data : null
+    ) : diag;
+    if (!local || local.coverage?.comparable === false || (!section && reading) || comparing) return;
     const requests = comparisonRequests.current;
     const version = ++requests.latest;
     setComparing(true);
     setCompareFailed(false);
     setExplain({});
     const r = await apiRotations({
-      diagnosis: diag,
-      zone: diag.zone,
-      current: current === "unknown" ? null : { rotation_id: current },
+      diagnosis: local,
+      zone: local.zone,
+      current: null,
       priorities: prioWeights(prioSel),
       constraints: {
         irrigation: cons.irrigation,
@@ -670,7 +738,6 @@ export function FieldPanel({ target, open, onClose, onChangePlot, onMethods,
     setComparing(false);
     setCompareFailed(!r);
     setRots(r);
-    setRefRun(current === "unknown");
     if (r) {
       const e = await apiExplain(r); // explain takes the rotations response
       if (e && version === requests.latest) {
@@ -701,18 +768,23 @@ export function FieldPanel({ target, open, onClose, onChangePlot, onMethods,
   const tv = (vars: Record<string, string | number>) =>
     Object.fromEntries(Object.entries(vars).map(([k, v]) =>
       [k, typeof v === "string" && v.startsWith("risk.cat.") ? t(v) : v]));
-  const openCompare = () => {
-    setStep(2);
-    setTimeout(() => formRef.current?.scrollIntoView(
-      { behavior: "smooth", block: "start" }), 50);
-  };
+  const sectionReading = section && sectionResult?.geom !== section.geom;
+  const recommendationData = section ? (
+    sectionResult?.geom === section.geom ? sectionResult.data : null
+  ) : base;
+  const currentImage = detected?.geometry === recGeometry ? detected?.data : undefined;
 
   return (
-    <BottomSheet open={open}>
-      <div style={{ display: "flex", justifyContent: "space-between" }}>
-        <h3 style={{ margin: 0 }}>{t("field.result.title")}</h3>
-        <button onClick={onClose} aria-label={t("ui.close")}>✕</button>
-      </div>
+    <div className="field-analysis-results" hidden={!open}>
+      <header className="analysis-header">
+        <div className="analysis-actions" role="group" aria-label={t("recs.views")}>
+          <button type="button" aria-pressed={tab === "recommendations"}
+                  onClick={() => setTab("recommendations")}>{t("recs.tab")}</button>
+          <button type="button" aria-pressed={tab === "details"}
+                  onClick={() => setTab("details")}>{t("recs.details")}</button>
+          <button type="button" onClick={onClose ?? onChangePlot}>{t("recs.changeField")}</button>
+        </div>
+      </header>
       {target && (
         <div className="analysis-scope">
           <strong>{target.fieldName
@@ -729,9 +801,19 @@ export function FieldPanel({ target, open, onClose, onChangePlot, onMethods,
               <strong>{t("demo.producer")}</strong><br />
               {t("demo.disclaimer")}
             </p>)}
+          {target.parcel && (
+            <div className="muted">
+              {t("parcel.boundarySource", { s: t("parcel.src." + target.parcel.source) })}
+              {" · "}
+              {target.parcel.crop
+                ? t(target.parcel.source === "crop" && !target.declaredCrop ? "recs.historicalCrop" :
+                  "parcel.cropDeclared", { c: target.parcel.crop })
+                : t("parcel.cropUnknown")}
+            </div>)}
         </div>)}
       {lot?.synthetic && <SyntheticBanner t={t} />}
 
+      <div hidden={tab !== "details"}>
       {/* needs step: short and skippable, before the analysis runs;
           priorities and numbers live in optional disclosures */}
       {target && effNeeds === undefined && (
@@ -789,21 +871,21 @@ export function FieldPanel({ target, open, onClose, onChangePlot, onMethods,
             <ParcelAlerts res={pres.res} parcels={effParcels} t={t}
                           onEmergency={onEmergency} />
           </div>
-          <Tabs active={tab} onSelect={(id) =>
-                  setTab(id as typeof tab)}
+          <Tabs active={parcelTab} onSelect={(id) =>
+                  setParcelTab(id as typeof parcelTab)}
                 tabs={[
                   { id: "resumen", label: t("parcels.tab.summary") },
                   { id: "prioridades",
                     label: t("parcels.tab.priorities") },
                   { id: "mas", label: t("parcels.tab.more") },
                 ]} />
-          <div role="tabpanel" id={`panel-${tab}`}
-               aria-labelledby={`tab-${tab}`}>
-          {tab === "resumen" && (
+          <div role="tabpanel" id={`panel-${parcelTab}`}
+               aria-labelledby={`tab-${parcelTab}`}>
+          {parcelTab === "resumen" && (
             <ParcelsResult res={pres.res} parcels={effParcels}
                            profile={profile} t={t} fmt={fmt}
                            onRetry={() => setPRetry((n) => n + 1)} />)}
-          {tab === "prioridades" && (
+          {parcelTab === "prioridades" && (
             <section className="card prio-card">
               <h4 style={{ marginTop: 0 }}>{t("parcels.prio.title")}</h4>
               <p className="muted">{t("parcels.prio.how")}</p>
@@ -814,10 +896,10 @@ export function FieldPanel({ target, open, onClose, onChangePlot, onMethods,
                              onChange={updateEcon} />
               <button type="button" className="primary"
                       onClick={() => { setPRetry((n) => n + 1);
-                                       setTab("resumen"); }}>
+                                       setParcelTab("resumen"); }}>
                 {t("parcels.rerun")}</button>
             </section>)}
-          {tab === "mas" && (
+          {parcelTab === "mas" && (
             <>
             <HiddenHazards res={pres.res} parcels={effParcels}
                            profile={profile} t={t} fmt={fmt} />
@@ -831,8 +913,13 @@ export function FieldPanel({ target, open, onClose, onChangePlot, onMethods,
                            .length > 1
                            ? parcelName(effParcels, p.id) : undefined} />))}
               </section>)}
-      {verMas && (
-        <>
+            <SourcesBlock res={pres.res} t={t} />
+            </>
+          )}
+          </div>
+        </>
+      )}
+      {showDiagnosis && <>
       {reading && <p role="status">{t("field.diagnosing")}</p>}
       {!diag && !reading && target && (
         <div className="card">
@@ -845,11 +932,11 @@ export function FieldPanel({ target, open, onClose, onChangePlot, onMethods,
           </button>}
         </div>)}
 
-      {open && body && onMoistureZones && onMoistureSelect &&
+      {open && tab === "details" && body && onMoistureZones && onMoistureSelect &&
         <MoisturePanel key={JSON.stringify(body)} body={body}
           selected={moistureSelection ?? null}
           onZones={onMoistureZones} onSelect={onMoistureSelect} />}
-      {diag?.degraded && (
+      {tab === "details" && diag?.degraded && (
         <div className="card diag-degraded" role="alert">
           <p><strong>{t("field.degraded.title")}</strong>{" "}
             {diag.degraded_reason ?? t("field.degraded.unknown")}</p>
@@ -857,7 +944,7 @@ export function FieldPanel({ target, open, onClose, onChangePlot, onMethods,
             {t("field.diagnosis.retry")}
           </button>
         </div>)}
-      {diag && (
+      {tab === "details" && diag && (
         <>
           <section className="card plain-summary"
                    aria-labelledby="plain-summary-h">
@@ -891,13 +978,6 @@ export function FieldPanel({ target, open, onClose, onChangePlot, onMethods,
                 { n: fmt.format(diag.terrain_coverage * 100) })}</p>}
             <p className="muted plain-scale">{t("field.plain.scale")}</p>
           </section>
-
-          <div className="field-actions">
-            {step === 1 && !rots && !lot && canCompare && (
-              <button className="primary" onClick={openCompare}>
-                {t("field.form.open")}</button>)}
-            <button onClick={onChangePlot}>{t("field.changePlot")}</button>
-          </div>
 
           <Card title={t("scen.title")} className="scen">
             <p className="muted">{t("scen.honest")}</p>
@@ -1018,96 +1098,75 @@ export function FieldPanel({ target, open, onClose, onChangePlot, onMethods,
               })} />
           </details>
 
-          {lot && (
-            <p className="notice" role="status">
-              {t("orin.rot.none", { crop: lot.crop_label })}
-            </p>)}
-
-          {step === 2 && !lot && canCompare && (
-            <div ref={formRef}>
-            <Card title={t("field.form.run")}>
-              <label>{t("field.form.current")}
-                <select value={current}
-                        onChange={(e) => setCurrent(e.target.value)}>
-                  <option value="unknown">{t("field.form.dontKnow")}</option>
-                  {catalog?.rotations.map((r) =>
-                    <option key={r.id} value={r.id}>{r.name[lang] ?? r.name.es ?? r.id}</option>)}
-                </select>
-              </label>
-              {catalogFailed && (
-                <p role="status">
-                  {t("field.form.catalogFailed")}{" "}
-                  <button type="button" onClick={() => setCatalogRetry((n) => n + 1)}>
-                    {t("field.diagnosis.retry")}
-                  </button>
-                </p>)}
-              {current === "unknown" && (
-                <p className="muted">{t("field.form.dontKnowHint")}</p>)}
-              <fieldset className="prio-set">
-                <legend>{t("prio.choose")}</legend>
-                <div className="prio-chips" role="group"
-                     aria-label={t("prio.choose")}>
-                  {PRIORITY_IDS.map((p) => {
-                    const rank = prioSel.indexOf(p);
-                    return (
-                      <button key={p} type="button" className="chip"
-                              aria-pressed={rank >= 0}
-                              onClick={() => togglePrio(p)}>
-                        {t(`prio.${p}`)}
-                        {rank >= 0 &&
-                          <span className="rank"> {rank + 1}</span>}
-                      </button>);
-                  })}
-                </div>
-                <p className="muted">{t("prio.hint")}</p>
-              </fieldset>
-              <fieldset className="cons-set">
-                <legend>{t("field.form.constraints")}</legend>
-                <div className="cons-grid">
-                  {CONSTRAINTS.map((c) => (
-                    <label key={c}>
-                      {t(`field.form.${c}`)}
-                      <select value={String(cons[c] ?? "")} onChange={(e) => {
-                        const value = e.target.value;
-                        setCons((previous) => {
-                          const next = { ...previous };
-                          if (value === "") delete next[c];
-                          else next[c] = value === "true";
-                          return next;
-                        });
-                      }}>
-                        <option value="">{t("field.form.dontKnow")}</option>
-                        <option value="true">{t("field.form.yes")}</option>
-                        <option value="false">{t("field.form.no")}</option>
-                      </select>
-                    </label>))}
-                </div>
-              </fieldset>
-              {comparing && <p role="status">{t("field.form.comparing")}</p>}
-              {compareFailed && <p role="status">{t("field.form.failed")}</p>}
-              <button className="primary" onClick={runRotations}
-                      disabled={reading || comparing}>
-                {t("field.form.run")}</button>
-            </Card>
-            </div>)}
         </>
       )}
 
-      {rotsView && <RotationResults rots={rotsView} diag={diag}
+      </>}
+      </div>
+
+      <div hidden={tab !== "recommendations"}>
+        {reading && <p role="status">{t("field.diagnosing")}</p>}
+        {!diag && !reading && diagnosisProblem && <p role="status">
+          {t("field.diagnosis." + diagnosisProblem)}{" "}
+          <button type="button" onClick={() => setRetry((n) => n + 1)}>{t("field.diagnosis.retry")}</button>
+        </p>}
+        {target?.nearby && <p className="notice">
+          {t("recs.nearby")}{" "}
+          {t(nearbyUse === "urban" ? "recs.nearbyUrban"
+            : nearbyUse === "unavailable" ? "recs.nearbyUnavailable"
+            : nearbyUse === undefined ? "recs.nearbyChecking"
+            : recommendationData?.land_cover === "crop" ? "recs.nearbyCrop" : "recs.nearbyUnknown")}
+        </p>}
+        {sections && sections.length > 0 && <label className="rec-area">
+          {t("recs.area")}
+          <select value={areaIndex} onChange={(e) => {
+            comparisonRequests.current.latest++;
+            setRots(null); setExplain({}); setComparing(false); setCompareFailed(false);
+            setAreaIndex(Number(e.target.value));
+          }}>
+            {sections.map((part, i) => <option key={i} value={i}>
+              {part.name || t("recs.sector", { n: i + 1 })}
+              {" · "}{fmtHa(multiHa(part.geom))} ha
+            </option>)}
+          </select>
+          {autoPartition && <small className="muted">{t("recs.sectorNote")}</small>}
+        </label>}
+        {(sectionReading || (autoPartition && sections == null && !!diag)) &&
+          <p role="status">{t("recs.areaLoading")}</p>}
+        {section && sectionResult?.geom === section.geom && !sectionResult.data &&
+          <p role="status">{t("field.diagnosis.failed")}{" "}
+            <button onClick={() => { setSectionResult(null); setSectionRetry((n) => n + 1); }}>
+              {t("field.diagnosis.retry")}
+            </button>
+          </p>}
+        {zoneDetectionFailed && <p role="status">{t("recs.noSectors")}</p>}
+        {recommendationData && (!target?.nearby || nearbyUse === "checked") &&
+          !zoneDetectionFailed && (!autoPartition || sections != null) &&
+          <CropRecommendations key={JSON.stringify(section?.geom ?? body)}
+            diagnosis={recommendationData} crops={catalog?.crops ?? []} declared={declaredCrop}
+            observation={currentImage}
+            priorities={prioSel} resources={cons} onPriority={togglePrio} onResources={setCons} />}
+        {catalogFailed && <p role="status">{t("field.form.catalogFailed")}{" "}
+          <button onClick={() => setCatalogRetry((n) => n + 1)}>{t("field.diagnosis.retry")}</button>
+        </p>}
+        {recommendationData && (!target?.nearby || nearbyUse === "checked") && !lot && recommendationData.coverage?.comparable !== false &&
+          !zoneDetectionFailed && (!autoPartition || sections != null) && <details className="card rec-filters">
+          <summary>{t("field.form.plan")}</summary>
+          <p className="muted">{t("field.form.rotationReference")}</p>
+          {comparing && <p role="status">{t("field.form.comparing")}</p>}
+          {compareFailed && <p role="status">{t("field.form.failed")}</p>}
+          <button className="primary" onClick={runRotations} disabled={(!section && reading) || comparing}>
+            {t("field.form.run")}
+          </button>
+        </details>}
+      {rotsView && (!target?.nearby || nearbyUse === "checked") && <RotationResults rots={rotsView} diag={recommendationData}
                                 explain={explain} t={t}
-                                reference={refRun}
+                                reference
                                 explainMode={explainMode ?? undefined}
                                 onMethods={onMethods} />}
       {!rots && diag && <p className="notice">{t("rot.disclaimer")}</p>}
-        </>
-      )}
-            <SourcesBlock res={pres.res} t={t} />
-            </>
-          )}
-          </div>
-        </>
-      )}
-    </BottomSheet>
+      </div>
+    </div>
   );
 }
 

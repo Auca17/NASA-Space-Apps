@@ -10,6 +10,8 @@ from collections import defaultdict
 import h3
 import httpx
 from shapely.geometry import LinearRing, Polygon, MultiPolygon
+from shapely.ops import unary_union
+from shapely.validation import make_valid
 from fastapi import APIRouter, Request
 from fastapi.responses import JSONResponse
 
@@ -17,7 +19,10 @@ from ..cache import utc_today
 from ..h3util import h3_r5, h3_r6
 from ..services import field_sources as src
 from ..services.geodesy import ring_area_ha
-from ..services.field_geometry import cell_weights, sample_locations, weather_locations
+from ..services.field_geometry import (
+    area_ha as merged_area_ha, block_samples, cell_weights,
+    sample_locations, split_blocks,
+    weather_locations)
 from ..services.field_moisture import moisture_zones
 from ..services.crop_map import crop_zones, detect_crop
 from ..services import current_crop as now_crop
@@ -38,6 +43,9 @@ router = APIRouter()
 TIMEOUT = httpx.Timeout(6.0)
 DIAG_BUDGET = 8.0  # total wall-time for the whole diagnosis (task 23)
 MIN_HA, MAX_HA = 0.5, 5_000.0
+# drawn fields may be larger: they are analysed in internal blocks of at
+# most BLOCK_HA so sampling and terrain stay bounded per block
+MAX_ANALYSIS_HA, BLOCK_HA = 50_000.0, 5_000.0
 # total vertices over all rings (freehand pieces + holes)
 MAX_VERTICES = 2_000
 NDVI_BARE = 0.25          # NDVI below this counts as bare soil
@@ -72,6 +80,32 @@ MONTHS_ES = ["ene", "feb", "mar", "abr", "may", "jun",
 def _err(code: str, detail: str):
     return None, JSONResponse(status_code=400,
                               content={"error": code, "detail": detail})
+
+
+def _touches_only(ring) -> bool:
+    """A ring that only touches itself at vertices (outlines traced from
+    map cells can pinch at a corner) keeps its area once made valid; a
+    crossing ring (bow-tie) does not."""
+    raw = Polygon(ring)
+    fixed = make_valid(raw)
+    shoelace = abs(sum(a[0] * b[1] - b[0] * a[1]
+                       for a, b in zip(ring, ring[1:] + ring[:1]))) / 2
+    return fixed.area > 0 and abs(fixed.area - shoelace) <= 1e-9 + 1e-6 * shoelace
+
+
+def _polygon(rings):
+    """Polygon from [outer, holes...]; pinched rings are made valid.
+    None when the rings do not form a polygon."""
+    poly = Polygon(rings[0], rings[1:])
+    if poly.is_valid:
+        return poly
+    fixed = make_valid(poly)
+    parts = [g for g in getattr(fixed, "geoms", [fixed])
+             if g.geom_type in ("Polygon", "MultiPolygon") and g.area > 0]
+    if not parts:
+        return None
+    fixed = unary_union(parts)
+    return fixed if abs(fixed.area - poly.area) <= 1e-6 * max(poly.area, 1e-12) else None
 
 
 def parse_plot(body: dict):
@@ -144,7 +178,7 @@ def parse_plot(body: dict):
                    for i in range(n)):
                 return _err("invalid_polygon",
                             "polygon crosses the antimeridian, not supported")
-            if not LinearRing(ring).is_simple:
+            if not LinearRing(ring).is_simple and not _touches_only(ring):
                 return _err("invalid_polygon", "polygon self-intersects")
             n_vertices += len(ring)
             rings.append(ring)
@@ -156,16 +190,27 @@ def parse_plot(body: dict):
     areas = [max(0.0, ring_area_ha(rs[0]) - sum(ring_area_ha(h)
                                                for h in rs[1:]))
              for rs in polys]
-    geom_parts = [Polygon(rs[0], rs[1:]) for rs in polys]
-    if any(not p.is_valid for p in geom_parts):
+    geom_parts = [_polygon(rs) for rs in polys]
+    if any(p is None for p in geom_parts):
         return _err("invalid_polygon", "polygon has invalid holes or rings")
     area_ha = sum(areas)
-    if not (MIN_HA <= area_ha <= MAX_HA):
+    if not (MIN_HA <= area_ha <= MAX_ANALYSIS_HA):
         return _err("invalid_polygon",
-                    f"area must be between {MIN_HA} and {MAX_HA} ha "
+                    f"area must be between {MIN_HA} and {MAX_ANALYSIS_HA} ha "
                     f"(got {area_ha:.1f})")
     pieces = geom_parts
-    geom = pieces[0] if len(pieces) == 1 else MultiPolygon(pieces)
+    geom = pieces[0] if len(pieces) == 1 else MultiPolygon(
+        [q for part in pieces for q in getattr(part, "geoms", [part])])
+    if not geom.is_valid and len(pieces) > 1:
+        # neighbouring plots sent together share edges: merge them when
+        # they only touch; real overlaps are still rejected
+        merged = unary_union(pieces)
+        # simplified outlines of neighbouring plots may overlap by a thin
+        # sliver; anything larger is a real overlap
+        if sum(p.area for p in pieces) - merged.area > .02 * merged.area:
+            return _err("invalid_polygon", "pieces overlap")
+        geom = merged
+        area_ha = merged_area_ha(geom)  # never count a sliver twice
     if not geom.is_valid or any(p.bounds[2] - p.bounds[0] > 2 or
                                 p.bounds[3] - p.bounds[1] > 2 for p in pieces):
         return _err("invalid_polygon", "crossing rings or unsupported extent")
@@ -1247,6 +1292,30 @@ def build_scenario_cards(power, scenario, args, *, adj, zone,
     return simulated, build_calendar(simulated_power, args[2], burns), baseline
 
 
+async def block_terrain(client, blocks):
+    """Slope and elevation of a large field: each block on its own (two
+    at a time), combined by the area each one covered."""
+    gate = asyncio.Semaphore(2)
+
+    async def one(block):
+        async with gate:
+            p = block.representative_point()
+            return await src.terrain_stats(
+                client, p.y, p.x, h3_r6(p.y, p.x), block)
+    rows = await asyncio.gather(*(one(b) for b in blocks),
+                                return_exceptions=True)
+    got = [(r, b.area) for r, b in zip(rows, blocks) if isinstance(r, dict)]
+    if not got:
+        return None
+    whole = sum(b.area for b in blocks)
+    out = weighted_rows([({k: v for k, v in r.items() if v is not None},
+                          w * (r.get("coverage") or 0)) for r, w in got])
+    out["coverage"] = round(sum((r.get("coverage") or 0) * w
+                                for r, w in got) / whole, 3)
+    return {k: (round(v, 1) if k != "coverage" else v)
+            for k, v in out.items()}
+
+
 async def json_object(request):
     try:
         body = await request.json()
@@ -1295,6 +1364,8 @@ async def diagnose(request: Request):
     if geo["country"] is None:
         return _err("no_land", "plot is not on land (ocean or unmapped area)")[1]
     weights = cell_weights(geom, 5) if geom is not None else {r5c: 1}
+    blocks = (split_blocks(geom, BLOCK_HA)
+              if geom is not None and area_ha > BLOCK_HA else None)
 
     async def shard(parent, path):
         return await src.json_shard(clat, clon, f"{path}/{parent}.json", parent, path)
@@ -1324,7 +1395,8 @@ async def diagnose(request: Request):
             return combined
 
         async def samples():
-            points = sample_locations(geom) or [(clat, clon, 1)]
+            points = ((block_samples(blocks) if blocks else sample_locations(geom))
+                      or [(clat, clon, 1)])
             values = await asyncio.gather(*(
                 src.soilgrids(client, lat, lon, h3.latlng_to_cell(lat, lon, 10))
                 for lat, lon, _ in points), *(
@@ -1340,7 +1412,8 @@ async def diagnose(request: Request):
             return weighted_rows(soils), ndvi
 
         fetches = [asyncio.create_task(awaitable) for awaitable in (
-            weather(), src.terrain_stats(client, clat, clon, r6c, geom),
+            weather(), (block_terrain(client, blocks) if blocks
+                        else src.terrain_stats(client, clat, clon, r6c, geom)),
             samples(), field_shards(weights, "fire/cal", shard),
             field_shards(weights, "field/grid", shard),
             field_shards(weights, "", published_risk),
@@ -1431,6 +1504,8 @@ async def diagnose(request: Request):
          "power_cell_elevation_m": cell_elev_m,
          "temp_adjust_c": temp_adjust,
          "terrain_coverage": (terr or {}).get("coverage"),
+         "land_cover": grid_cell.get("lc"),
+         "analysis_blocks": len(blocks) if blocks else 1,
          "coverage": {"available_cards": available, "total_cards": len(cards),
                       "comparable": comparable, "indicators": sources},
          "h3_r5": r5s, "h3_r6": r6s, "cards": cards, "calendar": calendar,
@@ -1517,6 +1592,60 @@ def field_catalog():
         "rotations": [rot.model_dump() for rot in KNOWLEDGE.rotations],
         "crops": [crop.model_dump() for crop in KNOWLEDGE.crops.values()],
     }
+
+
+@router.post("/api/field/recommendation-zones")
+async def recommendation_zones(request: Request):
+    from shapely.geometry import box, mapping
+    parsed, err = parse_plot(await json_object(request))
+    if err:
+        return err
+    _, ha, _, _, geom = parsed
+    if geom is None or ha < 2:
+        return {"zones": []}
+    west, south, east, north = geom.bounds
+    mid_lon, mid_lat = (east + west) / 2, (north + south) / 2
+    quadrants = [
+        box(west, mid_lat, mid_lon, north), box(mid_lon, mid_lat, east, north),
+        box(west, south, mid_lon, mid_lat), box(mid_lon, south, east, mid_lat),
+    ]
+    zones = []
+    for quadrant in quadrants:
+        sector = geom.intersection(quadrant)
+        if sector.geom_type in {"Polygon", "MultiPolygon"} and ha * sector.area / geom.area >= .5:
+            zones.append(mapping(sector))
+    return {"zones": zones if len(zones) >= 2 else []}
+
+
+@router.post("/api/field/recommendations")
+async def recommendations(request: Request):
+    from ..services.rotations import KNOWLEDGE, PRIORITY_MAP, recommend_crops
+
+    body = await json_object(request)
+    if body is None or not isinstance(diag := body.get("diagnosis"), dict):
+        return _err("invalid_input", "expected diagnosis")[1]
+    cards = diag.get("cards")
+    if not isinstance(cards, list) or any(not isinstance(card, dict) for card in cards):
+        return _err("invalid_input", "invalid diagnosis cards")[1]
+    current = body.get("current", "unknown")
+    if (not isinstance(current, str) or
+            (current not in KNOWLEDGE.crops and current not in {
+                "unknown", "fallow", "perennial", "winter_cereal",
+            })):
+        return _err("invalid_input", "invalid current crop")[1]
+    priorities = body.get("priorities", {})
+    if (not isinstance(priorities, dict) or
+            any(k not in PRIORITY_MAP or not isinstance(v, (int, float))
+                or not 0 <= v <= 5 for k, v in priorities.items())):
+        return _err("invalid_input", "invalid priorities")[1]
+    constraints = body.get("constraints", {})
+    if not isinstance(constraints, dict) or any(
+            not isinstance(value, bool) for value in constraints.values()):
+        return _err("invalid_input", "invalid constraints")[1]
+    try:
+        return recommend_crops(diag, current, priorities, constraints)
+    except (ValueError, TypeError, OverflowError):
+        return _err("invalid_input", "invalid diagnosis values")[1]
 
 
 @router.post("/api/field/rotations")

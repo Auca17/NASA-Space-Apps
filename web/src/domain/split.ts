@@ -315,3 +315,149 @@ export function clipZone(zone: Multi, field: Multi,
   if (!geom.length) return null;
   return { geom, ha: geom.reduce((a, p) => a + polyHa(p), 0) };
 }
+
+/* -------------------------------------------------- plot detection --- */
+
+/** Smallest piece of land still worth showing as «Límite por revisar». */
+const REVIEW_MIN_HA = 0.5;
+
+/** "crop": zones from the automatic split by crop (this season's
+ * Sentinel-2, or INTA's crop map when that is not possible). */
+export type ParcelSource = "ftw" | "osm" | "manual" | "crop";
+export type DetectedParcel = Piece & { source: ParcelSource };
+export type Detection = {
+  /** plot boundaries backed by a source, inside the outline */
+  parcels: DetectedParcel[];
+  /** usable land no source delimits: «Límite por revisar» */
+  review: Piece[];
+  /** roads and built-up land left out */
+  excluded: Poly[];
+  totalHa: number; parcelHa: number; reviewHa: number; excludedHa: number;
+};
+
+/** Even-odd fill of one polygon limited to its own rows and columns,
+ * calling `hit` for every grid cell inside it. */
+function scanPoly(g: Grid, poly: Poly, hit: (c: number) => void) {
+  const P = poly.map((r) => r.map((p) => xy(g, p)));
+  const ys = P[0].map((p) => p[1]);
+  const j0 = Math.max(0, Math.floor((Math.min(...ys) - g.y0) / g.s));
+  const j1 = Math.min(g.ny - 1, Math.ceil((Math.max(...ys) - g.y0) / g.s));
+  for (let j = j0; j <= j1; j++) {
+    const y = g.y0 + (j + 0.5) * g.s;
+    const xs: number[] = [];
+    for (const r of P) {
+      for (let i = 0, n = r.length; i < n; i++) {
+        const [ax, ay] = r[i], [bx, by] = r[(i + 1) % n];
+        if ((ay > y) !== (by > y)) xs.push(ax + ((y - ay) * (bx - ax)) / (by - ay));
+      }
+    }
+    xs.sort((a, b) => a - b);
+    for (let q = 0; q + 1 < xs.length; q += 2) {
+      const i0 = Math.max(0, Math.ceil((xs[q] - g.x0) / g.s - 0.5));
+      const i1 = Math.min(g.nx - 1, Math.floor((xs[q + 1] - g.x0) / g.s - 0.5));
+      for (let i = i0; i <= i1; i++) hit(j * g.nx + i);
+    }
+  }
+}
+
+/** 4-connected components of cells sharing the same non-zero label. */
+function labelComponents(g: Grid, label: Int32Array): { k: number; cells: number[] }[] {
+  const seen = new Uint8Array(label.length);
+  const out: { k: number; cells: number[] }[] = [];
+  for (let c = 0; c < label.length; c++) {
+    const k = label[c];
+    if (!k || seen[c]) continue;
+    const cells: number[] = [];
+    const stack = [c]; seen[c] = 1;
+    while (stack.length) {
+      const v = stack.pop()!;
+      cells.push(v);
+      const i = v % g.nx, j = (v - i) / g.nx;
+      const nb = [i > 0 ? v - 1 : -1, i < g.nx - 1 ? v + 1 : -1,
+                  j > 0 ? v - g.nx : -1, j < g.ny - 1 ? v + g.nx : -1];
+      for (const u of nb) {
+        if (u >= 0 && !seen[u] && label[u] === k) { seen[u] = 1; stack.push(u); }
+      }
+    }
+    out.push({ k, cells });
+  }
+  return out;
+}
+
+/** Plots inside a field outline. Agricultural boundaries (Fields of The
+ * World polygons) delimit plots; OpenStreetMap roads and built-up land
+ * are cut out. Where no boundary covers the land it stays «Límite por
+ * revisar» — no grid, size cut or moisture split is ever turned into a
+ * plot. Plots never cross the outline, never overlap (the first boundary
+ * that claims a cell keeps it) and keep the outline's holes. */
+export function detectParcels(contour: Multi, data: {
+    /** agricultural boundaries; one entry per boundary, which may come
+     * in several pieces (map tiles cut polygons at their edges) */
+    fields: Multi[]; roads: Road[]; landuse: Landuse[];
+    /** plots the producer already drew: left as they are */
+    taken?: Multi[] },
+    minHa = 0.5): Detection {
+  const g = makeGrid(contour.flat(), 500_000, 5);
+  const inside = fillUnion(g, contour);
+  const taken = fillUnion(g, (data.taken ?? []).flat());
+  for (let c = 0; c < inside.length; c++) if (taken[c]) inside[c] = 0;
+  const urban = fillUnion(g, data.landuse
+    .filter((l) => URBAN_CLASSES.has(l.cls)).flatMap((l) => l.rings)
+    .map((r) => [r]));
+  const roads = burn(g, data.roads);
+  const label = new Int32Array(inside.length);
+  const excl = new Uint8Array(inside.length);
+  let total = 0;
+  for (let c = 0; c < inside.length; c++) {
+    if (!inside[c]) continue;
+    total++;
+    if (urban[c] || roads[c]) excl[c] = 1;
+  }
+  // first boundary that claims a usable cell keeps it
+  data.fields.forEach((multi, idx) => {
+    for (const poly of multi) {
+      if (!poly.length || poly[0].length < 3) continue;
+      scanPoly(g, poly, (c) => {
+        if (inside[c] && !excl[c] && (!label[c] || label[c] === idx + 1)) {
+          label[c] = idx + 1;
+        }
+      });
+    }
+  });
+  const REVIEW = -1;
+  for (let c = 0; c < inside.length; c++) {
+    if (inside[c] && !excl[c] && !label[c]) label[c] = REVIEW;
+  }
+  const ch = cellHa(g);
+  const parcels: DetectedParcel[] = [];
+  const review: Piece[] = [];
+  for (const { k, cells } of labelComponents(g, label)) {
+    const geom = outline(g, cells);
+    const piece = { geom, ha: polyHa(geom) };
+    // boundary pieces below minHa (slivers along the outline) and land
+    // no boundary covers are both left to review, never dropped
+    if (k !== REVIEW && cells.length * ch >= minHa) {
+      parcels.push({ ...piece, source: "ftw" });
+    } else if (cells.length * ch >= REVIEW_MIN_HA) {
+      review.push(piece);
+    }
+  }
+  // «Parcela 1, 2…» read north to south, then west to east
+  const key = (p: Piece) => {
+    const r = p.geom[0];
+    const la = r.reduce((a, q) => a + q[0], 0) / r.length;
+    const lo = r.reduce((a, q) => a + q[1], 0) / r.length;
+    return [-Math.round(la * 200), lo] as const;
+  };
+  parcels.sort((a, b) => key(a)[0] - key(b)[0] || key(a)[1] - key(b)[1]);
+  const excluded = components(g, excl)
+    .filter((c) => c.length * ch >= 0.05).map((c) => outline(g, c));
+  let exclC = 0;
+  for (let c = 0; c < excl.length; c++) exclC += excl[c];
+  return {
+    parcels, review, excluded, totalHa: total * ch,
+    parcelHa: parcels.reduce((a, p) => a + p.ha, 0),
+    reviewHa: review.reduce((a, p) => a + p.ha, 0),
+    excludedHa: exclC * ch,
+  };
+}

@@ -83,6 +83,51 @@ body:has(.app) { background: #0f110e; }
   border-radius: 18px; padding: 6px 8px 6px 12px; gap: 10px;
 }
 .app .map-wrap { flex: 1; }
+.app.analysis-screen {
+  display: grid;
+  grid-template-columns: minmax(260px, 37%) minmax(0, 1fr);
+  grid-template-rows: auto minmax(0, 1fr);
+}
+.app.analysis-screen > .topbar {
+  position: relative; inset: auto; grid-column: 1 / -1; margin: 8px 10px;
+}
+.app.analysis-screen > .map-wrap {
+  min-width: 0; background: #10150f; border-right: 1px solid var(--border);
+}
+.app.analysis-screen .maplibregl-ctrl-attrib { color: var(--fg); }
+.field-analysis-results {
+  min-width: 0; overflow-y: auto; padding: 0 clamp(14px, 4vw, 54px) 36px;
+  background: var(--bg);
+}
+.field-analysis-results > :not([hidden]) { margin-bottom: 14px; }
+.analysis-header {
+  position: sticky; top: 0; z-index: 5; padding: 12px 0;
+  background: var(--bg); border-bottom: 1px solid var(--border);
+}
+.analysis-actions, .field-entry-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.app .analysis-actions button[aria-pressed="true"] {
+  background: var(--accent); color: var(--accent-fg);
+}
+.analysis-actions button:last-child { margin-left: auto; }
+.rec-list { list-style: none; padding: 0; display: grid; gap: 10px; }
+.rec-heading { display: flex; flex-wrap: wrap; gap: 8px; justify-content: space-between; }
+.rec-heading h4, .rec-heading strong { margin: 0; }
+.rec-affinity { color: var(--good); }
+.rec-conditional { color: var(--warn); }
+.crop-recs h2 { margin-top: 14px; }
+.rec-filters[open] > summary { margin-bottom: 12px; }
+.rec-area { display: grid; gap: 6px; margin: 10px 0; }
+.rec-area select, .rec-filters select { max-width: 100%; width: 100%; }
+.field-entry-actions details > summary { cursor: pointer; padding: 10px 0; font-weight: 650; }
+.field-entry-actions > p { flex-basis: 100%; margin: 0; }
+@media (max-width: 760px) {
+  .app.analysis-screen {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto clamp(150px, 28dvh, 230px) minmax(0, 1fr);
+  }
+  .app.analysis-screen > .map-wrap { border-right: 0; }
+  .analysis-actions button:last-child { margin-left: 0; }
+}
 .app .topbar h1 { font-weight: 650; letter-spacing: -0.01em; }
 .app .topbar-home { border-radius: var(--radius-ctl);
   color: inherit; transition: background-color 160ms var(--ease-out); }

@@ -47,7 +47,7 @@ import re
 import statistics
 from pathlib import Path
 
-from .knowledge import KNOWLEDGE, Crop, Rotation, SeqItem
+from .knowledge import KNOWLEDGE, LEVEL, Crop, Rotation, SeqItem
 from .measures import evaluate as eval_measures, uncovered_burn_months
 
 log = logging.getLogger("rotations")
@@ -962,6 +962,138 @@ def run(diagnosis: dict, current: dict | None, priorities: dict,
         # shown in the front empty state, nothing is computed
         out["zone_references"] = refs
     return out
+
+
+def _calendar_date(year, month_day):
+    from datetime import date
+    return date.fromisoformat(f"{year}-{month_day}")
+
+
+def _next_sowing(earliest, start, end):
+    from datetime import timedelta
+    for year in range(earliest.year - 1, earliest.year + 2):
+        opening = _calendar_date(year, start)
+        closing = _calendar_date(year + (end < start), end)
+        if closing >= earliest and opening <= earliest + timedelta(days=365):
+            return max(opening, earliest), closing
+    return None
+
+
+def recommend_crops(diagnosis, current, priorities, constraints, *, today=None):
+    """Individual crop affinity, using the same windows and viability as rotations."""
+    from datetime import date, timedelta
+
+    zone = diagnosis.get("zone")
+    today = today or date.today()
+    empty = {"available_from": None, "options": []}
+    if current == "perennial":
+        return {**empty, "status": "perennial"}
+    if not isinstance(zone, str) or zone not in ZONE_CROPS:
+        return {**empty, "status": "no_catalog"}
+    ff = _frost_free_doys(diagnosis)
+    daily = _daily_rain_mm(diagnosis)
+    heat = (_card(diagnosis, "heat") or {}).get("value")
+    if daily is None and ff is None and not isinstance(heat, (int, float)):
+        return {**empty, "status": "missing_climate"}
+
+    previous_ids = ("trigo", "cebada") if current == "winter_cereal" else (current,)
+    previous = [KNOWLEDGE.crops[crop_id] for crop_id in previous_ids if crop_id in KNOWLEDGE.crops]
+    harvests = []
+    for crop in previous:
+        window = crop.window(zone)
+        if window is None:
+            return {**empty, "status": "missing_harvest"}
+        sow_start, _, harvest_end = window
+        if current == "winter_cereal":
+            # A recently harvested cereal can still leave the same seasonal signal.
+            sow_year = today.year - (today < _calendar_date(today.year, sow_start))
+            harvest = _calendar_date(sow_year + (harvest_end < sow_start), harvest_end)
+        else:
+            harvest = _calendar_date(today.year, harvest_end)
+            if harvest < today:
+                harvest = _calendar_date(today.year + 1, harvest_end)
+        harvests.append(harvest)
+    earliest = max(today, max(harvests) + timedelta(days=1)) if harvests else today
+    result = []
+    slope = (_card(diagnosis, "slope") or {}).get("value")
+    heavy_rain = (_card(diagnosis, "heavy_rain") or {}).get("value")
+    burns = _burn_months(diagnosis)
+    for crop in KNOWLEDGE.crops.values():
+        window = crop.window(zone)
+        if not window or not (sowing := _next_sowing(earliest, *window[:2])):
+            continue
+        start, end = sowing
+        cycle_end = crop.cycle_end_for(zone) or window[2]
+        start_day = start.strftime("%m-%d").replace("02-29", "02-28")
+        cycle = set(range(365)) if crop.water_period == "year" else _cycle_doys(start_day, cycle_end)
+        rain = sum(daily[d] for d in cycle) if daily is not None else None
+        item = SeqItem(crop=crop.id, start=start_day, end=window[2])
+        reasons = crop_viable(crop, diagnosis, constraints, zone, ff, item, rain)
+        needs_irrigation = rain is not None and crop.water_mm_cycle > rain * IRRIGATION_MARGIN
+        if ((constraints.get("irrigation") is False and needs_irrigation)
+                or (constraints.get("livestock") is False and crop.forage)
+                or (constraints.get("limited_market") is True and crop.market_ar == "low")):
+            continue
+
+        fit = [1.0]
+        if rain is not None:
+            fit.append(1 if constraints.get("irrigation") is True
+                       else min(1, rain / max(crop.water_mm_cycle, 1)))
+        if ff is not None:
+            fit.append(1 if crop.frost_tolerance == "high"
+                       else len(cycle & ff) / len(cycle))
+        if isinstance(heat, (int, float)) and crop.heat_tolerance != "high":
+            fit.append(1 - min(.4, heat / 100))
+        different_family = bool(previous) and all(prior.family != crop.family for prior in previous)
+        if previous:
+            fit.append(1 if different_family else .65)
+        residue = min(1, crop.residue_t_ha / 6)
+        erosion = ((365 - len(cycle)) * slope * heavy_rain / 100
+                   if isinstance(slope, (int, float)) and
+                   isinstance(heavy_rain, (int, float)) else None)
+        if erosion is not None:
+            fit.append(1 / (1 + max(0, erosion) / EROSION_HIGH))
+        match = {
+            "water": min(1, (rain or 0) / max(crop.water_mm_cycle, 1)) if rain is not None else None,
+            "soil": residue, "nitrogen": float(crop.n_fixation), "forage": float(crop.forage),
+            "erosion": 1 / (1 + max(0, erosion) / EROSION_HIGH) if erosion is not None else None,
+            "income": LEVEL[crop.market_ar] / 3,
+            "pests": float(different_family) if previous else None,
+            "avoid_burning": (len(burns & {_doy_month(d) + 1 for d in cycle}) / len(burns)
+                              if burns else None),
+        }
+        weighted = [(v, priorities[k]) for k, v in match.items()
+                    if v is not None and priorities.get(k, 0) > 0]
+        affinity = statistics.fmean(fit)
+        if weighted:
+            affinity = .75 * affinity + .25 * (
+                sum(v * w for v, w in weighted) / sum(w for _, w in weighted))
+        if reasons:
+            affinity = min(.59, affinity * .7)
+        fits_frost = (crop.frost_tolerance == "high" or
+                      len(cycle - ff) <= FROST_GRACE_DAYS) if ff is not None else None
+        conditions = []
+        if needs_irrigation:
+            conditions.append("water")
+        if fits_frost is False:
+            conditions.append("frost")
+        if rain is None and crop.water_mm_cycle >= 500 and constraints.get("irrigation") is not True:
+            conditions.append("rain_missing")
+        result.append({"id": crop.id, "name": crop.name, "score": round(affinity, 3),
+                       "sow_from": start.isoformat(), "sow_until": end.isoformat(),
+                       "water_demand_mm": crop.water_mm_cycle,
+                       "rain_period": crop.water_period,
+                       "rain_mm": round(rain) if rain is not None else None,
+                       "needs_irrigation": needs_irrigation,
+                       "fits_frost": fits_frost,
+                       "erosion": erosion, "different_family": different_family,
+                       "same_family": bool(previous and not different_family),
+                       "conditional": bool(conditions), "conditions": conditions,
+                       "source": crop.sources[0]})
+    result.sort(key=lambda item: (item["conditional"], -item["score"],
+                                  item["sow_from"], item["id"]))
+    return {"status": "ok", "available_from": earliest.isoformat() if harvests else None,
+            "options": result}
 
 
 def explain(rotations_response: dict) -> dict:

@@ -25,8 +25,12 @@ export type LandUseRead = { landuse: Landuse[]; buildings: LatLon[];
 
 /** Shapes drawn over the map during selection review and in Mis campos. */
 export type ShapeKind = "piece-on" | "piece-off" | "excluded" | "original"
-  | "field" | "zone" | "moisture" | "moisture-selected" | "moisture-missing";
-export type Shape = { geom: Poly; kind: ShapeKind; color?: string };
+  | "field" | "zone" | "moisture" | "moisture-selected" | "moisture-missing" | "analysis-mask"
+  | "contour" | "parcel" | "parcel-selected" | "parcel-off" | "review";
+/** `label`: text drawn on the shape (plot names). */
+export type Shape = { geom: Poly; kind: ShapeKind; color?: string;
+                      label?: string };
+
 
 export function hexGeoJSON(cells: Map<string, number>): GeoJSON.FeatureCollection {
   const feats: GeoJSON.Feature[] = [];
@@ -61,7 +65,7 @@ export interface GlobeHandle {
   fitRing(ring: [number, number][], bottomPx?: number): void;
   /** OpenStreetMap land use + buildings from the vector tiles in view;
    * null when the tiles could not be read in time. */
-  readLandUse(timeoutMs?: number): Promise<LandUseRead | null>;
+  readLandUse(timeoutMs?: number, minZoom?: number): Promise<LandUseRead | null>;
   /** Replace the review/field shapes; [] clears them. */
   setShapes(shapes: Shape[]): void;
   setFieldBasemap(active: boolean, satellite: boolean, guide: boolean): void;
@@ -121,9 +125,25 @@ export function useGlobe(
     let fieldSatellite = true;
     let guideEnabled = false;
     let ready = false;
+    let pendingShapes: Shape[] = [];
     let protocol: Protocol | undefined;
     const shapesFill = makeFillOverlay("shapes-fill");
     const draftFill = makeFillOverlay("draft-fill");
+    /** Fields of The World source for the optional dashed visual guide
+     * (plot detection reads the archive directly, see domain/ftw.ts). */
+    const ensureGuide = () => {
+      if (map.getSource("field-guide")) return;
+      protocol = new Protocol();
+      maplibregl.addProtocol("pmtiles", protocol.tile);
+      map.addSource("field-guide", FIELD_GUIDE_SOURCE);
+      map.addLayer({
+        id: "field-guide-line", type: "line", source: "field-guide",
+        "source-layer": "fields", minzoom: 13,
+        layout: { visibility: "none" },
+        paint: { "line-color": "#43edd5", "line-width": 2,
+          "line-opacity": 0.9, "line-dasharray": [2, 1] },
+      }, "shapes-fill");
+    };
     const updateFieldBasemap = () => {
       if (!ready) return;
       if (map.getLayer("field-overview")) {
@@ -134,17 +154,7 @@ export function useGlobe(
         if (map.getLayer(layer)) map.setLayoutProperty(layer, "visibility", visibility);
       }
       const showGuide = fieldActive && guideEnabled;
-      if (showGuide && !map.getSource("field-guide")) {
-        protocol = new Protocol();
-        maplibregl.addProtocol("pmtiles", protocol.tile);
-        map.addSource("field-guide", FIELD_GUIDE_SOURCE);
-        map.addLayer({
-          id: "field-guide-line", type: "line", source: "field-guide",
-          "source-layer": "fields", minzoom: 13,
-          paint: { "line-color": "#43edd5", "line-width": 2,
-            "line-opacity": 0.9, "line-dasharray": [2, 1] },
-        }, "shapes-fill");
-      }
+      if (showGuide) ensureGuide();
       if (map.getLayer("field-guide-line")) {
         map.setLayoutProperty("field-guide-line", "visibility", showGuide ? "visible" : "none");
       }
@@ -231,6 +241,12 @@ export function useGlobe(
         paint: { "fill-pattern": "unobserved-hatch" } });
       map.addLayer({ id: "shapes-line", type: "line", source: "shapes",
         paint: { "line-color": ["get", "line"], "line-width": ["get", "w"] } });
+      map.addLayer({ id: "shapes-label", type: "symbol", source: "shapes",
+        filter: ["has", "label"],
+        layout: { "text-field": ["get", "label"], "text-size": 13,
+                  "text-font": ["Noto Sans Bold"], "text-allow-overlap": false },
+        paint: { "text-color": "#ffffff", "text-halo-color": "#0a0d0b",
+                 "text-halo-width": 1.6 } });
       map.addSource("draft", { type: "geojson",
         data: { type: "FeatureCollection", features: [] } });
       map.addLayer(draftFill);
@@ -249,6 +265,7 @@ export function useGlobe(
       });
       ready = true;
       updateFieldBasemap();
+      handleRef.current?.setShapes(pendingShapes);
     });
 
     // Task 30 — tile health: raster sources die quietly on rural 4G.
@@ -410,13 +427,14 @@ export function useGlobe(
       },
       fitRing(ring, bottomPx = 0) {
         if (ring.length < 2) return;
+        map.resize();
         const la = ring.map((p) => p[0]), lo = ring.map((p) => p[1]);
         map.fitBounds([[Math.min(...lo), Math.min(...la)],
                        [Math.max(...lo), Math.max(...la)]],
           { padding: { top: 60, left: 40, right: 40, bottom: 40 + bottomPx },
             maxZoom: 16, duration: reduce ? 0 : 800 });
       },
-      async readLandUse(timeoutMs = 8000) {
+      async readLandUse(timeoutMs = 8000, minZoom = 13) {
         const t0 = Date.now();
         // wait until the camera settled and the landuse tiles loaded
         while (Date.now() - t0 < timeoutMs) {
@@ -425,7 +443,7 @@ export function useGlobe(
           await new Promise((r) => setTimeout(r, 200));
         }
         if (!map.getSource("omt") || !map.isSourceLoaded("omt") ||
-            map.getZoom() < 13) return null;
+            map.getZoom() < minZoom) return null;
         const toRings = (g: GeoJSON.Geometry): LatLon[][] =>
           g.type === "Polygon"
             ? [g.coordinates[0].map(([x, y]) => [y, x] as LatLon)]
@@ -458,6 +476,8 @@ export function useGlobe(
         } catch { return null; }
       },
       setShapes(shapes) {
+        pendingShapes = shapes;
+        if (!ready) return;
         const st: Record<ShapeKind, { fill: string; op: number;
                                        line: string; w: number }> = {
           "piece-on": { fill: "#2e7d32", op: 0.35, line: "#1b5e20", w: 2 },
@@ -469,6 +489,12 @@ export function useGlobe(
           moisture: { fill: "#8eaa62", op: 0.55, line: "#faf4e8", w: 0.5 },
           "moisture-selected": { fill: "#8eaa62", op: 0.75, line: "#fff", w: 2.5 },
           "moisture-missing": { fill: "#8c9297", op: 0.25, line: "#e1e5e7", w: 0.6 },
+          "analysis-mask": { fill: "#10150f", op: 1, line: "#10150f", w: 0 },
+          contour: { fill: "#000000", op: 0, line: "#ffffff", w: 2.5 },
+          parcel: { fill: "#43edd5", op: 0.18, line: "#f4fffd", w: 2 },
+          "parcel-selected": { fill: "#ffd54f", op: 0.35, line: "#ffd54f", w: 3.5 },
+          "parcel-off": { fill: "#9e9e9e", op: 0.12, line: "#bdbdbd", w: 1 },
+          review: { fill: "#ff9800", op: 0.22, line: "#ffb74d", w: 1.2 },
         };
         const src = map.getSource("shapes") as maplibregl.GeoJSONSource | undefined;
         const good = shapes.filter(
@@ -476,7 +502,8 @@ export function useGlobe(
         src?.setData({ type: "FeatureCollection", features: good
           .map((sh) => ({ type: "Feature",
             properties: { ...st[sh.kind], kind: sh.kind,
-                          ...(sh.color ? { fill: sh.color } : {}) },
+                          ...(sh.color ? { fill: sh.color } : {}),
+                          ...(sh.label ? { label: sh.label } : {}) },
             // outer ring + holes, each closed, [lon, lat]
             geometry: { type: "Polygon", coordinates: sh.geom
               .filter((ring) => ring.length >= 3)

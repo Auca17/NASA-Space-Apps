@@ -101,6 +101,7 @@ export interface DiagnoseResponse {
   cards: Card[];
   coverage?: { available_cards: number; total_cards: number; comparable: boolean };
   terrain_coverage?: number | null;
+  land_cover?: string | null;
   calendar: { months: string[]; rows: CalendarRow[] };
   baseline?: Pick<DiagnoseResponse, "cards" | "calendar">;
   measures?: Measure[];
@@ -225,6 +226,19 @@ export interface RotationEntry {
 export interface CropEntry {
   id: string;
   name: { es?: string; en?: string };
+}
+
+export interface CropRecommendations {
+  status: "ok" | "missing_climate" | "missing_harvest" | "perennial" | "no_catalog";
+  available_from: string | null;
+  options: {
+    id: string; name: CropEntry["name"]; score: number; conditional: boolean;
+    conditions?: ("water" | "frost" | "rain_missing")[];
+    sow_from: string; sow_until: string;
+    water_demand_mm: number; rain_mm: number | null; rain_period?: "cycle" | "year";
+    needs_irrigation: boolean;
+    fits_frost: boolean | null; different_family: boolean; same_family: boolean;
+  }[];
 }
 
 /** A documented incident shown next to the prevention measures

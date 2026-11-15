@@ -96,3 +96,72 @@ describe("analysisOptions", () => {
     expect(analysisOptions(loadFields()[0]).map((o) => o.kind)).toEqual(["all"]);
   });
 });
+
+describe("detected parcels in a single field", () => {
+  const big: Multi = [[squareRing(-33.96, -60.69, 5500)]];   // ~12,100 ha
+  const a: Multi = [[squareRing(-33.95, -60.70, 1000)]];
+  const b: Multi = [[squareRing(-33.97, -60.68, 1000)]];
+
+  it("saves a field above 5,000 ha under one name", () => {
+    saveField({ name: "Estancia grande", geom: big });
+    const [f] = loadFields();
+    expect(f.name).toBe("Estancia grande");
+    expect(fieldHa(f)).toBeGreaterThan(12_000);
+  });
+
+  it("accepts a detection: plots, review area and where it came from", async () => {
+    const { acceptDetection } = await import("./fields");
+    const f = saveField({ name: "Campo", geom: big });
+    addZone(f.id, { name: "Mía", crop: "trigo", geom: [[squareRing(-33.99, -60.69, 300)]] });
+    acceptDetection(f.id, [
+      { name: "Parcela 1", geom: a, source: "ftw" },
+      { name: "Parcela 2", geom: b, source: "ftw" }],
+      [[squareRing(-33.93, -60.66, 400)]],
+      { at: "2026-11-15", sources: ["ftw", "osm"], parcelHa: 800, reviewHa: 64 });
+    const g = loadFields()[0];
+    expect(g.zones.map((z) => `${z.name}:${z.source ?? "manual"}`))
+      .toEqual(["Mía:manual", "Parcela 1:ftw", "Parcela 2:ftw"]);
+    expect(g.review).toHaveLength(1);
+    expect(g.detection?.sources).toEqual(["ftw", "osm"]);
+    // a new detection replaces detected plots, never the hand-drawn ones
+    acceptDetection(f.id, [{ name: "Parcela 1", geom: b, source: "ftw" }], [],
+                    { at: "2026-11-16", sources: ["ftw"], parcelHa: 400, reviewHa: 0 });
+    expect(loadFields()[0].zones.map((z) => z.name)).toEqual(["Mía", "Parcela 1"]);
+  });
+
+  it("discarding a plot sends its land to «Límite por revisar»", async () => {
+    const { acceptDetection, discardParcel } = await import("./fields");
+    const f = saveField({ name: "Campo", geom: big });
+    acceptDetection(f.id, [{ name: "Parcela 1", geom: a, source: "ftw" }], [],
+                    { at: "x", sources: ["ftw"], parcelHa: 400, reviewHa: 0 });
+    const z = loadFields()[0].zones[0];
+    discardParcel(f.id, z.id);
+    const g = loadFields()[0];
+    expect(g.zones).toEqual([]);
+    expect(g.review).toEqual(a);
+  });
+
+  it("corrected borders replace the plot and leave the rest for review", async () => {
+    const { acceptDetection, replaceParcel } = await import("./fields");
+    const f = saveField({ name: "Campo", geom: big });
+    acceptDetection(f.id, [{ name: "Parcela 1", geom: a, source: "ftw" }], [],
+                    { at: "x", sources: ["ftw"], parcelHa: 400, reviewHa: 0 });
+    const z = loadFields()[0].zones[0];
+    const smaller: Multi = [[squareRing(-33.95, -60.70, 500)]];
+    replaceParcel(f.id, z.id, smaller, [[squareRing(-33.95, -60.71, 200)]]);
+    const g = loadFields()[0];
+    expect(g.zones[0].geom).toEqual(smaller);
+    expect(g.zones[0].source).toBe("manual");
+    expect(g.zones[0].name).toBe("Parcela 1");
+    expect(g.review).toHaveLength(1);
+  });
+
+  it("opens fields saved before plots existed (no review, no detection)", () => {
+    localStorage.setItem("fs_fields_v1", JSON.stringify([{ id: "v1",
+      name: "Viejo", geom: one, zones: [{ id: "z", name: "Norte", crop: "maíz",
+      geom: one }], createdAt: "" }]));
+    const [f] = loadFields();
+    expect(f.review ?? []).toEqual([]);
+    expect(f.zones[0].source ?? "manual").toBe("manual");
+  });
+});

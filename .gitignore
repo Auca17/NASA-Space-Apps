@@ -24,3 +24,7 @@ web/screenshots/
 # Staging local para uploads R2 (task 23)
 r2-stage/
 data/siga/
+
+# Impeccable (binario descargable y config local de Claude Code)
+.claude/skills/impeccable/scripts/bin/
+.claude/settings.local.json

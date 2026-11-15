@@ -1,0 +1,147 @@
+import { useEffect, useState } from "react";
+import { apiCropRecommendations } from "../../api";
+import type { CropEntry, CropRecommendations as Result, CurrentCrop, DiagnoseResponse } from "../../api/types";
+import { PRIORITY_IDS, prioWeights } from "../../domain/rotations";
+import { useT } from "../../i18n";
+
+const RESOURCES = ["irrigation", "livestock", "markets"] as const;
+const OBSERVED_CROPS: Partial<Record<string, string>> = {
+  winter_cereal: "winter_cereal", summer_early: "maiz", fallow: "fallow", perennial: "perennial",
+};
+const normalize = (s: string) => s.normalize("NFD").replace(/\p{M}/gu, "").toLowerCase().trim();
+
+export function knownCrop(name: string, catalog: CropEntry[]): string {
+  const key = normalize(name);
+  if (/^(sin[ _]cultivo|barbecho|fallow)$/.test(key)) return "fallow";
+  if (/\b(vid|vinedo|pastura|perenne|olivar|frutal|alfalfa)\b/.test(key)) return "perennial";
+  return catalog.find((c) => [c.id, c.name.es, c.name.en].some((v) =>
+    v && normalize(v) === key))?.id ?? "unknown";
+}
+
+function optionConditions(option: Result["options"][number]) {
+  if (Array.isArray(option.conditions)) return option.conditions;
+  // Older API responses expose the same warnings as individual flags.
+  const conditions: NonNullable<Result["options"][number]["conditions"]> = [];
+  if (option.needs_irrigation && option.rain_mm != null) conditions.push("water");
+  if (option.fits_frost === false) conditions.push("frost");
+  return conditions;
+}
+
+export function CropRecommendations({ diagnosis, crops, declared, observation, priorities, resources,
+  onPriority, onResources }: {
+  diagnosis: DiagnoseResponse; crops: CropEntry[]; declared?: string;
+  observation?: CurrentCrop | null;
+  priorities: string[]; resources: Record<string, boolean>;
+  onPriority: (id: string) => void;
+  onResources: (next: Record<string, boolean>) => void;
+}) {
+  const { t, lang } = useT();
+  const [retry, setRetry] = useState(0);
+  const [result, setResult] = useState<Result | null>();
+  const observedClass = observation?.status === "available"
+    ? observation.zones.find((zone) => zone.share >= .8)?.class.id : undefined;
+  const detectedCrop = observedClass ? OBSERVED_CROPS[observedClass] : undefined;
+  const detecting = !declared && observation === undefined;
+  const current = declared ? knownCrop(declared, crops) : detectedCrop ?? "unknown";
+  useEffect(() => {
+    if (detecting) return;
+    const controller = new AbortController();
+    setResult(undefined);
+    apiCropRecommendations({
+      diagnosis, current, priorities: prioWeights(priorities),
+      constraints: {
+        irrigation: resources.irrigation, livestock: resources.livestock,
+        limited_market: resources.markets === false,
+      },
+    }, controller.signal).then((data) => {
+      if (!controller.signal.aborted) setResult(data);
+    });
+    return () => controller.abort();
+  }, [diagnosis, current, detecting, priorities, resources, retry]);
+
+  const afterCrop = current !== "unknown" && current !== "fallow" && current !== "perennial";
+  const name = crops.find((row) => row.id === current)?.name;
+  const cropName = current === "winter_cereal" ? t("recs.winterCereal")
+    : name?.[lang] ?? name?.es ?? declared ?? (current === "maiz" ? t("recs.maize") : current);
+  const formatDate = (day: string) => new Intl.DateTimeFormat(lang, {
+    dateStyle: "medium", timeZone: "UTC",
+  }).format(new Date(day + "T00:00:00Z"));
+  const formatNumber = new Intl.NumberFormat(lang);
+  const ranked = result?.status === "ok" ? [...result.options]
+    .sort((a, b) => Number(a.conditional) - Number(b.conditional) || b.score - a.score) : [];
+  const renderOption = (row: Result["options"][number]) => <li className="card" key={row.id}>
+    <div className="rec-heading">
+      <h4>{row.name[lang] ?? row.name.es ?? row.id}</h4>
+      <strong className={row.conditional ? "rec-conditional" : "rec-affinity"}>
+        {t(row.conditional ? "recs.conditional" : row.score >= .8 ? "recs.high" : "recs.medium")}
+      </strong>
+    </div>
+    <p>{t("recs.window", { start: formatDate(row.sow_from), end: formatDate(row.sow_until) })}</p>
+    <p>{row.rain_mm == null ? t("recs.rainMissing") : t(row.rain_period === "year" ? "recs.waterYear" : "recs.water", {
+      rain: row.rain_mm, need: row.water_demand_mm,
+    })}</p>
+    {optionConditions(row).map((condition) => <p className="rec-conditional" key={condition}>
+      {t("recs.condition." + condition, {
+        gap: formatNumber.format(row.water_demand_mm - (row.rain_mm ?? 0)),
+      })}
+    </p>)}
+    {row.different_family && <p>{t("recs.different")}</p>}
+    {row.same_family && <p>{t("recs.same")}</p>}
+  </li>;
+  return <section className="crop-recs">
+    <h2>{t(afterCrop ? "recs.next" : "recs.title", { crop: cropName })}</h2>
+    {detecting ? <p role="status">{t("recs.detecting")}</p>
+      : declared ? <p className="muted">{t("recs.savedCrop", {
+          crop: current === "fallow" ? t("recs.fallow") : cropName,
+        })}</p>
+      : detectedCrop ? <p className="muted">{t("recs.detected", {
+          crop: t("recs.observed." + observedClass),
+        })}{observation?.as_of && ` · ${formatDate(observation.as_of)}`}</p>
+      : <p className="muted">{t("recs.unknown")}</p>}
+    {!detecting && result?.available_from && <p className="muted">{t("recs.after", {
+      date: formatDate(result.available_from),
+    })}</p>}
+    {detecting ? null : result === undefined ? <p role="status">{t("recs.loading")}</p>
+      : result === null ? <p role="status">{t("recs.error")}{" "}
+          <button onClick={() => setRetry((n) => n + 1)}>{t("field.diagnosis.retry")}</button>
+        </p>
+      : result.status !== "ok" ? <p role="status">{t("recs." + result.status)}</p>
+      : result.options.length === 0 ? <p role="status">{t("recs.empty")}</p>
+      : <>
+        <h3>{t("recs.top")}</h3>
+        {ranked.length < 3 && <p className="muted">{t(ranked.length === 1 ? "recs.oneOption" : "recs.fewOptions")}</p>}
+        {ranked.every((row) => row.conditional) && <p className="notice">{t("recs.allConditional")}</p>}
+        <ol className="rec-list">{ranked.slice(0, 3).map(renderOption)}</ol>
+        {ranked.length > 3 && <details className="card rec-filters">
+          <summary>{t("recs.more", { count: ranked.length - 3 })}</summary>
+          <ol className="rec-list" start={4}>{ranked.slice(3).map(renderOption)}</ol>
+        </details>}
+      </>}
+    <details className="card rec-filters">
+      <summary>{t("recs.filters")}</summary>
+      <fieldset className="prio-set">
+        <legend>{t("prio.choose")}</legend>
+        <div className="prio-chips">{PRIORITY_IDS.map((id) =>
+          <button key={id} type="button" className="chip" aria-pressed={priorities.includes(id)}
+                  onClick={() => onPriority(id)}>{t("prio." + id)}</button>)}</div>
+      </fieldset>
+      <fieldset className="cons-set">
+        <legend>{t("field.form.constraints")}</legend>
+        <div className="cons-grid">{RESOURCES.map((key) =>
+          <label key={key}>{t("field.form." + key)}
+            <select aria-label={t("field.form." + key)}
+                    value={String(resources[key] ?? "")} onChange={(e) => {
+              const next = { ...resources };
+              if (e.target.value === "") delete next[key];
+              else next[key] = e.target.value === "true";
+              onResources(next);
+            }}>
+              <option value="">{t("field.form.dontKnow")}</option>
+              <option value="true">{t("field.form.yes")}</option>
+              <option value="false">{t("field.form.no")}</option>
+            </select>
+          </label>)}</div>
+      </fieldset>
+    </details>
+  </section>;
+}
