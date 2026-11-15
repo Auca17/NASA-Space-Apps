@@ -77,6 +77,15 @@ def test_trigger_bare_soil_in_burn_season():
     assert "no_residue_burning" not in {m["id"] for m in cov}
 
 
+def test_annual_cover_with_end_in_the_same_month_is_not_reported_as_bare():
+    annual = {"crop": "alfalfa", "start": "03-15", "end": "03-14"}
+    context = {"calendar": BURN_CAL, "sequence": [annual], "today_month": 1}
+    assert "no_residue_burning" not in {m["id"] for m in evaluate(context)["measures"]}
+    context["sequence"] = [{**annual, "cover": False}]
+    measure = next(m for m in evaluate(context)["measures"] if m["id"] == "no_residue_burning")
+    assert "agosto" in measure["why"]
+
+
 def test_trigger_burn_season_now():
     ids = {m["id"] for m in evaluate(
         {"calendar": BURN_CAL, "today_month": 8})["measures"]}

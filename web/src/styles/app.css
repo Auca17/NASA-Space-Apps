@@ -478,8 +478,6 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
 .place-more .place-title { display: none; }
 .place-more .place-finder { border-bottom: 0; padding-bottom: 0; }
 .picker { max-height: calc(100% - 24px); overflow-y: auto; }
-.field-chooser { max-height: min(60%, 31rem); }
-#field-chooser-options:not([hidden]) { display: grid; gap: 8px; }
 .field-examples > summary { cursor: pointer; min-height: var(--touch);
   padding: 10px 0; }
 .field-examples > .row { margin-bottom: 4px; }
@@ -582,13 +580,6 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
   .field-extents { left: 8px; }
   .field-map-tools { right: 8px; }
   .field-extents button, .field-basemap button { padding: 0 8px; font-size: 0.85rem; }
-  .field-chooser { left: 8px; right: 8px; bottom: 8px;
-    max-width: none; max-height: 48%; overscroll-behavior: contain; }
-  .field-chooser .picker-head { position: sticky; top: -10px;
-    display: grid; grid-template-columns: minmax(0, 1fr) auto;
-    background: var(--panel); z-index: 1; }
-  .field-chooser .picker-head button { font-size: 0.85rem; padding: 0 8px; }
-  .field-chooser .picker-options li > span { display: none; }
 }
 
 /* Task 16: Orin validation card + synthetic banner */

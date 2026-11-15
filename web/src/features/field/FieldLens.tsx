@@ -1,4 +1,5 @@
 import { CropRecommendations } from "./CropRecommendations";
+import { DecisionDetail } from "./DecisionDetail";
 import { moistureGeometry } from "../../domain/moisture";
 import { MoisturePanel } from "./MoisturePanel";
 import type { CurrentCrop, MoistureZone } from "../../api/types";
@@ -12,7 +13,7 @@ import { Calendar, calendarCrops, type CatalogCrop } from "./Calendar";
 import { Timeline, TimelinePeek } from "./Timeline";
 import { SatelliteAccuracy } from "./SatelliteAccuracy";
 import {
-  apiCurrentCrop, apiDiagnose, apiRecommendationZones, apiRotations, apiExplain,
+  apiCurrentCrop, apiDiagnose, apiRecommendationZones, apiRotations,
   apiFieldCatalog, ecostressDemo, knowledgeCases, orinValidation,
 } from "../../api";
 import type {
@@ -156,7 +157,8 @@ function MeasureMeta({ m, t }: {
     t: (k: string, v?: Record<string, string | number>) => string }) {
   const note = m.requires?.reference_width_note;
   return (
-    <>
+    <details className="measure-meta">
+      <summary>{t("measure.details")}</summary>
       {m.requires && <div className="muted">
         {measureReqPairs(m.requires).map((p) =>
           `${t(p.key)}: ${p.value.startsWith("field.")
@@ -167,7 +169,7 @@ function MeasureMeta({ m, t }: {
       {m.checks && m.checks.length > 0 && (
         <div className="muted">{t("measure.checks")}: {m.checks.join("; ")}</div>)}
       {m.source && <div className="muted">{m.source}</div>}
-    </>);
+    </details>);
 }
 
 /** Measures that bring the "Un caso real" card into the prevention
@@ -196,14 +198,15 @@ export function CaseBlock({ c, t }: {
 
 /** "Qué hacer" prevention-measures card + real case (exported for
  * tests). */
-export function MeasuresCard({ measures, cases, t }: {
+export function MeasuresCard({ measures, cases, title, t }: {
     measures: Measure[];
     cases?: CaseEntry[];
+    title?: string;
     t: (k: string, v?: Record<string, string | number>) => string }) {
   if (!measures.length) return null;
   const showCase = measures.some((m) => CASE_MEASURE_IDS.has(m.id));
   return (
-    <Card title={t("measures.title")}>
+    <Card title={title ?? t("measures.title")}>
       <ul>{measures.map((m) => (
         <li key={m.id}><strong>{m.name}</strong> — {m.why}
           <MeasureMeta m={m} t={t} />
@@ -277,10 +280,11 @@ function StrategyCard({ s, t, current, variants, explain,
       </dl>}
       {rank && <p className="rank-note">{t(rank.key, { n: rank.n ?? "" })}</p>}
       <Afinity score={s.score} t={t} />
-      <Section title={t("rot.why")} open>
-        <p>{why}</p>
-        {explainText && <p className="muted">{explainText}</p>}
-      </Section>
+      {explainText && !s.decision && <p className="muted">{explainText}</p>}
+      <DecisionDetail decision={s.decision} fallback={why} facts={Object.fromEntries(
+        ["water_balance_mm", "bare_soil_days", "soil_cover_fit"].flatMap((key) =>
+          typeof s.indicators[key] === "number" ? [[key, s.indicators[key] as number]] : []),
+      )} />
       {/* changes versus the baseline; the baseline itself has none */}
       {!s.is_current &&
         (s.benefits && Object.keys(s.benefits).length > 0 || irr != null) && (
@@ -307,13 +311,13 @@ function StrategyCard({ s, t, current, variants, explain,
       <Section title={t("rot.risks")} count={s.risks.length}>
         <ul>{s.risks.map((r) => <li key={r}>{r}</li>)}</ul>
       </Section>
-      <Section title={t("rot.measures")} count={s.measures?.length ?? 0}>
+      {!!s.measures?.length && <Section title={t("rot.measures")} count={s.measures.length}>
         <ul>{(s.measures ?? []).map((m) => (
           <li key={m.id}><strong>{m.name}</strong>
             {m.why && <> — {m.why}</>}
             <MeasureMeta m={m} t={t} />
           </li>))}</ul>
-      </Section>
+      </Section>}
     </article>
   );
 }
@@ -362,11 +366,11 @@ function CmpTable({ strategies, t, reference = false }: {
 }
 
 /** Rotations results block — exported for tests (Patagonia zero-state). */
-export function RotationResults({ rots, diag, explain, t,
+export function RotationResults({ rots, diag, explain = {}, t,
                                  reference = false, explainMode, onMethods }: {
     rots: RotationsResponse;
     diag: DiagnoseResponse | null;
-    explain: Record<string, string>;
+    explain?: Record<string, string>;
     /** true when the user answered "No sé": the baseline is the zone's
      * typical rotation, shown as a reference scenario. */
     reference?: boolean;
@@ -375,6 +379,10 @@ export function RotationResults({ rots, diag, explain, t,
     t: (k: string, v?: Record<string, string | number>) => string }) {
   const current = rots.strategies.find((s) => s.is_current) ?? null;
   const groups = groupVariants(rots.strategies);
+  const commonMeasures = rots.strategies.length > 1 ?
+    (rots.strategies[0].measures ?? []).filter((measure) => rots.strategies.every((strategy) =>
+      strategy.measures?.some((item) => item.id === measure.id && item.why === measure.why))) : [];
+  const commonIds = new Set(commonMeasures.map((measure) => measure.id));
   const on = orderNote(rots);
   const trackRef = useRef<HTMLDivElement>(null);
   const [carIdx, setCarIdx] = useState(0);
@@ -394,6 +402,10 @@ export function RotationResults({ rots, diag, explain, t,
         </p>)}
       {on && <p className="scen-order" role="status">
         {t(on.key, on.vars)}</p>}
+      {!!rots.strategies.length && rots.ranking_source && <p className="muted">
+        {t(`decision.order.${rots.ranking_source}`)}</p>}
+      {rots.strategies.length > 0 && rots.soil_data != null && <p className="muted">
+        {t(rots.soil_data ? "rot.soilUsed" : "recs.soilMissing")}</p>}
       {explainMode === "ai" && (
         <p className="explain-ai muted">
           {t("explain.aiLabel")}
@@ -426,9 +438,11 @@ export function RotationResults({ rots, diag, explain, t,
               {t("rot.refNote")}</p>)}
           <CmpTable strategies={rots.strategies} t={t}
                     reference={reference} />
+          <MeasuresCard measures={commonMeasures} title={t("rot.commonMeasures")} t={t} />
           <div className="strategies" ref={trackRef} onScroll={onScroll}>
             {groups.map((g) => (
-              <StrategyCard key={g.primary.id} s={g.primary} t={t}
+              <StrategyCard key={g.primary.id} s={{ ...g.primary,
+                measures: g.primary.measures?.filter((measure) => !commonIds.has(measure.id)) }} t={t}
                             current={current} variants={g.variants}
                             explain={explain[g.primary.id]}
                             reference={reference} rank={rankNote(g.primary.id, rots)} />))}
@@ -486,12 +500,10 @@ export function FieldPanel({ target, open, onClose, onChangePlot, onMethods, onR
   const [orin, setOrin] = useState<OrinValidation | null>(null);
   const [cases, setCases] = useState<CaseEntry[]>([]);
   const [rots, setRots] = useState<RotationsResponse | null>(null);
-  const [explain, setExplain] = useState<Record<string, string>>({});
   const [catalog, setCatalog] =
     useState<{ rotations: RotationEntry[]; crops: CropEntry[] } | null>(null);
   const [catalogFailed, setCatalogFailed] = useState(false);
   const [catalogRetry, setCatalogRetry] = useState(0);
-  const [explainMode, setExplainMode] = useState<string | null>(null);
   const [sc, setSc] = useState<Scenario | null>(null);
   const [scenario, applyScenario] = useState<Scenario | null>(null);
   const [eco, setEco] = useState<EcostressDemo | null>(null);
@@ -668,9 +680,8 @@ export function FieldPanel({ target, open, onClose, onChangePlot, onMethods, onR
       setSc(null);
       if (scenario) { applyScenario(null); return; }
     }
-    setReading(true); setRots(null); setExplain({}); setDiagnosisProblem(undefined);
+    setReading(true); setRots(null); setDiagnosisProblem(undefined);
     setComparing(false); setCompareFailed(false);
-    setExplainMode(null);
     apiDiagnose(scenario ? { ...body, scenario } : body, controller.signal)
       .then(({ diagnosis: d, problem }) => {
       if (controller.signal.aborted) return;
@@ -722,11 +733,12 @@ export function FieldPanel({ target, open, onClose, onChangePlot, onMethods, onR
     const version = ++requests.latest;
     setComparing(true);
     setCompareFailed(false);
-    setExplain({});
     const r = await apiRotations({
       diagnosis: local,
       zone: local.zone,
       current: null,
+      rank_with_gemini: true,
+      lang,
       priorities: prioWeights(prioSel),
       constraints: {
         irrigation: cons.irrigation,
@@ -738,14 +750,6 @@ export function FieldPanel({ target, open, onClose, onChangePlot, onMethods, onR
     setComparing(false);
     setCompareFailed(!r);
     setRots(r);
-    if (r) {
-      const e = await apiExplain(r); // explain takes the rotations response
-      if (e && version === requests.latest) {
-        setExplainMode(e.mode ?? null);
-        setExplain(Object.fromEntries(
-          e.strategies.map((s) => [s.id, s.text])));
-      }
-    }
   };
 
   const base = useMemo(() => diag ? { ...diag, ...diag.baseline } : null, [diag]);
@@ -773,6 +777,7 @@ export function FieldPanel({ target, open, onClose, onChangePlot, onMethods, onR
     sectionResult?.geom === section.geom ? sectionResult.data : null
   ) : base;
   const currentImage = detected?.geometry === recGeometry ? detected?.data : undefined;
+  const sectionName = section && (section.name || t("recs.sector", { n: areaIndex + 1 }));
 
   return (
     <div className="field-analysis-results" hidden={!open}>
@@ -784,13 +789,30 @@ export function FieldPanel({ target, open, onClose, onChangePlot, onMethods, onR
                   onClick={() => setTab("details")}>{t("recs.details")}</button>
           <button type="button" onClick={onClose ?? onChangePlot}>{t("recs.changeField")}</button>
         </div>
+        {tab === "recommendations" && sections && sections.length > 1 && <div className="rec-area">
+          <label htmlFor="recommendation-area"><strong>{t(autoPartition ? "recs.changeArea" : "recs.changeParcel")}</strong></label>
+          <select id="recommendation-area" aria-describedby="recommendation-area-help"
+            value={areaIndex} onChange={(e) => {
+            comparisonRequests.current.latest++;
+            setRots(null); setComparing(false); setCompareFailed(false);
+            setAreaIndex(Number(e.target.value));
+          }}>
+            {sections.map((part, i) => <option key={i} value={i}>
+              {part.name || t("recs.sector", { n: i + 1 })}
+              {" · "}{fmtHa(multiHa(part.geom))} ha
+            </option>)}
+          </select>
+          <small id="recommendation-area-help" className="muted">{t(autoPartition ? "recs.sectorNote" : "recs.parcelNote")}</small>
+        </div>}
       </header>
       {target && (
         <div className="analysis-scope">
-          <strong>{target.fieldName
-            ? `${target.fieldName} · ${target.areaLabel}` : target.areaLabel}</strong>
+          <strong>{[target.fieldName, tab === "recommendations" ? sectionName ?? target.areaLabel : target.areaLabel]
+            .filter(Boolean).join(" · ")}</strong>
           <div className="muted">
-            {target.fieldHa != null && Math.abs(target.fieldHa - targetHa) > 0.05
+            {tab === "recommendations" && section
+              ? t("analyze.scopePart", { a: fmtHa(multiHa(section.geom)), b: fmtHa(targetHa) })
+              : target.fieldHa != null && Math.abs(target.fieldHa - targetHa) > 0.05
               ? t("analyze.scopePart", { a: fmtHa(targetHa), b: fmtHa(target.fieldHa) })
               : t("analyze.scopeAll", { a: fmtHa(targetHa) })}
             {target.geom.length > 1 &&
@@ -1117,20 +1139,6 @@ export function FieldPanel({ target, open, onClose, onChangePlot, onMethods, onR
             : nearbyUse === undefined ? "recs.nearbyChecking"
             : recommendationData?.land_cover === "crop" ? "recs.nearbyCrop" : "recs.nearbyUnknown")}
         </p>}
-        {sections && sections.length > 0 && <label className="rec-area">
-          {t("recs.area")}
-          <select value={areaIndex} onChange={(e) => {
-            comparisonRequests.current.latest++;
-            setRots(null); setExplain({}); setComparing(false); setCompareFailed(false);
-            setAreaIndex(Number(e.target.value));
-          }}>
-            {sections.map((part, i) => <option key={i} value={i}>
-              {part.name || t("recs.sector", { n: i + 1 })}
-              {" · "}{fmtHa(multiHa(part.geom))} ha
-            </option>)}
-          </select>
-          {autoPartition && <small className="muted">{t("recs.sectorNote")}</small>}
-        </label>}
         {(sectionReading || (autoPartition && sections == null && !!diag)) &&
           <p role="status">{t("recs.areaLoading")}</p>}
         {section && sectionResult?.geom === section.geom && !sectionResult.data &&
@@ -1160,9 +1168,7 @@ export function FieldPanel({ target, open, onClose, onChangePlot, onMethods, onR
           </button>
         </details>}
       {rotsView && (!target?.nearby || nearbyUse === "checked") && <RotationResults rots={rotsView} diag={recommendationData}
-                                explain={explain} t={t}
-                                reference
-                                explainMode={explainMode ?? undefined}
+                                t={t} reference
                                 onMethods={onMethods} />}
       {!rots && diag && <p className="notice">{t("rot.disclaimer")}</p>}
       </div>

@@ -177,6 +177,11 @@ export type MoistureResult = { status: "no_detail" | "unavailable" } | {
   zones: MoistureZone[];
 };
 
+export interface RankedDecision {
+  why: string;
+  evidence: Record<string, number | string | boolean>;
+}
+
 export interface Strategy {
   id: string;
   name: string;
@@ -193,12 +198,15 @@ export interface Strategy {
   sequence: { crop: string; start: string; end: string; cover?: boolean }[];
   measures?: Measure[];
   measures_gaps?: string[];
+  decision?: RankedDecision;
 }
 
 export interface RotationsResponse {
   diagnosis_id?: string;
   strategies: Strategy[];
   disclaimer: string;
+  soil_data?: boolean;
+  ranking_source?: "gemini" | "catalog";
   /** "low" when the zone has no validated rotation (e.g. Patagonia). */
   confidence?: string;
   /** Top-level gaps, e.g. "sin rotaciones validadas para esta zona". */
@@ -231,11 +239,16 @@ export interface CropEntry {
 export interface CropRecommendations {
   status: "ok" | "missing_climate" | "missing_harvest" | "perennial" | "no_catalog";
   available_from: string | null;
+  soil_data?: boolean;
+  ranking_source?: "gemini" | "catalog";
+  regional_crops?: CropEntry[];
   options: {
     id: string; name: CropEntry["name"]; score: number; conditional: boolean;
     conditions?: ("water" | "frost" | "rain_missing")[];
     sow_from: string; sow_until: string;
     water_demand_mm: number; rain_mm: number | null; rain_period?: "cycle" | "year";
+    cover_days?: number;
+    decision?: RankedDecision;
     needs_irrigation: boolean;
     fits_frost: boolean | null; different_family: boolean; same_family: boolean;
   }[];

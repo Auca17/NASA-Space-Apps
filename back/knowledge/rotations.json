@@ -398,6 +398,26 @@
       ]
     },
     {
+      "id": "alfalfa4-ajo",
+      "name": {
+        "es": "Pastura de alfalfa 4 años – ajo (bajo riego)",
+        "en": "4-yr alfalfa pasture – garlic (irrigated)"
+      },
+      "years": 5,
+      "sequence": [
+        { "crop": "alfalfa", "start": "03-15", "end": "03-14" },
+        { "crop": "alfalfa", "start": "03-15", "end": "03-14" },
+        { "crop": "alfalfa", "start": "03-15", "end": "03-14" },
+        { "crop": "alfalfa", "start": "03-15", "end": "03-14" },
+        { "crop": "ajo", "start": "03-15", "end": "11-30" }
+      ],
+      "zones": ["cuyo"],
+      "sources": [
+        "INTA EEA La Consulta, Burba, Manejo de suelos y preparación: cuatro años de alfalfa como antecedente de ajo para interrumpir el ciclo del nematodo. https://repositorio.inta.gob.ar/xmlui/handle/20.500.12123/10415",
+        "Las fechas del ajo son un escenario del catálogo regional de Ashfield; confirmar variedad y disponibilidad de riego para el lote."
+      ]
+    },
+    {
       "id": "alfalfa4-maiz",
       "name": {
         "es": "Pastura de alfalfa 4 años – maíz (bajo riego)",

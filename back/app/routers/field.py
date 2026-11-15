@@ -765,6 +765,7 @@ def build_cards(power, soilg, slope, ndvi, grid_cell, fire_cal,
                            "; ".join(parts) or "Sin datos",
                            "ISRIC SoilGrids v2", "250 m", "medium",
                            "; ".join(parts_en) or "No data"))
+        cards[-1]["texture"] = tex
     elif grid_soil.get("texture") or grid_soil.get("soc_g_kg") is not None:
         soc = grid_soil.get("soc_g_kg")
         parts = [t for t in (grid_soil.get("texture"),
@@ -775,6 +776,7 @@ def build_cards(power, soilg, slope, ndvi, grid_cell, fire_cal,
                            "; ".join(parts) or "Sin datos",
                            "ISRIC SoilGrids v2 (field/grid)", "250 m",
                            "medium", "; ".join(parts_en) or "No data"))
+        cards[-1]["texture"] = grid_soil.get("texture")
     else:
         cards.append(_null_card("soil", "ISRIC SoilGrids v2", "250 m"))
 
@@ -960,6 +962,7 @@ def degraded_cards(grid_cell, terr, soilg, fire_cal, risk_cell, r5):
         cards.append(_card("soil", round(soc, 1) if soc else None,
                            "g/kg", "; ".join(parts) or "Sin datos",
                            "ISRIC SoilGrids v2", "250 m", "medium"))
+        cards[-1]["texture"] = tex
     elif gsoil.get("texture") or gsoil.get("soc_g_kg") is not None:
         soc = gsoil.get("soc_g_kg")
         parts = [t for t in (gsoil.get("texture"),
@@ -968,6 +971,7 @@ def degraded_cards(grid_cell, terr, soilg, fire_cal, risk_cell, r5):
                            "; ".join(parts) or "Sin datos",
                            "ISRIC SoilGrids v2 (field/grid)", "250 m",
                            "medium"))
+        cards[-1]["texture"] = gsoil.get("texture")
     else:
         cards.append(_null_card("soil", "ISRIC SoilGrids v2", "250 m"))
 
@@ -1619,6 +1623,7 @@ async def recommendation_zones(request: Request):
 
 @router.post("/api/field/recommendations")
 async def recommendations(request: Request):
+    from ..services.ai_ranking import rank_candidates
     from ..services.rotations import KNOWLEDGE, PRIORITY_MAP, recommend_crops
 
     body = await json_object(request)
@@ -1643,17 +1648,24 @@ async def recommendations(request: Request):
             not isinstance(value, bool) for value in constraints.values()):
         return _err("invalid_input", "invalid constraints")[1]
     try:
-        return recommend_crops(diag, current, priorities, constraints)
+        result = recommend_crops(diag, current, priorities, constraints)
+        if body.get("rank_with_gemini") is True and result["status"] == "ok":
+            return await rank_candidates(result, diag, priorities, constraints,
+                                         "en" if body.get("lang") == "en" else "es",
+                                         kind="crop", current=current)
+        return result
     except (ValueError, TypeError, OverflowError):
         return _err("invalid_input", "invalid diagnosis values")[1]
 
 
 @router.post("/api/field/rotations")
 async def rotations(request: Request):
+    from ..services.ai_ranking import rank_candidates
     from ..services.rotations import run, PRIORITY_MAP, PRIORITY_LABEL
     body = await json_object(request)
     if body is None:
         return _err("invalid_input", "expected a JSON object")[1]
+    ai_rank = body.get("rank_with_gemini") is True
     diag = body.get("diagnosis")
     if not isinstance(diag, dict) or not isinstance(diag.get("cards"), list):
         return JSONResponse(
@@ -1735,7 +1747,11 @@ async def rotations(request: Request):
         analog = next((analogs[cell] for cell in r5s if cell in analogs), None)
     try:
         out = run(diag, current, priorities, constraints,
-                  zone, analog=analog, hazards=hazard_set)
+                  zone, analog=analog, hazards=hazard_set, candidate_limit=6 if ai_rank else 3)
+        if ai_rank:
+            out = await rank_candidates(out, diag, priorities, constraints,
+                                        "en" if body.get("lang") == "en" else "es",
+                                        kind="rotation")
         if diag.get("scenario"):
             base = diag.get("baseline") or {
                 "cards": [dict(c, value=c.get("baseline_value",

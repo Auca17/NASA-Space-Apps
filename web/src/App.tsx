@@ -1,4 +1,4 @@
-import { Suspense, lazy, useRef, useState, useCallback, useEffect } from "react";
+import { Suspense, lazy, useRef, useState, useCallback, useEffect, useMemo } from "react";
 import { DrawSession, activateDrawSession, deactivateDrawSession }
   from "./features/field/drawEdit";
 import { useT } from "./i18n";
@@ -11,10 +11,10 @@ import { BottomSheet } from "./components/ui";
 import type { GlobeHandle, Shape } from "./features/globe/GlobeView";
 import { moistureGeometry, MOISTURE_COLORS } from "./domain/moisture";
 import { cellsInCircle, circleRing } from "./domain/h3area";
-import { apiRisk, orinLots } from "./api";
-import type { OrinLots, MoistureZone } from "./api/types";
+import { apiRisk } from "./api";
+import type { MoistureZone } from "./api/types";
 import { drawStatus } from "./domain/clarity";
-import { FieldPicker, type DrawMode } from "./features/field/FieldPicker";
+import { FieldCreationControls, FieldPicker, type DrawMode } from "./features/field/FieldPicker";
 import { SelectionReview, AdjustPanel, type LandCheck, type Adjust }
   from "./features/field/SelectionReview";
 import { FieldsList } from "./features/field/FieldsPanel";
@@ -38,8 +38,9 @@ import {
 } from "./features/demo/mendozaFarm";
 import { GuidedTour } from "./features/demo/GuidedTour";
 import { tourSeen } from "./features/demo/demoTour";
+import { testFields } from "./features/demo/testFields";
 import {
-  loadFields, saveField, renameField, deleteField, addZone, updateZone,
+  loadFields, saveField, saveExampleFields, renameField, deleteField, addZone, updateZone,
   addZones, setFieldCrop, markCropSplit,
   fieldHa, acceptDetection, discardParcel, replaceParcel, zoneHa,
   type Field, type Zone,
@@ -193,7 +194,8 @@ export default function App() {
   /** #demo can fire before the map exists: the farm frame is queued
    * here and applied once the globe reports ready. */
   const demoFitPending = useRef(false);
-  const [lots, setLots] = useState<OrinLots["features"]>([]);
+  const examples = useMemo(() => testFields(lang), [lang]);
+  const hasMissingExamples = examples.some((example) => !fields.some((f) => f.id === example.id));
   const [playingMonth, setPlayingMonth] = useState<string | null>(null);
   const [methodsOpen, setMethodsOpen] = useState(false);
   const [emergOpen, setEmergOpen] = useState(false);
@@ -642,7 +644,9 @@ export default function App() {
     setDraft([]); setTarget(null); setFieldOpen(false);
     setParcelRes(null); setParcelsWizard(false);
     setSelection(null); setAdjust(null);
-    setFieldsView(null); setShownField(null);
+    locationRequest.current++;
+    setLocationState("idle");
+    setFieldsView(dm === "none" ? "list" : null); setShownField(null);
     targetRef.current = { kind: "selection" };
     globeRef.current?.setDraft(null);
   };
@@ -676,6 +680,7 @@ export default function App() {
 
   const cancelSelection = () => {
     setSelection(null); setAdjust(null); setDraw("none"); setDraft([]);
+    setFieldsView("list");
     globeRef.current?.setDraft(null);
   };
 
@@ -835,11 +840,6 @@ export default function App() {
     setSelection({ ...selection, geom, checked: true });
   };
 
-  /** Mis campos */
-  const openFields = () => {
-    setDraw("none"); setSelection(null); setAdjust(null);
-    refreshFields(); setFieldsView("list");
-  };
   const showField = (f: Field) => {
     setShownField(f.id);
     globeRef.current?.fitRing(multiPoints(f.geom), coveredBottom());
@@ -876,13 +876,12 @@ export default function App() {
     analyze({ geom: [[ring]], areaLabel: t("fields.nearby"), nearby: true });
   };
 
-  const useLocationFor = (action: "add" | "nearby") => {
+  const requestLocationFor = (action: "add" | "nearby") => {
     const revision = ++locationRequest.current;
     setLocationState("loading");
     const denied = () => {
       if (revision !== locationRequest.current) return;
       setLocationState("denied");
-      if (action === "add") setFieldsView(null);
     };
     if (!navigator.geolocation) { denied(); return; }
     navigator.geolocation.getCurrentPosition(({ coords }) => {
@@ -892,7 +891,6 @@ export default function App() {
         analyzeNearby(coords.latitude, coords.longitude);
         return;
       }
-      setFieldsView(null);
       if (mapUnavailable) { onShape(circleApprox(coords.latitude, coords.longitude), true); return; }
       if (!globeRef.current) pendingFieldLocation.current = {
         lat: coords.latitude, lon: coords.longitude,
@@ -937,14 +935,13 @@ export default function App() {
     if (targetRef.current.kind !== "selection") {
       setFieldsView({ id: targetRef.current.fieldId });
       targetRef.current = { kind: "selection" };
-    }
+    } else setFieldsView("list");
   };
 
-  /** Back to the method chooser with no plot selected. */
+  /** Return to saved fields after closing an analysis. */
   const changePlot = () => {
     setFieldOpen(false); setTarget(null); setSelection(null); setAdjust(null);
     startField("none");
-    setFieldsView("list");
   };
 
   /** One-tap guided demo (task 40): a fictional Mendoza farm on a real
@@ -975,30 +972,6 @@ export default function App() {
                          x.id === targetRef.current.fieldId)
     : undefined;
 
-  const orinLot = (feature: OrinLots["features"][number]) => {
-    const geom: Multi = [feature.geometry.coordinates.map((ring) =>
-      ring.slice(0, -1).map(([lon, lat]): LatLon => [lat, lon]))];
-    if ((geom[0][0]?.length ?? 0) < 3) return;
-    const { name, crop_label, synthetic } = feature.properties;
-    setMode("field");
-    setDraw("none");
-    analyze({
-      geom,
-      areaLabel: [name, crop_label].filter(Boolean).join(" · "),
-      demoLot: { name, crop_label, synthetic },
-    });
-  };
-
-  useEffect(() => {
-    orinLots().then((data) => setLots((data?.features ?? []).map((feature) => ({
-      ...feature,
-      properties: {
-        ...feature.properties,
-        synthetic: data?.synthetic || feature.properties.synthetic,
-      },
-    }))));
-  }, []);
-
   // A right-side .panel is open: the map's top-right controls step
   // left of it so nothing sits on the panel (task 33.2).
   const sidePanel = (mode === "fire" && panelOpen) ||
@@ -1021,7 +994,7 @@ export default function App() {
         <nav aria-label={t("nav.modes")}>
           <button aria-pressed={mode === "field"}
                   onClick={() => {
-                    if (modeRef.current !== "field") { startField("none"); setFieldsView("list"); }
+                    if (modeRef.current !== "field") startField("none");
                   }}>
             <svg className="nav-ico" viewBox="0 0 24 24" aria-hidden="true">
               <path d="M12 21v-8m0 0c-4.5-.5-6.5-3-7-7 4.5.5 6.5 3 7 7Zm0 0c4.5-.5
@@ -1108,8 +1081,6 @@ export default function App() {
           <button type="button" className="fire-reopen"
                   onClick={() => setPanelOpen(true)}>
             {t("panel.reopen")}</button>)}
-        {mode === "field" && fieldsView !== "list" && !fieldOpen && locationState === "denied" &&
-          <p className="map-warning" role="status">{t("fields.locationDenied")}</p>}
         {mode === "field" && !fieldOpen && (
           <>
             {draw === "none" && !selection && !fieldsView && (
@@ -1202,18 +1173,32 @@ export default function App() {
         {mode === "field" && !fieldOpen && !selection && draw === "none" &&
           fieldsView === "list" && (
           <FieldsList fields={fields} actions={<div className="field-entry-actions">
-            <details onToggle={(event) => {
-              if (event.currentTarget.open) useLocationFor("add");
+            <details className="add-field" onToggle={(event) => {
+              if (event.target === event.currentTarget && event.currentTarget.open) requestLocationFor("add");
             }}>
               <summary>{t("fields.addNew")}</summary>
-              <button type="button" onClick={() => {
-                locationRequest.current++;
-                setLocationState("idle");
-                setFieldsView(null);
-              }}>{t("place.search")}</button>
+              <FieldCreationControls onPick={startField}
+                onGo={(lat, lon, precise, accuracy) => {
+                  locationRequest.current++;
+                  setLocationState("idle");
+                  goTo(lat, lon, precise, accuracy);
+                }}
+                onPointCoords={(lat, lon) => {
+                  locationRequest.current++;
+                  setLocationState("idle");
+                  if (!mapUnavailable) goTo(lat, lon, true);
+                  onShape(circleApprox(lat, lon), true);
+                }}
+                mapUnavailable={mapUnavailable} zoomLow={zoom < DRAW_ZOOM - 0.5}
+                onZoomIn={zoomToDraw} />
             </details>
             <button type="button" disabled={locationState === "loading"}
-                    onClick={() => useLocationFor("nearby")}>{t("fields.nearby")}</button>
+                    onClick={() => requestLocationFor("nearby")}>{t("fields.nearby")}</button>
+            {hasMissingExamples && <button type="button"
+                    onClick={() => storeChange(() => saveExampleFields(examples))}>
+              {t("fields.loadExamples")}
+            </button>}
+            {!hasMissingExamples && <p className="muted">{t("fields.examplesNote")}</p>}
             {locationState === "loading" && <p role="status">{t("place.locating")}</p>}
             {locationState === "denied" && <p role="status">{t("fields.locationDenied")}{" "}
               {globe && <button onClick={() => {
@@ -1229,7 +1214,7 @@ export default function App() {
             onRename={(f, n) => { storeChange(() => renameField(f.id, n)); }}
             onDelete={(f) => { if (storeChange(() => deleteField(f.id)) && shownField === f.id)
                                setShownField(null); }}
-            onClose={() => { setFieldsView(null); setShownField(null); }} />)}
+            onClose={() => { setShownField(null); setMode("welcome"); }} />)}
         {mode === "field" && !fieldOpen && !selection && draw === "none" &&
           fieldsView && fieldsView !== "list" && openField && (
           <ParcelPanel key={openField.id} field={openField}
@@ -1284,30 +1269,17 @@ export default function App() {
           </Suspense>)}
         {demoTour && parcelRes && (
           <GuidedTour onClose={() => setDemoTour(false)} />)}
-        {mode === "field" && !fieldOpen && !selection &&
-          (draw !== "none" || !fieldsView) && (
-          <FieldPicker draw={mapUnavailable ? "none" : draw} points={draft.length}
-                       onPick={startField} onDemo={startDemo}
-                       demoLots={lots.map((feature) => ({
-                         id: feature.properties.id,
-                         label: feature.properties.crop_label || feature.properties.name,
-                         onOpen: () => orinLot(feature),
-                       }))}
+        {mode === "field" && !fieldOpen && !selection && draw !== "none" && (
+          <FieldPicker draw={draw} points={draft.length}
                        onFinish={finishDraw} onUndo={undoPoint}
                        onCancel={cancelDraw} onGo={goTo}
-                       onFields={openFields} fieldsCount={fields.length}
                        freeError={freeError}
                        movingMap={movingMap}
                        onToggleMove={() => {
                          if (draw === "free") globeRef.current?.setDraft(null);
                          setMovingMap(!movingMap);
                        }}
-                       mapUnavailable={mapUnavailable}
                        zoomLow={zoom < DRAW_ZOOM - 0.5} onZoomIn={zoomToDraw}
-                       onPointCoords={(la, lo) => {
-                         if (!mapUnavailable) goTo(la, lo, true);
-                         onShape(circleApprox(la, lo), true);
-                       }}
                        context={zoneField
                          ? t("zones.drawingFor", { name: zoneField.name })
                          : undefined} />)}

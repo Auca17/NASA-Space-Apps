@@ -27,9 +27,9 @@ log = logging.getLogger(__name__)
 GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta"
 GEMINI_MODEL = "gemini-3.1-flash-lite"
 # Tried in order when the chosen model answers 429 (free-tier quota),
-# 404 (retired) or 400 (unsupported config): the app degrades to the
-# template only when every model fails.
-GEMINI_FALLBACKS = ("gemini-3.1-flash-lite", "gemini-2.5-flash")
+# 404 (retired), 400 (unsupported config), or a temporary server error.
+# The app degrades to the template only when every model fails.
+GEMINI_FALLBACKS = ("gemini-3.1-flash-lite", "gemini-2.5-flash-lite", "gemini-2.5-flash")
 ANTHROPIC_URL = "https://api.anthropic.com/v1/messages"
 ANTHROPIC_MODEL = "claude-haiku-5-5"
 TIMEOUT = 6.0
@@ -253,10 +253,13 @@ async def _call_gemini(client: httpx.AsyncClient, key: str,
             return await _call_gemini_model(client, key, model,
                                             payload, system)
         except httpx.HTTPStatusError as exc:
-            if exc.response.status_code not in (400, 404, 429):
+            if exc.response.status_code not in (400, 404, 429, 500, 502, 503, 504):
                 raise
             log.warning("ai_explain: %s answered %s, trying next model",
                         model, exc.response.status_code)
+            last = exc
+        except httpx.TimeoutException as exc:
+            log.warning("ai_explain: %s timed out, trying next model", model)
             last = exc
     assert last is not None
     raise last

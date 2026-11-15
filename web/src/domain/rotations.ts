@@ -48,6 +48,7 @@ export function indicatorLabelKey(id: string): string | null {
     case "carbon": return null; // deprecated alias of residue_t_ha_yr
     case "residue_t_ha_yr": return "ind.residue";
     case "bare_soil_days": return "ind.bareSoil";
+    case "soil_cover_fit": return "decision.fact.soil_cover_fit";
     case "water_balance": return "ind.waterBalance";
     // numeric twin of water_balance (equal unless irrigated, where the
     // irrigation line already shows the mm): shown once
@@ -252,6 +253,7 @@ export function seqSegments(start: string, end: string):
     { from: number; to: number }[] {
   const mo = (d: string) => Number(d.slice(0, 2)) - 1;
   const a = mo(start), b = mo(end);
+  if (a === b && end < start) return [{ from: 0, to: 11 }];
   if (a <= b) return [{ from: a, to: b }];
   return [{ from: a, to: 11 }, { from: 0, to: b }];
 }

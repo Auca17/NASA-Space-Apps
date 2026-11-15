@@ -67,6 +67,22 @@ it("renders options returned by an API without the conditions array", async () =
   expect(screen.getByText(/expuesta a heladas/i)).toBeInTheDocument();
 });
 
+it("shows Gemini order and the evidence for the selected detail", async () => {
+  const base = { sow_from: "2026-11-15", sow_until: "2026-11-30", water_demand_mm: 650, conditional: false };
+  recommend.mockResolvedValue({ status: "ok", ranking_source: "gemini", options: [
+    { ...base, id: "maiz", name: { es: "Maíz" }, score: .65, decision: {
+      why: "El orden refleja el clima y la textura disponible.", evidence: { texture: "Arcilloso" },
+    } },
+    { ...base, id: "soja", name: { es: "Soja" }, score: .91 },
+  ] });
+  render(<I18nProvider><CropRecommendations {...props} observation={null} /></I18nProvider>);
+  expect(await screen.findByText(/ordenado con gemini/i)).toBeInTheDocument();
+  expect(screen.getAllByRole("heading", { level: 4 }).map((heading) => heading.textContent)).toEqual(["Maíz", "Soja"]);
+  fireEvent.click(screen.getAllByText("Detalle", { exact: true })[0]);
+  expect(screen.getByText("Arcilloso")).toBeVisible();
+  expect(recommend).toHaveBeenCalledWith(expect.objectContaining({ rank_with_gemini: true }), expect.anything());
+});
+
 it("waits for this parcel and leaves a mixed signal unconfirmed", async () => {
   const view = (observation?: CurrentCrop) => <I18nProvider><CropRecommendations {...props}
     observation={observation} /></I18nProvider>;

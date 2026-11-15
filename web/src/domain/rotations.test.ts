@@ -146,6 +146,7 @@ describe("seqSegments", () => {
     expect(seqSegments("11-01", "04-15"))
       .toEqual([{ from: 10, to: 11 }, { from: 0, to: 3 }]);
     expect(seqSegments("03-01", "06-30")).toEqual([{ from: 2, to: 5 }]);
+    expect(seqSegments("03-15", "03-14")).toEqual([{ from: 0, to: 11 }]);
   });
 });
 

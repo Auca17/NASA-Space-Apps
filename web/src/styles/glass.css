@@ -116,9 +116,13 @@ body:has(.app) { background: #0f110e; }
 .rec-conditional { color: var(--warn); }
 .crop-recs h2 { margin-top: 14px; }
 .rec-filters[open] > summary { margin-bottom: 12px; }
+.decision-detail > summary { cursor: pointer; font-weight: 700; padding: 8px 0; }
+.decision-detail > p { margin: 4px 0 8px; }
 .rec-area { display: grid; gap: 6px; margin: 10px 0; }
 .rec-area select, .rec-filters select { max-width: 100%; width: 100%; }
 .field-entry-actions details > summary { cursor: pointer; padding: 10px 0; font-weight: 650; }
+.field-entry-actions .add-field[open] { flex-basis: 100%; }
+.field-creation { display: grid; gap: 8px; }
 .field-entry-actions > p { flex-basis: 100%; margin: 0; }
 @media (max-width: 760px) {
   .app.analysis-screen {
@@ -368,25 +372,6 @@ body:has(.app) { background: #0f110e; }
   .app .controls { bottom: calc(64px + env(safe-area-inset-bottom, 0px)); }
   .app .welcome-overlay {
     padding-bottom: calc(72px + env(safe-area-inset-bottom, 0px)); }
-
-  /* field chooser as a peekable bottom sheet (task 38.4). The
-   * component's "expanded" state is the default and renders as the
-   * peek: handle + the main action only. The "collapsed" state
-   * (options list is [hidden]) is un-hidden here and shows the full
-   * sheet — tapping the handle moves between peek and full. */
-  .app .field-chooser { left: 8px; right: 8px;
-    bottom: calc(64px + env(safe-area-inset-bottom, 0px));
-    max-height: 64%; overflow-y: auto; }
-  .app .field-chooser .picker-head button:first-child {
-    font-size: 0; display: inline-flex; align-items: center;
-    justify-content: center; min-width: 44px; flex: 1; }
-  .app .field-chooser .picker-head button:first-child::before {
-    content: ""; display: block; width: 34px; height: 5px;
-    border-radius: 3px; background: var(--muted); }
-  .app .field-chooser:has(.picker-head [data-peek="true"])
-      #field-chooser-options > :not(.row) { display: none; }
-  .app .field-chooser:has(.picker-head [data-peek="false"])
-      #field-chooser-options[hidden] { display: grid; gap: 8px; }
 
   /* 5 · one sheet at a time: an open .panel (emergencies, fire area)
    *     collapses the map sheets (chooser, review, fields, parcels);

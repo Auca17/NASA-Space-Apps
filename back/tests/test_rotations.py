@@ -33,7 +33,7 @@ def test_engine_returns_four_strategies():
             assert s[sec], f"{s['id']}.{sec} empty"
         for e in s["evidence"]:
             assert e["indicator"] in card_ids | ind_keys
-        assert s["risks"][-1].startswith("Validar")
+        assert all(not risk.startswith("Validar") for risk in s["risks"])
 
 
 def test_priorities_reorder_avoid_burning():

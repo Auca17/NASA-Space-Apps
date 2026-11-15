@@ -1,16 +1,20 @@
 import { describe, it, expect, vi } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
 import { I18nProvider } from "../../i18n";
-import { FieldPicker } from "./FieldPicker";
+import { FieldCreationControls, FieldPicker } from "./FieldPicker";
 
 const noop = () => {};
-const renderPicker = (draw: "none" | "draw" | "point" | "free", points = 0,
+const renderPicker = (draw: "draw" | "point" | "free", points = 0,
                       extra = {}) => render(
   <I18nProvider>
-    <FieldPicker draw={draw} points={points} onPick={noop} onDemo={noop}
+    <FieldPicker draw={draw} points={points}
                  onFinish={noop} onUndo={noop} onCancel={noop} onGo={noop}
                  {...extra} />
   </I18nProvider>);
+const renderCreation = (extra = {}) => render(<I18nProvider>
+  <FieldCreationControls onPick={noop} onGo={noop} onPointCoords={noop}
+    onZoomIn={noop} zoomLow={false} mapUnavailable={false} {...extra} />
+</I18nProvider>);
 
 describe("FieldPicker", () => {
   it("offers an explicit way to move the map during freehand drawing", () => {
@@ -29,17 +33,15 @@ describe("FieldPicker", () => {
   });
 
   it("explains the three ways to mark a field", () => {
-    const onPick = vi.fn(), onDemo = vi.fn();
-    renderPicker("none", 0, { onPick, onDemo });
+    const onPick = vi.fn();
+    renderCreation({ onPick });
     fireEvent.click(screen.getByText("Otras formas de marcar"));
-    fireEvent.click(screen.getByText("Probar con un ejemplo"));
     expect(screen.getByText(/cada esquina del lote/i)).toBeInTheDocument();
     expect(screen.getByText(/aproximada de 50 ha/i)).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: /punto por punto/i }));
     fireEvent.click(screen.getByRole("button", { name: /tocar un punto/i }));
-    fireEvent.click(screen.getByRole("button", { name: /ejemplo: finca en mendoza/i }));
-    expect(onPick.mock.calls).toEqual([["draw"], ["point"]]);
-    expect(onDemo).toHaveBeenCalledOnce();
+    fireEvent.click(screen.getByRole("button", { name: /mano alzada/i }));
+    expect(onPick.mock.calls).toEqual([["draw"], ["point"], ["free"]]);
   });
 
   it("while drawing, counts points and blocks finishing below 3", () => {
@@ -70,44 +72,17 @@ describe("FieldPicker", () => {
     expect(screen.getByRole("button", { name: /cancelar/i })).toBeInTheDocument();
   });
 
-  it("reports aria-expanded matching the visible state, wide or compact",
-      () => {
-    const realMM = window.matchMedia;
-    try {
-      // wide: options visible by default -> expanded
-      window.matchMedia = (() =>
-        ({ matches: false, addEventListener() {},
-           removeEventListener() {} })) as unknown as typeof matchMedia;
-      const first = renderPicker("none");
-      const toggle = () => screen.getByRole("button",
-        { name: /ver más mapa|buscar o marcar lote/i });
-      expect(toggle()).toHaveAttribute("aria-expanded", "true");
-      fireEvent.click(toggle());
-      expect(toggle()).toHaveAttribute("aria-expanded", "false");
-      first.unmount();
-
-      // compact: the default "peek" shows only the main action ->
-      // collapsed; tapping the handle opens the full sheet
-      window.matchMedia = (() =>
-        ({ matches: true, addEventListener() {},
-           removeEventListener() {} })) as unknown as typeof matchMedia;
-      renderPicker("none");
-      expect(toggle()).toHaveAttribute("aria-expanded", "false");
-      fireEvent.click(toggle());
-      expect(toggle()).toHaveAttribute("aria-expanded", "true");
-    } finally { window.matchMedia = realMM; }
-  });
 });
 
 describe("FieldPicker place finder", () => {
   it("offers optional zoom and lets the producer draw at a wide view", () => {
     const onPick = vi.fn(), onZoomIn = vi.fn();
-    renderPicker("none", 0, { zoomLow: true, onZoomIn, onPick });
+    renderCreation({ zoomLow: true, onZoomIn, onPick });
     fireEvent.click(screen.getByRole("button", { name: /dibujar punto por punto/i }));
     expect(onPick).toHaveBeenCalledWith("draw");
     fireEvent.click(screen.getByRole("button", { name: /ver más detalle/i }));
     expect(onZoomIn).toHaveBeenCalledOnce();
-    expect(screen.getByRole("textbox")).toBeInTheDocument();
+    expect(screen.getByRole("textbox", { name: "Localidad o coordenadas" })).toBeInTheDocument();
   });
 
   it("offers going to the user's area before choosing a method", () => {
@@ -115,7 +90,7 @@ describe("FieldPicker place finder", () => {
     Object.defineProperty(navigator, "geolocation", { configurable: true,
       value: { getCurrentPosition: vi.fn((ok) =>
         ok({ coords: { latitude: -31.4, longitude: -64.2 } })) } });
-    renderPicker("none", 0, { onGo, zoomLow: true });
+    renderCreation({ onGo, zoomLow: true });
     expect(screen.getByText(/llevá el mapa a tu zona/i)).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: /usar mi ubicación/i }));
     expect(onGo).toHaveBeenCalledWith(-31.4, -64.2, true);
@@ -130,7 +105,7 @@ describe("FieldPicker place finder", () => {
 describe("FieldPicker keyboard path", () => {
   it("submits typed coordinates and rejects out-of-range ones", () => {
     const onPointCoords = vi.fn();
-    renderPicker("none", 0, { onPointCoords });
+    renderCreation({ onPointCoords, mapUnavailable: true });
     const [lat, lon] = screen.getAllByRole("textbox")
       .filter((x) => x.closest(".coord-form"));
     const submit = () =>

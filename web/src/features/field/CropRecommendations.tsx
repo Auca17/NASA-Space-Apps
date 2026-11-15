@@ -3,6 +3,7 @@ import { apiCropRecommendations } from "../../api";
 import type { CropEntry, CropRecommendations as Result, CurrentCrop, DiagnoseResponse } from "../../api/types";
 import { PRIORITY_IDS, prioWeights } from "../../domain/rotations";
 import { useT } from "../../i18n";
+import { DecisionDetail } from "./DecisionDetail";
 
 const RESOURCES = ["irrigation", "livestock", "markets"] as const;
 const OBSERVED_CROPS: Partial<Record<string, string>> = {
@@ -48,7 +49,7 @@ export function CropRecommendations({ diagnosis, crops, declared, observation, p
     const controller = new AbortController();
     setResult(undefined);
     apiCropRecommendations({
-      diagnosis, current, priorities: prioWeights(priorities),
+      diagnosis, current, priorities: prioWeights(priorities), rank_with_gemini: true, lang,
       constraints: {
         irrigation: resources.irrigation, livestock: resources.livestock,
         limited_market: resources.markets === false,
@@ -57,7 +58,7 @@ export function CropRecommendations({ diagnosis, crops, declared, observation, p
       if (!controller.signal.aborted) setResult(data);
     });
     return () => controller.abort();
-  }, [diagnosis, current, detecting, priorities, resources, retry]);
+  }, [diagnosis, current, detecting, priorities, resources, retry, lang]);
 
   const afterCrop = current !== "unknown" && current !== "fallow" && current !== "perennial";
   const name = crops.find((row) => row.id === current)?.name;
@@ -67,8 +68,8 @@ export function CropRecommendations({ diagnosis, crops, declared, observation, p
     dateStyle: "medium", timeZone: "UTC",
   }).format(new Date(day + "T00:00:00Z"));
   const formatNumber = new Intl.NumberFormat(lang);
-  const ranked = result?.status === "ok" ? [...result.options]
-    .sort((a, b) => Number(a.conditional) - Number(b.conditional) || b.score - a.score) : [];
+  const ranked = result?.status !== "ok" ? [] : result.ranking_source === "gemini" ? result.options
+    : [...result.options].sort((a, b) => Number(a.conditional) - Number(b.conditional) || b.score - a.score);
   const renderOption = (row: Result["options"][number]) => <li className="card" key={row.id}>
     <div className="rec-heading">
       <h4>{row.name[lang] ?? row.name.es ?? row.id}</h4>
@@ -77,6 +78,7 @@ export function CropRecommendations({ diagnosis, crops, declared, observation, p
       </strong>
     </div>
     <p>{t("recs.window", { start: formatDate(row.sow_from), end: formatDate(row.sow_until) })}</p>
+    {row.cover_days != null && <p>{t("recs.coverDays", { days: row.cover_days })}</p>}
     <p>{row.rain_mm == null ? t("recs.rainMissing") : t(row.rain_period === "year" ? "recs.waterYear" : "recs.water", {
       rain: row.rain_mm, need: row.water_demand_mm,
     })}</p>
@@ -87,6 +89,10 @@ export function CropRecommendations({ diagnosis, crops, declared, observation, p
     </p>)}
     {row.different_family && <p>{t("recs.different")}</p>}
     {row.same_family && <p>{t("recs.same")}</p>}
+    <DecisionDetail decision={row.decision} fallback={t("decision.cropFallback")} facts={{
+      ...(row.rain_mm != null ? { rain_mm: row.rain_mm } : {}), water_demand_mm: row.water_demand_mm,
+      ...(row.cover_days != null ? { cover_days: row.cover_days } : {}),
+    }} />
   </li>;
   return <section className="crop-recs">
     <h2>{t(afterCrop ? "recs.next" : "recs.title", { crop: cropName })}</h2>
@@ -109,6 +115,9 @@ export function CropRecommendations({ diagnosis, crops, declared, observation, p
       : result.options.length === 0 ? <p role="status">{t("recs.empty")}</p>
       : <>
         <h3>{t("recs.top")}</h3>
+        {result.ranking_source && <small className="muted">{t(`decision.order.${result.ranking_source}`)}</small>}
+        {result.soil_data != null && <p className="muted">{t(result.soil_data ? "recs.soilUsed" : "recs.soilMissing")}</p>}
+        <p className="muted">{t("recs.sharedData")}</p>
         {ranked.length < 3 && <p className="muted">{t(ranked.length === 1 ? "recs.oneOption" : "recs.fewOptions")}</p>}
         {ranked.every((row) => row.conditional) && <p className="notice">{t("recs.allConditional")}</p>}
         <ol className="rec-list">{ranked.slice(0, 3).map(renderOption)}</ol>
@@ -117,6 +126,11 @@ export function CropRecommendations({ diagnosis, crops, declared, observation, p
           <ol className="rec-list" start={4}>{ranked.slice(3).map(renderOption)}</ol>
         </details>}
       </>}
+    {result?.regional_crops && result.regional_crops.length > 0 && <details className="card rec-filters" open>
+      <summary>{t("recs.regionalCrops")}</summary>
+      <p className="muted">{t("recs.regionalCropsNote")}</p>
+      <ul>{result.regional_crops.map((row) => <li key={row.id}>{row.name[lang] ?? row.name.es ?? row.id}</li>)}</ul>
+    </details>}
     <details className="card rec-filters">
       <summary>{t("recs.filters")}</summary>
       <fieldset className="prio-set">

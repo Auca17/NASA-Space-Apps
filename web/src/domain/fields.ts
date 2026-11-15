@@ -81,6 +81,13 @@ export function saveField(f: { name: string; geom: Multi }): Field {
   return field;
 }
 
+export function saveExampleFields(examples: Field[]) {
+  const fields = loadFields();
+  const existing = new Set(fields.map((field) => field.id));
+  const missing = examples.filter((example) => !existing.has(example.id));
+  if (missing.length) write([...fields, ...missing]);
+}
+
 export function renameField(id: string, name: string) {
   const n = name.trim();
   if (n) update(id, (f) => ({ ...f, name: n }));

@@ -20,6 +20,10 @@ log = logging.getLogger("measures")
 COST_ORDER = {"low": 0, "medium": 1, "high": 2}
 HIGH_RISK_CATS = {"alto", "muy_alto"}
 BURN_LEVEL = 2          # calendar level that counts as burn/dry season
+MONTHS_ES = ("enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto",
+             "septiembre", "octubre", "noviembre", "diciembre")
+MONTHS_EN = ("January", "February", "March", "April", "May", "June", "July", "August",
+             "September", "October", "November", "December")
 
 
 def _level_map(calendar, row_id):
@@ -34,11 +38,13 @@ def _seq_months(sequence):
     """Months covered by at least one period of the sequence."""
     months = set()
     for s in sequence or []:
+        if s.get("cover") is False:
+            continue
         try:
             a, b = int(s["start"][:2]), int(s["end"][:2])
         except (KeyError, TypeError, ValueError):
             continue
-        months |= (set(range(a, b + 1)) if a <= b
+        months |= (set(range(a, b + 1)) if s["start"] <= s["end"]
                    else set(range(a, 13)) | set(range(1, b + 1)))
     return months
 
@@ -113,7 +119,7 @@ def _triggers(ctx) -> tuple[set, list[str]]:
     if cat is not None:
         if cat in HIGH_RISK_CATS:
             fired.add("risk_high")
-            ctx["_why"]["risk_high"] = f"riesgo 7 días: {cat}"
+            ctx["_why"]["risk_high"] = f"riesgo de incendio a 7 días en la zona: {cat.replace('_', ' ')}"
             ctx["_why_en"]["risk_high"] = \
                 f"7-day risk: {cat.replace('muy_alto', 'very high')}"
     else:
@@ -124,9 +130,11 @@ def _triggers(ctx) -> tuple[set, list[str]]:
         if uncovered:
             fired.add("bare_soil_in_burn_season")
             ctx["_why"]["bare_soil_in_burn_season"] = \
-                f"suelo desnudo en meses de quemas: {sorted(uncovered)}"
+                "la secuencia deja suelo sin cultivo en meses con historial de quemas: " + \
+                ", ".join(MONTHS_ES[m - 1] for m in sorted(uncovered))
             ctx["_why_en"]["bare_soil_in_burn_season"] = \
-                f"bare ground in burning months: {sorted(uncovered)}"
+                "the sequence leaves bare ground in months with past burning: " + \
+                ", ".join(MONTHS_EN[m - 1] for m in sorted(uncovered))
     else:
         gaps.append("bare_soil_in_burn_season (falta rotación o calendario)")
 

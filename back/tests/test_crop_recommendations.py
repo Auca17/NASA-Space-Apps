@@ -6,7 +6,7 @@ from shapely.geometry import Polygon, mapping, shape
 from shapely.ops import unary_union
 
 from back.app.main import app
-from back.app.services.rotations import recommend_crops
+from back.app.services.rotations import recommend_crops, run
 
 
 def diagnosis(rain):
@@ -40,6 +40,53 @@ def test_alfalfa_compares_annual_reference_with_a_year_of_rain():
     assert crop["rain_period"] == "year"
     assert crop["rain_mm"] == 900
     assert crop["water_demand_mm"] == 1200
+
+
+def test_cuyo_exposes_documented_perennials_without_inventing_planting_windows():
+    local = {**diagnosis(900), "zone": "cuyo"}
+    result = recommend_crops(local, "fallow", {}, {}, today=date(2026, 11, 15))
+    assert {row["id"] for row in result["regional_crops"]} == {"vid", "olivo", "frutal_carozo"}
+    assert all("sow_from" not in row for row in result["regional_crops"])
+    assert not ({row["id"] for row in result["options"]} & {"vid", "olivo", "frutal_carozo"})
+    assert not recommend_crops(diagnosis(900), "fallow", {}, {}, today=date(2026, 11, 15))["regional_crops"]
+
+
+def test_cuyo_rotations_surface_the_garlic_option_and_which_crop_needs_water():
+    local = {**diagnosis(300), "zone": "cuyo"}
+    for card in local["cards"]:
+        card.setdefault("text", str(card["value"]))
+        card["source"] = "test"
+    result = run(local, None, {}, {}, "cuyo")
+    assert [strategy["id"] for strategy in result["strategies"]] == ["alfalfa4-maiz", "alfalfa4-ajo"]
+    risks = result["strategies"][1]["risks"]
+    assert risks[0].startswith("Alfalfa (pastura) · La lluvia estimada")
+    assert "demanda anual" in risks[0]
+    assert any(risk.startswith("Ajo · La lluvia estimada") for risk in risks)
+
+
+def test_same_climate_different_soils_change_crop_affinity_and_rotation_score():
+    local = {**diagnosis(900), "zone": "cuyo"}
+    for card in local["cards"]:
+        card.setdefault("text", str(card["value"]))
+        card["source"] = "test"
+    def parcel(soil):
+        return {**local, "cards": [*local["cards"], {
+            "id": "soil", "texture": soil, "value": 12,
+        }]}
+
+    def compare(diag):
+        crops = recommend_crops(diag, "fallow", {"soil": 5}, {}, today=date(2026, 11, 15))
+        rotations = run(diag, None, {"soil": 5}, {}, "cuyo")
+        maize = next(crop for crop in crops["options"] if crop["id"] == "maiz")
+        garlic_rotation = next(rot for rot in rotations["strategies"] if rot["id"] == "alfalfa4-ajo")
+        return crops["soil_data"], rotations["soil_data"], maize["score"], garlic_rotation["score"]
+
+    sand = compare(parcel("Arenoso"))
+    clay = compare(parcel("Arcilloso"))
+    assert sand[:2] == clay[:2] == (True, True)
+    assert sand[2] > clay[2]
+    assert sand[3] != clay[3]
+    assert compare(local)[:2] == (False, False)
 
 
 def test_next_crop_starts_after_current_crop_harvest():

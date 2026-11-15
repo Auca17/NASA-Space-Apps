@@ -1,7 +1,7 @@
 /** Step-by-step guide to mark a field: choose a method, then follow
  * the instructions for drawing an outline (point by point or freehand)
  * or tapping a point. Also used to draw crop zones inside a field. */
-import { useEffect, useState, useSyncExternalStore } from "react";
+import { useState, useSyncExternalStore } from "react";
 import { useT } from "../../i18n";
 import { drawStatus } from "../../domain/clarity";
 import { PlaceFinder } from "./PlaceFinder";
@@ -11,54 +11,23 @@ import {
 
 export type DrawMode = "none" | "draw" | "point" | "free";
 
-export function FieldPicker({ draw, points, onPick, onDemo, onFinish,
-                              onUndo, onCancel, onGo, onFields = () => {},
-                              fieldsCount = 0, context, freeError = false,
-                              zoomLow = false, onZoomIn = () => {},
-                              demoLots = [], movingMap = false, onToggleMove,
-                              mapUnavailable = false, onPointCoords }: {
-  draw: DrawMode;
+export function FieldPicker({ draw, points, onFinish, onUndo, onCancel, onGo,
+                              context, freeError = false, zoomLow = false,
+                              onZoomIn = () => {}, movingMap = false, onToggleMove }: {
+  draw: Exclude<DrawMode, "none">;
   points: number;
-  onPick: (m: "draw" | "point" | "free") => void;
-  onDemo: () => void;
-  /** Keyboard path: a ~50 ha selection around entered coordinates. */
-  onPointCoords?: (lat: number, lon: number) => void;
-  demoLots?: { id: string; label: string; onOpen: () => void }[];
   onFinish: () => void;
   onUndo: () => void;
   onCancel: () => void;
-  /** Center the map on a place (current location or search hit). */
   onGo: (lat: number, lon: number, precise?: boolean, accuracy?: number) => void;
-  onFields?: () => void;
-  fieldsCount?: number;
-  /** Shown on top while drawing something else than a field (a zone). */
   context?: string;
-  /** Last freehand stroke enclosed too little area. */
   freeError?: boolean;
-  /** The map is still too far to tell plots apart. */
   zoomLow?: boolean;
   onZoomIn?: () => void;
   movingMap?: boolean;
   onToggleMove?: () => void;
-  mapUnavailable?: boolean;
 }) {
   const { t } = useT();
-  const [expanded, setExpanded] = useState(true);
-  /** On compact widths the chooser is a peekable bottom sheet where the
-   * default state is the peek (only the main action visible): there
-   * `expanded` means "peek", so the visible state is inverted and
-   * aria-expanded must report what the user actually sees. */
-  const [compact, setCompact] = useState(() =>
-    typeof matchMedia !== "undefined" &&
-    matchMedia("(max-width: 900px)").matches);
-  useEffect(() => {
-    if (typeof matchMedia === "undefined") return;
-    const mq = matchMedia("(max-width: 900px)");
-    const on = () => setCompact(mq.matches);
-    mq.addEventListener("change", on);
-    return () => mq.removeEventListener("change", on);
-  }, []);
-  const shown = compact ? !expanded : expanded;
   // the draw layer's session: selected vertex + refusal notices
   const drawSt = useSyncExternalStore(subscribeDrawSession,
                                       activeDrawState);
@@ -129,65 +98,57 @@ export function FieldPicker({ draw, points, onPick, onDemo, onFinish,
       </div>);
   }
 
-  if (draw === "point") {
-    return (
-      <div className="controls picker" role="region"
-           aria-label={t("field.pointing.title")}>
-        <strong className="picker-mode">{t("field.pointing.title")}</strong>
-        <p className="picker-how" aria-live="polite">
-          {t(movingMap ? "field.map.moving" : "field.pointing.how")}</p>
-        <div className="row">
-          {move}
-          {zoomDetail}
-          <button onClick={onCancel}>{t("field.cancel")}</button>
-        </div>
-        {finder}
-      </div>);
-  }
-
   return (
-    <div className="controls picker field-chooser" role="region"
-         aria-label={t("field.choose.title")}>
-      <div className="picker-head">
-        <button type="button" aria-expanded={shown}
-                aria-controls="field-chooser-options"
-                data-peek={expanded}
-                onClick={() => setExpanded(!expanded)}>
-          {t(shown ? "field.choose.hide" : "field.choose.show")}</button>
-        <button type="button" onClick={onFields}>{t("fields.open", { n: fieldsCount })}</button>
+    <div className="controls picker" role="region" aria-label={t("field.pointing.title")}>
+      <strong className="picker-mode">{t("field.pointing.title")}</strong>
+      <p className="picker-how" aria-live="polite">
+        {t(movingMap ? "field.map.moving" : "field.pointing.how")}</p>
+      <div className="row">
+        {move}
+        {zoomDetail}
+        <button onClick={onCancel}>{t("field.cancel")}</button>
       </div>
-      <div id="field-chooser-options" hidden={!expanded}>
-        {zoomLow || mapUnavailable ? <PlaceFinder onGo={onGo} /> : finder}
-        {!mapUnavailable && <><div className="row">
-          <button className="primary" onClick={() => onPick("draw")}>{t("field.draw")}</button>
-          {zoomDetail}
-        </div>
-        <p className="picker-how">{t("field.opt.drawText")}</p>
-        <details className="field-examples">
-          <summary>{t("field.moreWays")}</summary>
-          <ul className="picker-options">
-            <li>
-              <button onClick={() => onPick("free")}>{t("field.free")}</button>
-              <span className="muted">{t("field.opt.freeText")}</span>
-            </li>
-            <li>
-              <button onClick={() => onPick("point")}>{t("field.point")}</button>
-              <span className="muted">{t("field.opt.pointText")}</span>
-            </li>
-          </ul>
-          {onPointCoords && <CoordForm onSubmit={onPointCoords} t={t} />}
-        </details></>}
-        {mapUnavailable && onPointCoords && <CoordForm onSubmit={onPointCoords} t={t} />}
-        <details className="field-examples">
-          <summary>{t("field.examples")}</summary>
-          <div className="row">
-            <button onClick={onDemo}>{t("field.demo")}</button>
-            {demoLots.map(({ id, label, onOpen }) => (
-              <button key={id} onClick={onOpen}>{label}</button>))}
-          </div>
-        </details>
-      </div>
+      {finder}
     </div>);
+}
+
+export function FieldCreationControls({ onPick, onGo, onPointCoords, mapUnavailable,
+                                         zoomLow, onZoomIn }: {
+  onPick: (mode: Exclude<DrawMode, "none">) => void;
+  onGo: (lat: number, lon: number, precise?: boolean, accuracy?: number) => void;
+  onPointCoords: (lat: number, lon: number) => void;
+  mapUnavailable: boolean;
+  zoomLow: boolean;
+  onZoomIn: () => void;
+}) {
+  const { t } = useT();
+  return <div className="field-creation">
+    <PlaceFinder onGo={onGo} />
+    {!mapUnavailable && <>
+      <div className="row">
+        <button type="button" className="primary" onClick={() => onPick("draw")}>
+          {t("field.draw")}
+        </button>
+        {zoomLow && <button type="button" onClick={onZoomIn}>{t("field.zoomIn")}</button>}
+      </div>
+      <p className="picker-how">{t("field.opt.drawText")}</p>
+      <details>
+        <summary>{t("field.moreWays")}</summary>
+        <ul className="picker-options">
+          <li>
+            <button type="button" onClick={() => onPick("free")}>{t("field.free")}</button>
+            <span className="muted">{t("field.opt.freeText")}</span>
+          </li>
+          <li>
+            <button type="button" onClick={() => onPick("point")}>{t("field.point")}</button>
+            <span className="muted">{t("field.opt.pointText")}</span>
+          </li>
+        </ul>
+        <CoordForm onSubmit={onPointCoords} t={t} />
+      </details>
+    </>}
+    {mapUnavailable && <CoordForm onSubmit={onPointCoords} t={t} />}
+  </div>;
 }
 
 /** Keyboard-only path to a ~50 ha selection: typed lat/lon instead of

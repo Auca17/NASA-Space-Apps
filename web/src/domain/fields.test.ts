@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import {
-  loadFields, saveField, renameField, deleteField, addZone, removeZone,
+  loadFields, saveField, saveExampleFields, renameField, deleteField, addZone, removeZone,
   updateZone, fieldHa, zoneHa, type Field,
 } from "./fields";
 import { squareRing, type Multi } from "./selection";
@@ -20,6 +20,18 @@ describe("fields store", () => {
     expect(all.map((f) => f.name)).toEqual(["Campo Los Álamos", "La Esperanza"]);
     expect(all[0].id).not.toBe(all[1].id);
     expect(fieldHa(all[1])).toBeCloseTo(200, 0);
+  });
+
+  it("adds missing samples without duplicating or overwriting saved fields", () => {
+    const own = saveField({ name: "Mi campo", geom: one });
+    const samples = ["a", "b"].map((id) => ({ ...own, id, name: id }));
+    saveExampleFields(samples);
+    renameField("a", "A editado");
+    deleteField("b");
+    saveExampleFields(samples);
+    expect(loadFields().map(({ id, name }) => [id, name])).toEqual([
+      [own.id, "Mi campo"], ["a", "A editado"], ["b", "b"],
+    ]);
   });
 
   it("keeps holes when saving and reading (area without them)", () => {

@@ -4,8 +4,7 @@ Every number in the output traces to a diagnosis card or a knowledge entry.
 Priority -> indicator weight mapping (contract 4.3):
 
   water         -> water_balance   (lower deficit is better)
-  soil          -> residue_t_ha_yr (t/ha/yr of stubble, higher better;
-                                    `carbon` kept as deprecated alias)
+  soil          -> stubble and exposure relative to the soil's infiltration
   erosion       -> erosion_risk    (lower level is better)
   income        -> income          (market_ar bucket, higher better)
   forage        -> forage          (has forage crop)
@@ -47,6 +46,7 @@ import re
 import statistics
 from pathlib import Path
 
+from .infiltration import infiltration_score
 from .knowledge import KNOWLEDGE, LEVEL, Crop, Rotation, SeqItem
 from .measures import evaluate as eval_measures, uncovered_burn_months
 
@@ -131,6 +131,25 @@ def _card(diag: dict, cid: str) -> dict | None:
         if c.get("id") == cid:
             return c
     return None
+
+
+def _soil_infiltration(diag: dict) -> int | None:
+    soil = _card(diag, "soil") or {}
+    texture = soil.get("texture")
+    carbon = soil.get("value")
+    texture = texture if isinstance(texture, str) and texture else None
+    carbon = carbon if isinstance(carbon, (int, float)) else None
+    if texture is None and carbon is None:
+        return None
+    slope = (_card(diag, "slope") or {}).get("value")
+    return infiltration_score(texture, carbon, slope if isinstance(slope, (int, float)) else None, None)
+
+
+def _soil_cover_fit(infiltration: int | None, bare_days: int) -> float | None:
+    """Relative trade-off between exposure and infiltration, never a water depth."""
+    if infiltration is None:
+        return None
+    return 1 - bare_days / 365 * (1 - infiltration / 100)
 
 
 def _frost_free_doys(diag: dict) -> set[int] | None:
@@ -320,7 +339,7 @@ def crop_viable(crop: Crop, diag: dict, constraints: dict,
     if ff is not None and crop.frost_tolerance != "high":
         outside = cyc - ff
         if len(outside) > FROST_GRACE_DAYS:
-            reasons.append("ciclo fuera de la ventana libre de heladas")
+            reasons.append(f"{len(outside)} días del ciclo quedan fuera de la época libre de heladas de referencia. Revisá las fechas de siembra.")
     if constraints.get("irrigation") is not True:
         if avail is None:
             if item is not None:
@@ -332,8 +351,9 @@ def crop_viable(crop: Crop, diag: dict, constraints: dict,
         if avail is not None:
             if avail < crop.water_mm_cycle * WATER_MIN_FRAC:
                 reasons.append(
-                    f"agua disponible ~{avail:.0f} mm < "
-                    f"{crop.water_mm_cycle} mm del ciclo")
+                    f"La lluvia estimada aporta unos {avail:.0f} mm frente a "
+                    f"{crop.water_mm_cycle} mm de demanda {'anual' if crop.water_period == 'year' else 'del ciclo'}. "
+                    "Confirmá el agua disponible antes de planificar la siembra.")
             elif constraints.get("irrigation") is False and \
                     crop.water_mm_cycle > avail * IRRIGATION_MARGIN:
                 reasons.append("necesitaría riego para cubrir su demanda")
@@ -476,6 +496,7 @@ def indicators(rot: Rotation, diag: dict, zone: str | None,
             round(sum(c.residue_t_ha for c in crops) / years, 1),
         "nitrogen": sum(1 for c in crops if c.n_fixation),
         "bare_soil_days": bare,
+        "soil_cover_fit": _soil_cover_fit(_soil_infiltration(diag), bare),
         "erosion_risk": erosion,
         # relative, qualitative: how this alternative moves the
         # infiltration drivers a rotation controls (cover days and
@@ -538,7 +559,10 @@ def score(alt: dict, cur: dict, priorities: dict) -> float:
         b = _metric_value(cur, key)
         invert = key in ("water_balance_mm", "erosion_risk",
                          "pest_break")
-        num += w * _numeric_delta(a, b, invert)
+        delta = _numeric_delta(a, b, invert)
+        if p == "soil" and alt.get("soil_cover_fit") is not None and cur.get("soil_cover_fit") is not None:
+            delta = (delta + _numeric_delta(alt["soil_cover_fit"], cur["soil_cover_fit"])) / 2
+        num += w * delta
     return round(0.5 + num / (2 * sum(used.values())), 3)
 
 
@@ -629,7 +653,8 @@ def _gaps(diag: dict, analog_missing: bool = False,
 
 def _risks(rot: Rotation, viable: bool, reasons: list[str]) -> list[str]:
     per = CAUTIONS.get("per_crop", {})
-    risks = [r for s in rot.sequence for r in per.get(s.crop, [])]
+    risks = [] if viable else reasons.copy()
+    risks.extend(r for s in rot.sequence for r in per.get(s.crop, []))
     # host-sharing consecutive pairs get a specific warning, e.g.
     # "maíz sobre maíz mantiene Fusarium y chicharrita"
     for a, b, pests in host_sharing_pairs(rot):
@@ -638,16 +663,17 @@ def _risks(rot: Rotation, viable: bool, reasons: list[str]) -> list[str]:
         risks.append(
             f"{a} seguido de {b} mantiene {names} "
             f"(inóculo: {how}).")
-    risks += CAUTIONS.get("generic", [])
-    if not viable:
-        risks += [f"No viable: {r}" for r in reasons]
-    risks.append("Validar estas opciones con tu agrónomo de cabecera.")
     seen, out = set(), []
     for r in risks:
         if r not in seen:
             seen.add(r)
             out.append(r)
     return out
+
+
+def _crop_risks(bad: dict[str, list[str]]) -> list[str]:
+    return [f"{KNOWLEDGE.crops[key.split('#')[0]].name.get('es', key)} · {reason}"
+            for key, reasons in bad.items() for reason in reasons]
 
 
 _MONTHS_ES = ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago",
@@ -856,7 +882,7 @@ def _shift_for_zone(rot: Rotation,
 def run(diagnosis: dict, current: dict | None, priorities: dict,
         constraints: dict, zone: str | None,
         analog: dict | None = None,
-        hazards: set | None = None) -> dict:
+        hazards: set | None = None, *, candidate_limit: int = 3) -> dict:
     zone = zone if zone in ZONE_CROPS else ("other" if zone else None)
     known = zone in ZONE_CROPS
     ff = _frost_free_doys(diagnosis)
@@ -899,11 +925,10 @@ def run(diagnosis: dict, current: dict | None, priorities: dict,
             notes += hnotes
         cand.append({"rot": rot2, "ind": ind, "score": sc,
                      "bad": bad, "viable": not bad, "notes": notes})
-    viable = [c for c in cand if c["viable"]]
-    notviable = sorted((c for c in cand if not c["viable"]),
-                       key=lambda c: -c["score"])
-    top = sorted(viable, key=lambda c: -c["score"])[:3]
-    top += notviable[:3 - len(top)]  # least-bad fill; up to 3 alternatives
+    # Keep viability first. For equal priority scores prefer better soil cover.
+    top = sorted(cand, key=lambda c: (
+        not c["viable"], -c["score"], -(c["ind"].get("soil_cover_fit") or 0),
+    ))[:candidate_limit]
 
     def _measures(rot: Rotation) -> dict:
         cat = None
@@ -929,18 +954,19 @@ def run(diagnosis: dict, current: dict | None, priorities: dict,
             "indicators": cur_ind,
             **_sections(cur_rot, cur_ind, cur_ind, True, priorities,
                         diagnosis, not cur_bad,
-                        [r for v in cur_bad.values() for r in v], analog,
+                        _crop_risks(cur_bad), analog,
                         constraints,
                         zone_gaps + cur_notes),
             **_measures(cur_rot),
         })
     for c in top:
-        reasons = [r for v in c["bad"].values() for r in v]
+        reasons = _crop_risks(c["bad"])
         strategies.append({
             "id": c["rot"].id,
             "name": c["rot"].name.get("es", c["rot"].id),
             "name_en": c["rot"].name.get("en") or c["rot"].name.get("es", c["rot"].id),
             "is_current": False,
+            "viable": c["viable"],
             "score": c["score"],
             "confidence": confidence,
             "indicators": c["ind"],
@@ -951,7 +977,7 @@ def run(diagnosis: dict, current: dict | None, priorities: dict,
         })
     out = {"diagnosis_id": diagnosis.get("diagnosis_id"),
            "strategies": strategies, "disclaimer": DISCLAIMER,
-           "confidence": confidence}
+           "confidence": confidence, "soil_data": _soil_infiltration(diagnosis) is not None}
     if zone_gaps or not strategies:
         out["gaps"] = zone_gaps or \
             ["sin rotaciones validadas para esta zona"]
@@ -1015,6 +1041,7 @@ def recommend_crops(diagnosis, current, priorities, constraints, *, today=None):
         harvests.append(harvest)
     earliest = max(today, max(harvests) + timedelta(days=1)) if harvests else today
     result = []
+    infiltration = _soil_infiltration(diagnosis)
     slope = (_card(diagnosis, "slope") or {}).get("value")
     heavy_rain = (_card(diagnosis, "heavy_rain") or {}).get("value")
     burns = _burn_months(diagnosis)
@@ -1053,9 +1080,13 @@ def recommend_crops(diagnosis, current, priorities, constraints, *, today=None):
                    isinstance(heavy_rain, (int, float)) else None)
         if erosion is not None:
             fit.append(1 / (1 + max(0, erosion) / EROSION_HIGH))
+        cover_fit = _soil_cover_fit(infiltration, 365 - len(cycle))
+        if cover_fit is not None:
+            fit.append(cover_fit)
         match = {
             "water": min(1, (rain or 0) / max(crop.water_mm_cycle, 1)) if rain is not None else None,
-            "soil": residue, "nitrogen": float(crop.n_fixation), "forage": float(crop.forage),
+            "soil": (residue + cover_fit) / 2 if cover_fit is not None else residue,
+            "nitrogen": float(crop.n_fixation), "forage": float(crop.forage),
             "erosion": 1 / (1 + max(0, erosion) / EROSION_HIGH) if erosion is not None else None,
             "income": LEVEL[crop.market_ar] / 3,
             "pests": float(different_family) if previous else None,
@@ -1069,7 +1100,7 @@ def recommend_crops(diagnosis, current, priorities, constraints, *, today=None):
             affinity = .75 * affinity + .25 * (
                 sum(v * w for v, w in weighted) / sum(w for _, w in weighted))
         if reasons:
-            affinity = min(.59, affinity * .7)
+            affinity *= .59
         fits_frost = (crop.frost_tolerance == "high" or
                       len(cycle - ff) <= FROST_GRACE_DAYS) if ff is not None else None
         conditions = []
@@ -1083,6 +1114,7 @@ def recommend_crops(diagnosis, current, priorities, constraints, *, today=None):
                        "sow_from": start.isoformat(), "sow_until": end.isoformat(),
                        "water_demand_mm": crop.water_mm_cycle,
                        "rain_period": crop.water_period,
+                       "cover_days": len(cycle),
                        "rain_mm": round(rain) if rain is not None else None,
                        "needs_irrigation": needs_irrigation,
                        "fits_frost": fits_frost,
@@ -1093,7 +1125,12 @@ def recommend_crops(diagnosis, current, priorities, constraints, *, today=None):
     result.sort(key=lambda item: (item["conditional"], -item["score"],
                                   item["sow_from"], item["id"]))
     return {"status": "ok", "available_from": earliest.isoformat() if harvests else None,
-            "options": result}
+            "soil_data": infiltration is not None,
+            "options": result, "regional_crops": [
+                {"id": crop.id, "name": crop.name}
+                for crop in KNOWLEDGE.crops.values()
+                if not crop.rotatable and zone in crop.harvest and not crop.window(zone)
+            ]}
 
 
 def explain(rotations_response: dict) -> dict:
