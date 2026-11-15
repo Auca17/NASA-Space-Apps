@@ -1,0 +1,110 @@
+{
+  "name": "Ashfield · Enviar código",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "send-code",
+        "authentication": "headerAuth",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "a61d1c83-356d-4415-8607-b0aac137868a",
+      "name": "POST /send-code",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        0
+      ],
+      "webhookId": "3076aed4-084e-49c0-9c2d-383394e49187"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "// Valida el pedido del back end antes de mandar nada.\nconst { phone, code } = $json.body || {};\nif (!/^\\+\\d{8,15}$/.test(phone || '') || !/^\\d{6}$/.test(String(code || ''))) {\n  throw new Error('Pedido inválido: se espera { \"phone\": \"+549...\", \"code\": \"123456\" }');\n}\nreturn { json: { phone, code: String(code) } };"
+      },
+      "id": "2292fa96-e401-487a-a26b-428e8f1d00fe",
+      "name": "Validar pedido",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        240,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "send",
+        "from": "+14155238886",
+        "to": "={{ $json.phone }}",
+        "toWhatsapp": true,
+        "message": "={{ $json.code }} es tu código de verificación de Ashfield. Vence en 10 minutos. No lo compartas."
+      },
+      "id": "9b95b8d8-df76-497a-a979-dc2daf526bf3",
+      "name": "WhatsApp (Twilio)",
+      "type": "n8n-nodes-base.twilio",
+      "typeVersion": 1,
+      "position": [
+        480,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { \"ok\": true } }}",
+        "options": {}
+      },
+      "id": "34c151c4-65df-4287-91c7-ffe9b1b5ae53",
+      "name": "Responder",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        720,
+        0
+      ]
+    }
+  ],
+  "connections": {
+    "POST /send-code": {
+      "main": [
+        [
+          {
+            "node": "Validar pedido",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validar pedido": {
+      "main": [
+        [
+          {
+            "node": "WhatsApp (Twilio)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "WhatsApp (Twilio)": {
+      "main": [
+        [
+          {
+            "node": "Responder",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "America/Argentina/Buenos_Aires"
+  },
+  "pinData": {},
+  "active": false
+}

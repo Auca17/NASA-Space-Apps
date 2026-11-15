@@ -1,0 +1,158 @@
+{
+  "name": "Ashfield · Alerta de fuego (demo)",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "hours",
+              "hoursInterval": 3
+            }
+          ]
+        }
+      },
+      "id": "d7960807-80e9-4a75-a4ba-fe844497a64c",
+      "name": "Cada 3 horas",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        0
+      ]
+    },
+    {
+      "parameters": {},
+      "id": "43549d28-5dea-4855-9e61-f0f25b53c7fa",
+      "name": "Probar ahora",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Suscripciones de prueba. Cuando exista GET /api/alerts/subscriptions,\n// este nodo se reemplaza por un HTTP Request con Header Auth.\nconst API_BASE = 'https://REEMPLAZAR.vercel.app'; // URL del deploy de Ashfield, sin / final\n\nconst subs = [\n  {\n    id: 'demo-pergamino',\n    name: 'Lote de prueba Pergamino',\n    lat: -33.89, lon: -60.57,\n    radius_km: 25,              // avisar si hay un foco a esta distancia o menos\n    phone: '+549XXXXXXXXXX',    // celular unido al sandbox de Twilio\n    country: 'AR',\n  },\n];\n\nreturn subs.map(s => {\n  const dLat = s.radius_km / 111;\n  const dLon = s.radius_km / (111 * Math.cos(s.lat * Math.PI / 180));\n  const bbox = [s.lon - dLon, s.lat - dLat, s.lon + dLon, s.lat + dLat]\n    .map(v => v.toFixed(4)).join(',');\n  return { json: { ...s, api_base: API_BASE,\n    live_url: `${API_BASE}/api/live?window=24h&bbox=${bbox}` } };\n});"
+      },
+      "id": "a065da2c-f26a-4c30-9ab9-f1173037b60b",
+      "name": "Suscripciones",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        240,
+        100
+      ]
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.live_url }}",
+        "options": {
+          "timeout": 60000
+        }
+      },
+      "id": "14cc808d-4884-47a2-8a81-ed824d015acf",
+      "name": "Focos 24 h (Ashfield /api/live)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        480,
+        100
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Para cada campo: focos de /api/live dentro del radio que no se avisaron antes.\nconst subs = $('Suscripciones').all().map(i => i.json);\nconst FIRE_NUMBER = { AR: '100', BR: '193', CL: '131', UY: '104', PY: '132', BO: '119' };\nconst SAT = { N: 'VIIRS S-NPP', N20: 'VIIRS NOAA-20', N21: 'VIIRS NOAA-21', T: 'MODIS Terra', A: 'MODIS Aqua' };\nconst DIRS = ['norte', 'noreste', 'este', 'sureste', 'sur', 'suroeste', 'oeste', 'noroeste'];\n\n// Memoria de focos ya avisados (persiste solo en ejecuciones del flujo activo)\nconst memory = $getWorkflowStaticData('global');\nmemory.seen = memory.seen || [];\nconst seen = new Set(memory.seen);\n\nconst rad = d => d * Math.PI / 180;\nfunction distKm(a, b, c, d) {\n  const x = Math.sin(rad(c - a) / 2) ** 2 +\n    Math.cos(rad(a)) * Math.cos(rad(c)) * Math.sin(rad(d - b) / 2) ** 2;\n  return 6371 * 2 * Math.asin(Math.sqrt(x));\n}\nfunction direction(lat0, lon0, lat1, lon1) {\n  const y = Math.sin(rad(lon1 - lon0)) * Math.cos(rad(lat1));\n  const x = Math.cos(rad(lat0)) * Math.sin(rad(lat1)) -\n    Math.sin(rad(lat0)) * Math.cos(rad(lat1)) * Math.cos(rad(lon1 - lon0));\n  const deg = (Math.atan2(y, x) * 180 / Math.PI + 360) % 360;\n  return DIRS[Math.round(deg / 45) % 8];\n}\n\nconst out = [];\n$input.all().forEach((item, i) => {\n  const s = subs[i];\n  const live = item.json;\n  if (!s || live.mode !== 'points' || !Array.isArray(live.points)) return;\n  const near = live.points\n    .map(([lat, lon, frp, sat, acq]) => ({ lat, lon, frp, sat, acq,\n      km: distKm(s.lat, s.lon, lat, lon) }))\n    .filter(p => p.km <= s.radius_km)\n    .filter(p => !seen.has(`${s.id}|${p.lat.toFixed(3)},${p.lon.toFixed(3)}|${p.acq}`))\n    .sort((a, b) => a.km - b.km);\n  if (!near.length) return;\n  near.forEach(p => memory.seen.push(`${s.id}|${p.lat.toFixed(3)},${p.lon.toFixed(3)}|${p.acq}`));\n  const p = near[0];\n  const when = new Date(p.acq).toLocaleString('es-AR', {\n    timeZone: 'America/Argentina/Buenos_Aires', day: 'numeric', month: 'numeric',\n    hour: '2-digit', minute: '2-digit', hour12: false });\n  const more = near.length > 1 ? ` (y ${near.length - 1} foco${near.length > 2 ? 's' : ''} más dentro de ${s.radius_km} km)` : '';\n  const message =\n    `🔥 Ashfield: posible foco a ${p.km.toFixed(1).replace('.', ',')} km al ${direction(s.lat, s.lon, p.lat, p.lon)} ` +\n    `de tu campo «${s.name}»${more}. Satélite ${SAT[p.sat] || p.sat}, ${when} (hora de Argentina).\\n\\n` +\n    `Es una detección satelital, no un incendio confirmado. Si ves fuego o humo, llamá al ${FIRE_NUMBER[s.country] || '911'}.\\n\\n` +\n    `Ver en el mapa: ${s.api_base}/app/`;\n  out.push({ json: { subscription_id: s.id, phone: s.phone, km: p.km, focos: near.length, message } });\n});\nmemory.seen = memory.seen.slice(-1000);\nreturn out;"
+      },
+      "id": "3eccb4c6-2eee-4a07-a68d-ad2b9b5c7309",
+      "name": "¿Foco nuevo cerca?",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        720,
+        100
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "send",
+        "from": "+14155238886",
+        "to": "={{ $json.phone }}",
+        "toWhatsapp": true,
+        "message": "={{ $json.message }}"
+      },
+      "id": "7ce0adb0-bac5-4362-93d2-b2e0721c3c17",
+      "name": "WhatsApp (Twilio)",
+      "type": "n8n-nodes-base.twilio",
+      "typeVersion": 1,
+      "position": [
+        960,
+        100
+      ]
+    }
+  ],
+  "connections": {
+    "Cada 3 horas": {
+      "main": [
+        [
+          {
+            "node": "Suscripciones",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Probar ahora": {
+      "main": [
+        [
+          {
+            "node": "Suscripciones",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Suscripciones": {
+      "main": [
+        [
+          {
+            "node": "Focos 24 h (Ashfield /api/live)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Focos 24 h (Ashfield /api/live)": {
+      "main": [
+        [
+          {
+            "node": "¿Foco nuevo cerca?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "¿Foco nuevo cerca?": {
+      "main": [
+        [
+          {
+            "node": "WhatsApp (Twilio)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "America/Argentina/Buenos_Aires"
+  },
+  "pinData": {},
+  "active": false
+}
