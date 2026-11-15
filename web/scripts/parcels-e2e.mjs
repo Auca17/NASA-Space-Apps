@@ -31,15 +31,10 @@ await page.goto(BASE + "/app/", { waitUntil: "networkidle" });
 await page.waitForTimeout(1500);
 await page.getByRole("button", { name: /ejemplo|pergamino/i }).first()
   .click();
-await page.waitForSelector("#needs-h", { timeout: 15000 });
-ok(true, "needs form shown");
-// profile editors live on the needs step
-ok(await page.getByText(/Mis prioridades/).count() > 0,
-   "priorities editor on needs step");
-await page.getByRole("button", { name: /^Fuego$/ }).click().catch(() => {});
-await page.getByRole("button", { name: /^Analizar$/ }).click();
-await page.waitForSelector(".parcel-badge", { timeout: 40000 })
-  .catch(() => {});
+// the Mendoza demo carries its own needs: it goes straight to the
+// parcels analysis instead of asking first
+await page.waitForSelector(".parcel-badge, [role='tab']",
+  { timeout: 60000 }).catch(() => {});
 ok(await page.locator(".parcel-badge").count() > 0, "parcel badges on map");
 ok(await page.locator(".parcel-alert, .parcel-res-row").count() > 0,
    "result panel rows/alerts");
@@ -47,8 +42,8 @@ ok(await page.locator(".parcel-alert, .parcel-res-row").count() > 0,
 // tabs present and accessible
 const tabs = page.getByRole("tab");
 ok(await tabs.count() === 3, "three result tabs");
-ok(await page.getByText("Todo el campo").count() > 0,
-   "unsplit field labelled 'Todo el campo'");
+ok(await page.getByText(/Finca Los Álamos/).count() > 0,
+   "demo farm named in the panel");
 ok(await page.getByText(/^Otro$/, { exact: true }).count() === 0,
    "whole-field crop hidden");
 

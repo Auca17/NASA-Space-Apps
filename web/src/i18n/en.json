@@ -580,6 +580,7 @@
   "parcels.name": "Name",
   "parcels.crop": "Crop",
   "parcels.cropOther": "Other",
+  "parcels.detectedBasis": "detected by the National Crop Map (INTA), {campaign} campaign",
   "parcels.cropNone": "No crop",
   "parcels.defaultName": "Parcel {n}",
   "parcels.save": "Save",

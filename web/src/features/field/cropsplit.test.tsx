@@ -45,20 +45,20 @@ describe("split by crop", () => {
   const field: Field = { id: "a", name: "A", geom: [[ring]], zones: [], createdAt: "" };
 
   it("shows that it is looking for crops while the automatic split runs", () => {
-    vi.stubGlobal("fetch", vi.fn(async () => json({ seasons: [] })));
+    vi.stubGlobal("fetch", vi.fn(async (u: unknown) => { void u; return json({ seasons: [] }); }));
     wrap(<FieldDetail field={field} choice="all" pending={null} {...fns()} />);
     expect(screen.getByText(/buscando los cultivos/i)).toBeInTheDocument();
   });
 
   it("explains when the map found no crops", () => {
-    vi.stubGlobal("fetch", vi.fn(async () => json({ seasons: [] })));
+    vi.stubGlobal("fetch", vi.fn(async (u: unknown) => { void u; return json({ seasons: [] }); }));
     wrap(<FieldDetail field={{ ...field, cropSplit: "none" }} choice="all"
                       pending={null} {...fns()} />);
     expect(screen.getByText(/no encontró cultivos/i)).toBeInTheDocument();
   });
 
   it("does not split again once it was tried (the user may have removed zones)", async () => {
-    const fetch = vi.fn(async (_url: string) => json({ seasons: [] }));
+    const fetch = vi.fn(async (u: unknown) => { void u; return json({ seasons: [] }); });
     vi.stubGlobal("fetch", fetch);
     wrap(<FieldDetail field={{ ...field, cropSplit: "done" }} choice="all"
                       pending={null} {...fns()} />);
@@ -77,7 +77,7 @@ describe("useAutoCropSplit", () => {
     ({ id, name: id, geom: [[ring]], zones: [], createdAt: "", ...extra });
 
   it("splits every saved field with no zones, without opening it", async () => {
-    vi.stubGlobal("fetch", vi.fn(async () => zonesReply.clone()));
+    vi.stubGlobal("fetch", vi.fn(async (u: unknown) => { void u; return zonesReply.clone(); }));
     const apply = vi.fn();
     renderHook(() => useAutoCropSplit([f("a"), f("b", { cropSplit: "none" })],
                                       "es", apply));
@@ -89,7 +89,7 @@ describe("useAutoCropSplit", () => {
   });
 
   it("asks only once per field even if the list re-renders", async () => {
-    const fetch = vi.fn(async (_u: string) => zonesReply.clone());
+    const fetch = vi.fn(async (u: unknown) => { void u; return zonesReply.clone(); });
     vi.stubGlobal("fetch", fetch);
     const apply = vi.fn();
     const fields = [f("c")];

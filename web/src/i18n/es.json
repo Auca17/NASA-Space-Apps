@@ -580,6 +580,7 @@
   "parcels.name": "Nombre",
   "parcels.crop": "Cultivo",
   "parcels.cropOther": "Otro",
+  "parcels.detectedBasis": "detectado por el Mapa Nacional de Cultivos (INTA), campaña {campaign}",
   "parcels.cropNone": "Sin cultivo",
   "parcels.defaultName": "Parcela {n}",
   "parcels.save": "Guardar",

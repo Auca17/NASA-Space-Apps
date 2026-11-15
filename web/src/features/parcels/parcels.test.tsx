@@ -249,6 +249,53 @@ describe("ParcelsWizard", () => {
     expect(legend).not.toHaveTextContent("Maíz");
   });
 
+  it("prefills the crop from INTA detection and shows the basis",
+      async () => {
+    globalThis.fetch = vi.fn(async (url: RequestInfo | URL, init) => {
+      const u = String(url);
+      if (u.includes("crops.json")) {
+        return new Response(JSON.stringify(crops), { status: 200 });
+      }
+      if (u.includes("/api/field/crop") && init?.method === "POST") {
+        return new Response(JSON.stringify({
+          source: "INTA · Mapa Nacional de Cultivos",
+          source_url: "https://example.test", resolution_m: 30,
+          seasons: [{ season: "summer", campaign: "2024-2025",
+                      status: "crop", share: 0.8, coverage: 0.9,
+                      crop: { id: "soy", es: "Soja", en: "Soybean" } }],
+        }), { status: 200 });
+      }
+      return new Response("{}", { status: 404 });
+    }) as typeof fetch;
+    const g = globeMock();
+    wrap(<ParcelsWizard geom={fieldGeom} globe={g}
+                        onDone={vi.fn()} onCancel={() => {}} />);
+    fireEvent.click(await screen.findByRole("button",
+      { name: es["parcels.addParcel"] }));
+    const layer = document.querySelector(".freehand-layer")!;
+    const tap = (x: number, y: number) => {
+      fireEvent(layer, new MouseEvent("pointerdown",
+        { clientX: x, clientY: y, button: 0, bubbles: true }));
+      fireEvent(layer, new MouseEvent("pointerup",
+        { clientX: x, clientY: y, button: 0, bubbles: true }));
+    };
+    tap(40, 40); tap(160, 40); tap(160, 160); tap(40, 160);
+    fireEvent.click(screen.getByRole("button",
+      { name: es["field.finish"] }));
+    // the basis names the source and campaign
+    expect(await screen.findByText(/Mapa Nacional de Cultivos/))
+      .toHaveTextContent("2024-2025");
+    // and the select already shows the detected crop
+    const select = screen.getByRole("combobox") as HTMLSelectElement;
+    await waitFor(() => expect(select.value).toBe("soja"));
+    fireEvent.click(screen.getByRole("button",
+      { name: es["parcels.save"] }));
+    // saved without touching: the parcel keeps the detected crop
+    const legend = await screen.findByRole("list",
+      { name: es["parcels.legend"] });
+    expect(legend).toHaveTextContent("Soja");
+  });
+
   it("skips to needs and calls onDone with the parcels", async () => {
     const g = globeMock();
     const onDone = vi.fn();

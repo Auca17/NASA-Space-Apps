@@ -20,6 +20,7 @@ import { DrawLayer } from "../field/DrawLayer";
 import { FreehandLayer } from "../field/FreehandLayer";
 import { NeedsForm } from "./NeedsForm";
 import { CropIcon } from "./CropIcon";
+import { detectParcelCrop, type ParcelDetection } from "./cropDetect";
 
 type DrawTool = "points" | "free" | "split";
 type Step = "parcels" | "needs";
@@ -44,6 +45,12 @@ export function ParcelsWizard({ geom, globe, onDone, onCancel }: {
   const [editing, setEditing] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [crops, setCrops] = useState<CropOpt[] | null>(null);
+  /** INTA detection per pending piece + the dominant one (largest
+   * piece), used to prefill the crop the user has not chosen yet. */
+  const [detection, setDetection] = useState<{
+    perPiece: (ParcelDetection | null)[];
+    dominant: ParcelDetection | null;
+  } | null>(null);
   const nextId = useRef(1);
 
   // the point-by-point tool keeps its own session (open path, then a
@@ -69,6 +76,22 @@ export function ParcelsWizard({ geom, globe, onDone, onCancel }: {
     });
     return () => { live = false; };
   }, [lang, t]);
+
+  // Detect the crop of each just-drawn piece on INTA's map; the form
+  // prefills with it and saving applies each piece's own detection
+  // unless the user picked a crop themselves.
+  useEffect(() => {
+    if (!pending) { setDetection(null); return; }
+    let live = true;
+    Promise.all(pending.map((g) => detectParcelCrop([g]))).then((ds) => {
+      if (!live) return;
+      let di = 0, best = -1;
+      pending.forEach((g, i) => { const h = polyHa(g);
+        if (h > best) { best = h; di = i; } });
+      setDetection({ perPiece: ds, dominant: ds[di] });
+    });
+    return () => { live = false; };
+  }, [pending]);
 
   // preview: boundary + declared parcels + pieces waiting for a name
   useEffect(() => {
@@ -124,7 +147,7 @@ export function ParcelsWizard({ geom, globe, onDone, onCancel }: {
   const cropLabel = (id: string) =>
     crops?.find((c) => c.id === id)?.label ?? id;
 
-  const saveForm = (name: string, crop: string) => {
+  const saveForm = (name: string, crop: string, touched: boolean) => {
     if (editing) {
       setParcels((ps) => ps.map((p) =>
         p.id === editing ? { ...p, name, crop } : p));
@@ -138,7 +161,8 @@ export function ParcelsWizard({ geom, globe, onDone, onCancel }: {
       const add = pieces.map((geom, i) => ({
         id: `p${nextId.current + i}`,
         name: pieces.length > 1 ? `${name} ${i + 1}` : name,
-        crop, geom }));
+        crop: touched ? crop
+          : (detection?.perPiece[i]?.cropId ?? crop), geom }));
       nextId.current += pieces.length;
       return [...ps, ...add];
     });
@@ -251,6 +275,7 @@ export function ParcelsWizard({ geom, globe, onDone, onCancel }: {
           t={t} crops={crops}
           initial={editing
             ? parcels.find((p) => p.id === editing) ?? null : null}
+          detected={editing ? null : (detection?.dominant ?? null)}
           defaultName={t("parcels.defaultName",
                          { n: parcels.length + 1 })}
           onSave={saveForm}
@@ -316,19 +341,28 @@ export function ParcelsWizard({ geom, globe, onDone, onCancel }: {
 /** Name + crop form: used right after drawing (one shared form even
  * when a split produced several pieces — each becomes a parcel with
  * the same crop and a numbered name) and for editing a parcel. */
-function ParcelForm({ t, crops, initial, defaultName, onSave, onCancel }: {
+function ParcelForm({ t, crops, initial, detected, defaultName,
+                      onSave, onCancel }: {
     t: (k: string, v?: Record<string, string | number>) => string;
     crops: CropOpt[] | null;
     initial: ParcelInput | null;
+    /** INTA detection prefilling the crop until the user picks one. */
+    detected: ParcelDetection | null;
     defaultName: string;
-    onSave: (name: string, crop: string) => void;
+    onSave: (name: string, crop: string, touched: boolean) => void;
     onCancel: () => void }) {
   const [name, setName] = useState(initial?.name ?? defaultName);
   const [crop, setCrop] = useState(initial?.crop ?? "otro");
+  const [touched, setTouched] = useState(false);
+  // the detection lands after the form opens; fill the select while
+  // the user has not picked anything yet
+  useEffect(() => {
+    if (!touched && detected) setCrop(detected.cropId);
+  }, [detected, touched]);
   return (
     <form className="parcel-form" onSubmit={(e) => {
       e.preventDefault();
-      if (name.trim()) onSave(name.trim(), crop);
+      if (name.trim()) onSave(name.trim(), crop, touched);
     }}>
       <label>{t("parcels.name")}
         <input value={name} autoFocus
@@ -340,13 +374,18 @@ function ParcelForm({ t, crops, initial, defaultName, onSave, onCancel }: {
                 style={{ background: cropColor(crop) }} />
           <CropIcon crop={crop} />
           <select value={crop}
-                  onChange={(e) => setCrop(e.target.value)}>
+                  onChange={(e) => {
+                    setCrop(e.target.value); setTouched(true); }}>
             {(crops ?? [{ id: "otro", label: t("parcels.cropOther") }])
               .map((c) =>
                 <option key={c.id} value={c.id}>{c.label}</option>)}
           </select>
         </span>
       </label>
+      {detected && !touched && !initial && (
+        <p className="muted detected-basis">
+          {t("parcels.detectedBasis", { campaign: detected.campaign })}
+        </p>)}
       <div className="row">
         <button type="submit" className="primary">{t("parcels.save")}</button>
         <button type="button" onClick={onCancel}>{t("field.cancel")}</button>

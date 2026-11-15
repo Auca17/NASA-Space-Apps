@@ -119,8 +119,6 @@ for (const s of SIZES) {
     note("orin", "medium", "Orin card not found in the panel", oShot);
 
   // scenario sliders
-  const scen = page.locator("section, details, div")
-    .filter({ hasText: /cambia el clima/i }).last();
   const sliders = page.locator('input[type="range"]');
   const nSliders = await sliders.count();
   if (nSliders) {
@@ -142,7 +140,7 @@ for (const s of SIZES) {
   // rotations: open form, then run
   await click(/Comparar rotaciones/i);
   await page.waitForTimeout(800);
-  const rfShot = await snap("rotations-form");
+  await snap("rotations-form");
   await click(/Comparar rotaciones/i, "last");
   await page.waitForSelector(".strategy", { timeout: 120000 })
     .catch(() => {});
@@ -178,7 +176,7 @@ for (const s of SIZES) {
   await page.waitForTimeout(2000);
   await click(/^Analizar mi campo$/i);
   await page.waitForTimeout(1500);
-  const chShot0 = await snap("field-chooser");
+  await snap("field-chooser");
 
   // place finder
   const search = page.locator(

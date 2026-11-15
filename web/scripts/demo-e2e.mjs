@@ -1,4 +1,3 @@
-/* global localStorage */
 /** Task 40 end-to-end: /app/#demo at 390px and 1280px.
  * Expects: the Mendoza farm loads with no drawing, the live parcels
  * analysis runs, parcels + badges + zones appear on the map, the
