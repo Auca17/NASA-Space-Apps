@@ -1,0 +1,235 @@
+{
+  "parcels": [
+    {
+      "id": "p1",
+      "crop": "soja",
+      "area_ha": 795.2,
+      "indicators": {
+        "fire": {
+          "pct": 4,
+          "level": "alto",
+          "basis": "Probabilidad de fuego en los próximos 7 días según el modelo de la zona; subió a alto porque hay un foco satelital detectado a 4,2 km en las últimas 72 h."
+        },
+        "water": {
+          "pct": 34,
+          "level": "normal",
+          "basis": "Humedad de la raíz (NASA POWER GWETROOT), promedio de los últimos 30 días; dentro de lo normal para noviembre en esta zona."
+        },
+        "heat": {
+          "days_over_35": 23,
+          "basis": "Promedio anual de días por encima de 35 °C según la serie diaria de NASA POWER."
+        },
+        "frost": {
+          "frost_free_days": 289,
+          "basis": "Días del año entre la última helada de primavera y la primera de otoño (mediana de años completos, NASA POWER)."
+        }
+      },
+      "alerts": [
+        {
+          "kind": "fire",
+          "severity": "high",
+          "text": "Hay un foco satelital a 4,2 km del lote. Llamá al 100 (bomberos) si ves fuego o humo, mantené los guardafuegos despejados y no quemes rastrojos."
+        }
+      ]
+    },
+    {
+      "id": "p2",
+      "crop": "maiz",
+      "area_ha": 794.8,
+      "indicators": {
+        "fire": {
+          "pct": 4,
+          "level": "bajo",
+          "basis": "Probabilidad de fuego en los próximos 7 días según el modelo de la zona."
+        },
+        "water": {
+          "pct": 12,
+          "level": "seco",
+          "basis": "Humedad de la raíz (NASA POWER GWETROOT), promedio de los últimos 30 días; está por debajo del percentil 20 de noviembre en la historia de esta zona."
+        },
+        "heat": {
+          "days_over_35": 23,
+          "basis": "Promedio anual de días por encima de 35 °C según la serie diaria de NASA POWER."
+        },
+        "frost": {
+          "frost_free_days": 289,
+          "basis": "Días del año entre la última helada de primavera y la primera de otoño (mediana de años completos, NASA POWER). La parcela es más chica que la celda de datos, así que comparte el valor climático de la zona."
+        }
+      },
+      "alerts": [
+        {
+          "kind": "dry",
+          "severity": "medium",
+          "text": "El suelo está más seco que lo normal y el lote tiene maíz. Sin acceso a agua: priorizá el riego o el monitoreo en esta parcela."
+        }
+      ]
+    },
+    {
+      "id": "p3",
+      "crop": "sin_cultivo",
+      "area_ha": 796.1,
+      "indicators": {
+        "fire": {
+          "pct": 6,
+          "level": "bajo",
+          "basis": "Probabilidad de fuego en los próximos 7 días según el modelo de la zona."
+        },
+        "water": {
+          "pct": 41,
+          "level": "normal",
+          "basis": "Humedad de la raíz (NASA POWER GWETROOT), promedio de los últimos 30 días; dentro de lo normal para noviembre en esta zona."
+        },
+        "heat": {
+          "days_over_35": 23,
+          "basis": "Promedio anual de días por encima de 35 °C según la serie diaria de NASA POWER."
+        },
+        "frost": {
+          "frost_free_days": 289,
+          "basis": "Días del año entre la última helada de primavera y la primera de otoño (mediana de años completos, NASA POWER)."
+        }
+      },
+      "alerts": []
+    }
+  ],
+  "zones": [
+    {
+      "kind": "hotspot",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [-60.5122, -33.8814], [-60.5130, -33.8807], [-60.5141, -33.8804],
+            [-60.5152, -33.8807], [-60.5160, -33.8814], [-60.5163, -33.8825],
+            [-60.5160, -33.8836], [-60.5152, -33.8843], [-60.5141, -33.8846],
+            [-60.5130, -33.8843], [-60.5122, -33.8836], [-60.5119, -33.8825],
+            [-60.5122, -33.8814]
+          ]
+        ]
+      },
+      "center": [-60.5141, -33.8825],
+      "radius_m": 375,
+      "pct": null,
+      "label": "Foco detectado por satélite",
+      "source": "VIIRS NOAA-20 NRT",
+      "date": "2026-11-14"
+    },
+    {
+      "kind": "fire_risk",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [-60.6095, -33.8283], [-60.6003, -33.8367], [-60.5842, -33.8362],
+            [-60.5750, -33.8278], [-60.5842, -33.8194], [-60.6003, -33.8199],
+            [-60.6095, -33.8283]
+          ]
+        ]
+      },
+      "center": [-60.5922, -33.8280],
+      "radius_m": null,
+      "pct": 62,
+      "label": "Zona de riesgo alto de fuego",
+      "source": "modelo ar-lgbm-0.1",
+      "date": "2026-11-15"
+    },
+    {
+      "kind": "dry",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [-60.63, -33.898], [-60.565, -33.898], [-60.565, -33.886],
+            [-60.63, -33.886], [-60.63, -33.898]
+          ]
+        ]
+      },
+      "center": [-60.5975, -33.892],
+      "radius_m": null,
+      "pct": 12,
+      "label": "Suelo más seco que lo normal (maiz)",
+      "source": "NASA POWER GWETROOT",
+      "date": "2026-11-15"
+    },
+    {
+      "kind": "bare_soil",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [-60.6281, -33.9056], [-60.6189, -33.9140], [-60.6028, -33.9135],
+            [-60.5936, -33.9051], [-60.6028, -33.8967], [-60.6189, -33.8972],
+            [-60.6281, -33.9056]
+          ]
+        ]
+      },
+      "center": [-60.6108, -33.9054],
+      "radius_m": null,
+      "pct": 88,
+      "label": "Suelo desnudo la mayor parte del año",
+      "source": "Sentinel-2 / grid",
+      "date": "2026-11-15"
+    }
+  ],
+  "nearby": {
+    "fire_stations": [
+      {
+        "name": "Bomberos Voluntarios de Pergamino",
+        "distance_km": 9.4,
+        "lon": -60.5736,
+        "lat": -33.8987
+      }
+    ],
+    "hospitals": [
+      {
+        "name": "Hospital San Vicente de Paul",
+        "distance_km": 10.8,
+        "lon": -60.5708,
+        "lat": -33.8971
+      }
+    ],
+    "water": [
+      {
+        "name": "Arroyo Pergamino",
+        "kind": "river",
+        "distance_km": 4.2,
+        "lon": -60.5890,
+        "lat": -33.9102
+      }
+    ],
+    "source": "OpenStreetMap contributors",
+    "degraded": false
+  },
+  "summary": {
+    "headline": "Hay un foco de fuego detectado cerca del lote norte: vigilancia y guardafuegos al día.",
+    "bullets": [
+      "La parcela del medio (maíz) tiene el suelo más seco que lo normal para noviembre; sin riego declarado, es la primera en mirar.",
+      "El resto de las parcelas muestra humedad y riesgo dentro de lo normal para la época.",
+      "Los bomberos voluntarios más cercanos están a unos 9 km, en Pergamino."
+    ],
+    "source": "template"
+  },
+  "sources": [
+    {
+      "id": "power",
+      "text": "NASA POWER — clima diario 0,5°×0,625° (lluvia, temperatura, humedad de raíz GWETROOT)"
+    },
+    {
+      "id": "risk_model",
+      "text": "Modelo de riesgo de fuego ar-lgbm-0.1 — probabilidad a 7 días por celda H3"
+    },
+    {
+      "id": "firms",
+      "text": "NASA FIRMS — detecciones activas VIIRS/MODIS de las últimas 72 h"
+    },
+    {
+      "id": "field_grid",
+      "text": "Grilla de campo precalculada (IMERG lluvia, SRTM pendiente, cobertura de suelo)"
+    },
+    {
+      "id": "osm",
+      "text": "OpenStreetMap contributors — servicios cercanos (bomberos, hospitales, agua)"
+    }
+  ],
+  "degraded": false,
+  "degraded_reason": null
+}
