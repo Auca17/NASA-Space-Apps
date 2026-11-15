@@ -33,9 +33,9 @@ import {
 import { splitSelection, clipZone, detectParcels, ROAD_HALF_WIDTH } from "./domain/split";
 import { nearestMidpoint, nearestVertex } from "./domain/parcelsGeo";
 import {
-  isDemoHash, MENDOZA_BOUNDARY, MENDOZA_CACHED, MENDOZA_ECON,
-  MENDOZA_NEEDS, MENDOZA_PARCELS, MENDOZA_PROFILE,
+  isDemoHash,
 } from "./features/demo/mendozaFarm";
+import { DEMO_FARMS, type DemoFarmId } from "./features/demo/demoFarms";
 import { GuidedTour } from "./features/demo/GuidedTour";
 import { tourSeen } from "./features/demo/demoTour";
 import {
@@ -927,22 +927,24 @@ export default function App() {
    * Valle de Uco location — parcels, producer profile and a cached
    * fallback all come from features/demo/mendozaFarm. The analysis
    * itself is the live /api/field/parcels call. */
-  const startDemo = () => {
+  const startDemo = (id: DemoFarmId = "mendoza") => {
+    const farm = DEMO_FARMS[id];
     setMode("field"); setDraw("none"); setSelection(null); setAdjust(null);
     setFieldsView(null); setShownField(null); setPendingZone(null);
     setParcelRes(null); setParcelsWizard(false);
     demoFitPending.current = true;
     setEmergencyCountry("AR");
     analyze({
-      geom: MENDOZA_BOUNDARY,
-      areaLabel: t("demo.farmArea"),
-      fieldName: t("demo.farmName"),
-      parcels: MENDOZA_PARCELS,
-      needs: MENDOZA_NEEDS,
-      profile: MENDOZA_PROFILE,
-      econ: MENDOZA_ECON,
-      demo: { cached: MENDOZA_CACHED.res,
-              cachedDate: MENDOZA_CACHED.date },
+      geom: farm.boundary,
+      areaLabel: t(farm.keys.area),
+      fieldName: t(farm.keys.name),
+      parcels: farm.parcels,
+      needs: farm.needs,
+      profile: farm.profile,
+      econ: farm.econ,
+      demo: { cached: farm.cached.res,
+              cachedDate: farm.cached.date,
+              producer: t(farm.keys.producer) },
     });
   };
 
@@ -1100,7 +1102,7 @@ export default function App() {
 
         {mode === "welcome" && (
           <div className="welcome-overlay">
-            <Welcome onAnalyze={() => startField("none")} onDemo={startDemo}
+            <Welcome onAnalyze={() => startField("none")} onDemo={() => startDemo()}
                      onLocate={locate} />
           </div>)}
 

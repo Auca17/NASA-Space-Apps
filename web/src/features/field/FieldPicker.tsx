@@ -4,6 +4,7 @@
 import { useEffect, useState, useSyncExternalStore } from "react";
 import { useT } from "../../i18n";
 import { drawStatus } from "../../domain/clarity";
+import type { DemoFarmId } from "../demo/demoFarms";
 import { PlaceFinder } from "./PlaceFinder";
 import {
   activeDrawState, removeActiveVertex, subscribeDrawSession,
@@ -20,7 +21,7 @@ export function FieldPicker({ draw, points, onPick, onDemo, onFinish,
   draw: DrawMode;
   points: number;
   onPick: (m: "draw" | "point" | "free") => void;
-  onDemo: () => void;
+  onDemo: (id: DemoFarmId) => void;
   /** Keyboard path: a ~50 ha selection around entered coordinates. */
   onPointCoords?: (lat: number, lon: number) => void;
   demoLots?: { id: string; label: string; onOpen: () => void }[];
@@ -181,7 +182,8 @@ export function FieldPicker({ draw, points, onPick, onDemo, onFinish,
         <details className="field-examples">
           <summary>{t("field.examples")}</summary>
           <div className="row">
-            <button onClick={onDemo}>{t("field.demo")}</button>
+            <button onClick={() => onDemo("mendoza")}>{t("field.demo")}</button>
+            <button onClick={() => onDemo("pampa")}>{t("field.demoPampa")}</button>
             {demoLots.map(({ id, label, onOpen }) => (
               <button key={id} onClick={onOpen}>{label}</button>))}
           </div>

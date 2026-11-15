@@ -87,12 +87,11 @@ describe("Mendoza fixture", () => {
     }
   });
 
-  it("is a 120–250 ha farm split into 4–5 parcels", () => {
+  it("is a 120–250 ha farm split into exactly 3 parcels", () => {
     const ha = ringAreaHa(boundary);
     expect(ha).toBeGreaterThanOrEqual(120);
     expect(ha).toBeLessThanOrEqual(250);
-    expect(MENDOZA_PARCELS.length).toBeGreaterThanOrEqual(4);
-    expect(MENDOZA_PARCELS.length).toBeLessThanOrEqual(5);
+    expect(MENDOZA_PARCELS.length).toBe(3);
     const ids = new Set(MENDOZA_PARCELS.map((p) => p.id));
     expect(ids.size).toBe(MENDOZA_PARCELS.length);
   });
@@ -248,4 +247,43 @@ describe("demo fallback", () => {
     expect(screen.getByText(/inventados para la demo/))
       .toBeInTheDocument();
   });
+});
+
+/* --------------------------------------- both example fields ------- */
+
+import { DEMO_FARMS } from "./demoFarms";
+import pampaCachedFile from "./pampaCached.json";
+
+describe("example fields (Mendoza and pampa)", () => {
+  const catalog = JSON.parse(readFileSync(
+    resolve(process.cwd(), "../back/knowledge/crops.json"),
+    "utf-8")) as { crops: { id: string }[] };
+  const known = new Set(catalog.crops.map((c) => c.id));
+  const files = { mendoza: cachedFile, pampa: pampaCachedFile } as Record<
+    string, { captured_at: string; response: { parcels: { id: string }[] } }>;
+
+  for (const [id, farm] of Object.entries(DEMO_FARMS)) {
+    it(`${id}: three parcels, inside the boundary, real crops`, () => {
+      expect(farm.parcels).toHaveLength(3);
+      const ring = farm.boundary[0][0];
+      expect(selfIntersects(ring)).toBe(false);
+      expect(ringAreaHa(ring)).toBeGreaterThan(50);
+      for (const p of farm.parcels) {
+        expect(known.has(p.crop), `${id} ${p.id} crop ${p.crop}`).toBe(true);
+        for (const v of p.geom[0]) {
+          expect(pointInRing(v, ring), `${id} ${p.id} vertex`).toBe(true);
+        }
+      }
+      for (const k of Object.keys(farm.econ.parcels)) {
+        expect(farm.parcels.map((p) => p.id)).toContain(k);
+      }
+    });
+
+    it(`${id}: the saved reply is a real capture of the same parcels`, () => {
+      const ids = files[id].response.parcels.map((p) => p.id).sort();
+      expect(ids).toEqual(farm.parcels.map((p) => p.id).sort());
+      expect(farm.cached.date).toBe(files[id].captured_at);
+      expect(farm.cached.date).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+    });
+  }
 });
