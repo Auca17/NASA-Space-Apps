@@ -22,6 +22,27 @@
         "frost": {
           "frost_free_days": 289,
           "basis": "Días del año entre la última helada de primavera y la primera de otoño (mediana de años completos, NASA POWER)."
+        },
+        "snow": {
+          "days_per_year": 0.1,
+          "pct_years_with_snow": 8,
+          "basis": "Días por año con nevada sobre 1 mm (NASA POWER PRECSNOLAND, 2001–hoy); casi nunca nieva en esta zona."
+        },
+        "hail": {
+          "available": false,
+          "basis": "No hay un dato satelital de granizo para tu zona en esta app; consultá el servicio meteorológico y tu aseguradora."
+        },
+        "enso": {
+          "phase_now": "la_nina",
+          "oni": -0.6,
+          "oni_period": "ASO 2026",
+          "rain_effect_pct": {"el_nino": 18, "la_nina": -22},
+          "basis": "ENSO según el índice ONI de NOAA: ahora La Niña (-0,6 °C). En esta zona, los años El Niño llovieron 18 % más que el promedio y los La Niña 22 % menos en octubre–marzo. Es una tendencia histórica, no un pronóstico."
+        },
+        "flood": {
+          "heavy_rain_days_yr": 2.5,
+          "low_slope": true,
+          "basis": "2,5 días por año con lluvia fuerte (sobre 20 mm) y terreno casi plano: riesgo de anegamiento bajo pero no nulo tras tormentas."
         }
       },
       "alerts": [
@@ -30,7 +51,21 @@
           "severity": "high",
           "text": "Hay un foco satelital a 4,2 km del lote. Llamá al 100 (bomberos) si ves fuego o humo, mantené los guardafuegos despejados y no quemes rastrojos."
         }
-      ]
+      ],
+      "order": ["fire", "enso", "drought", "frost", "heat", "snow", "hail"],
+      "extra": [{"id": "flood", "hidden": true}],
+      "economics": {
+        "currency": "USD",
+        "expected_yield_t_ha": 4.0,
+        "yield_source": "user",
+        "revenue_per_ha": 1160,
+        "cost_per_ha": 420,
+        "margin_per_ha": 740,
+        "margin_total": 588448,
+        "break_even_yield_t_ha": 1.4,
+        "risk_adjusted_margin_per_ha": 682,
+        "basis": "Rinde esperado declarado por el productor (4 t/ha). Margen ajustado con supuestos aproximados: alerta de fuego −5 % del ingreso. No es un pronóstico."
+      }
     },
     {
       "id": "p2",
@@ -54,6 +89,27 @@
         "frost": {
           "frost_free_days": 289,
           "basis": "Días del año entre la última helada de primavera y la primera de otoño (mediana de años completos, NASA POWER). La parcela es más chica que la celda de datos, así que comparte el valor climático de la zona."
+        },
+        "snow": {
+          "days_per_year": 0.1,
+          "pct_years_with_snow": 8,
+          "basis": "Días por año con nevada sobre 1 mm (NASA POWER PRECSNOLAND, 2001–hoy); casi nunca nieva en esta zona."
+        },
+        "hail": {
+          "available": false,
+          "basis": "No hay un dato satelital de granizo para tu zona en esta app; consultá el servicio meteorológico y tu aseguradora."
+        },
+        "enso": {
+          "phase_now": "la_nina",
+          "oni": -0.6,
+          "oni_period": "ASO 2026",
+          "rain_effect_pct": {"el_nino": 18, "la_nina": -22},
+          "basis": "ENSO según el índice ONI de NOAA: ahora La Niña (-0,6 °C). En esta zona, los años El Niño llovieron 18 % más que el promedio y los La Niña 22 % menos en octubre–marzo. Es una tendencia histórica, no un pronóstico."
+        },
+        "flood": {
+          "heavy_rain_days_yr": 2.5,
+          "low_slope": true,
+          "basis": "2,5 días por año con lluvia fuerte (sobre 20 mm) y terreno casi plano: riesgo de anegamiento bajo pero no nulo tras tormentas."
         }
       },
       "alerts": [
@@ -62,7 +118,21 @@
           "severity": "medium",
           "text": "El suelo está más seco que lo normal y el lote tiene maíz. Sin acceso a agua: priorizá el riego o el monitoreo en esta parcela."
         }
-      ]
+      ],
+      "order": ["drought", "enso", "fire", "frost", "heat", "snow", "hail"],
+      "extra": [{"id": "flood", "hidden": true}],
+      "economics": {
+        "currency": "USD",
+        "expected_yield_t_ha": 6.08,
+        "yield_source": "magyp_department",
+        "revenue_per_ha": 1763,
+        "cost_per_ha": 510,
+        "margin_per_ha": 1253,
+        "margin_total": 996088,
+        "break_even_yield_t_ha": 1.8,
+        "risk_adjusted_margin_per_ha": 989,
+        "basis": "Rinde departamental MAGyP 2024/2025 para maíz (6,1 t/ha). Margen ajustado con supuestos aproximados: suelo seco −15 % del ingreso. No es un pronóstico."
+      }
     },
     {
       "id": "p3",
@@ -86,9 +156,32 @@
         "frost": {
           "frost_free_days": 289,
           "basis": "Días del año entre la última helada de primavera y la primera de otoño (mediana de años completos, NASA POWER)."
+        },
+        "snow": {
+          "days_per_year": 0.1,
+          "pct_years_with_snow": 8,
+          "basis": "Días por año con nevada sobre 1 mm (NASA POWER PRECSNOLAND, 2001–hoy); casi nunca nieva en esta zona."
+        },
+        "hail": {
+          "available": false,
+          "basis": "No hay un dato satelital de granizo para tu zona en esta app; consultá el servicio meteorológico y tu aseguradora."
+        },
+        "enso": {
+          "phase_now": "la_nina",
+          "oni": -0.6,
+          "oni_period": "ASO 2026",
+          "rain_effect_pct": {"el_nino": 18, "la_nina": -22},
+          "basis": "ENSO según el índice ONI de NOAA: ahora La Niña (-0,6 °C). En esta zona, los años El Niño llovieron 18 % más que el promedio y los La Niña 22 % menos en octubre–marzo. Es una tendencia histórica, no un pronóstico."
+        },
+        "flood": {
+          "heavy_rain_days_yr": 2.5,
+          "low_slope": true,
+          "basis": "2,5 días por año con lluvia fuerte (sobre 20 mm) y terreno casi plano: riesgo de anegamiento bajo pero no nulo tras tormentas."
         }
       },
-      "alerts": []
+      "alerts": [],
+      "order": ["enso", "fire", "drought", "frost", "heat", "snow", "hail"],
+      "extra": [{"id": "flood", "hidden": true}]
     }
   ],
   "zones": [
@@ -200,9 +293,9 @@
     "degraded": false
   },
   "summary": {
-    "headline": "Hay un foco de fuego detectado cerca del lote norte: vigilancia y guardafuegos al día.",
+    "headline": "La Niña activa: en esta zona suele llover un 22 % menos en la temporada, y hay un foco de fuego cerca del lote norte.",
     "bullets": [
-      "La parcela del medio (maíz) tiene el suelo más seco que lo normal para noviembre; sin riego declarado, es la primera en mirar.",
+      "La parcela de maíz tiene el suelo más seco que lo normal para noviembre; sin riego declarado, es la primera en mirar.",
       "El resto de las parcelas muestra humedad y riesgo dentro de lo normal para la época.",
       "Los bomberos voluntarios más cercanos están a unos 9 km, en Pergamino."
     ],
@@ -211,7 +304,7 @@
   "sources": [
     {
       "id": "power",
-      "text": "NASA POWER — clima diario 0,5°×0,625° (lluvia, temperatura, humedad de raíz GWETROOT)"
+      "text": "NASA POWER — clima diario 0,5°×0,625° (lluvia, temperatura, humedad de raíz GWETROOT, nieve PRECSNOLAND)"
     },
     {
       "id": "risk_model",
@@ -222,8 +315,16 @@
       "text": "NASA FIRMS — detecciones activas VIIRS/MODIS de las últimas 72 h"
     },
     {
+      "id": "enso",
+      "text": "NOAA CPC — índice ONI (El Niño / La Niña) y efecto histórico sobre la lluvia de la zona"
+    },
+    {
       "id": "field_grid",
       "text": "Grilla de campo precalculada (IMERG lluvia, SRTM pendiente, cobertura de suelo)"
+    },
+    {
+      "id": "magyp",
+      "text": "MAGyP — rindes departamentales por cultivo cuando el productor no declara el propio"
     },
     {
       "id": "osm",

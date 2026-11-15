@@ -108,8 +108,8 @@ async def test_ok_minimal():
     d = r.json()
     assert len(d["parcels"]) == 3
     assert d["parcels"][0]["crop"] == "soja"
-    assert {"fire", "water", "heat", "frost"} == \
-        set(d["parcels"][0]["indicators"])
+    assert {"fire", "water", "heat", "frost", "snow", "hail",
+            "enso", "flood"} == set(d["parcels"][0]["indicators"])
     assert d["summary"]["source"] == "template"
     assert d["degraded"] is False
 
