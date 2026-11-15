@@ -155,6 +155,10 @@ SCHEMAS = [
                     "r_adjusted": NUM, "adjustment": STR,
                     "unit": STR, "n": {"type": "integer"},
                     "quality": {"enum": ["good", "fair", "poor"]},
+                    "reference_kind": {"enum": ["field",
+                                                "finer_satellite"]},
+                    "n_pixels": {"type": "integer"},
+                    "pairs": {"type": "array"},
                     "satellite": {"type": "object"},
                     "field": {"type": "object"}}}}}}),
     (re.compile(r"^api/diagnose\.response\.json$"), {

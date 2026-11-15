@@ -116,6 +116,7 @@ El error lo explica la altura: una celda de POWER (~55 × 60 km) tiene una sola 
 - **La base de conocimiento de cultivos es un borrador en revisión agronómica** (`docs/revision-agronomica.md`): varios valores de uso de agua y rastrojo esperan fuentes argentinas, y Patagonia no tiene rotación validada.
 - **Las rotaciones son apoyo a la decisión, no consejo agronómico** — la app lo dice en cada tarjeta y lista qué validar con un agrónomo local.
 - El historial de fuego a 365 días del modelo de riesgo de Argentina no ve los focos de enero a octubre de 2026 hasta que se agregue el Parquet anual (flag `fires_365d_complete` en cada shard).
+- El piloto de pronóstico de heladas de Orin (una estación, primavera 2026, 24 noches completas) no registró ninguna helada, así que el valor de la alerta no se puede juzgar — y la corrección de sesgo por estación empeoró el RMSE en esa muestra (3,64 vs 3,07 °C): no es prueba de que la calibración ayude.
 
 ## De dónde salen los datos de Orin
 
@@ -157,7 +158,7 @@ npm install
 npm run dev
 ```
 
-Abrir http://localhost:5173 — el servidor de desarrollo sirve `fixtures/` en `/data/v1/`, así que la app funciona sin backend; `/api/*` se redirige a `localhost:8000`.
+Abrir http://localhost:5173/app/ — el servidor de desarrollo sirve `fixtures/` en `/data/v1/`, así que la app funciona sin backend; `/api/*` se redirige a `localhost:8000`. La landing está en `/` (inglés) y `/es/` (español).
 
 ## Deploy
 

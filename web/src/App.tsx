@@ -1,12 +1,15 @@
 import { Suspense, lazy, useRef, useState, useCallback, useEffect } from "react";
 import { useT } from "./i18n";
 import { APP_NAME, DEFAULT_VIEW, DEMO_PLOT, WORLD_VIEW } from "./config";
+import { WindLogo } from "./components/WindLogo";
 import { Welcome } from "./features/welcome/Welcome";
 import { MethodsDrawer } from "./features/methods/MethodsDrawer";
+import { EmergencyBlock } from "./features/emergency/EmergencyBlock";
+import { BottomSheet } from "./components/ui";
 import type { GlobeHandle, Shape } from "./features/globe/GlobeView";
 import { moistureGeometry, MOISTURE_COLORS } from "./domain/moisture";
 import { cellsInCircle, circleRing } from "./domain/h3area";
-import { orinLots } from "./api";
+import { apiRisk, orinLots } from "./api";
 import type { OrinLots, MoistureZone } from "./api/types";
 import { drawStatus } from "./domain/clarity";
 import { FieldPicker, type DrawMode } from "./features/field/FieldPicker";
@@ -119,9 +122,21 @@ export default function App() {
   const [lots, setLots] = useState<OrinLots["features"]>([]);
   const [playingMonth, setPlayingMonth] = useState<string | null>(null);
   const [methodsOpen, setMethodsOpen] = useState(false);
+  const [emergOpen, setEmergOpen] = useState(false);
+  const [emergencyCountry, setEmergencyCountry] = useState<string | null>(null);
   const [view, setView] = useState<{ lat: number; lon: number; zoom: number;
     bbox: [number, number, number, number] } | null>(null);
   const initialLocation = useRef<LatLon | null>(null);
+  useEffect(() => {
+    if (!emergOpen) return;
+    let active = true;
+    setEmergencyCountry(null);
+    const center = view ?? globe?.center() ?? DEFAULT_VIEW;
+    apiRisk(center.lat, center.lon).then((risk) => {
+      if (active) setEmergencyCountry(risk?.country ?? null);
+    });
+    return () => { active = false; };
+  }, [emergOpen, globe, view]);
   const globeRef = useRef<GlobeHandle | null>(null);
   const mapDiv = useRef<HTMLDivElement>(null);
   const frameArgentinaOnOpen = useRef(false);
@@ -554,15 +569,14 @@ export default function App() {
   return (
     <div className="app">
       <header className="topbar">
-        <h1><button type="button" className="home-button"
-                    aria-label={t("nav.home")} onClick={() => {
-                      if (modeRef.current === "field") changePlot();
-                      setMode("welcome");
-                    }}>
-          <img src={`${import.meta.env.BASE_URL}brand/ashfield-mark-light.svg`}
-               alt="" width={24} height={24} />
-          {APP_NAME}
-        </button></h1>
+        <h1><WindLogo size={30} title={APP_NAME} />
+          <span className="topbar-name">{APP_NAME}</span></h1>
+        <button type="button" className="home-button"
+                onClick={() => {
+                  if (modeRef.current === "field") changePlot();
+                  setMode("welcome");
+                }}>
+          {t("nav.home")}</button>
         <nav>
           <button aria-pressed={mode === "field"}
                   onClick={() => {
@@ -574,13 +588,16 @@ export default function App() {
                   onClick={() => setMode("live")}>{t("nav.live")}</button>
         </nav>
         <div className="spacer" />
+        <button className="emerg-link"
+                onClick={() => setEmergOpen(true)}>
+          {t("emerg.nav")}</button>
         <button className="meth-link"
                 onClick={() => setMethodsOpen(true)}>
           <span className="ml-long">{t("meth.link")}</span>
           <span className="ml-short">{t("meth.short")}</span></button>
         <button className="lang-btn"
                 onClick={() => setLang(lang === "es" ? "en" : "es")}
-                aria-label="language">{t("nav.lang")}</button>
+                aria-label={t("nav.langLabel")}>{t("nav.lang")}</button>
       </header>
 
       <div className={`map-wrap${mode === "field" && draw !== "none" && !movingMap ? " marking" : ""}`}>
@@ -635,14 +652,11 @@ export default function App() {
         )}
 
         {mode === "welcome" && (
-          <div className="welcome" style={{ position: "absolute", inset: 0,
-            display: "flex", background: "var(--bg)" }}>
-            <div style={{ margin: "auto" }}>
-              <Welcome onAnalyze={() => startField("none")} onDemo={demoPlot}
-                       onLocate={locate}
-                       onExplore={openFire}
-                       onLive={() => setMode("live")} />
-            </div>
+          <div className="welcome-overlay">
+            <Welcome onAnalyze={() => startField("none")} onDemo={demoPlot}
+                     onLocate={locate}
+                     onExplore={openFire}
+                     onLive={() => setMode("live")} />
           </div>)}
 
         {mode === "fire" && <Suspense fallback={null}>
@@ -718,6 +732,10 @@ export default function App() {
                        }}
                        mapUnavailable={mapUnavailable}
                        zoomLow={zoom < DRAW_ZOOM - 0.5} onZoomIn={zoomToDraw}
+                       onPointCoords={(la, lo) => {
+                         if (!mapUnavailable) goTo(la, lo, true);
+                         onShape(circleApprox(la, lo), true);
+                       }}
                        context={zoneField
                          ? t("zones.drawingFor", { name: zoneField.name })
                          : undefined} />)}
@@ -739,6 +757,19 @@ export default function App() {
         </Suspense>)}
       <MethodsDrawer open={methodsOpen}
                      onClose={() => setMethodsOpen(false)} />
+      <BottomSheet open={emergOpen}>
+        <div className="panel-head">
+          <h3>{t("emerg.title")}</h3>
+          <button onClick={() => setEmergOpen(false)}
+                  aria-label={t("ui.close")}>✕</button>
+        </div>
+        <EmergencyBlock country={emergencyCountry}
+                        mapCenter={globe
+                          ? { lat: globe.center().lat,
+                              lon: globe.center().lon }
+                          : null}
+                        lead={t("emerg.lead")} />
+      </BottomSheet>
     </div>
   );
 }

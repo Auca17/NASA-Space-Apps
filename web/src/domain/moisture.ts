@@ -9,4 +9,3 @@ export function moistureGeometry(geometry: MoistureZone["geometry"]): Multi {
   const polys = geometry.type === "Polygon" ? [geometry.coordinates] : geometry.coordinates;
   return polys.map((poly) => poly.map((ring) => ring.map(([x, y]) => [y, x])));
 }
-

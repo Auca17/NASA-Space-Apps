@@ -327,3 +327,15 @@ export function deltaText(c: { delta?: number; unit?: string | null },
   const v = `${sign}${fmt.format(Math.abs(c.delta))}`;
   return c.unit ? `${v} ${c.unit}` : v;
 }
+
+/** Safety net for gap sentences that still carry a raw card id
+ * (`rain tiene resolución…`, `Sin dato de heat`): the visible card title
+ * (`card.<id>`) replaces the id. Backend gaps already use titles; this
+ * only touches tokens that still look like `snake_case` ids. */
+export function humanizeGap(g: string,
+    t: (k: string) => string): string {
+  return g.replace(/\b[a-z]+(?:_[a-z]+)+\b/g, (m) => {
+    const label = t(`card.${m}`);
+    return label !== `card.${m}` ? label : m;
+  });
+}

@@ -41,7 +41,9 @@ def hexs(a) -> list[str]:
 def write_json(path: Path, obj, kind: str):
     raw = json.dumps(obj, separators=(",", ":"), ensure_ascii=False).encode()
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_bytes(raw)
+    tmp = path.with_name(path.name + ".tmp")
+    tmp.write_bytes(raw)
+    tmp.replace(path)  # atomic: a killed run never leaves a partial JSON
     SIZES.setdefault(kind, []).append(len(gzip.compress(raw, 6)))
 
 

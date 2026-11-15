@@ -43,11 +43,12 @@ Convención: `D<n>` es el identificador estable. Una decisión no se borra; si c
 
 | D31 | 2026-11-14 | Validación satélite contra campo con datos de Orin: mientras no lleguen los datos reales, el front trabaja con ejemplos marcados `synthetic: true`, con cartel visible y la compilación de producción falla si algún archivo servido es inventado. Los lotes de Orin (viña, olivo) solo tienen diagnóstico y validación; el motor de rotaciones no los cubre. | Poder construir la pantalla sin mostrar nunca datos falsos como reales. | Vigente |
 
+| D32 | 2026-11-15 | Explicación en lenguaje simple con IA: **Gemini Flash** por defecto (`gemini-2.5-flash`), pluggable con Claude como segunda opción. Solo explica números que ya calculó el motor y nunca decide ni cambia el ranking. El texto que se manda lleva solo indicadores, unidades y fuentes (nunca coordenadas, nombres de lugares ni datos de Orin). Se valida cada cifra e identificador antes de mostrar; si falla, tarda más de 6 s o no hay clave, se usan las plantillas. El modelo de riesgo de fuego **no** se reemplaza por un LLM: sigue siendo LightGBM, que se evalúa con ROC-AUC, PR-AUC y Brier. | Pedido del equipo; un LLM no da probabilidades calibradas. Implementado en `back/app/services/ai_explain.py`. | Vigente |
+
 ## Pendientes de decisión
 
 - Orden de construcción y asignación de la lente Campo (`crops.json`, `rotations.json`, `/api/field/*`): se define con el plan de acción.
 - Orden de las tareas de Devin: se define con el plan de acción.
-- Explicación en lenguaje simple: plantillas desde los indicadores primero; LLM solo si sobra tiempo (propuesta, no decidido).
 - Tamaño de los archivos diarios de fuego por shard (ver contrato, sección `fire/daily`): si superan el presupuesto, D9 pasa a percentiles mensuales y se registra acá.
 - SoilGrids y las series MODIS de ORNL no responden a demanda (medido 2026-11-14: más de 15 s, tres intentos). `soil`, `vigor_bare_soil` y la fila `bare_soil` del calendario deben salir del precálculo `field/grid` (tarea 05 de Devin), primero Argentina y los lotes de demo. Hasta entonces esas tarjetas muestran "Sin datos disponibles".
 - POWER: MERRA-2 diario termina el 2026-10-01; la cola hasta hoy sale de GEOS-IT (misma grilla de 0,5° × 0,625°, otro producto). El modelo de riesgo entrena con MERRA-2 y predice con GEOS-IT en las últimas semanas; el `report.md` del modelo debe mencionarlo y, si hace falta, agregar una columna `source` compatible al Parquet (tarea 01 de Devin, 2026-11-14).

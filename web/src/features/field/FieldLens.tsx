@@ -16,7 +16,7 @@ import type { EcostressDemo } from "../../api";
 import { OrinCard, SyntheticBanner } from "./OrinCard";
 import {
   benefitValue, benefitRows, cardValueText, compareDeltas, deltaText, groupVariants,
-  groupedCards, indicatorLabelKey, irrigationNeedMm, measureReqPairs,
+  groupedCards, humanizeGap, indicatorLabelKey, irrigationNeedMm, measureReqPairs,
   orderNote, prioWeights, rankNote,
   seqSegments, verdictDelta, PRIORITY_IDS, type Scenario,
 } from "../../domain/rotations";
@@ -94,7 +94,7 @@ function RainChart({ card, t }: {
         <summary>{t("field.rainTable")}</summary>
         <table className="cal">
           <tbody>
-            <tr>{months.map((m) => <th key={m} scope="col">{m}</th>)}</tr>
+            <tr>{months.map((m, i) => <th key={i} scope="col">{m}</th>)}</tr>
             <tr>{mm.map((v, i) => <td key={i}>{v}</td>)}</tr>
           </tbody>
         </table>
@@ -361,7 +361,7 @@ function StrategyCard({ s, t, current, variants, explain,
         </ul>
       </Section>
       <Section title={t("rot.gaps")} count={s.gaps.length}>
-        <ul>{s.gaps.map((g) => <li key={g}>{g}</li>)}</ul>
+        <ul>{s.gaps.map((g) => <li key={g}>{humanizeGap(g, t)}</li>)}</ul>
       </Section>
       <Section title={t("rot.risks")} count={s.risks.length}>
         <ul>{s.risks.map((r) => <li key={r}>{r}</li>)}</ul>
@@ -731,6 +731,14 @@ export function FieldPanel({ target, open, onClose, onChangePlot, onMethods, moi
         <MoisturePanel key={JSON.stringify(body)} body={body}
           selected={moistureSelection ?? null}
           onZones={onMoistureZones} onSelect={onMoistureSelect} />}
+      {diag?.degraded && (
+        <div className="card diag-degraded" role="alert">
+          <p><strong>{t("field.degraded.title")}</strong>{" "}
+            {diag.degraded_reason ?? t("field.degraded.unknown")}</p>
+          <button type="button" onClick={() => setRetry((n) => n + 1)}>
+            {t("field.diagnosis.retry")}
+          </button>
+        </div>)}
       {diag && (
         <>
           <section className="card plain-summary"
@@ -810,7 +818,8 @@ export function FieldPanel({ target, open, onClose, onChangePlot, onMethods, moi
                        temp_delta_c: Number(e.target.value) })} />
             </label>
             <button type="button" onClick={() => applyScenario(sc)}
-                    disabled={!sc || (sc === scenario && !diagnosisProblem) || reading}>
+                    disabled={!sc || (sc === scenario && !diagnosisProblem) ||
+                      reading || diag.degraded}>
               {t("scen.apply")}
             </button>
             {diagnosisProblem === "scenario" && <p role="status">{t("field.diagnosis.scenario")}

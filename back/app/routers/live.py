@@ -84,6 +84,12 @@ async def live(window: str = Query("24h"), bbox: str | None = Query(None)):
         return JSONResponse(
             status_code=400, content={"error": "invalid_bbox", "detail": err})
 
+    # country at the centre of the requested (unexpanded) area: the
+    # front picks emergency numbers from it when nothing better is known
+    from ..services.georef import country_at
+    clat = (box[1] + box[3]) / 2
+    clon = (box[0] + box[2]) / 2
+    country = (country_at(clat, clon) or {}).get("iso2")
     box = expand_bbox(box)
     bbox_str = ",".join(_fmt(v) for v in box)
     area = (box[2] - box[0]) * (box[3] - box[1])
@@ -96,17 +102,14 @@ async def live(window: str = Query("24h"), bbox: str | None = Query(None)):
                      "sources_failed": failed},
             headers={"Cache-Control": "no-store"})
     cache_control = ("public, s-maxage=600" if failed else CACHE_CONTROL)
-    from ..services.georef import zone_at
-    lon = (box[0] + box[2]) / 2
-    lat = (box[1] + box[3]) / 2
     body = {
         "updated_at": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
         "latest_observation": max((point[4] for point in points), default=None),
-        "country": zone_at(lat, lon)["country"] if area <= CELLS_AREA_THRESHOLD else None,
         "window_h": WINDOW_H[window],
         "sources": ok,
         "mode": "points",
         "bbox": bbox_str,
+        "country": country,
         "points": points,
     }
     if failed:

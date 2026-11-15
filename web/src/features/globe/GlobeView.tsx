@@ -6,7 +6,12 @@ import { Protocol } from "pmtiles";
 import "maplibre-gl/dist/maplibre-gl.css";
 import { cellToBoundary, latLngToCell } from "h3-js";
 import { DEFAULT_VIEW } from "../../config";
-import { BASE_STYLE, FIELD_GUIDE_SOURCE, LANDUSE_SOURCE } from "./baseStyle";
+import {
+  BASE_STYLE, FALLBACK_LAYERS, FIELD_GUIDE_SOURCE, MAX_TILE_ERRORS,
+  RASTER_LAYERS, RASTER_TILES,
+  needsFallback, newTileHealth, recordTileError, recordTileOk,
+  retryDelayMs,
+} from "./baseStyle";
 import type { Landuse, LatLon, Poly } from "../../domain/selection";
 import type { Road } from "../../domain/split";
 
@@ -148,8 +153,9 @@ export function useGlobe(
           "line-opacity": 0.9 },
       });
       // invisible OpenMapTiles layers: they make MapLibre load the
-      // landuse/building tiles that the urban check reads
-      map.addSource("omt", LANDUSE_SOURCE);
+      // landuse/building tiles that the urban check reads. The `omt`
+      // source itself lives in BASE_STYLE so the fallback base can use
+      // it from the first frame.
       map.addLayer({ id: "omt-landuse", type: "fill", source: "omt",
         "source-layer": "landuse", minzoom: 11,
         paint: { "fill-opacity": 0 } });
@@ -221,6 +227,85 @@ export function useGlobe(
       });
       ready = true;
       updateFieldBasemap();
+    });
+
+    // Task 30 — tile health: raster sources die quietly on rural 4G.
+    // After MAX_TILE_ERRORS a source counts as dead; the neutral
+    // land/water fallback paints under the rasters and the dead source
+    // is asked to reload with exponential backoff. The `bg` background
+    // plus this fallback mean the canvas is never left blank.
+    const health = newTileHealth();
+    let fallbackOn = false;
+    let removed = false;
+    let retryTimer: ReturnType<typeof setTimeout> | null = null;
+    const hiddenByFallback = new Set<string>();
+    const applyFallback = () => {
+      if (removed) return;
+      const want = needsFallback(health);
+      try {
+        if (want !== fallbackOn) {
+          fallbackOn = want;
+          for (const id of FALLBACK_LAYERS) {
+            if (map.getLayer(id)) {
+              map.setLayoutProperty(id, "visibility",
+                want ? "visible" : "none");
+            }
+          }
+        }
+        /* Hide the dead source's own layers too: an aborted tile can
+         * leave the painter binding a texture that never loaded, which
+         * crashes maplibre's render loop. Restore on recovery. */
+        for (const [src, layers] of Object.entries(RASTER_LAYERS)) {
+          const dead = (health.errors[src] ?? 0) >= MAX_TILE_ERRORS;
+          for (const l of layers) {
+            if (dead) {
+              if (map.getLayer(l) && !hiddenByFallback.has(l) &&
+                  map.getLayoutProperty(l, "visibility") !== "none") {
+                hiddenByFallback.add(l);
+                map.setLayoutProperty(l, "visibility", "none");
+              }
+            } else if (hiddenByFallback.delete(l)) {
+              if (map.getLayer(l)) {
+                map.setLayoutProperty(l, "visibility", "visible");
+              }
+            }
+          }
+        }
+      } catch { /* style mid-mutation or map gone */ }
+    };
+    /* `error` fires while maplibre is mid-render; mutating the style
+     * synchronously there can race the painter, so the visibility
+     * toggle is deferred to the next frame. */
+    const queueFallback = () => {
+      requestAnimationFrame(() => applyFallback());
+    };
+    const scheduleRetry = () => {
+      if (retryTimer) return;
+      retryTimer = setTimeout(() => {
+        retryTimer = null;
+        for (const [id, tiles] of Object.entries(RASTER_TILES)) {
+          if ((health.errors[id] ?? 0) === 0) continue;
+          try {
+            (map.getSource(id) as
+              { setTiles?: (t: string[]) => void } | undefined)
+              ?.setTiles?.(tiles);
+          } catch { /* source removed or already reloading */ }
+        }
+        health.retries += 1;
+        if (needsFallback(health)) scheduleRetry();
+      }, retryDelayMs(health.retries));
+    };
+    map.on("error", (e) => {
+      const id = (e as { sourceId?: string }).sourceId;
+      if (id && recordTileError(health, id)) queueFallback();
+      if (id && (id in RASTER_TILES)) scheduleRetry();
+    });
+    map.on("sourcedata", (e) => {
+      const ev = e as { sourceId?: string; sourceDataType?: string };
+      if (ev.sourceId && ev.sourceDataType === "content" &&
+          recordTileOk(health, ev.sourceId)) {
+        queueFallback();
+      }
     });
 
     let clickCb: ((lat: number, lon: number) => void) | null = null;
@@ -387,12 +472,17 @@ export function useGlobe(
         const b = map.getBounds();
         return [b.getWest(), b.getSouth(), b.getEast(), b.getNorth()];
       },
-      destroy() { map.remove(); handleRef.current = null; },
+      destroy() {
+        removed = true;
+        if (retryTimer) clearTimeout(retryTimer);
+        map.remove(); handleRef.current = null;
+      },
     };
     handleRef.current = h;
     onReady(h);
 
     return () => {
+      removed = true;
       if (timer) clearTimeout(timer);
       map.remove();
       if (protocol) maplibregl.removeProtocol("pmtiles");

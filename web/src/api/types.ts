@@ -37,6 +37,8 @@ export interface LiveResponse {
   bbox?: number[];
   points?: { lat: number; lon: number; frp?: number; acq_datetime?: string }[];
   cells?: { h3: string; n: number; frp_max?: number }[];
+  /** ISO A2 of the bbox centre (Natural Earth), when resolved. */
+  country?: string | null;
   note?: string;
 }
 
@@ -110,6 +112,10 @@ export interface DiagnoseResponse {
   elevation_m?: number | null;
   power_cell_elevation_m?: number | null;
   temp_adjust_c?: number;
+  /** Degraded response: the backend returned whatever it could without
+   * some sources. The UI shows the reason + retry, never a blank. */
+  degraded?: boolean;
+  degraded_reason?: string;
 }
 
 export type MoistureKind = "dry" | "middle" | "wet" | "missing";
@@ -204,6 +210,9 @@ export interface OrinVariable {
   bias_adjusted?: number;
   r_adjusted?: number;
   adjustment?: string;
+  /** "field" = weather stations; "finer_satellite" = a finer satellite
+   * used as reference (e.g. Sentinel-2 vs MODIS). Absent on old files. */
+  reference_kind?: "field" | "finer_satellite";
   unit: string;
   quality: "good" | "fair" | "poor";
 }

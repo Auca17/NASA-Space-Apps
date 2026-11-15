@@ -7,7 +7,7 @@ for (const w of [390, 1280]) {
     viewport: { width: w, height: 800 }, locale: "es" });
   const page = await ctx.newPage();
   // fire mode + layer selector + methods link in header
-  await page.goto("http://localhost:5198/?r2=2#-33.89,-60.57",
+  await page.goto("http://localhost:5198/app/?r2=2#-33.89,-60.57",
     { waitUntil: "domcontentloaded" });
   await page.waitForTimeout(2500);
   await page.screenshot({ path: `${OUT}17-after-${w}px-fire.png` });

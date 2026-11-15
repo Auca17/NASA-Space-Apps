@@ -23,6 +23,17 @@ export function SyntheticBanner({ t }: { t: T }) {
 function VarRow({ v, t, fmt }: { v: OrinVariable; t: T;
     fmt: Intl.NumberFormat }) {
   const bias = biasKey(v.bias, v.unit, fmt.format(Math.abs(v.bias)));
+  // plain-language verdict first: margin = corrected error when the
+  // app applies an elevation fix, else the raw RMSE
+  const margin = v.reference_kind === "finer_satellite"
+    ? v.rmse
+    : (v.rmse_adjusted ?? v.rmse);
+  const verdict = v.reference_kind === "finer_satellite"
+    ? t("orin.verdict.finer", { ref: v.field.source,
+        v: fmt.format(margin), u: v.unit })
+    : t("orin.verdict", {
+        label: t(varLabelKey(v.id)).toLowerCase(),
+        v: fmt.format(margin), u: v.unit });
   return (
     <div className="orin-row">
       <div className="orin-row-head">
@@ -31,24 +42,45 @@ function VarRow({ v, t, fmt }: { v: OrinVariable; t: T;
           <i className="cdot" aria-hidden="true" />
           {t(`orin.q.${v.quality}`)}
         </span>
+        {v.n < 5 && (
+          <span className="badge q-poor">{t("orin.few")}</span>)}
         <span className="qbar" aria-hidden="true">
           <i style={{ width: `${qualityRatio(v.quality) * 100}%` }} />
         </span>
       </div>
-      <p>
-        {v.satellite.dataset} · {v.satellite.resolution} —{" "}
-        {t("orin.sites", { n: v.field.n_sites, m: v.n })}
-      </p>
-      <p>{t("orin.rmse", { v: fmt.format(v.rmse), u: v.unit })}
-        {bias && <>; {t(bias.key, bias.vars)}</>}</p>
-      {v.rmse_adjusted != null && (
-        <p>{t("orin.rmseAdj", {
-          v: fmt.format(v.rmse_adjusted), u: v.unit,
-          raw: fmt.format(v.rmse) })}</p>)}
-      {v.adjustment && (
-        <p className="muted">{v.adjustment}. {t("orin.adjNote")}</p>)}
+      <p className="orin-verdict">{verdict}</p>
       <details className="orin-details">
-        <summary>{t("orin.details")}</summary>
+        <summary>{t("orin.detail.label")}</summary>
+        <p>
+          {v.satellite.dataset} · {v.satellite.resolution} —{" "}
+          {v.reference_kind === "finer_satellite"
+            ? t("orin.finerRef", { ref: v.field.source })
+            : t("orin.sites", { n: v.field.n_sites, m: v.n })}
+        </p>
+        {v.reference_kind === "finer_satellite" ? (
+          <>
+            <p>{t("orin.finerLead", {
+              ref: v.field.source,
+              ds: v.satellite.dataset, res: v.satellite.resolution,
+              v: fmt.format(v.rmse), u: v.unit })}
+              {bias && <> {t(bias.key, bias.vars)}</>}</p>
+            <p className="muted">{t("orin.finerLesson",
+              { res: v.satellite.resolution })}</p>
+          </>
+        ) : (
+          <>
+            <p>{t("orin.rmse", { v: fmt.format(v.rmse), u: v.unit })}
+              {bias && <>; {t(bias.key, bias.vars)}</>}</p>
+            {v.rmse_adjusted != null && (
+              <p>{t("orin.elevFix", {
+                raw: fmt.format(v.rmse), adj: fmt.format(v.rmse_adjusted),
+                u: v.unit })}
+                {v.bias_adjusted != null && <> {t("orin.elevBias", {
+                  raw: fmt.format(v.bias), adj: fmt.format(v.bias_adjusted),
+                  u: v.unit })}</>}</p>)}
+            {v.adjustment && (
+              <p className="muted">{v.adjustment}. {t("orin.adjNote")}</p>)}
+          </>)}
         <ul className="muted">
           <li>RMSE: {fmt.format(v.rmse)} {v.unit}</li>
           <li>bias: {fmt.format(v.bias)} {v.unit}</li>

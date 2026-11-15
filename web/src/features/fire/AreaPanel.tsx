@@ -18,6 +18,7 @@ import {
 import { groupByShard } from "../../domain/h3area";
 import { presentRisk, emergencyText } from "../../domain/risk";
 import type { RiskCell } from "../../domain/risk";
+import { EmergencyBlock } from "../emergency/EmergencyBlock";
 import { viridis, css } from "../../domain/colors";
 import { semaphorePeriod } from "../../domain/clarity";
 import type { MetaJson } from "../../api/types";
@@ -169,13 +170,23 @@ export function AreaPanel({ lat, lon, cells, open, onClose, country,
             ? t("sem.noBaseline")
             : t("sem.percentile", { p: sem.percentile })))
     : "";
+  const effCountry = riskCell?.country ?? country;
+  const riskHigh = risk ? ["alto", "muy_alto"].includes(risk.cat) : false;
 
   return (
     <BottomSheet open={open}>
-      <div style={{ display: "flex", justifyContent: "space-between" }}>
-        <h3 style={{ margin: 0 }}>{lat.toFixed(2)}°, {lon.toFixed(2)}°</h3>
+      <div className="panel-head">
+        <h3>{t("panel.title")}</h3>
         <button onClick={onClose} aria-label={t("ui.close")}>✕</button>
       </div>
+
+      {sem && (
+        <section className="lead" aria-live="polite">
+          <p className="lead-place">{lat.toFixed(2)}°, {lon.toFixed(2)}°</p>
+          <span className={`badge ${sem.category}`}>{t(`sem.${sem.category}`)}</span>
+          <p className="lead-text">{t(`panel.lead.${sem.category}`, { d: windowDays })}</p>
+        </section>
+      )}
 
       <Card title={t("panel.risk7d")}>
         {risk ? (
@@ -205,13 +216,18 @@ export function AreaPanel({ lat, lon, cells, open, onClose, country,
             end: new Date(riskCell.valid_until).toLocaleDateString(lang) })}
         </p>}
         <p className="notice">{t("panel.disclaimer")}<br />
-          {emergencyText(riskCell?.country ?? country, t)}</p>
+          {emergencyText(effCountry, t)}</p>
       </Card>
 
       {semaphoreData?.selection === selection && !sem && <Card
         title={t("panel.semaphore", { d: windowDays })}>
         <p className="muted">{t("panel.noData")}</p>
       </Card>}
+      {(riskHigh || sem?.category === "extremo") && (
+        <EmergencyBlock country={effCountry}
+                        mapCenter={{ lat, lon }}
+                        lead={t("emerg.lead")} />)}
+
       {sem && (
         <Card title={t("panel.semaphore", { d: windowDays })}>
           <div className="big">
@@ -231,6 +247,8 @@ export function AreaPanel({ lat, lon, cells, open, onClose, country,
         </Card>
       )}
 
+      <details className="sec more detail-more">
+      <summary>{t("panel.more")}</summary>
       <Card title={t("calendar.title")}>
         {calMatrix ? (
           <>
@@ -287,12 +305,13 @@ export function AreaPanel({ lat, lon, cells, open, onClose, country,
               `fuegos_${lat.toFixed(2)}_${lon.toFixed(2)}.csv`,
               toCsv(cal))}>
             {t("csv.download")}</button>
-          {shards.length === 1 && country === "AR" && (
+          {shards.length === 1 && effCountry === "AR" && (
             <p><a href={pointsCsvUrl(shards[0],
                 new Date().getFullYear())} download>
               {t("csv.rawPoints")}</a></p>)}
         </Card>
       )}
+      </details>
     </BottomSheet>
   );
 }

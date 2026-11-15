@@ -65,8 +65,13 @@ async def fetch_source(client: httpx.AsyncClient, map_key: str, source: str,
     resp = await client.get(url)
     # FIRMS signals errors as plain text, sometimes with a non-200 status.
     if resp.status_code != 200 or "latitude" not in resp.text[:200]:
-        log.warning("firms %s failed: %s",
-                    source, resp.text[:120].replace("\n", " "))
+        # redact the key in case the error body echoes the request path
+        # (FIRMS keys are long tokens; skip short test keys like "K")
+        body = resp.text[:120]
+        if len(map_key) >= 8:
+            body = body.replace(map_key, "***")
+        body = body.replace("\n", " ")
+        log.warning("firms %s failed: %s", source, body)
         resp.raise_for_status()
         raise httpx.TransportError("invalid response body", request=resp.request)
     return parse_csv(resp.text, source)

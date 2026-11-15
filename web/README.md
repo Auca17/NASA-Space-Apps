@@ -12,7 +12,10 @@ npm install
 npm run dev
 ```
 
-Open http://localhost:5173 — it serves `../fixtures` read-only at
+Open http://localhost:5173 — the landing page (English). The app lives
+at `/app/` and the Spanish landing at `/es/` — the build is multi-page
+(`index.html`, `es/index.html`, `app/index.html` via
+`build.rollupOptions.input`). It serves `../fixtures` read-only at
 `/data/v1/`, so the app works without a backend. `/api/*` is proxied to
 `http://localhost:8000` (start `back/` with uvicorn for diagnose,
 rotations and live mode).
@@ -24,6 +27,7 @@ rotations and live mode).
 | `VITE_DATA_BASE_URL` | `/data/v1/` | contract data base (shards) |
 | `VITE_API_BASE` | *(empty = same origin)* | API endpoints base |
 | `DATA_DIR` | `../fixtures` | dev/preview: folder served at `/data/v1/` |
+| `VITE_SITE_URL` | *(empty = relative)* | public site base: canonical, hreflang, OG, sitemap |
 
 Run against the real local export:
 
@@ -86,18 +90,25 @@ real ones — no code change needed.
 ## Layout
 
 ```
+index.html      landing (English) -> /src/landing/main.ts
+es/index.html   landing (Spanish) -> same entry, <html lang="es">
+app/index.html  the app -> /src/main.tsx
 src/
   api/        typed clients, one per contract file/endpoint (404 -> null)
   domain/     pure logic: h3 area->cells, fire series, baseline,
               semaphore (+ Web Worker), risk presentation, color scales
   components/ Card, BottomSheet, Calendar, Legend, Tooltip, Glossary
+  content/    datasets.ts — "Datos y métodos" panel content
   features/   welcome, globe, fire (historic + area panel), live, field
   i18n/       es.json (default), en.json, t() helper
+  landing/    public landing: content.ts (typed, both languages),
+              main.ts (vanilla renderer), landing.css
   styles/     app.css (CSS variables, light/dark, mobile-first)
 ```
 
-`APP_NAME` lives in `src/config.ts` and is deliberately undecided
-("Nombre a definir") — do not hardcode a project name anywhere else.
+The landing shares no app code; it duplicates the few CSS tokens it
+needs in `landing.css`. `APP_NAME` lives in `src/config.ts` ("Ashfield") —
+do not hardcode a project name anywhere else.
 
 ## Task 17/18/19 notes
 
@@ -109,3 +120,32 @@ src/
   `field/grid` shards at zoom >= 5.
 - `/api/field/explain` returns `mode`; "ai" shows the AI label with a
   link to Datos y métodos.
+
+## Task 26/30 notes
+
+- Emergency block (`src/features/emergency/`): `tel:` links from the
+  typed country table in `src/content/emergency.ts` (AR 100/911 per
+  PRD; CL, UY, PY, BR, BO, MX, US, CA, ES, PT, AU + EU 112, each row
+  keeps its official source URL). Unknown country -> generic text,
+  never a guessed number. Shown when a live point detection is within
+  10 km of the reference (user location if shared, else map centre /
+  reticle), when the 7-day risk is `alto`/`muy_alto` or the semaphore
+  is `extremo`, and always from the "Emergencias" top-bar entry.
+  `apiRisk` and `apiLiveResult` answers carry `country` (ISO A2).
+- The "what to say" message (`src/domain/emergency.ts`) lists only
+  values the app really has; the clipboard failure path falls back to
+  a selectable textarea. The app never dials and never sends the
+  location anywhere.
+- Map fallback: `BASE_STYLE` keeps hidden `base-water`/`base-boundary`
+  vector layers under the rasters; `GlobeView` counts tile errors per
+  raster source, paints the fallback when one is dead, and forces a
+  reload with exponential backoff (`baseStyle.ts` helpers are unit
+  tested). `.map` has a permanent dark background, so the canvas is
+  never blank.
+- Degraded diagnosis: when `/api/field/diagnose` answers
+  `degraded: true`, the panel shows a `role="alert"` notice with the
+  backend `degraded_reason` and a "Reintentar" button; cards render
+  whatever the backend returned.
+- Orin validation: rows with `reference_kind: "finer_satellite"` get
+  the resolution-mixing wording and appear only when the file has
+  them; `n < 5` rows carry a "pocas mediciones" badge.
