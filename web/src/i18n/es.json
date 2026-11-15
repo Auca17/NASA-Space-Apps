@@ -34,9 +34,9 @@
   "sem.alto": "alto",
   "sem.extremo": "extremo",
   "sem.summary": "Del {from} al {to}: {n} focos — {extra}",
-  "sem.timesMedian": "{x}× la mediana",
+  "sem.timesMedian": "{x} veces lo normal",
   "sem.noBaseline": "históricamente casi sin fuego en este mes",
-  "sem.percentile": "percentil {p}",
+  "sem.percentile": "más fuego que en {p} de cada 100 períodos parecidos del pasado",
   "calendar.title": "Calendario de fuego",
   "calendar.years": "Años",
   "calendar.counts": "Cantidades",
@@ -186,7 +186,7 @@
   "rot.carousel": "{i} de {n}",
   "legend.unit": "focos por celda y mes",
   "legend.maxMonth": "máx {max} · {month}",
-  "sem.median": "mediana: {n}",
+  "sem.median": "lo normal: {n} focos",
   "gloss.ndvi": "NDVI",
   "gloss.et": "evapotranspiración",
   "gloss.anomaly": "anomalía",
@@ -451,5 +451,11 @@
   "eco.bias": "Diferencia media contra la temperatura del aire (NASA POWER): {v} °C",
   "meth.short": "Métodos",
   "orin.rmseAdj": "Corregido por altura: {v} {u} (antes {raw})",
-  "orin.adjNote": "En llanura POWER sirve bien para los patrones; en valles de montaña confirmá las heladas con una estación cercana."
+  "orin.adjNote": "En llanura POWER sirve bien para los patrones; en valles de montaña confirmá las heladas con una estación cercana.",
+  "panel.title": "Fuego en esta zona",
+  "panel.more": "Ver detalle: historial por mes y año, y descarga de datos",
+  "panel.lead.normal": "En los últimos {d} días hubo la cantidad de fuego normal para esta zona.",
+  "panel.lead.sobre_lo_normal": "En los últimos {d} días hubo más fuego que lo normal en esta zona.",
+  "panel.lead.alto": "En los últimos {d} días hubo mucho más fuego que lo normal en esta zona. Conviene estar atento.",
+  "panel.lead.extremo": "En los últimos {d} días hubo muchísimo más fuego que lo normal en esta zona. Extremá los cuidados y no quemes."
 }

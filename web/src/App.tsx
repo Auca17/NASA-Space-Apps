@@ -561,14 +561,11 @@ export default function App() {
         )}
 
         {mode === "welcome" && (
-          <div className="welcome" style={{ position: "absolute", inset: 0,
-            display: "flex", background: "var(--bg)" }}>
-            <div style={{ margin: "auto" }}>
-              <Welcome onAnalyze={() => startField("none")} onDemo={demoPlot}
-                       onLocate={locate}
-                       onExplore={openFire}
-                       onLive={() => setMode("live")} />
-            </div>
+          <div className="welcome-overlay">
+            <Welcome onAnalyze={() => startField("none")} onDemo={demoPlot}
+                     onLocate={locate}
+                     onExplore={openFire}
+                     onLive={() => setMode("live")} />
           </div>)}
 
         {mode === "fire" &&

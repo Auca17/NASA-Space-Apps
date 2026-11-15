@@ -34,9 +34,9 @@
   "sem.alto": "high",
   "sem.extremo": "extreme",
   "sem.summary": "{from} to {to}: {n} hotspots — {extra}",
-  "sem.timesMedian": "{x}× the median",
+  "sem.timesMedian": "{x} times the usual amount",
   "sem.noBaseline": "historically almost no fire this month",
-  "sem.percentile": "percentile {p}",
+  "sem.percentile": "more fire than in {p} out of 100 similar periods in the past",
   "calendar.title": "Fire calendar",
   "calendar.years": "Years",
   "calendar.counts": "Counts",
@@ -186,7 +186,7 @@
   "rot.carousel": "{i} of {n}",
   "legend.unit": "fires per cell and month",
   "legend.maxMonth": "max {max} · {month}",
-  "sem.median": "median: {n}",
+  "sem.median": "usual: {n} hotspots",
   "gloss.ndvi": "NDVI",
   "gloss.et": "evapotranspiration",
   "gloss.anomaly": "anomaly",
@@ -451,5 +451,11 @@
   "eco.bias": "Mean difference vs air temperature (NASA POWER): {v} °C",
   "meth.short": "Methods",
   "orin.rmseAdj": "Elevation-corrected: {v} {u} (was {raw})",
-  "orin.adjNote": "On the plains POWER tracks patterns well; in mountain valleys confirm frosts with a nearby station."
+  "orin.adjNote": "On the plains POWER tracks patterns well; in mountain valleys confirm frosts with a nearby station.",
+  "panel.title": "Fire in this area",
+  "panel.more": "See details: history by month and year, and data download",
+  "panel.lead.normal": "In the last {d} days this area had a usual amount of fire.",
+  "panel.lead.sobre_lo_normal": "In the last {d} days this area had more fire than usual.",
+  "panel.lead.alto": "In the last {d} days this area had much more fire than usual. Stay alert.",
+  "panel.lead.extremo": "In the last {d} days this area had far more fire than usual. Take extra care and do not burn."
 }

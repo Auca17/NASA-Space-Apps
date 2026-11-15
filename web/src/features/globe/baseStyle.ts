@@ -28,15 +28,23 @@ export const BASE_STYLE: StyleSpecification = {
         "EOX IT Services GmbH (Contains modified Copernicus Sentinel data 2024)" },
   },
   layers: [
-    { id: "bg", type: "background", paint: { "background-color": "#0a0f1c" } },
-    { id: "marble", type: "raster", source: "marble" },
+    { id: "bg", type: "background", paint: { "background-color": "#0a0d0b" } },
+    // Rasters are dimmed slightly so the glass panels and labels read on
+    // top (docs/ui-style.md, section 5); street tiles get the most because
+    // they are the brightest.
+    { id: "marble", type: "raster", source: "marble",
+      paint: { "raster-brightness-max": 0.9, "raster-saturation": -0.1 } },
     { id: "field-overview", type: "raster", source: "osm",
-      maxzoom: 9.5, layout: { visibility: "none" } },
+      maxzoom: 9.5, layout: { visibility: "none" },
+      paint: { "raster-brightness-max": 0.8, "raster-saturation": -0.35 } },
     { id: "osm", type: "raster", source: "osm", minzoom: 7.5,
       paint: { "raster-opacity":
-        ["interpolate", ["linear"], ["zoom"], 7.5, 0, 9.5, 1] } },
+        ["interpolate", ["linear"], ["zoom"], 7.5, 0, 9.5, 1],
+        "raster-brightness-max": 0.8, "raster-saturation": -0.35 } },
     { id: "field-satellite", type: "raster", source: "field-satellite",
-      minzoom: 8, layout: { visibility: "none" } },
+      minzoom: 8, layout: { visibility: "none" },
+      paint: { "raster-brightness-max": 0.88, "raster-saturation": -0.1,
+        "raster-contrast": 0.08 } },
   ],
 };
 
