@@ -32,6 +32,7 @@ from ..services.infiltration import (infiltration_class,
                                      infiltration_score)
 from ..services.et0 import (METHOD_LABEL, et0_series,
                             series_is_masked)
+from ..services.accuracy import accuracy_block
 from ..services.knowledge import KNOWLEDGE
 from .field import (json_object, _err, parse_plot,
                     days_per_year, frost_free_window,
@@ -1108,6 +1109,8 @@ async def parcels(request: Request):
                "area_ha": round(p["_ha"], 1),
                "indicators": ind, "alerts": alerts,
                "order": order, "extra": extra,
+               "accuracy": accuracy_block(p["_cent"][0], p["_cent"][1],
+                                          adj),
                "_geom": p["_geom"]}
         pe = profile["economics"].get("parcels", {}).get(p["id"])
         if pe is not None:

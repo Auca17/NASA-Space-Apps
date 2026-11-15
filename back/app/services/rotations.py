@@ -359,6 +359,47 @@ def rotation_viable(rot: Rotation, diag, constraints, zone, ff):
     return bad
 
 
+def hazard_viability(rot: Rotation, diag, zone: str | None,
+                     hazards: set | None,
+                     ff: set[int] | None) -> tuple[float, list[str]]:
+    """Score penalty + notes for hazard-profile viability checks.
+
+    When the farmer ranked "frost" or "heat" as a hazard, crops whose
+    sensitive frost window falls outside this cell's frost-free days,
+    or whose heat tolerance can't take the cell's hot-day count, get a
+    score penalty and a plain-language note."""
+    if not hazards or not (hazards & {"frost", "heat"}):
+        return 0.0, []
+    hot = None
+    card = _card(diag, "heat") or {}
+    if isinstance(card.get("value"), (int, float)):
+        hot = card["value"]
+    penalty, notes = 0.0, []
+    for crop in crops_unique(rot):
+        if "frost" in hazards and ff and crop.frost_window:
+            span = (crop.frost_window.get(zone or "") or
+                    crop.frost_window.get("other"))
+            if span:
+                a, b = _doy(span[0]), _doy(span[1])
+                doys = (range(a, b + 1) if a <= b else
+                        list(range(a, 366)) + list(range(1, b + 1)))
+                out = sum(1 for d in doys if d not in ff)
+                if out >= 14:
+                    penalty += 0.15
+                    notes.append(
+                        f"{crop.id}: {out} días sensibles a helada "
+                        "fuera de la ventana libre de la celda")
+        if "heat" in hazards and hot is not None:
+            tol = crop.heat_tolerance or "medium"
+            lim = {"low": 10, "medium": 50}.get(tol)
+            if lim is not None and hot > lim:
+                penalty += 0.15
+                notes.append(
+                    f"{crop.id}: tolerancia al calor {tol} con "
+                    f"{hot:g} días >35 °C en la celda")
+    return min(penalty, 0.45), notes
+
+
 # ------------------------------------------------------------- indicators --
 
 def indicators(rot: Rotation, diag: dict, zone: str | None,
@@ -764,7 +805,8 @@ def _shift_for_zone(rot: Rotation,
 
 def run(diagnosis: dict, current: dict | None, priorities: dict,
         constraints: dict, zone: str | None,
-        analog: dict | None = None) -> dict:
+        analog: dict | None = None,
+        hazards: set | None = None) -> dict:
     zone = zone if zone in ZONE_CROPS else ("other" if zone else None)
     known = zone in ZONE_CROPS
     ff = _frost_free_doys(diagnosis)
@@ -800,6 +842,11 @@ def run(diagnosis: dict, current: dict | None, priorities: dict,
         bad = rotation_viable(rot2, diagnosis, constraints, zone, ff)
         ind = indicators(rot2, diagnosis, zone, constraints)
         sc = score(ind, cur_ind, priorities)
+        hpen, hnotes = hazard_viability(rot2, diagnosis, zone,
+                                        hazards, ff)
+        if hpen:
+            sc = max(0.0, round(sc - hpen, 3))
+            notes += hnotes
         cand.append({"rot": rot2, "ind": ind, "score": sc,
                      "bad": bad, "viable": not bad, "notes": notes})
     viable = [c for c in cand if c["viable"]]
