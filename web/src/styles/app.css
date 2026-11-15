@@ -154,6 +154,46 @@ table.cal td button { min-width: var(--touch); min-height: var(--touch);
 table.cal td.playing { outline: 2px solid var(--accent); }
 table.cal tr.current td { outline: 2px solid var(--accent); }
 
+/* farming calendar: crop bars over the climate rows */
+table.cal td.cal-on { background:
+  repeating-linear-gradient(-45deg,
+    color-mix(in srgb, var(--covered) 55%, var(--panel)) 0 5px,
+    color-mix(in srgb, var(--covered) 30%, var(--panel)) 5px 10px);
+  color: var(--fg); }
+table.cal td.cal-risk { background:
+  repeating-linear-gradient(45deg,
+    color-mix(in srgb, var(--bad) 70%, var(--panel)) 0 4px,
+    color-mix(in srgb, var(--bad) 30%, var(--panel)) 4px 9px);
+  color: var(--bad); font-weight: 700; }
+table.cal td.cal-off { background: transparent; color: var(--muted); }
+table.cal th .glossary-btn { margin-left: 4px; }
+.cal-legend { display: flex; flex-wrap: wrap; align-items: center;
+  gap: 2px 4px; margin: 6px 0 0; }
+.cal-sw { display: inline-block; width: .9rem; height: .9rem;
+  border: 1px solid var(--border); border-radius: 3px;
+  vertical-align: -1px; }
+.cal-sw.cal-on { background:
+  repeating-linear-gradient(-45deg,
+    color-mix(in srgb, var(--covered) 55%, var(--panel)) 0 5px,
+    color-mix(in srgb, var(--covered) 30%, var(--panel)) 5px 10px); }
+.cal-sw.cal-risk { background:
+  repeating-linear-gradient(45deg,
+    color-mix(in srgb, var(--bad) 70%, var(--panel)) 0 4px,
+    color-mix(in srgb, var(--bad) 30%, var(--panel)) 4px 9px); }
+.cal-risks { color: var(--bad); font-weight: 600; margin: 6px 0 0; }
+
+/* glossary + satellite accuracy */
+.dtile-label .glossary-btn { margin-left: 4px; }
+.gloss-all { margin-top: 8px; }
+.gloss-all summary { cursor: pointer; min-height: var(--touch);
+  align-content: center; }
+.gloss-defs { margin: 6px 0 0; }
+.gloss-def { margin: 0 0 8px; }
+.gloss-defs dt { font-weight: 600; }
+.gloss-defs dd { margin: 2px 0 0; color: var(--muted); }
+.acc-card h4 .glossary-btn { margin-left: 4px; }
+.acc-card p { margin: 4px 0; }
+
 .legend { display: flex; align-items: center; gap: 6px; font-size: 0.8rem; }
 .legend .bar { flex: 1; height: 10px; border-radius: 5px; }
 
