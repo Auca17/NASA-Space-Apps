@@ -51,46 +51,66 @@ UA = {"User-Agent": "verify-r2/1.0"}
 ORIN_NOT_PUBLISHED = {"ndvi_modis_vs_s2.json"}
 
 
-def local_sources() -> dict[str, Path]:
-    """Expected R2 key -> local file, first mapping wins."""
+def local_sources(only_prefix: str = "v1/") -> dict[str, Path]:
+    """Expected R2 key -> local file, first mapping wins.
+
+    only_prefix prunes whole source dirs that cannot intersect it,
+    so `--prefix v1/risk/` never walks data/dev_v1 (~40k files).
+    """
     out: dict[str, Path] = {}
+
+    def overlaps(prefix: str) -> bool:
+        return (prefix.startswith(only_prefix)
+                or only_prefix.startswith(prefix))
 
     def add(local: Path, prefix: str):
         if local.is_dir():
             for p in sorted(local.rglob("*")):
-                if p.is_file():
-                    key = prefix + p.relative_to(local).as_posix()
-                    out.setdefault(key, p)
+                if not p.is_file():
+                    continue
+                key = prefix + p.relative_to(local).as_posix()
+                if (key.startswith("v1/orin/")
+                        and p.name in ORIN_NOT_PUBLISHED):
+                    continue
+                out.setdefault(key, p)
         else:
-            out.setdefault(prefix + local.name, local)
+            key = prefix + local.name
+            if not (key.startswith("v1/orin/")
+                    and local.name in ORIN_NOT_PUBLISHED):
+                out.setdefault(key, local)
 
-    export = ROOT / "data/processed/export/v1"
-    if export.is_dir():
-        add(export, "v1/")
+    # export and the dev_v1 mirror both cover the whole v1/ tree; when a
+    # narrower --prefix is given, only walk the matching subdirectory.
+    def add_tree(base: Path):
+        sub = base
+        if only_prefix.startswith("v1/") and only_prefix != "v1/":
+            sub = base / only_prefix[len("v1/"):]
+        if sub.is_dir():
+            add(sub, "v1/" if sub == base else only_prefix)
+
+    add_tree(ROOT / "data/processed/export/v1")
     grid = ROOT / "data/processed/field/grid"
     analogs = ROOT / "data/processed/field/analogs"
-    if grid.is_dir():
+    if grid.is_dir() and overlaps("v1/field/grid/"):
         add(grid, "v1/field/grid/")
-    if analogs.is_dir():
+    if analogs.is_dir() and overlaps("v1/field/analogs/"):
         add(analogs, "v1/field/analogs/")
     risk = ROOT / "data/processed/risk"
-    if risk.is_dir():
+    if risk.is_dir() and overlaps("v1/risk/"):
         add(risk, "v1/risk/")
     know = ROOT / "back/knowledge"
-    if know.is_dir():
+    if know.is_dir() and overlaps("v1/knowledge/"):
         for p in sorted(know.glob("*.json")):
             add(p, "v1/knowledge/")
     orin = ROOT / "data/processed/orin"
-    if orin.is_dir():
+    if orin.is_dir() and overlaps("v1/orin/"):
         for p in sorted(orin.glob("*")):
             if p.is_file() and p.name not in ORIN_NOT_PUBLISHED:
                 add(p, "v1/orin/")
     eco = ROOT / "data/processed/ecostress_demo.json"
-    if eco.is_file():
+    if eco.is_file() and overlaps("v1/ecostress_demo.json"):
         add(eco, "v1/")
-    mirror = ROOT / "data/dev_v1"
-    if mirror.is_dir():
-        add(mirror, "v1/")  # fills keys not already mapped above
+    add_tree(ROOT / "data/dev_v1")  # fills keys not already mapped
     return out
 
 
@@ -123,7 +143,7 @@ def main() -> int:
 
     env, client = upload_r2.make_client()
     remote = upload_r2.list_remote(client, env["R2_BUCKET"], prefix)
-    local = {k: v for k, v in local_sources().items()
+    local = {k: v for k, v in local_sources(prefix).items()
              if k.startswith(prefix)}
 
     counts = Counter(group(k) for k in remote)
@@ -133,21 +153,58 @@ def main() -> int:
         print(f"  {g:<28} {n}")
 
     # ---- local -> remote reconciliation ----------------------------------
-    missing, mismatch = [], []
-    for key, path in sorted(local.items()):
-        r = remote.get(key)
-        if r is None:
-            missing.append(key)
-            continue
-        item = upload_r2.Item(
+    # prepare() gzips every .json to compare stored sizes; zlib releases
+    # the GIL so threads give a real speedup on thousands of files.
+    from concurrent.futures import ThreadPoolExecutor
+    missing = [k for k in sorted(local) if k not in remote]
+    present = [k for k in sorted(local) if k in remote]
+
+    def prepared(key):
+        path = local[key]
+        return key, upload_r2.Item(
             local=path, key=key, is_json=path.suffix == ".json",
             content_type="", content_encoding=None).prepare()
-        if r["size"] != item.stored_size and r["etag"] != item.md5:
-            head = client.head_object(
-                Bucket=env["R2_BUCKET"], Key=key)
-            meta = (head.get("Metadata") or {}).get("src-md5")
-            if meta != item.src_md5:
-                mismatch.append((key, r["size"], item.stored_size))
+
+    candidates = []
+    with ThreadPoolExecutor(16) as ex:
+        for key, item in ex.map(prepared, present):
+            r = remote[key]
+            if r["size"] != item.stored_size and r["etag"] != item.md5:
+                candidates.append((key, item, r["size"]))
+    # same stored size can still mean a different gzip stream of the
+    # same source: compare src-md5 metadata when present; when the
+    # object lacks it (uploaded by another pipeline), download and
+    # compare the decompressed content. Heads/downloads run in parallel.
+    def check(key, item, rsize):
+        try:
+            head = client.head_object(Bucket=env["R2_BUCKET"], Key=key)
+        except Exception:
+            return (key, rsize, item.stored_size)
+        meta = (head.get("Metadata") or {}).get("src-md5")
+        if meta is not None:
+            return (key, rsize, item.stored_size) \
+                if meta != item.src_md5 else None
+        try:
+            body = client.get_object(
+                Bucket=env["R2_BUCKET"], Key=key)["Body"].read()
+            if body[:2] == GZIP_MAGIC:
+                body = gzip.decompress(body)
+            local = item.local.read_bytes()
+            if local[:2] == GZIP_MAGIC:
+                local = gzip.decompress(local)
+            if body == local or \
+                    (key.endswith(".json")
+                     and json.loads(body) == json.loads(local)):
+                return None
+        except Exception:
+            pass
+        return (key, rsize, item.stored_size)
+
+    mismatch = []
+    with ThreadPoolExecutor(16) as ex:
+        for res in ex.map(lambda a: check(*a), candidates):
+            if res:
+                mismatch.append(res)
     print(f"\nlocal sources mapped: {len(local)}")
     print(f"missing remotely: {len(missing)}")
     for k in missing[:20]:
