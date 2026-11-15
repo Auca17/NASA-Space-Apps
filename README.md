@@ -21,7 +21,8 @@ One harmonization engine that brings NASA data from different sensors and resolu
 ## What the app does
 
 - **Fire lens (Hot Spots):** a 3D globe with an animated month-by-month historic mode from November 2000 to today, a live mode with detections from the last 24 h / 48 h / 7 d over today's satellite image, a year × month fire calendar, a semaphore comparing the current month against its 2003–2022 baseline, a 7-day fire-risk level with 2–3 reasons, and CSV download.
-- **Field lens (Field Shift):** the producer draws their plot and gets a diagnosis where every number carries its source and resolution (rain, extreme rain, soil moisture, frosts, heat, crop water, bare soil, slope, soil, water trend, fire), an agricultural calendar showing when the plot is exposed, and their **current rotation + 3 alternatives**, each card with the five sections the challenge asks for: why, evidence, benefits, information gaps, and risks to validate with an agronomist.
+- **Field lens (Field Shift):** the producer draws their plot, splits it into **parcels with a crop each**, ranks the eight hazards that worry them most (fire, drought, El Niño, frost, heat, snow, hail, flood), and optionally adds water access, distance to emergency services, and per-parcel costs, prices and margins. The diagnosis gives each parcel a fire and a water percentage **with the reason for every number**, alerts, and fire-risk/dry/bare-soil zones on the map — then their **current rotation + 3 alternatives**, each card with the five sections the challenge asks for: why, evidence, benefits, information gaps, and risks to validate with an agronomist. An optional AI summary (Gemini) puts the numbers in plain words; emergency-service phones are a tap away, never dialed automatically.
+- **Planned:** proactive alerts when a parcel's risk turns high (the alert banner and emergency contacts already ship; the push-style warning does not).
 
 **Two-minute demo path:** welcome → **"Ver mi zona"** (location, globe flies to a 50 km view) → historic mode playing **Corrientes 2022** → risk and semaphore in the area panel → **"Analizar mi campo"** → choose the **Pergamino demo plot** → compare the current rotation against the 3 alternatives, including the climate scenario sliders (rain −20 %, +1 °C).
 
@@ -37,6 +38,11 @@ All NASA satellite sources are global. Resolution and period are the source's ow
 | FIRMS VIIRS S-NPP | Hot spots | 375 m | 2012-01-20 → 2025-12-31 |
 | FIRMS VIIRS NOAA-20 | Hot spots, unit of the series | 375 m | 2018-04-01 → 2026-07-31 (SP), then NRT |
 | NASA POWER (daily) | Frosts, heat, rain, fire weather, model features | 0.5° × 0.625° (≈55 × 60 km) | 2001 → yesterday (MERRA-2; tail from GEOS-IT) |
+| NASA POWER `GWETROOT` | Root-zone soil moisture (the parcel water indicator) | 0.5° × 0.625° | Same as POWER |
+| NOAA CPC ONI | El Niño / La Niña tendency per parcel | Seasonal index | Ongoing |
+| GPM IMERG | Satellite rain | 0.1°, half-hourly | **Pending** — GES DISC data-use agreement; rain comes from POWER meanwhile |
+| OpenStreetMap (Nominatim + Overpass) | Place search, nearby emergency services and water | Point data | Live |
+| Google Gemini (Flash) | Optional plain-language summary of the diagnosis | — | Server key required |
 | SMAP L3 (SPL3SMP_E) | Soil moisture anomaly | 9 km | Computed but rejected by quality gates; the card uses POWER `GWETROOT` (see limitations) |
 | MODIS MOD13C2 NDVI | Bare-soil days per year | 0.05°, monthly | Multi-year record |
 | MCD12Q1 / ESA WorldCover | Dominant land cover | 500 m / 10 m | Latest available |
@@ -49,7 +55,7 @@ All NASA satellite sources are global. Resolution and period are the source's ow
 | Orin field data | Satellite-vs-field validation | 53 weather stations, Mendoza | 2026-10-04 → 2026-10-20 |
 | IGN / Natural Earth | Provinces, departments, country lookup | Polygons | — |
 
-**Not used, and why:** the field datasets suggested for the US (SSURGO, NASS/CDL, NLDAS/PRISM, NAIP, CoCoRaHS, OpenET) cover only the United States; they are replaced by SoilGrids, MAGyP, POWER and the Orin data so the tool works in Argentina and worldwide. **GPM IMERG** is pending a data-use agreement at GES DISC — rain cards come from NASA POWER instead. **FAO GAEZ** is pending a manual license step. Landsat/HLS and Sentinel-2 are kept for demo plots only (partial coverage). ERA5/GLDAS stay as a climate backup. On-demand SoilGrids and ORNL MODIS calls time out beyond the latency budget, so those cards fall back to the precomputed grid.
+**Not used, and why:** the field datasets suggested for the US (SSURGO, NASS/CDL, NLDAS/PRISM, NAIP, CoCoRaHS, OpenET) cover only the United States; they are replaced by SoilGrids, MAGyP, POWER and the Orin data so the tool works in Argentina and worldwide. **GPM IMERG** is pending a data-use agreement at GES DISC — rain cards come from NASA POWER instead. **FAO GAEZ** is pending a manual license step. **Hail** has no usable satellite product, so the app says "no satellite data" instead of guessing. Landsat/HLS and Sentinel-2 are kept for demo plots only (partial coverage). ERA5/GLDAS stay as a climate backup. On-demand SoilGrids and ORNL MODIS calls time out beyond the latency budget, so those cards fall back to the precomputed grid.
 
 ## Method
 
@@ -110,7 +116,10 @@ The error is driven by elevation: a POWER cell (~55 × 60 km) has one mean altit
 - **Precomputed field layers cover Argentina only** (plus demo plots); elsewhere the diagnosis relies on on-demand APIs and some cards may read "no data available".
 - **POWER temperature in mountain cells** can miss several degrees (see validation): the diagnosis applies a −6.5 °C/km elevation correction on demand, but frost cards in valleys still need ground confirmation — and the fire-risk model features remain uncorrected (the model was not retrained).
 - **SMAP soil-moisture anomaly was computed (SPL3SMP_E) but rejected by the quality gates** — it showed no positive relation to recent POWER rain — so the card falls back to POWER `GWETROOT`.
-- **Climate scenarios are simple scalings** of the historical POWER series (rain × (1 + pct), temperature ± delta), not forecasts.
+- **Climate scenarios are simple scalings** of the historical POWER series (rain × (1 + pct), temperature ± delta), not forecasts. The El Niño tendency shown per parcel is a historical statistic, not a forecast either.
+- **Hail is reported as "no satellite data"** — there is no satellite hail product honest enough to show a number for.
+- **Nearby-services lookups (OpenStreetMap) can fail or time out**; when they do the diagnosis says so and marks itself incomplete rather than hiding it.
+- **Parcel margins are rough estimates** from the producer's own costs/prices (or the department average from MAGyP) — agronomic advice still needed.
 - **ECOSTRESS** is not part of the general diagnosis (partial coverage; demo plots only).
 - **NRT hot spots infer `type`** with a fixed-source mask (discards 5.7 % of NOAA-20 NRT vs 8.6 % with the real flag); a new industrial source could slip through in recent months.
 - **The crop knowledge base is a draft under agronomic review** (`docs/revision-agronomica.md`): several water-use and residue figures await Argentine sources, and Patagonia has no validated rotation.

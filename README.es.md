@@ -21,7 +21,8 @@ Un solo motor de armonización que lleva datos de NASA de distintos sensores y r
 ## Qué hace la app
 
 - **Lente Fuego (Hot Spots):** un globo 3D con modo histórico animado mes a mes desde noviembre de 2000 hasta hoy, modo live con las detecciones de las últimas 24 h / 48 h / 7 d sobre la imagen satelital del día, calendario de fuego año × mes, semáforo que compara el mes actual contra la línea base 2003–2022, riesgo de fuego en 7 días con 2–3 razones y descarga en CSV.
-- **Lente Campo (Field Shift):** el productor dibuja su lote y recibe un diagnóstico donde cada número muestra su fuente y su resolución (lluvia, lluvias extremas, humedad del suelo, heladas, calor, agua del cultivo, suelo desnudo, pendiente, suelo, tendencia del agua y fuego), un calendario agrícola que muestra cuándo el lote queda expuesto, y su **rotación actual + 3 alternativas**, cada tarjeta con las cinco secciones que pide el brief: por qué, evidencia, beneficios, vacíos de información y riesgos a validar con un agrónomo.
+- **Lente Campo (Field Shift):** el productor dibuja su lote, lo divide en **parcelas con su cultivo**, ordena los ocho riesgos que más le preocupan (fuego, sequía, El Niño, heladas, calor, nevadas, granizo, inundación) y, si quiere, agrega acceso al agua, distancia a emergencias y costos, precios y márgenes por parcela. El diagnóstico le da a cada parcela un porcentaje de fuego y uno de agua **con el motivo de cada número**, alertas y las zonas de riesgo de fuego, suelo seco y suelo desnudo en el mapa — después su **rotación actual + 3 alternativas**, cada tarjeta con las cinco secciones que pide el brief: por qué, evidencia, beneficios, vacíos de información y riesgos a validar con un agrónomo. Un resumen opcional con IA (Gemini) pone los números en palabras simples; los teléfonos de emergencia están a un toque y nunca se marcan solos.
+- **Planeado:** alertas proactivas cuando el riesgo de una parcela sube (el aviso con los contactos de emergencia ya está; el aviso tipo notificación todavía no).
 
 **Recorrido de demo de dos minutos:** bienvenida → **"Ver mi zona"** (ubicación, el globo vuela a una vista de 50 km) → modo histórico reproduciendo **Corrientes 2022** → riesgo y semáforo en el panel del área → **"Analizar mi campo"** → elegir el **lote de demo de Pergamino** → comparar la rotación actual con las 3 alternativas, incluidos los sliders de escenario climático (lluvia −20 %, +1 °C).
 
@@ -37,6 +38,11 @@ Todas las fuentes satelitales de NASA son globales. La resolución y el período
 | FIRMS VIIRS S-NPP | Focos de calor | 375 m | 2012-01-20 → 2025-12-31 |
 | FIRMS VIIRS NOAA-20 | Focos de calor, unidad de la serie | 375 m | 2018-04-01 → 2026-07-31 (SP), luego NRT |
 | NASA POWER (diario) | Heladas, calor, lluvia, clima de fuego, features del modelo | 0,5° × 0,625° (≈55 × 60 km) | 2001 → ayer (MERRA-2; cola desde GEOS-IT) |
+| NASA POWER `GWETROOT` | Humedad del suelo en raíz (el indicador de agua por parcela) | 0,5° × 0,625° | Igual que POWER |
+| NOAA CPC ONI | Tendencia El Niño / La Niña por parcela | Índice estacional | En curso |
+| GPM IMERG | Lluvia satelital | 0,1°, semiborario | **Pendiente** — acuerdo de uso en GES DISC; la lluvia sale de POWER mientras tanto |
+| OpenStreetMap (Nominatim + Overpass) | Búsqueda de lugares, servicios de emergencia y agua cercanos | Datos de punto | En vivo |
+| Google Gemini (Flash) | Resumen opcional del diagnóstico en lenguaje simple | — | Requiere clave en el servidor |
 | SMAP L3 (SPL3SMP_E) | Anomalía de humedad del suelo | 9 km | Calculada pero rechazada por las pruebas de calidad; la tarjeta usa POWER `GWETROOT` (ver limitaciones) |
 | MODIS MOD13C2 NDVI | Días de suelo desnudo por año | 0,05°, mensual | Registro multianual |
 | MCD12Q1 / ESA WorldCover | Cobertura dominante del suelo | 500 m / 10 m | Última disponible |
@@ -49,7 +55,7 @@ Todas las fuentes satelitales de NASA son globales. La resolución y el período
 | Datos de campo de Orin | Validación satélite contra campo | 53 estaciones meteorológicas, Mendoza | 2026-10-04 → 2026-10-20 |
 | IGN / Natural Earth | Provincias, departamentos, país | Polígonos | — |
 
-**No se usa, y por qué:** los datasets de campo sugeridos para EE. UU. (SSURGO, NASS/CDL, NLDAS/PRISM, NAIP, CoCoRaHS, OpenET) cubren solo Estados Unidos; se reemplazan por SoilGrids, MAGyP, POWER y los datos de Orin para que la herramienta funcione en Argentina y en el mundo. **GPM IMERG** está pendiente de un acuerdo de uso en GES DISC — las tarjetas de lluvia salen de NASA POWER. **FAO GAEZ** está pendiente de un paso manual de licencia. Landsat/HLS y Sentinel-2 quedan solo para lotes de demo (cobertura parcial). ERA5/GLDAS queda como respaldo de clima. Las consultas a demanda de SoilGrids y MODIS de ORNL superan el presupuesto de latencia, así que esas tarjetas usan la grilla precalculada.
+**No se usa, y por qué:** los datasets de campo sugeridos para EE. UU. (SSURGO, NASS/CDL, NLDAS/PRISM, NAIP, CoCoRaHS, OpenET) cubren solo Estados Unidos; se reemplazan por SoilGrids, MAGyP, POWER y los datos de Orin para que la herramienta funcione en Argentina y en el mundo. **GPM IMERG** está pendiente de un acuerdo de uso en GES DISC — las tarjetas de lluvia salen de NASA POWER. **FAO GAEZ** está pendiente de un paso manual de licencia. **El granizo** no tiene un producto satelital usable, así que la app dice «sin dato satelital» en vez de adivinar. Landsat/HLS y Sentinel-2 quedan solo para lotes de demo (cobertura parcial). ERA5/GLDAS queda como respaldo de clima. Las consultas a demanda de SoilGrids y MODIS de ORNL superan el presupuesto de latencia, así que esas tarjetas usan la grilla precalculada.
 
 ## Método
 
@@ -110,7 +116,10 @@ El error lo explica la altura: una celda de POWER (~55 × 60 km) tiene una sola 
 - **Las capas de campo precalculadas cubren solo Argentina** (más los lotes de demo); en el resto del mundo el diagnóstico depende de las APIs a demanda y algunas tarjetas pueden mostrar "sin datos disponibles".
 - **La temperatura de POWER en celdas de montaña** puede errar varios grados (ver validación): el diagnóstico aplica una corrección de −6,5 °C/km por altura a demanda, pero las tarjetas de helada en valles igual necesitan confirmación en campo — y las features del modelo de riesgo quedan sin corregir (el modelo no se reentrenó).
 - **La anomalía de humedad de SMAP se calculó (SPL3SMP_E) pero fue rechazada por las pruebas de calidad** — no mostró relación positiva con la lluvia reciente de POWER — así que la tarjeta usa POWER `GWETROOT`.
-- **Los escenarios climáticos son escalados simples** de la serie histórica de POWER (lluvia × (1 + pct), temperatura ± delta), no pronósticos.
+- **Los escenarios climáticos son escalados simples** de la serie histórica de POWER (lluvia × (1 + pct), temperatura ± delta), no pronósticos. La tendencia de El Niño que se muestra por parcela es una estadística histórica, tampoco un pronóstico.
+- **El granizo se informa como «sin dato satelital»** — no hay un producto satelital lo bastante honesto como para mostrar un número.
+- **Las consultas de servicios cercanos (OpenStreetMap) pueden fallar o agotar el tiempo**; cuando pasa, el diagnóstico lo dice y se marca incompleto en vez de ocultarlo.
+- **Los márgenes por parcela son estimaciones gruesas** a partir de los costos y precios del productor (o el promedio departamental del MAGyP) — hace falta el criterio agronómico igual.
 - **ECOSTRESS** no forma parte del diagnóstico general (cobertura parcial; solo lotes de demo).
 - **Los focos NRT infieren `type`** con una máscara de fuentes fijas (descarta 5,7 % del NRT de NOAA-20 contra 8,6 % con el flag real); una fuente industrial nueva podría pasar en los últimos meses.
 - **La base de conocimiento de cultivos es un borrador en revisión agronómica** (`docs/revision-agronomica.md`): varios valores de uso de agua y rastrojo esperan fuentes argentinas, y Patagonia no tiene rotación validada.

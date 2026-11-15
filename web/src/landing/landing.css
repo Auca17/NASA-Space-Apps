@@ -367,7 +367,7 @@ tbody th { font-weight: 500; max-width: 22rem; }
  * minimum width: title, status pill, honest limit, then what
  * Ashfield does — no horizontal scroll at tablet or phone width */
 @media (max-width: 991px) {
-  .table-wrap { overflow-x: visible; border: 0; border-radius: 0;
+  .req-group .table-wrap { overflow-x: visible; border: 0; border-radius: 0;
     background: transparent; }
   .req-table { min-width: 0; }
   .req-table thead { display: none; }
