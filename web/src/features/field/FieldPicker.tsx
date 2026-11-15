@@ -1,10 +1,13 @@
 /** Step-by-step guide to mark a field: choose a method, then follow
  * the instructions for drawing an outline (point by point or freehand)
  * or tapping a point. Also used to draw crop zones inside a field. */
-import { useState } from "react";
+import { useState, useSyncExternalStore } from "react";
 import { useT } from "../../i18n";
 import { drawStatus } from "../../domain/clarity";
 import { PlaceFinder } from "./PlaceFinder";
+import {
+  activeDrawState, removeActiveVertex, subscribeDrawSession,
+} from "./drawEdit";
 
 export type DrawMode = "none" | "draw" | "point" | "free";
 
@@ -40,6 +43,9 @@ export function FieldPicker({ draw, points, onPick, onDemo, onFinish,
 }) {
   const { t } = useT();
   const [expanded, setExpanded] = useState(true);
+  // the draw layer's session: selected vertex + refusal notices
+  const drawSt = useSyncExternalStore(subscribeDrawSession,
+                                      activeDrawState);
   const ctx = context && <p className="picker-context">{context}</p>;
   const move = onToggleMove && (
     <button type="button" className={movingMap ? "primary" : undefined}
@@ -62,18 +68,25 @@ export function FieldPicker({ draw, points, onPick, onDemo, onFinish,
         {ctx}
         <strong className="picker-mode">{t("field.drawing.title")}</strong>
         <p className="picker-how" aria-live="polite">
-          {t(movingMap ? "field.map.moving" : "field.drawing.how")}</p>
+          {t(movingMap ? "field.map.moving"
+            : drawSt?.closed ? "field.drawing.howEdit"
+            : "field.drawing.how")}</p>
         <p aria-live="polite" className="picker-status">
           <span className="picker-count">
             {t("field.drawing.count", { n: points })}</span>{" "}
           {st.canFinish ? t("field.drawing.ready")
             : t("field.drawing.missing", { k: st.missing })}
         </p>
+        {drawSt?.notice && (
+          <p className="notice" role="status">{t(drawSt.notice)}</p>)}
         <div className="row">
           <button className="primary" onClick={onFinish}
                   disabled={!st.canFinish}>{t("field.finish")}</button>
           <button onClick={onUndo} disabled={points === 0}>
             {t("field.drawing.undo")}</button>
+          {drawSt?.closed && drawSt.selected != null && (
+            <button onClick={removeActiveVertex}>
+              {t("field.draw.removeVertex")}</button>)}
           {move}
           {zoomDetail}
           <button onClick={onCancel}>{t("field.cancel")}</button>

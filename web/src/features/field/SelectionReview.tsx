@@ -29,7 +29,7 @@ function useHa() {
 }
 
 export function SelectionReview({ geom, approx, check, onEdit, onCancel,
-                                  onConfirm, onAdjust, onSave }: {
+                                  onConfirm, onAdjust, onSave, onParcels }: {
   /** pieces of the selection, each [outer, ...holes] */
   geom: Multi;
   approx: boolean;
@@ -39,6 +39,8 @@ export function SelectionReview({ geom, approx, check, onEdit, onCancel,
   onConfirm: () => void;
   onAdjust: () => void;
   onSave: (name: string) => void;
+  /** Optional: divide the confirmed field into crop parcels first. */
+  onParcels?: () => void;
 }) {
   const { t } = useT();
   const ha = useHa();
@@ -89,6 +91,9 @@ export function SelectionReview({ geom, approx, check, onEdit, onCancel,
         <div className="row">
           <button className="primary" onClick={onConfirm} disabled={blocked}>
             {t("review.confirm")}</button>
+          {onParcels && (
+            <button onClick={onParcels} disabled={blocked}>
+              {t("parcels.open")}</button>)}
           <button onClick={() => setNaming(true)} disabled={blocked}>
             {t("fields.saveAs")}</button>
           <button onClick={onAdjust}>{t("adjust.open")}</button>

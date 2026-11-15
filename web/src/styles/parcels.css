@@ -1,0 +1,164 @@
+/* Parcels flow (task 34): wizard, needs form, result badges and the
+ * reduced results panel. Reuses the app's .glass / .panel / .card /
+ * .chip tokens — nothing here redefines them. */
+
+/* -------------------------------------------- wizard + needs ------- */
+
+.parcels-wizard .parcel-list {
+  list-style: none; margin: 6px 0; padding: 0;
+  display: flex; flex-direction: column; gap: 4px;
+  max-height: 220px; overflow-y: auto;
+}
+
+.parcel-row {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 13px;
+}
+.parcel-row .parcel-name { font-weight: 600; }
+.parcel-row .parcel-ha { margin-left: auto; font-variant-numeric: tabular-nums; }
+.parcel-row button { padding: 2px 8px; font-size: 12px; }
+
+.parcel-swatch {
+  width: 14px; height: 14px; flex: none;
+  border-radius: 4px;
+  border: 1px solid rgba(255, 255, 255, 0.45);
+}
+
+.parcel-legend {
+  list-style: none; margin: 8px 0 0; padding: 6px 0 0;
+  border-top: 1px solid var(--glass-border, rgba(255, 255, 255, 0.14));
+  display: flex; flex-wrap: wrap; gap: 6px 14px;
+  font-size: 12px;
+}
+.parcel-legend li { display: flex; align-items: center; gap: 6px; }
+
+.parcel-form {
+  display: flex; flex-direction: column; gap: 8px;
+  margin: 8px 0; padding: 8px;
+  border: 1px solid var(--glass-border, rgba(255, 255, 255, 0.14));
+  border-radius: var(--radius, 12px);
+}
+.parcel-form label {
+  display: flex; flex-direction: column; gap: 4px; font-size: 13px;
+}
+.parcel-crop-row { display: flex; align-items: center; gap: 6px; }
+.parcel-crop-row select { flex: 1; }
+
+.parcel-tools { flex-wrap: wrap; }
+
+/* needs form */
+
+.needs-form { display: flex; flex-direction: column; gap: 10px; margin: 8px 0; }
+.needs-form .needs-set { border: 0; margin: 0; padding: 0; }
+.needs-form .needs-set legend { font-size: 13px; font-weight: 600; padding: 0 0 4px; }
+.needs-form .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.needs-dist { display: flex; flex-direction: column; gap: 4px; font-size: 13px; }
+.needs-dist input { max-width: 160px; }
+.needs-dist-hint { font-size: 12px; margin: -6px 0 0; }
+.needs-note { display: flex; flex-direction: column; gap: 4px; font-size: 13px; }
+.needs-note textarea { resize: vertical; }
+.needs-note-count { align-self: flex-end; font-size: 11px; opacity: 0.7; }
+
+/* -------------------------------------------- map layer ------------ */
+
+.parcel-map {
+  position: absolute; inset: 0;
+  pointer-events: none;
+  z-index: 2;
+}
+
+.parcel-badge {
+  position: absolute;
+  transform: translate(-50%, -100%);
+  display: flex; align-items: center; gap: 3px;
+  padding: 3px 7px;
+  font-size: 11px; font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: #f4f6f8;
+  background: rgba(12, 16, 22, 0.78);
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  border-radius: 999px;
+  backdrop-filter: blur(4px);
+  white-space: nowrap;
+}
+.parcel-badge .pi { flex: none; }
+
+.zone-chip {
+  position: absolute;
+  transform: translate(-50%, 6px);
+  display: flex; align-items: center; gap: 4px;
+  padding: 2px 8px;
+  font-size: 11px; font-weight: 600;
+  color: #fff;
+  border-radius: 999px;
+  border: 1.5px solid currentColor;
+  white-space: nowrap;
+}
+.zone-chip.hotspot { color: #ff8a66; background: rgba(40, 8, 0, 0.85); }
+.zone-chip.fire_risk { color: #ffb566; background: rgba(40, 16, 0, 0.8); }
+
+/* -------------------------------------------- results panel -------- */
+
+.parcel-alert {
+  display: flex; gap: 10px; align-items: flex-start;
+  padding: 10px 12px; margin: 8px 0;
+  border-radius: var(--radius, 12px);
+}
+.parcel-alert.fire {
+  background: rgba(217, 79, 43, 0.16);
+  border: 2px solid #d94f2b;
+}
+.parcel-alert.dry {
+  background: rgba(196, 154, 74, 0.12);
+  border: 1px solid #c49a4a;
+}
+.parcel-alert p { margin: 0 0 4px; font-size: 13px; }
+.parcel-alert a { font-size: 12px; font-weight: 600; }
+.parcel-alert .pi { flex: none; margin-top: 2px; }
+
+.parcel-rows {
+  list-style: none; margin: 0; padding: 0;
+  display: flex; flex-direction: column; gap: 6px;
+}
+.parcel-res-row {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 13px;
+  flex-wrap: wrap;
+}
+.parcel-res-row .parcel-name { font-weight: 600; }
+.parcel-res-row .parcel-crop { opacity: 0.85; }
+.parcel-ind {
+  display: inline-flex; align-items: center; gap: 3px;
+  font-variant-numeric: tabular-nums;
+}
+.parcel-ind.high { color: #ff8a66; font-weight: 700; }
+.parcel-basis { margin-left: auto; }
+
+.parcel-summary h4 { margin: 10px 0 4px; font-size: 14px; }
+.parcel-summary ul { margin: 0; padding-left: 18px; font-size: 13px; }
+.parcel-source { font-size: 11px; opacity: 0.7; }
+
+.parcel-nearby ul { list-style: none; margin: 4px 0 0; padding: 0; }
+.parcel-nearby li {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 13px; padding: 3px 0;
+}
+.parcel-nearby .nearby-km {
+  margin-left: auto; font-variant-numeric: tabular-nums; opacity: 0.8;
+}
+
+.ver-mas {
+  margin-top: 10px;
+  border-top: 1px solid var(--glass-border, rgba(255, 255, 255, 0.14));
+}
+.ver-mas > summary {
+  padding: 10px 4px 4px;
+  cursor: pointer; font-weight: 600; font-size: 14px;
+}
+.ver-mas > summary:focus-visible {
+  outline: 2px solid var(--act, #56b4e9); outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .parcel-badge, .zone-chip { backdrop-filter: none; }
+}

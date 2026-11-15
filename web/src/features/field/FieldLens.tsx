@@ -22,6 +22,15 @@ import { plainSummary, referenceText, localizeDiag } from "../../domain/clarity"
 import {
   plotBody, multiHa, type Multi, type PlotBody,
 } from "../../domain/selection";
+import {
+  cropColor, hasHighFireAlert, largestPoly, normalizeCropLabel,
+  parcelsBody, parcelsWithHighFire, parcelsWithDry,
+  type Needs, type ParcelInput, type ParcelsResponse,
+} from "../../domain/parcels";
+import { apiParcels } from "../parcels/api";
+import { NeedsForm } from "../parcels/NeedsForm";
+import { Icon } from "../parcels/CropIcon";
+import "../../styles/parcels.css";
 
 /** The exact area sent to the diagnosis, and how to name it. */
 export type AnalysisTarget = {
@@ -33,6 +42,11 @@ export type AnalysisTarget = {
   /** whole field area, to say how much of it is analysed */
   fieldHa?: number;
   demoLot?: DemoLot;
+  /** Crop parcels drawn by the user; empty/missing analyses the whole
+   * field as a single parcel. */
+  parcels?: ParcelInput[];
+  /** Needs step answers: null when skipped, undefined = ask first. */
+  needs?: Needs | null;
 };
 
 const LS_PLOTS = "fs_plots";
@@ -509,10 +523,16 @@ export interface DemoLot {
   synthetic?: boolean;
 }
 
-export function FieldPanel({ target, open, onClose, onChangePlot, onMethods }: {
+export function FieldPanel({ target, open, onClose, onChangePlot, onMethods,
+                             onResult, onEmergency }: {
   target: AnalysisTarget | null; open: boolean; onClose: () => void;
   onChangePlot: () => void;
   onMethods?: () => void;
+  /** Parcels response arrived: the map layer draws zones and badges. */
+  onResult?: (res: ParcelsResponse, parcels: ParcelInput[],
+              fixture: boolean) => void;
+  /** Open the emergency block (tel numbers + message). */
+  onEmergency?: () => void;
 }) {
   const lot = target?.demoLot;
   const { t, lang } = useT();
@@ -534,6 +554,13 @@ export function FieldPanel({ target, open, onClose, onChangePlot, onMethods }: {
   const [step, setStep] = useState<1 | 2>(1);
   const [reading, setReading] = useState(false);
   const [retry, setRetry] = useState(0);
+  // parcels flow (task 34): needs -> POST /api/field/parcels -> panel
+  const [needs, setNeeds] = useState<Needs | null | undefined>(undefined);
+  const [pres, setPres] = useState<
+    import("../parcels/api").ParcelsResult | null>(null);
+  const [pReading, setPReading] = useState(false);
+  const [pRetry, setPRetry] = useState(0);
+  const [verMas, setVerMas] = useState(false);
   const [comparing, setComparing] = useState(false);
   const [compareFailed, setCompareFailed] = useState(false);
   const lastDiagnosisBody = useRef<PlotBody | null>(null);
@@ -546,7 +573,7 @@ export function FieldPanel({ target, open, onClose, onChangePlot, onMethods }: {
       { maximumFractionDigits: 1 }), [lang]);
 
   useEffect(() => {
-    if (!open) return;
+    if (!open || !verMas) return;
     let active = true;
     setCatalogFailed(false);
     apiFieldCatalog().then((data) => {
@@ -555,15 +582,54 @@ export function FieldPanel({ target, open, onClose, onChangePlot, onMethods }: {
       setCatalogFailed(!data);
     });
     return () => { active = false; };
-  }, [open, catalogRetry]);
+  }, [open, catalogRetry, verMas]);
 
   const body = useMemo<PlotBody | null>(() =>
     target ? plotBody(target.geom) : null, [target]);
   const fmtHa = (v: number) => fmt.format(v);
   const targetHa = target ? multiHa(target.geom) : 0;
 
+  /** Parcels sent to the API: the drawn ones, or the whole field as a
+   * single parcel (demo lot keeps its declared crop when known). */
+  const effParcels = useMemo<ParcelInput[]>(() => {
+    if (!target) return [];
+    if (target.parcels?.length) return target.parcels;
+    return [{ id: "p1", name: target.areaLabel,
+              crop: normalizeCropLabel(lot?.crop_label),
+              geom: largestPoly(target.geom) }];
+  }, [target, lot]);
+  /** undefined = the needs step still has to be answered/skipped. */
+  const effNeeds = target?.needs !== undefined ? target.needs : needs;
+
+  // New target: reset the whole flow.
   useEffect(() => {
-    if (!open || !body) return;
+    setNeeds(undefined); setPres(null); setVerMas(false);
+    setDiag(null); setStep(1); setRots(null);
+  }, [target]);
+
+  // POST /api/field/parcels — the main analysis.
+  useEffect(() => {
+    if (!open || !target || !effParcels.length || effNeeds === undefined) {
+      return;
+    }
+    let active = true;
+    setPReading(true); setPres(null);
+    apiParcels(
+      parcelsBody(target.geom, effParcels, effNeeds, lang)).then((r) => {
+      if (!active) return;
+      setPres(r); setPReading(false);
+      if (r.ok) {
+        if (body) savePlot(lot?.name ?? "lote", body);
+        onResult?.(r.res, effParcels, r.fixture);
+      }
+    });
+    return () => { active = false; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, target, effNeeds, effParcels, lang, pRetry]);
+
+  // The detailed diagnosis only loads behind "Ver más".
+  useEffect(() => {
+    if (!open || !body || !verMas) return;
     let active = true;
     const requests = comparisonRequests.current;
     if (lastDiagnosisBody.current !== body) {
@@ -577,24 +643,23 @@ export function FieldPanel({ target, open, onClose, onChangePlot, onMethods }: {
     apiDiagnose(sc ? { ...body, scenario: sc } : body).then((d) => {
       if (!active) return;
       setDiag(d); setReading(false);
-      if (d) savePlot(lot?.name ?? "lote", body);
     });
     return () => {
       active = false;
       requests.latest++;
     };
-  }, [open, body, lot, retry, sc]);
+  }, [open, body, lot, retry, sc, verMas]);
 
   useEffect(() => {
-    if (open) { orinValidation().then(setOrin);
+    if (open && verMas) { orinValidation().then(setOrin);
                 ecostressDemo().then(setEco); }
-  }, [open]);
+  }, [open, verMas]);
 
   useEffect(() => {
-    if (open) {
+    if (open && verMas) {
       knowledgeCases().then((k) => setCases(k?.cases ?? []));
     }
-  }, [open]);
+  }, [open, verMas]);
 
   // ECOSTRESS demo tile: only for the two demo plots (task 18.3)
   const ecoSite = (() => {
@@ -687,6 +752,52 @@ export function FieldPanel({ target, open, onClose, onChangePlot, onMethods }: {
           </div>
         </div>)}
       {lot?.synthetic && <SyntheticBanner t={t} />}
+
+      {/* needs step: short and skippable, before the analysis runs */}
+      {target && effNeeds === undefined && (
+        <section className="card" aria-labelledby="needs-h">
+          <h4 id="needs-h" style={{ marginTop: 0 }}>
+            {t("parcels.needs.title")}</h4>
+          <NeedsForm compact
+                     onDone={(n) => setNeeds(n)}
+                     onSkip={() => setNeeds(null)} />
+        </section>)}
+
+      {pReading && (
+        <p role="status">{t("parcels.analyzing")}</p>)}
+
+      {pres && !pres.ok && (
+        <div className="card">
+          <p role="status">{t(pres.errorKey)}</p>
+          <button type="button" onClick={() => setPRetry((n) => n + 1)}>
+            {t("field.diagnosis.retry")}
+          </button>
+        </div>)}
+
+      {pres?.ok && pres.fixture && (
+        <p className="notice" role="status">{t("parcels.fixture")}</p>)}
+
+      {pres?.ok && pres.res.degraded && (
+        <div className="card diag-degraded" role="alert">
+          <p><strong>{t("field.degraded.title")}</strong>{" "}
+            {pres.res.degraded_reason ?? t("field.degraded.unknown")}</p>
+          <button type="button" onClick={() => setPRetry((n) => n + 1)}>
+            {t("field.diagnosis.retry")}
+          </button>
+        </div>)}
+
+      {pres?.ok && (
+        <>
+          <ParcelsResult res={pres.res} parcels={effParcels} t={t}
+                         fmt={fmt} onEmergency={onEmergency} />
+
+          <details className="ver-mas"
+                   onToggle={(e) => {
+                     if (e.currentTarget.open) setVerMas(true); }}>
+            <summary>{t("parcels.verMas")}</summary>
+
+      {verMas && (
+        <>
       {reading && <p role="status">{t("field.diagnosing")}</p>}
       {!diag && !reading && target && (
         <div className="card">
@@ -916,8 +1027,145 @@ export function FieldPanel({ target, open, onClose, onChangePlot, onMethods }: {
                                 explainMode={explainMode ?? undefined}
                                 onMethods={onMethods} />}
       {!rots && diag && <p className="notice">{t("rot.disclaimer")}</p>}
+        </>
+      )}
+          </details>
+        </>
+      )}
     </BottomSheet>
   );
+}
+
+/* ------------------------------------------------- parcels result --- */
+
+/** The compact, plain-language result: alerts first, then the summary
+ * headline, one row per parcel (color + name + crop + fire/water % +
+ * basis one tap away), and the nearest emergency services and water. */
+export function ParcelsResult({ res, parcels, t, fmt, onEmergency }: {
+    res: ParcelsResponse;
+    parcels: ParcelInput[];
+    t: (k: string, v?: Record<string, string | number>) => string;
+    fmt: Intl.NumberFormat;
+    onEmergency?: () => void }) {
+  const highFire = parcelsWithHighFire(res);
+  const dry = parcelsWithDry(res).filter((p) => !hasHighFireAlert(p));
+  const name = (id: string) =>
+    parcels.find((p) => p.id === id)?.name ?? id;
+  const km = (v: number) =>
+    t("parcels.nearby.km", { v: fmt.format(v) });
+  return (
+    <>
+      {highFire.map((p) =>
+        p.alerts.filter((a) => a.kind === "fire" && a.severity === "high")
+          .map((a, i) => (
+            <div key={`${p.id}-${i}`} className="parcel-alert fire"
+                 role="alert">
+              <Icon kind="flame" size={18} />
+              <div>
+                <p><strong>{name(p.id)}:</strong> {a.text}</p>
+                {onEmergency
+                  ? <button type="button" className="chip"
+                            onClick={onEmergency}>
+                      {t("parcels.alert.emergency")}</button>
+                  : <a href="#parcels-emergency">
+                      {t("parcels.alert.emergency")}</a>}
+              </div>
+            </div>)))}
+      {dry.map((p) =>
+        p.alerts.filter((a) => a.kind === "dry").map((a, i) => (
+          <div key={`${p.id}-${i}`} className="parcel-alert dry" role="status">
+            <Icon kind="drop" size={16} />
+            <div>
+              <p><strong>{name(p.id)}:</strong> {a.text}</p>
+            </div>
+          </div>)))}
+
+      <section className="parcel-summary"
+               aria-labelledby="parcel-summary-h">
+        <h4 id="parcel-summary-h">{res.summary.headline}</h4>
+        {res.summary.bullets.length > 0 && (
+          <ul>{res.summary.bullets.slice(0, 3)
+            .map((b, i) => <li key={i}>{b}</li>)}</ul>)}
+        <p className="parcel-source">{res.summary.source}</p>
+      </section>
+
+      <ul className="parcel-rows">
+        {res.parcels.map((p) => {
+          const high = hasHighFireAlert(p);
+          return (
+            <li key={p.id} className="parcel-res-row">
+              <span className="parcel-swatch"
+                    style={{ background: cropColor(p.crop) }} />
+              <span className="parcel-name">{name(p.id)}</span>
+              <span className="parcel-crop muted">
+                {p.crop === "otro" ? t("parcels.cropOther")
+                  : p.crop === "sin_cultivo" ? t("parcels.cropNone")
+                  : p.crop}</span>
+              <span className={`parcel-ind${high ? " high" : ""}`}>
+                <Icon kind="flame" size={13}
+                      title={t("parcels.ind.fire")} />
+                {p.indicators.fire.pct ?? "–"}%
+                <Tooltip text={p.indicators.fire.basis}
+                         label={t("parcels.basis.fire")} />
+              </span>
+              <span className="parcel-ind">
+                <Icon kind="drop" size={13}
+                      title={t("parcels.ind.water")} />
+                {p.indicators.water.pct ?? "–"}%
+                <Tooltip text={p.indicators.water.basis}
+                         label={t("parcels.basis.water")} />
+              </span>
+              {p.alerts.length > 0 && (
+                <Icon kind="alert" size={14}
+                      title={t("parcels.alertHas")} />)}
+              <span className="parcel-ha muted">
+                {fmt.format(p.area_ha)} ha</span>
+            </li>);
+        })}
+        {res.parcels.length === 0 && (
+          <li className="muted">{t("parcels.empty")}</li>)}
+      </ul>
+
+      <section className="parcel-nearby" id="parcels-emergency"
+               aria-labelledby="parcel-nearby-h">
+        <h4 id="parcel-nearby-h">{t("parcels.nearby.title")}</h4>
+        <ul>
+          {res.nearby.fire_stations.map((s) => (
+            <li key={`f${s.name}`}>
+              <Icon kind="fire-station" size={14}
+                    title={t("parcels.nearby.fire")} />
+              <span>{s.name}</span>
+              <span className="nearby-km">{km(s.distance_km)}</span>
+            </li>))}
+          {res.nearby.hospitals.map((s) => (
+            <li key={`h${s.name}`}>
+              <Icon kind="hospital" size={14}
+                    title={t("parcels.nearby.hospital")} />
+              <span>{s.name}</span>
+              <span className="nearby-km">{km(s.distance_km)}</span>
+            </li>))}
+          {res.nearby.water.map((s) => (
+            <li key={`w${s.name}`}>
+              <Icon kind="drop" size={14}
+                    title={t("parcels.nearby.water")} />
+              <span>{s.name}</span>
+              <span className="nearby-km">{km(s.distance_km)}</span>
+            </li>))}
+        </ul>
+        {!res.nearby.fire_stations.length &&
+         !res.nearby.hospitals.length && !res.nearby.water.length && (
+          <p className="muted">{t("parcels.nearby.empty")}</p>)}
+        <p className="parcel-source">{res.nearby.source}</p>
+      </section>
+
+      {res.sources.length > 0 && (
+        <details className="sec more">
+          <summary>{t("parcels.sources")}</summary>
+          <ul>
+            {res.sources.map((s) => <li key={s.id}>{s.text}</li>)}
+          </ul>
+        </details>)}
+    </>);
 }
 export type { PlotBody };
 /** Exported for tests only. */
