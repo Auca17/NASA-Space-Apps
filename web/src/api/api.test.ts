@@ -2,6 +2,12 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { fetchJson, dataUrl } from "./client";
 import { meta, fireCal } from "./index";
 
+// The test owns its configuration: a local .env (VITE_DATA_BASE_URL
+// pointing at a bucket) must not change what the client is checked against.
+vi.mock("../config", () => ({
+  DATA_BASE_URL: "/data/v1/", API_BASE: "", APP_NAME: "test",
+}));
+
 describe("api client", () => {
   beforeEach(() => { vi.restoreAllMocks(); });
 

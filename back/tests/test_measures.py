@@ -189,6 +189,17 @@ def test_trigger_harvest_stop_conditions():
     assert "harvest_timing" not in ids
 
 
+def test_measures_carry_english_name_and_reason():
+    from app.services.measures import evaluate
+    out = evaluate({"cards": {}, "risk_cat": "muy_alto",
+                    "calendar": [{"id": "burn_season",
+                                  "levels": [3] * 12}]})
+    assert out["measures"]
+    for m in out["measures"]:
+        assert m["name_en"] and m["name_en"] != m["name"]
+        assert m["why_en"]
+        assert "quemas" not in m["why_en"] and "riesgo" not in m["why_en"]
+
 # ------------------------------------------------------------- task 21 ----
 
 def test_clean_harvester_checks_and_firebreak_width():

@@ -58,6 +58,23 @@ input[type="range"] { min-height: var(--touch); }
 
 .map-wrap { position: relative; flex: 1; min-height: 0; }
 .map { position: absolute; inset: 0; }
+.home-button { border: 0; background: transparent; padding: 0;
+  display: inline-flex; align-items: center; gap: 8px;
+  font-weight: inherit; color: inherit; }
+.field-extents, .field-map-tools { position: absolute; z-index: 8; top: 12px; }
+.field-extents { left: 12px; }
+.field-map-tools { right: 12px; display: grid; justify-items: end; gap: 8px; }
+.field-basemap, .field-extents, .field-zoom {
+  display: flex; gap: 4px; padding: 4px; border: 1px solid var(--border);
+  border-radius: var(--radius); background: var(--panel); }
+.field-zoom { flex-direction: column; }
+.field-zoom button { padding: 0; font-size: 1.25rem; }
+.field-guide { display: grid; justify-items: end; gap: 4px; }
+.field-guide small { background: var(--panel); color: var(--fg); padding: 4px 6px;
+  border: 1px solid var(--border); border-radius: 6px; }
+.field-basemap button[aria-pressed="true"], .field-guide button[aria-pressed="true"] {
+  background: var(--accent);
+  color: var(--accent-fg); border-color: transparent; }
 .reticle { position: absolute; left: 50%; top: 42%; width: 28px; height: 28px;
   transform: translate(-50%, -50%); pointer-events: none; z-index: 5; }
 .reticle::before, .reticle::after { content: ""; position: absolute;
@@ -260,6 +277,160 @@ table.cal tr.current td { outline: 2px solid var(--accent); }
 .badge.variante { font-size: 0.7rem; margin-left: 6px; }
 .zone-header { margin: 8px 0 0; }
 .stop-conditions ul { margin: 4px 0; padding-left: 18px; }
+
+/* Clarity pass: field-first welcome, guided picker, plain summary */
+.welcome-brand { margin: 0; font-size: 0.85rem; font-weight: 700;
+  letter-spacing: 0.06em; text-transform: uppercase; color: var(--accent); }
+.welcome h2 { margin: 6px 0 10px; line-height: 1.2; }
+.welcome .big-cta { min-height: 52px; font-size: 1.05rem; }
+.welcome .demo-note { margin: -4px 0 0; }
+.welcome-more { border-top: 1px solid var(--border); margin-top: 8px;
+  padding-top: 12px; }
+.welcome-more h3 { margin: 0 0 4px; font-size: 0.95rem; }
+.welcome-more .row-actions { display: flex; gap: 8px; flex-wrap: wrap;
+  justify-content: center; margin: 10px 0; }
+.welcome-more details { margin-top: 6px; }
+.welcome-more summary { cursor: pointer; min-height: var(--touch);
+  display: inline-flex; align-items: center; color: var(--muted);
+  font-size: 0.9rem; }
+
+.picker { gap: 6px; }
+.picker-how { margin: 0; }
+.picker-status { margin: 0; font-size: 0.9rem; }
+.picker-count { font-weight: 700; }
+.picker-options { list-style: none; margin: 0; padding: 0;
+  display: flex; flex-direction: column; gap: 8px; }
+.picker-options li { display: grid; grid-template-columns: minmax(0, 15rem) 1fr;
+  gap: 10px; align-items: center; }
+.picker-options button { width: 100%; text-align: left; }
+@media (max-width: 560px) {
+  .controls { left: 8px; right: 8px; bottom: 8px; max-width: none; }
+  .picker-options li { grid-template-columns: 1fr; gap: 2px; }
+}
+
+.plain-summary { border-color: var(--covered); border-width: 2px; }
+.plain-summary .diag-summary { margin: 0 0 8px; font-weight: 600; }
+.plain-list { margin: 0; display: flex; flex-direction: column; gap: 8px; }
+.plain-row { display: grid; grid-template-columns: 4.5rem 1fr; gap: 8px; }
+.plain-row dt { font-weight: 700; font-size: 0.85rem;
+  text-transform: uppercase; letter-spacing: 0.03em; color: var(--muted);
+  padding-top: 2px; }
+.plain-row dd { margin: 0; line-height: 1.45; }
+.plain-scale { margin: 10px 0 0; }
+.field-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.field-actions .primary { flex: 1 1 auto; }
+.sec.more > summary { color: var(--fg); }
+.badge.role { margin-left: 6px; font-weight: 600; }
+.badge.role.ref { border-style: dashed; }
+.ref-note { border-style: dashed; }
+button:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* Place finder: go to the user's area before marking the field */
+.place-finder { display: flex; flex-direction: column; gap: 6px;
+  padding-bottom: 8px; border-bottom: 1px solid var(--border); }
+.place-title { font-weight: 600; font-size: 0.9rem; }
+.place-row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.place-row .search { margin-top: 0; flex: 1 1 14rem; min-width: 0; }
+.place-row .search input { min-width: 0; }
+.place-finder p { margin: 0; }
+.place-note { font-size: 0.75rem; }
+.place-more summary { cursor: pointer; min-height: var(--touch);
+  display: flex; align-items: center; color: var(--muted); font-size: 0.9rem; }
+.place-more .place-title { display: none; }
+.place-more .place-finder { border-bottom: 0; padding-bottom: 0; }
+.picker { max-height: calc(100% - 24px); overflow-y: auto; }
+.field-chooser { max-height: min(60%, 31rem); }
+#field-chooser-options:not([hidden]) { display: grid; gap: 8px; }
+.field-examples > summary { cursor: pointer; min-height: var(--touch);
+  padding: 10px 0; }
+.field-examples > .row { margin-bottom: 4px; }
+
+/* While drawing or tapping a point, the map shows a crosshair instead of
+ * the grab hand, so it is clear that a click marks the field. */
+.map-wrap.marking .maplibregl-canvas-container.maplibregl-interactive,
+.map-wrap.marking .maplibregl-canvas-container.maplibregl-interactive:active,
+.map-wrap.marking .maplibregl-canvas { cursor: crosshair; }
+.picker-mode { display: inline-flex; align-items: center; gap: 6px; }
+.picker-mode::before { content: "＋"; color: var(--accent); font-weight: 700; }
+
+/* Review step before the diagnosis */
+.review-area { margin: 0; display: flex; align-items: center; gap: 8px;
+  flex-wrap: wrap; }
+.review-ha { font-size: 1.15rem; font-weight: 700; }
+.badge.approx { border-style: dashed; color: var(--warn);
+  border-color: var(--warn); }
+.urban-warning { color: var(--bad); border-color: var(--bad);
+  font-size: 0.9rem; }
+.place-row .search { flex: 1 1 100%; width: 100%; }
+.place-row .search input { width: 100%; min-width: 0; flex: 1 1 auto; }
+.controls { box-sizing: border-box; overflow-x: hidden; }
+
+/* Freehand layer: catches the stroke so the map does not pan */
+.freehand-layer { position: absolute; inset: 0; z-index: 4;
+  cursor: crosshair; touch-action: none; }
+.picker-head { display: flex; justify-content: space-between;
+  align-items: center; gap: 8px; flex-wrap: wrap; }
+.picker-context { margin: 0; font-size: 0.85rem; font-weight: 600;
+  color: var(--accent); }
+.link-btn { border: 0; background: transparent; color: var(--focus);
+  text-decoration: underline; padding: 0 6px; min-width: 0; }
+.link-btn.danger { color: var(--bad); }
+.save-row input { flex: 1 1 10rem; min-width: 0; }
+.piece-list, .field-list, .zone-list { list-style: none; margin: 0;
+  padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.piece-list li { display: flex; justify-content: space-between;
+  align-items: center; gap: 6px; }
+.piece-list label { display: flex; align-items: center; gap: 8px;
+  min-height: var(--touch); }
+.piece-swatch, .excl-swatch, .zone-swatch { display: inline-block;
+  width: 14px; height: 14px; border-radius: 3px; flex-shrink: 0; }
+.piece-swatch { background: #2e7d32; opacity: 0.7; }
+.excl-swatch { background: #c62828; opacity: 0.7; margin-right: 6px;
+  vertical-align: -2px; }
+.excluded-line { margin: 0; font-size: 0.85rem; }
+.field-list li { border: 1px solid var(--border); border-radius: 8px;
+  padding: 8px; display: flex; flex-direction: column; gap: 4px; }
+.field-list input { font-weight: 600; }
+.zone-list li { display: grid; grid-template-columns: 14px 1fr 1fr auto auto;
+  gap: 6px; align-items: center; }
+.zone-list input { min-width: 0; }
+.zone-new { display: flex; flex-direction: column; gap: 6px;
+  border: 1px dashed var(--border); border-radius: 8px; padding: 8px; }
+.zone-new input { flex: 1 1 8rem; min-width: 0; }
+@media (max-width: 560px) {
+  .zone-list li { grid-template-columns: 14px 1fr 1fr; }
+}
+.analyze-set { border: 1px solid var(--border); border-radius: 8px;
+  padding: 8px; margin: 0; display: flex; flex-direction: column; gap: 4px; }
+.analyze-set legend { font-weight: 600; padding: 0 4px; }
+.analyze-opt { display: grid; grid-template-columns: auto 1fr auto; gap: 8px;
+  align-items: center; min-height: 36px; }
+.zones-h { margin: 6px 0 0; font-size: 0.95rem; }
+.analysis-scope { margin: 0; font-size: 0.9rem; }
+.live-status { margin: 0; font-size: 0.9rem; }
+.live-status.err { color: var(--bad); }
+
+/* Narrow phones (390 px, 320 px): the menu gets its own row so
+ * «Analizar mi campo», «Fuego» and «En vivo» are never cut. */
+@media (max-width: 480px) {
+  .topbar { flex-wrap: wrap; row-gap: 4px; padding: 4px 8px; }
+  .topbar h1 { max-width: none; flex: 1 1 auto; font-size: 0.95rem; }
+  .topbar .spacer { display: none; }
+  .topbar nav { order: 3; flex: 1 1 100%; overflow-x: visible; gap: 4px; }
+  .topbar nav button { flex: 1 1 auto; padding: 0 6px; font-size: 0.85rem;
+    min-width: 0; }
+  .field-extents, .field-map-tools { top: 8px; }
+  .field-extents { left: 8px; }
+  .field-map-tools { right: 8px; }
+  .field-extents button, .field-basemap button { padding: 0 8px; font-size: 0.85rem; }
+  .field-chooser { left: 8px; right: 8px; bottom: 8px;
+    max-width: none; max-height: 48%; overscroll-behavior: contain; }
+  .field-chooser .picker-head { position: sticky; top: -10px;
+    display: grid; grid-template-columns: minmax(0, 1fr) auto;
+    background: var(--panel); z-index: 1; }
+  .field-chooser .picker-head button { font-size: 0.85rem; padding: 0 8px; }
+  .field-chooser .picker-options li > span { display: none; }
+}
 
 /* Task 16: Orin validation card + synthetic banner */
 .orin-banner { display: flex; align-items: center; gap: 8px;

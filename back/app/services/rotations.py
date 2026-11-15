@@ -534,18 +534,49 @@ def _risks(rot: Rotation, viable: bool, reasons: list[str]) -> list[str]:
     return out
 
 
+_MONTHS_ES = ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago",
+              "sep", "oct", "nov", "dic"]
+# sowing months of a winter crop or winter cover in Argentina (apr-jul)
+_WINTER_START = {4, 5, 6, 7}
+
+
+def _seq_text(rot: Rotation) -> tuple[str, list[str]]:
+    """'Maíz (sep–mar) → Soja (nov–abr)' and the winter crops in it,
+    straight from the scenario's crops and dates."""
+    parts, winter, seen = [], [], set()
+    for s in rot.sequence:
+        crop = KNOWLEDGE.crops.get(s.crop)
+        name = (crop.name.get("es") if crop else None) or s.crop
+        m0, m1 = int(s.start[:2]), int(s.end[:2])
+        label = f"{name} ({_MONTHS_ES[m0 - 1]}–{_MONTHS_ES[m1 - 1]})"
+        perennial = (m1 - m0) % 12 in (0, 11) and s.start != s.end
+        if perennial:
+            label = f"{name} (todo el año)"
+        if label in seen:
+            continue
+        seen.add(label)
+        parts.append(label)
+        if m0 in _WINTER_START and not perennial:
+            winter.append(label)
+    return " → ".join(parts), winter
+
+
 def _why(rot: Rotation, is_current: bool, priorities: dict,
          diag: dict, constraints: dict) -> str:
+    """Explanation built from the scenario itself: its crops and dates,
+    whether it has a winter crop, and its days without a living crop."""
     if is_current:
         return "Es tu rotación actual; sirve de referencia."
     top = sorted(priorities.items(), key=lambda kv: -kv[1])[:2]
-    goals = " y ".join(PRIORITY_LABEL.get(p, p) for p, _ in top) \
-        or "diversificar"
-    problem = "ataca los días sin cultivo vivo" \
-        if (indicators(rot, diag, None, constraints)
-            .get("bare_soil_days") or 0) < 100 \
-        else "suma un cultivo de invierno al ciclo"
-    return f"Atiende tus prioridades de {goals}; {problem}."
+    goals = " y ".join(PRIORITY_LABEL.get(p, p) for p, _ in top)         or "diversificar"
+    seq, winter = _seq_text(rot)
+    bare = indicators(rot, diag, None, constraints).get("bare_soil_days")
+    winter_txt = ("incluye cultivo de invierno: " + ", ".join(winter)
+                  if winter else "sin cultivo de invierno")
+    bare_txt = (f"; deja el suelo sin cultivo vivo unos {bare} días por año"
+                if bare is not None else "")
+    return (f"Atiende tus prioridades de {goals}. Secuencia: {seq}; "
+            f"{winter_txt}{bare_txt}.")
 
 
 def _sections(rot: Rotation, ind: dict, cur_ind: dict,
@@ -750,6 +781,7 @@ def run(diagnosis: dict, current: dict | None, priorities: dict,
         strategies.append({
             "id": cur_rot.id,
             "name": cur_rot.name.get("es", cur_rot.id),
+            "name_en": cur_rot.name.get("en") or cur_rot.name.get("es", cur_rot.id),
             "is_current": True,
             "score": score(cur_ind, cur_ind, priorities),
             "confidence": confidence,
@@ -766,6 +798,7 @@ def run(diagnosis: dict, current: dict | None, priorities: dict,
         strategies.append({
             "id": c["rot"].id,
             "name": c["rot"].name.get("es", c["rot"].id),
+            "name_en": c["rot"].name.get("en") or c["rot"].name.get("es", c["rot"].id),
             "is_current": False,
             "score": c["score"],
             "confidence": confidence,

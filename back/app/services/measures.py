@@ -74,6 +74,8 @@ def _triggers(ctx) -> tuple[set, list[str]]:
             fired.add("harvest_in_dry_season")
             ctx["_why"]["harvest_in_dry_season"] = \
                 f"cosecha en meses secos/de quemas: {hit}"
+            ctx["_why_en"]["harvest_in_dry_season"] = \
+                f"harvest in dry/burning months: {hit}"
     else:
         gaps.append("harvest_in_dry_season (falta rotación o calendario)")
 
@@ -84,6 +86,8 @@ def _triggers(ctx) -> tuple[set, list[str]]:
             fired.add("fire_weather_high")
             ctx["_why"]["fire_weather_high"] = \
                 f"clima de fuego: {(fwc.get('text') or '')[:90]}"
+            ctx["_why_en"]["fire_weather_high"] = \
+                f"fire weather: {(fwc.get('text_en') or '')[:90]}"
     else:
         gaps.append("fire_weather_high (sin tarjeta fire_weather)")
 
@@ -98,6 +102,10 @@ def _triggers(ctx) -> tuple[set, list[str]]:
             ctx["_why"]["harvest_stop_conditions"] = \
                 "condición de parada: " + "; ".join(
                     det.get(c, c) for c in det or stop)
+            det_en = fwc.get("stop_detail_en") or {}
+            ctx["_why_en"]["harvest_stop_conditions"] = \
+                "stop condition: " + "; ".join(
+                    det_en.get(c, c) for c in det or stop)
     else:
         gaps.append("harvest_stop_conditions (sin tarjeta fire_weather)")
 
@@ -106,6 +114,8 @@ def _triggers(ctx) -> tuple[set, list[str]]:
         if cat in HIGH_RISK_CATS:
             fired.add("risk_high")
             ctx["_why"]["risk_high"] = f"riesgo 7 días: {cat}"
+            ctx["_why_en"]["risk_high"] = \
+                f"7-day risk: {cat.replace('muy_alto', 'very high')}"
     else:
         gaps.append("risk_high (sin celda de riesgo)")
 
@@ -115,6 +125,8 @@ def _triggers(ctx) -> tuple[set, list[str]]:
             fired.add("bare_soil_in_burn_season")
             ctx["_why"]["bare_soil_in_burn_season"] = \
                 f"suelo desnudo en meses de quemas: {sorted(uncovered)}"
+            ctx["_why_en"]["bare_soil_in_burn_season"] = \
+                f"bare ground in burning months: {sorted(uncovered)}"
     else:
         gaps.append("bare_soil_in_burn_season (falta rotación o calendario)")
 
@@ -123,6 +135,8 @@ def _triggers(ctx) -> tuple[set, list[str]]:
             fired.add("burn_season_now")
             ctx["_why"]["burn_season_now"] = \
                 f"este mes es temporada de quemas (nivel {burn[today]})"
+            ctx["_why_en"]["burn_season_now"] = \
+                f"this month is burning season (level {burn[today]})"
     else:
         gaps.append("burn_season_now (sin calendario)")
 
@@ -132,6 +146,7 @@ def _triggers(ctx) -> tuple[set, list[str]]:
 def evaluate(context: dict) -> dict:
     ctx = dict(context or {})
     ctx["_why"] = {}
+    ctx["_why_en"] = {}
     fired, gaps = _triggers(ctx)
     out = []
     for m in MEASURES:
@@ -144,6 +159,10 @@ def evaluate(context: dict) -> dict:
             "id": m.id, "name": m.name.get("es", m.id),
             "factor": m.factor,
             "why": f"{m.addresses}: {why}",
+            # knowledge carries English names only; the English reason
+            # lists what triggered the measure
+            "name_en": m.name.get("en") or m.name.get("es", m.id),
+            "why_en": "; ".join(ctx["_why_en"].get(t, t) for t in hits),
             "benefit": m.benefit,
             "requires": m.requires.model_dump(),
             "cost": m.requires.cost,

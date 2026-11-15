@@ -18,6 +18,7 @@ import {
 import { groupByShard } from "../../domain/h3area";
 import { presentRisk, emergencyText } from "../../domain/risk";
 import { viridis, css } from "../../domain/colors";
+import { semaphorePeriod } from "../../domain/clarity";
 import type { MetaJson } from "../../api/types";
 
 const MONTH_NAMES = ["enero","febrero","marzo","abril","mayo","junio",
@@ -67,6 +68,8 @@ export function AreaPanel({ lat, lon, cells, open, onClose, country,
   const [risk, setRisk] = useState<ReturnType<typeof presentRisk> | null>(null);
   const [cal, setCal] = useState<{ months: string[]; values: number[] } | null>(null);
   const [sem, setSem] = useState<SemaphoreResult | null>(null);
+  /** Day the semaphore window ends on (today when it was computed). */
+  const [semEnd, setSemEnd] = useState<string | null>(null);
   const [season, setSeason] = useState(false);
   const [anomalies, setAnomalies] = useState(false);
   const [picked, setPicked] = useState<string | null>(null);
@@ -106,7 +109,7 @@ export function AreaPanel({ lat, lon, cells, open, onClose, country,
           baselineEnd: `${meta.baseline.end}-28`,
         },
       });
-      if (!dead) setSem(s);
+      if (!dead) { setSem(s); setSemEnd(end); }
     })();
     return () => { dead = true; };
   }, [open, lat, lon, cells, cellSet, shards, meta]);
@@ -134,6 +137,13 @@ export function AreaPanel({ lat, lon, cells, open, onClose, country,
   const monthLabel = (m: string) =>
     `${MONTH_NAMES[Number(m.slice(5)) - 1]} ${m.slice(0, 4)}`;
   const curValue = cal && sem ? sem.value : null;
+  // The semaphore always sums the last `window_days` up to today; it
+  // must not borrow the month picked on the historic map.
+  const windowDays = meta?.semaphore.window_days ?? 30;
+  const period = semEnd ? semaphorePeriod(semEnd, windowDays) : null;
+  const dayFmt = new Intl.DateTimeFormat(lang === "en" ? "en" : "es",
+    { day: "numeric", month: "short", timeZone: "UTC" });
+  const fmtDay = (d: string) => dayFmt.format(new Date(`${d}T00:00:00Z`));
   const semExtra = sem
     ? (sem.ratio != null
         ? t("sem.timesMedian", { x: sem.ratio })
@@ -176,7 +186,7 @@ export function AreaPanel({ lat, lon, cells, open, onClose, country,
       </Card>
 
       {sem && (
-        <Card title={t("panel.semaphore")}>
+        <Card title={t("panel.semaphore", { d: windowDays })}>
           <div className="big">
             <span className={`badge ${sem.category}`}>
               {t(`sem.${sem.category}`)}
@@ -184,9 +194,13 @@ export function AreaPanel({ lat, lon, cells, open, onClose, country,
             <span className="muted"> · {t("sem.median",
               { n: sem.median })}</span>
           </div>
-          <p>{t("sem.summary", {
-            month: monthLabel(thisMonth),
-            n: curValue ?? 0, extra: semExtra })}</p>
+          {period && (
+            <p>{t("sem.summary", {
+              from: fmtDay(period.from), to: fmtDay(period.to),
+              n: curValue ?? 0, extra: semExtra })}</p>)}
+          {month && (
+            <p className="muted">{t("sem.mapMonthNote",
+              { month: monthLabel(month) })}</p>)}
         </Card>
       )}
 

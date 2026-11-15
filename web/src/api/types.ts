@@ -45,6 +45,8 @@ export interface Card {
   value: number | string | null;
   unit?: string | null;
   text: string;
+  /** English rendering of `text` (the Spanish one feeds the engines). */
+  text_en?: string;
   source: string;
   resolution?: string;
   confidence: "high" | "medium" | "low";
@@ -56,6 +58,7 @@ export interface Card {
   /** fire_weather card: single INTA stop conditions met (last 3 days). */
   stop_conditions?: string[];
   stop_detail?: Record<string, string>;
+  stop_detail_en?: Record<string, string>;
 }
 
 export interface CalendarRow {
@@ -67,6 +70,8 @@ export interface CalendarRow {
 export interface Measure {
   id: string;
   name: string;
+  name_en?: string;
+  why_en?: string;
   factor?: string;
   why?: string;
   benefit?: string;
@@ -105,6 +110,7 @@ export interface DiagnoseResponse {
 export interface Strategy {
   id: string;
   name: string;
+  name_en?: string;
   is_current: boolean;
   score: number;
   confidence: string;
