@@ -1,3 +1,28 @@
+# Status report (2026-11-15, end of day)
+
+Main is `6a0a275`: back 239 tests, front 365, tsc and build clean, Impeccable detector empty. Since the morning: 53 commits, 172 files, about 22k lines (Devin terminals orchestrated by Claude, plus Carmen/Ariel's crop detection branch and Ezequiel's n8n workflows).
+
+## Shipped today (all in main)
+
+- Landing v2 (product first), then inverted to Field Shift first; requirement table: F1 and F6 done, F10 with the SIGA rain validation; README and video script field-first; MIT LICENSE (team must confirm).
+- App shell: logo as home, compact shell to 900 px, bottom tabs, one sheet at a time, map controls never overlap, world live fire, zoom limits, logo idle animation, glass styling.
+- Field: parcels (draw, split, crops with colors, needs), per-parcel fire and water with basis, alerts, zones on the map, farmer profile (8 hazards ranked, hide/show, economics), tabs (Resumen, Mis prioridades, Mas informacion), crop prefilled from INTA's crop map (Ariel), current crop from Sentinel-2, moisture zones, calendar with the rotation overlaid and red risk months, 13-term glossary next to each card, "how well the satellite sees your plot" card.
+- Drawing: simple polygon whatever the click order, draggable vertices and midpoints, undo, self-crossing refused; WebGL fill layer fixes the MapLibre tile-clip artifact at high zoom.
+- Back: /api/field/parcels, farmer profile (ENSO from NOAA ONI, snow, hail honestly unavailable, flood, economics), evaporation and FAO-56 ET0 fallback, infiltration score, degree days per crop, pest cycle with real hosts, accuracy block, hazards accepted by /rotations, Gemini summary with model fallback, 18 audit fixes, negative-cache TTL.
+- Data and validation: R2 refreshed (risk 2026-11-15, grid, analogs, knowledge, Orin), SIGA rain validation (25 stations, 1346 station-months), INTA data scan, Mendoza crops.
+- Demo: /app/#demo = Mendoza farm (live analysis, real captured fallback, guided tour). The Pergamino rotation-first demo is parked on branch feat/demo-rotations (78dbc69, WIP, 351 tests green, build/e2e not run).
+- Alerts: idea and setup guide (docs/ideas, docs/ops); Ezequiel's n8n workflows in ops/n8n (Twilio sandbox because Meta blocked the account).
+
+## Open
+
+- Demo rework to Pergamino ending in rotation cards (parked by the team lead).
+- Not covered from the review: field-variable timeline (moisture, heat, long-term water), data outside Argentina.
+- Deploy on Vercel (function about 197 MB of 250 with rasterio), env vars, GEMINI quota on the production key, nearby services (OpenStreetMap unreachable from the dev network), real phone test.
+- Placeholders: demo, video and dataset URLs; categories; license confirmation; agronomist review of literature values.
+- Rotate FIRMS and Earthdata keys; pip-audit with network; geocode rate limit at Vercel.
+
+---
+
 # Overnight report (2026-11-15)
 
 **Update after resume:** brief 31 (UI polish) finished and is merged; `main` is pushed at `3015bf3` (back 143/143, front 231/231, `tsc` clean, build OK, detector: only the two intentional side-tab markers left). `/app` metadata added. Risk on R2 is fresh (`generated_at 2026-11-15T05:10Z`), so open item 2 below is resolved. Items 1 (terminal B) is done; 3, 4, 5 remain.
