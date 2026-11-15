@@ -438,6 +438,29 @@ export function insertOnEdge(ring: LatLon[], p: LatLon):
   return selfIntersects(next) ? null : { ring: next, index: e.edge + 1 };
 }
 
+/** Add a point to an outline that is still being drawn, keeping it a
+ * simple polygon: with 3+ vertices the point goes into the edge (the
+ * closing edge included) whose detour is shortest and that does not
+ * make the ring cross itself, so clicking corners out of order never
+ * draws a bow tie. Falls back to appending when every edge crosses. */
+export function insertCheapest(ring: LatLon[], p: LatLon): LatLon[] {
+  if (ring.length < 3) return [...ring, p];
+  const k = Math.cos((p[0] * Math.PI) / 180);
+  const d = (a: LatLon, b: LatLon) =>
+    Math.hypot(a[0] - b[0], (a[1] - b[1]) * k);
+  const n = ring.length;
+  const order = [...Array(n).keys()].map((i) => {
+    const a = ring[i];
+    const b = ring[(i + 1) % n];
+    return { i, cost: d(a, p) + d(p, b) - d(a, b) };
+  }).sort((x, y) => x.cost - y.cost);
+  for (const { i } of order) {
+    const next = [...ring.slice(0, i + 1), p, ...ring.slice(i + 1)];
+    if (!selfIntersects(next)) return next;
+  }
+  return [...ring, p];
+}
+
 /** Move a vertex; null when the move would self-cross the ring. */
 export function moveVertex(ring: LatLon[], i: number, p: LatLon):
     LatLon[] | null {

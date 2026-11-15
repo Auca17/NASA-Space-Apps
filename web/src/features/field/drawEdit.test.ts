@@ -3,6 +3,7 @@
  * self-intersection guard. */
 import { describe, it, expect } from "vitest";
 import { DrawSession } from "./drawEdit";
+import { selfIntersects } from "../../domain/parcelsGeo";
 import { squareRing } from "../../domain/selection";
 import type { LatLon } from "../../domain/selection";
 
@@ -12,6 +13,18 @@ const sq = (): LatLon[] => squareRing(-33.9, -60.6, 400); // ~800 m sides
 
 const mid = (a: LatLon, b: LatLon): LatLon =>
   [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2];
+
+describe("DrawSession out-of-order clicks", () => {
+  it("keeps a simple polygon when corners are clicked out of order", () => {
+    const s = new DrawSession();
+    const r = sq(); // corners in ring order
+    // click diagonal corners first: an append-only path would be a bow tie
+    s.click(r[0], TOL); s.click(r[2], TOL); s.click(r[1], TOL);
+    s.click(r[3], TOL);
+    expect(s.state.ring).toHaveLength(4);
+    expect(selfIntersects(s.state.ring)).toBe(false);
+  });
+});
 
 describe("DrawSession open path", () => {
   it("appends each click and closes on the first vertex", () => {

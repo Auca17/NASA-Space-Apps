@@ -1,11 +1,13 @@
 /** Drawing edit session: the outline the user is marking on the map.
- * While the path is open each click appends a vertex; once the outline
+ * While the path is open each click adds a vertex where the shape stays
+ * a simple polygon (never a bow tie); once the outline
  * is closed (a finished field or zone being edited) a click inserts a
  * vertex on the nearest edge, vertices can be dragged or removed, and
  * every mutation that would self-cross the ring is refused with a
  * notice. A history stack makes every edit undoable. */
 import {
-  insertOnEdge, nearestVertex, removeVertex, selfIntersects,
+  insertCheapest, insertOnEdge, nearestVertex, removeVertex,
+  selfIntersects,
 } from "../../domain/parcelsGeo";
 import type { LatLon } from "../../domain/selection";
 
@@ -80,7 +82,7 @@ export class DrawSession {
       } else {
         this.push();
         this.state = { ...this.state,
-          ring: [...ring, p], selected: null, notice: null };
+          ring: insertCheapest(ring, p), selected: null, notice: null };
       }
       this.notify();
       return;
