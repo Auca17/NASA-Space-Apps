@@ -6,9 +6,11 @@ Anything failing or slow returns None — the caller emits the card as
 value=null/confidence=low instead of failing the request.
 """
 
+import asyncio
 import io
 import logging
 import math
+import random
 import time
 from datetime import date, timedelta
 
@@ -42,10 +44,32 @@ _NULL = object()  # cached negative result marker
 
 NEGATIVE_TTL = 600  # failed fetches retry after 10 min, not the full TTL
 
+# In-flight de-duplication (task 23): concurrent diagnoses for the same
+# (h3_r6, source) share one upstream call instead of one call each.
+_inflight: dict[tuple, "asyncio.Task"] = {}
+
+
 async def _cached(h3_r6: str, name: str, fetch, ttl: float = 21_600):
     hit = CACHE.get(h3_r6, name)
     if hit is not None:
         return None if hit is _NULL else hit
+    key = (h3_r6, name)
+    task = _inflight.get(key)
+    if task is None:
+        task = asyncio.ensure_future(
+            _fetch_and_store(h3_r6, name, fetch, ttl))
+        _inflight[key] = task
+        try:
+            # shield: one caller's cancellation must not kill the
+            # upstream call other diagnoses are waiting on
+            return await asyncio.shield(task)
+        finally:
+            _inflight.pop(key, None)
+    return await asyncio.shield(task)
+
+
+async def _fetch_and_store(h3_r6: str, name: str, fetch,
+                           ttl: float = 21_600):
     t0 = time.monotonic()
     try:
         value = await fetch()
@@ -72,12 +96,29 @@ async def power_daily(client: httpx.AsyncClient, lat: float, lon: float,
     """
     async def go():
         today = date.today()
-        r = await client.get(POWER_DAILY_URL, params={
+        params = {
             "parameters": ",".join(POWER_PARAMS), "community": "AG",
             "latitude": lat, "longitude": lon,
             "start": "20010101",
             "end": (today - timedelta(days=1)).strftime("%Y%m%d"),
-            "format": "JSON"}, timeout=POWER_DAILY_TIMEOUT)
+            "format": "JSON"}
+        r = None
+        for attempt in range(2):
+            r = await client.get(POWER_DAILY_URL, params=params,
+                                 timeout=POWER_DAILY_TIMEOUT)
+            if r.status_code == 429 or r.status_code >= 500:
+                if attempt == 0:
+                    ra = r.headers.get("retry-after")
+                    try:
+                        delay = min(float(ra), 4.0) if ra else \
+                            1.5 + random.uniform(0, 0.5)
+                    except ValueError:
+                        delay = 1.5 + random.uniform(0, 0.5)
+                    log.warning("power_daily %s, retry in %.2fs",
+                                r.status_code, delay)
+                    await asyncio.sleep(delay)
+                    continue
+            break
         r.raise_for_status()
         body = r.json()
         param = body["properties"]["parameter"]

@@ -116,6 +116,7 @@ The error is driven by elevation: a POWER cell (~55 × 60 km) has one mean altit
 - **The crop knowledge base is a draft under agronomic review** (`docs/revision-agronomica.md`): several water-use and residue figures await Argentine sources, and Patagonia has no validated rotation.
 - **Rotations are decision support, not agronomic advice** — the app says so on every card and lists what to validate with a local agronomist.
 - The Argentina risk model's 365-day fire-history feature misses Jan–Oct 2026 fires until the next annual Parquet is added (`fires_365d_complete` flag on every shard).
+- The Orin frost-forecast pilot (one station, spring 2026, 24 complete nights) saw no frost, so the alert's value cannot be judged — and the station-based bias correction made RMSE worse in that sample (3.64 vs 3.07 °C), so it is not evidence that calibration helps.
 
 ## Where the Orin data comes from
 

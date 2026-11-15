@@ -224,6 +224,9 @@ Productor: Devin con los datos de Orin que entrega Ezequiel (B3). Consumidor: fr
 | `variables[].adjustment` | string | Opcional. Texto corto (ej. "Corrección por altura de 6,5 °C/km") |
 | `variables[].unit` | string | Unidad de `rmse` y `bias` |
 | `variables[].quality` | `good` \| `fair` \| `poor` | Juicio simple para el texto |
+| `variables[].reference_kind` | `field` \| `finer_satellite` | Opcional (default `field`). `finer_satellite` = la referencia es otro satélite de mayor resolución (ej. Sentinel-2), no una medición de campo |
+| `variables[].n_pixels` | entero | Opcional. Píxeles del satélite grueso que intersectan el polígono |
+| `variables[].pairs` | lista | Opcional. Tabla de pares por fecha (`product`, `modis_date`, `s2_date`, `modis`, `s2`, `diff`, `px_used`, `px_intersect`) |
 
 `orin/lots.geojson`: FeatureCollection de polígonos de lotes de demo con `properties`: `id`, `name`, `crop_label`, `zone` (`cuyo`), `synthetic`, `real_data_available` (bool).
 

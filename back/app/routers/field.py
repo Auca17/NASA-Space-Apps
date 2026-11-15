@@ -22,6 +22,7 @@ log = logging.getLogger("field")
 router = APIRouter()
 
 TIMEOUT = httpx.Timeout(6.0)
+DIAG_BUDGET = 8.0  # total wall-time for the whole diagnosis (task 23)
 MIN_HA, MAX_HA = 0.5, 5_000.0
 NDVI_BARE = 0.25          # NDVI below this counts as bare soil
 POWER_RES = "0.5°×0.625°"
@@ -346,7 +347,22 @@ def build_cards(power, soilg, slope, ndvi, grid_cell, fire_cal,
     cards = []
 
     rs = rain_stats(P("PRECTOTCORR") or {})
-    if rs:
+    gc = grid_cell or {}
+    imerg = "IMERG" in str(((gc.get("src") or {}).get("rain_mm_yr") or {})
+                         .get("dataset", ""))
+    if imerg and gc.get("rain_mm_yr") is not None:
+        rain = gc["rain_mm_yr"]
+        p25 = gc.get("rain_p25_mm")
+        rain_card = _card(
+            "rain", rain, "mm/año",
+            f"{_fmt_es(rain, 0)} mm/año"
+            + (f"; 1 de cada 4 años < {_fmt_es(p25, 0)} mm" if p25 else ""),
+            "GPM IMERG", "0,1°", "high")
+        rm = rain_monthly_mm(P("PRECTOTCORR") or {})
+        if rm:
+            rain_card["rain_monthly_mm"] = rm
+        cards.append(rain_card)
+    elif rs:
         rain_card = _card("rain", rs[0], "mm/año",
                           f"{rs[0]} mm/año; 1 de cada 4 años < {rs[2]} mm",
                           "NASA POWER", POWER_RES, "high")
@@ -510,6 +526,149 @@ def build_cards(power, soilg, slope, ndvi, grid_cell, fire_cal,
                            "NASA POWER", POWER_RES, "high"))
     else:
         cards.append(_null_card("recent_weather", "NASA POWER", POWER_RES))
+    return cards, monthly
+
+
+DEGRADED_SRC = ("Dato precalculado (NASA POWER, 0,5°) porque el "
+                "servicio no respondió")
+DEGRADED_REASON = ("El servicio de datos del clima no respondió; "
+                   "probá de nuevo en un minuto")
+
+
+def _grid_ff_days(ff: dict | None):
+    """frost_free {"start","end"} MM-DD -> free days between them."""
+    if not ff:
+        return None
+    try:
+        a = date(2001, int(ff["start"][:2]), int(ff["start"][3:]))
+        b = date(2001, int(ff["end"][:2]), int(ff["end"][3:]))
+        return (b - a).days % 365
+    except (KeyError, ValueError):
+        return None
+
+
+def _unavailable(cid):
+    return _card(cid, None, None,
+                 "No disponible ahora: el servicio del clima no "
+                 "respondió", "NASA POWER", POWER_RES, "low")
+
+
+def degraded_cards(grid_cell, terr, soilg, fire_cal, risk_cell, r5):
+    """Cards built from the precomputed field/grid cell when the POWER
+    daily series is unavailable (task 23). Everything capped at
+    confidence medium; series-only cards say unavailable."""
+    cards, gc = [], (grid_cell or {})
+
+    rain = gc.get("rain_mm_yr")
+    p25 = gc.get("rain_p25_mm")
+    imerg = "IMERG" in str(((gc.get("src") or {}).get("rain_mm_yr") or {})
+                         .get("dataset", ""))
+    rain_src = ("Dato precalculado (GPM IMERG 0,1°) porque el servicio "
+                "no respondió" if imerg else DEGRADED_SRC)
+    cards.append(
+        _card("rain", rain, "mm/año",
+              f"{rain} mm/año"
+              + (f"; 1 de cada 4 años < {p25} mm" if p25 else ""),
+              rain_src, POWER_RES, "medium")
+        if rain is not None else _unavailable("rain"))
+
+    heavy = gc.get("heavy_days_yr")
+    cards.append(
+        _card("heavy_rain", heavy, "días/año",
+              f"{heavy:g} días/año con más de 50 mm",
+              DEGRADED_SRC, POWER_RES, "medium")
+        if heavy is not None else _unavailable("heavy_rain"))
+
+    ff = gc.get("frost_free")
+    days = _grid_ff_days(ff)
+    if ff and days is not None:
+        sm, sd = ff["start"].split("-")
+        em, ed = ff["end"].split("-")
+        cards.append(_card(
+            "frost", days, "días",
+            f"Período libre de heladas: {sd}/{sm} – {ed}/{em}",
+            DEGRADED_SRC, POWER_RES, "medium"))
+    else:
+        cards.append(_unavailable("frost"))
+
+    hot = gc.get("hot_days_gt35")
+    cards.append(
+        _card("heat", hot, "días/año",
+              f"{hot:g} días/año por encima de 35 °C",
+              DEGRADED_SRC, POWER_RES, "medium")
+        if hot is not None else _unavailable("heat"))
+
+    sm = gc.get("sm_anom_pct")
+    if sm is not None:
+        cards.append(_card("soil_moisture", sm, "%",
+                           f"Última lectura {abs(sm)} % "
+                           f"{'bajo' if sm < 0 else 'sobre'} lo normal",
+                           "SMAP L3 (precalculado)", "9 km", "low"))
+    else:
+        cards.append(_unavailable("soil_moisture"))
+
+    cards.append(_unavailable("crop_water"))
+
+    bare = gc.get("bare_soil_days_yr")
+    cards.append(
+        _card("vigor_bare_soil", bare, "días/año",
+              f"~{bare:g} días/año con suelo desnudo (precalculado)",
+              "MODIS MOD13C2 (field/grid)", "0.05°", "low")
+        if bare is not None else _unavailable("vigor_bare_soil"))
+
+    slope = (terr or {}).get("slope")
+    cards.append(
+        _card("slope", slope, "%", f"Pendiente media: {slope:g} %",
+              "AWS Terrain Tiles (SRTM)", "~30 m", "high")
+        if slope is not None
+        else _null_card("slope", "AWS Terrain Tiles (SRTM)", "~30 m"))
+
+    gsoil = gc.get("soil") or {}
+    if soilg:
+        tex = texture_class(soilg)
+        soc = soilg.get("soc")
+        parts = [t for t in (tex, f"MO {soc:.1f} g/kg" if soc else None)
+                 if t]
+        cards.append(_card("soil", round(soc, 1) if soc else None,
+                           "g/kg", "; ".join(parts) or "Sin datos",
+                           "ISRIC SoilGrids v2", "250 m", "medium"))
+    elif gsoil.get("texture") or gsoil.get("soc_g_kg") is not None:
+        soc = gsoil.get("soc_g_kg")
+        parts = [t for t in (gsoil.get("texture"),
+                             f"MO {soc:.1f} g/kg" if soc else None) if t]
+        cards.append(_card("soil", soc, "g/kg",
+                           "; ".join(parts) or "Sin datos",
+                           "ISRIC SoilGrids v2 (field/grid)", "250 m",
+                           "medium"))
+    else:
+        cards.append(_null_card("soil", "ISRIC SoilGrids v2", "250 m"))
+
+    gt = gc.get("grace_trend")
+    trend_txt = {"down": "descendente", "flat": "estable",
+                 "up": "ascendente"}.get(gt or "", "")
+    cards.append(
+        _card("water_trend", gt, None,
+              f"Agua subterránea: tendencia {trend_txt}",
+              "GRACE-FO (precalculado)", "regional", "low")
+        if gt else _unavailable("water_trend"))
+
+    monthly, active = burn_season_months(fire_cal, r5)
+    cat = (risk_cell or {}).get("cat")
+    if monthly is not None or cat:
+        season = months_range_es(active) if active else \
+            "sin temporada marcada"
+        text = f"Temporada de quemas: {season}"
+        if cat:
+            text += f"; riesgo 7 días: {cat}"
+        cards.append(_card("fire", cat, None, text,
+                           "Serie armonizada MODIS+VIIRS",
+                           "H3 res 5 (~250 km²)", "high"))
+    else:
+        cards.append(_null_card("fire", "Serie armonizada MODIS+VIIRS",
+                                "H3 res 5 (~250 km²)"))
+
+    cards.append(_unavailable("fire_weather"))
+    cards.append(_unavailable("recent_weather"))
     return cards, monthly
 
 
@@ -741,7 +900,7 @@ async def diagnose(request: Request):
     r5c = r5s[0]
 
     async with httpx.AsyncClient(timeout=TIMEOUT) as client:
-        power, soilg, terr, ndvi, fire_cal, grid = await asyncio.gather(
+        fetches = asyncio.gather(
             src.power_daily(client, clat, clon, r6c),
             src.soilgrids(client, clat, clon, r6c),
             src.terrain_stats(client, clat, clon, r6c, bbox),
@@ -752,11 +911,16 @@ async def diagnose(request: Request):
             src.json_shard(clat, clon, f"field/grid/{r2}.json",
                            r6c, "field_grid"),
             return_exceptions=True)
+        try:
+            results = await asyncio.wait_for(fetches, DIAG_BUDGET)
+        except TimeoutError:
+            log.warning("diagnose: %.0fs budget exceeded", DIAG_BUDGET)
+            results = [TimeoutError("budget")] * 6
 
     def ok(v):
         return None if isinstance(v, Exception) else v
     power, soilg, terr, ndvi, fire_cal, grid = \
-        map(ok, (power, soilg, terr, ndvi, fire_cal, grid))
+        map(ok, results)
 
     slope = (terr or {}).get("slope")
     elevation_m = (terr or {}).get("elevation_m")
@@ -777,18 +941,33 @@ async def diagnose(request: Request):
         risk = None
     risk_cell = (risk or {}).get("cells", {}).get(r5c)
 
+    degraded = power is None
     adj = {"temp_adjust_c": temp_adjust, "elevation_m": elevation_m,
            "power_cell_elevation_m": cell_elev_m}
-    cards, monthly_burn = build_cards(power, soilg, slope, ndvi, grid_cell,
-                                      fire_cal, risk_cell, r5c, adj=adj)
+    if degraded:
+        cards, monthly_burn = degraded_cards(
+            grid_cell, terr, soilg, fire_cal, risk_cell, r5c)
+        calendar = build_calendar(None, ndvi, monthly_burn)
+        baseline = None
+    else:
+        cards, monthly_burn = build_cards(
+            power, soilg, slope, ndvi, grid_cell, fire_cal, risk_cell,
+            r5c, adj=adj)
     baseline = None
-    if scenario:
+    if scenario and not degraded:
         baseline = {"cards": cards,
-                  "calendar": build_calendar(power, ndvi, monthly_burn)}
+                    "calendar": build_calendar(power, ndvi, monthly_burn)}
         spower = apply_scenario(power, scenario)
+        sgrid = grid_cell
+        if grid_cell and scenario["rain_pct"]:
+            k = 1 + scenario["rain_pct"] / 100
+            sgrid = dict(grid_cell)
+            for key in ("rain_mm_yr", "rain_p25_mm"):
+                if sgrid.get(key) is not None:
+                    sgrid[key] = round(sgrid[key] * k, 1)
         base_map = {c["id"]: c["value"] for c in cards}
         cards, monthly_burn = build_cards(
-            spower, soilg, slope, ndvi, grid_cell, fire_cal, risk_cell,
+            spower, soilg, slope, ndvi, sgrid, fire_cal, risk_cell,
             r5c, adj=adj)
         calendar = build_calendar(spower, ndvi, monthly_burn)
         for c in cards:
@@ -821,6 +1000,8 @@ async def diagnose(request: Request):
          "power_cell_elevation_m": cell_elev_m,
          "temp_adjust_c": temp_adjust,
          "h3_r5": r5s, "h3_r6": r6s, "cards": cards, "calendar": calendar,
+         **({"degraded": True,
+             "degraded_reason": DEGRADED_REASON} if degraded else {}),
          **({"scenario": scenario} if scenario else {}),
          **({"baseline": baseline} if baseline else {}),
          **msr},
