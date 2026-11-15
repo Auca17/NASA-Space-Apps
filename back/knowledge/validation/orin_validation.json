@@ -1,0 +1,44 @@
+{
+ "version": "v1",
+ "synthetic": false,
+ "generated_at": "2026-11-15T00:52:32Z",
+ "source": "Estaciones meteorológicas Orin (Mendoza), 53 estaciones, 2026-10-04 a 2026-10-20",
+ "variables": [
+  {
+   "id": "temp_max",
+   "satellite": {
+    "dataset": "NASA POWER T2M_MAX",
+    "resolution": "0.5° × 0.625°",
+    "period": "2026-10-04 a 2026-10-20"
+   },
+   "field": {
+    "source": "Estaciones meteorológicas Orin (Mendoza)",
+    "n_sites": 53
+   },
+   "n": 742,
+   "rmse": 5.05,
+   "bias": -2.82,
+   "r": 0.628,
+   "unit": "°C",
+   "quality": "poor"
+  },
+  {
+   "id": "temp_min",
+   "satellite": {
+    "dataset": "NASA POWER T2M_MIN",
+    "resolution": "0.5° × 0.625°",
+    "period": "2026-10-04 a 2026-10-20"
+   },
+   "field": {
+    "source": "Estaciones meteorológicas Orin (Mendoza)",
+    "n_sites": 53
+   },
+   "n": 742,
+   "rmse": 3.89,
+   "bias": -0.67,
+   "r": 0.455,
+   "unit": "°C",
+   "quality": "poor"
+  }
+ ]
+}

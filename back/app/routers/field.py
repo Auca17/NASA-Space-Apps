@@ -26,6 +26,7 @@ from ..services.data import risk_shard
 from ..services.infiltration import (infiltration_class,
                                      infiltration_score)
 from ..services.et0 import METHOD_LABEL, et0_series
+from ..services.accuracy import accuracy_block
 
 log = logging.getLogger("field")
 
@@ -229,6 +230,21 @@ def days_per_year(series: dict, cond, years=None):
         return None
     return round(statistics.fmean(
         sum(1 for v in vs if cond(v)) for vs in by.values()), 1)
+
+
+def gdd_per_year(tmax: dict, tmin: dict):
+    """Mean annual growing degree days, base 10 °C capped at 30 °C
+    (FAO/Ecocrop convention): per day
+    max(0, (min(Tmax,30)+max(Tmin,10))/2 - 10). Years need >=300 days."""
+    by_year: dict[int, list[float]] = {}
+    for d, tx in (tmax or {}).items():
+        tn = (tmin or {}).get(d)
+        if tx is None or tn is None:
+            continue
+        by_year.setdefault(d.year, []).append(
+            max(0.0, (min(tx, 30.0) + max(tn, 10.0)) / 2 - 10.0))
+    full = [sum(vs) for vs in by_year.values() if len(vs) >= 300]
+    return round(statistics.fmean(full)) if full else None
 
 
 def frost_free_window(series: dict):
@@ -506,6 +522,19 @@ def build_cards(power, soilg, slope, ndvi, grid_cell, fire_cal,
               "NASA POWER", POWER_RES, "high",
               f"{hot:g} days/yr above 35 °C")
         if hot is not None else _null_card("heat", "NASA POWER", POWER_RES))
+
+    # gdd_year: thermal time accumulated per year, base 10 °C capped
+    # at 30 °C (FAO/Ecocrop convention), from POWER T2M_MAX/T2M_MIN.
+    gdd = gdd_per_year(P("T2M_MAX") or {}, P("T2M_MIN") or {})
+    cards.append(
+        _card("gdd_year", gdd, "°C·día/año",
+              f"Este lote acumula {_fmt_es(gdd, 0)} °C·día por año "
+              "(base 10 °C)",
+              "NASA POWER (T2M, base 10 °C, tope 30 °C)",
+              POWER_RES, "medium",
+              f"This plot accumulates ~{gdd} GDD/year (base 10 °C)")
+        if gdd is not None else _null_card(
+            "gdd_year", "NASA POWER", POWER_RES))
 
     # elevation transparency (task 20): note on temp cards + confidence cap
     if adj and adj.get("temp_adjust_c"):
@@ -824,6 +853,9 @@ def degraded_cards(grid_cell, terr, soilg, fire_cal, risk_cell, r5):
               f"{hot:g} días/año por encima de 35 °C",
               DEGRADED_SRC, POWER_RES, "medium")
         if hot is not None else _unavailable("heat"))
+
+    # no POWER series -> no daily temperatures -> GDD unavailable
+    cards.append(_unavailable("gdd_year"))
 
     sm = gc.get("sm_anom_pct")
     if sm is not None:
@@ -1368,6 +1400,7 @@ async def diagnose(request: Request):
          "coverage": {"available_cards": available, "total_cards": len(cards),
                       "comparable": comparable, "indicators": sources},
          "h3_r5": r5s, "h3_r6": r6s, "cards": cards, "calendar": calendar,
+         "accuracy": accuracy_block(clat, clon, temp_adjust),
          **({"degraded": True,
              "degraded_reason": DEGRADED_REASON} if degraded else {}),
          **({"scenario": scenario} if baseline else {}),
@@ -1427,6 +1460,16 @@ async def field_crop_zones(request: Request):
 
 ROTATIONS_ZONES = {"pampa_humeda", "nea", "noa", "cuyo", "patagonia",
                    "other"}
+# Hazard ids shared with the parcels farmer profile; mapped to engine
+# priorities (frost/heat drive viability penalties instead of a key).
+HAZARD_IDS = ("fire", "drought", "frost", "heat", "snow", "hail",
+              "enso", "flood")
+HAZARD_LABEL = {"fire": "fuego", "drought": "sequía", "frost": "helada",
+                "heat": "calor", "snow": "nieve", "hail": "granizo",
+                "enso": "El Niño", "flood": "inundación"}
+HAZARD_TO_PRIORITIES = {"drought": ("water",), "enso": ("water",),
+                        "fire": ("avoid_burning",),
+                        "flood": ("erosion", "soil")}
 
 
 @router.get("/api/field/catalog")
@@ -1442,7 +1485,7 @@ def field_catalog():
 
 @router.post("/api/field/rotations")
 async def rotations(request: Request):
-    from ..services.rotations import run, PRIORITY_MAP
+    from ..services.rotations import run, PRIORITY_MAP, PRIORITY_LABEL
     body = await json_object(request)
     if body is None:
         return _err("invalid_input", "expected a JSON object")[1]
@@ -1474,6 +1517,33 @@ async def rotations(request: Request):
         return JSONResponse(status_code=400, content={
             "error": "invalid_input",
             "detail": f"priorities keys: {sorted(PRIORITY_MAP)}, values 0-5"})
+    # Optional hazard profile (parcels farmer profile: ids + ranks).
+    # Mapped to engine priorities when `priorities` is not explicit;
+    # frost/heat additionally drive viability penalties inside run().
+    hazards_in = body.get("hazards")
+    hazard_ranks: list[tuple[str, float]] = []
+    if hazards_in is not None:
+        if not isinstance(hazards_in, list) or any(
+                not isinstance(h, dict)
+                or not isinstance(h.get("id"), str)
+                or h["id"] not in HAZARD_IDS
+                or not isinstance(h.get("rank"), (int, float))
+                or not 1 <= h["rank"] <= len(HAZARD_IDS)
+                for h in hazards_in):
+            return _err("invalid_input",
+                        f"hazards: list of "
+                        "{'id': one of " + str(sorted(HAZARD_IDS)) +
+                        ", 'rank': 1-" + str(len(HAZARD_IDS)) + "}")[1]
+        hazard_ranks = [(h["id"], h["rank"]) for h in hazards_in]
+    explicit_priorities = bool(priorities)
+    if not explicit_priorities and hazard_ranks:
+        for hid, rank in hazard_ranks:
+            w = max(1, 6 - int(rank))
+            for p in HAZARD_TO_PRIORITIES.get(hid, ()):
+                priorities[p] = max(priorities.get(p, 0), w)
+        if body.get("economics"):
+            priorities["income"] = max(priorities.get("income", 0), 3)
+    hazard_set = {h for h, _ in hazard_ranks} & {"frost", "heat"}
     constraints = body.get("constraints") or {}
     if not isinstance(constraints, dict):
         return JSONResponse(status_code=400, content={
@@ -1500,7 +1570,7 @@ async def rotations(request: Request):
         analog = next((analogs[cell] for cell in r5s if cell in analogs), None)
     try:
         out = run(diag, current, priorities, constraints,
-                  zone, analog=analog)
+                  zone, analog=analog, hazards=hazard_set)
         if diag.get("scenario"):
             base = diag.get("baseline") or {
                 "cards": [dict(c, value=c.get("baseline_value",
@@ -1517,6 +1587,23 @@ async def rotations(request: Request):
     except (ValueError, TypeError, KeyError, AttributeError) as exc:
         return JSONResponse(status_code=400, content={
             "error": "invalid_input", "detail": str(exc)})
+    out["priorities_used"] = priorities
+    if explicit_priorities:
+        out["mapping_note"] = ("Para las rotaciones usamos tus "
+                               "prioridades explícitas.")
+    elif hazard_ranks:
+        parts = [f"{PRIORITY_LABEL.get(p, p)} (por "
+                 f"{HAZARD_LABEL.get(h, h)})"
+                 for h, _ in sorted(hazard_ranks, key=lambda t: t[1])
+                 for p in HAZARD_TO_PRIORITIES.get(h, ())]
+        note = "Para las rotaciones usamos: " + ", ".join(parts) + "."
+        if hazard_set:
+            note += (" Además se penalizan cultivos que no cierran por "
+                     "helada o calor en esta celda.")
+        out["mapping_note"] = note
+    else:
+        out["mapping_note"] = ("Sin perfil de riesgos ni prioridades: "
+                               "todas las alternativas puntúan igual.")
     adjust = diag.get("temp_adjust_c")
     if isinstance(adjust, (int, float)) and abs(adjust) >= 2:
         out.setdefault("gaps", []).append(

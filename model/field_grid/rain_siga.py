@@ -224,6 +224,8 @@ def main():
         m = metrics(pairs, col)
         per_st = [{"station_id": s, "station": g.station.iloc[0],
                    "region": g.region.iloc[0],
+                   "lat": float(g.st_lat.iloc[0]),
+                   "lon": float(g.st_lon.iloc[0]),
                    **metrics(g, col)}
                   for s, g in pairs.groupby("station_id")]
         var = {"id": vid,
