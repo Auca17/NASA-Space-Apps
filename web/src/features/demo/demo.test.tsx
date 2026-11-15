@@ -16,6 +16,7 @@ import { selfIntersects, ringCenter } from "../../domain/parcelsGeo";
 import { CONCERNS } from "../../domain/parcels";
 import { HAZARDS } from "../../domain/parcelsProfile";
 import { FieldPanel } from "../field/FieldLens";
+import cachedFile from "./mendozaCached.json";
 import {
   isDemoHash, MENDOZA_BOUNDARY, MENDOZA_CACHED, MENDOZA_ECON,
   MENDOZA_NEEDS, MENDOZA_PARCELS, MENDOZA_PROFILE,
@@ -144,6 +145,18 @@ describe("Mendoza fixture", () => {
     expect(res.summary.headline).toBeTruthy();
     // at least one alert exists so the tour's alert step anchors
     expect(res.parcels.some((p) => p.alerts.length > 0)).toBe(true);
+  });
+
+  it("cached file is a real capture: same parcel ids, capture date", () => {
+    // mendozaCached.json is written verbatim by
+    // scripts/capture-demo.mjs from the live API — never hand-edited.
+    expect(cachedFile.captured_at).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+    expect(Date.parse(cachedFile.captured_at)).not.toBeNaN();
+    const ids = cachedFile.response.parcels.map((p) => p.id).sort();
+    expect(ids).toEqual(MENDOZA_PARCELS.map((p) => p.id).sort());
+    // the export exposes the capture verbatim
+    expect(MENDOZA_CACHED.res).toEqual(cachedFile.response);
+    expect(MENDOZA_CACHED.date).toBe(cachedFile.captured_at);
   });
 });
 

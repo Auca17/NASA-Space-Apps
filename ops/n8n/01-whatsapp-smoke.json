@@ -1,0 +1,52 @@
+{
+  "name": "Ashfield · WhatsApp smoke",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "b351e62d-8888-40bc-a36e-266ca12a0f71",
+      "name": "Probar",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "send",
+        "from": "+14155238886",
+        "to": "+549XXXXXXXXXX",
+        "toWhatsapp": true,
+        "message": "Ashfield: mensaje de prueba. Si te llegó, n8n ya puede mandar alertas por WhatsApp."
+      },
+      "id": "cc8d6bbf-bd4b-4ccc-963e-e7f7e18096fb",
+      "name": "WhatsApp (Twilio)",
+      "type": "n8n-nodes-base.twilio",
+      "typeVersion": 1,
+      "position": [
+        260,
+        0
+      ]
+    }
+  ],
+  "connections": {
+    "Probar": {
+      "main": [
+        [
+          {
+            "node": "WhatsApp (Twilio)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "America/Argentina/Buenos_Aires"
+  },
+  "pinData": {},
+  "active": false
+}

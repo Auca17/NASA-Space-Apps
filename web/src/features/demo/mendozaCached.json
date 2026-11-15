@@ -1,0 +1,718 @@
+{
+  "captured_at": "2026-11-15",
+  "response": {
+    "parcels": [
+      {
+        "id": "vid",
+        "crop": "vid",
+        "area_ha": 51.6,
+        "indicators": {
+          "fire": {
+            "pct": 15,
+            "level": "alto",
+            "basis": "Probabilidad de fuego en los próximos 7 días según el modelo de la zona."
+          },
+          "water": {
+            "pct": 55,
+            "level": "humedo",
+            "basis": "Humedad de la raíz (NASA POWER GWETROOT), promedio de los últimos 30 días; está por encima del percentil 80 de noviembre en la historia de esta zona. Esta parcela comparte la celda de datos climáticos con otra parcela del lote."
+          },
+          "heat": {
+            "days_over_35": 17.8,
+            "basis": "Promedio anual de días por encima de 35 °C (serie diaria NASA POWER, con corrección por altura). Esta parcela comparte la celda de datos climáticos con otra parcela del lote."
+          },
+          "frost": {
+            "frost_free_days": 273,
+            "window": {
+              "start": "08-31",
+              "end": "05-31"
+            },
+            "basis": "Días del año entre la última helada de primavera y la primera de otoño (mediana de años completos, NASA POWER, con corrección por altura). Esta parcela comparte la celda de datos climáticos con otra parcela del lote."
+          },
+          "snow": {
+            "days_per_year": 21.2,
+            "pct_years_with_snow": 100,
+            "basis": "Días por año con nevada sobre 1 mm (NASA POWER PRECSNOLAND, 2001–hoy); nieva algunos años en esta zona. Esta parcela comparte la celda de datos climáticos con otra parcela del lote."
+          },
+          "hail": {
+            "available": false,
+            "basis": "No hay un dato satelital de granizo para tu zona en esta app; consultá el servicio meteorológico y tu aseguradora."
+          },
+          "enso": {
+            "phase_now": "el_nino",
+            "oni": 2.5,
+            "oni_period": "ASO 2026",
+            "rain_effect_pct": {
+              "el_nino": -4,
+              "la_nina": 0
+            },
+            "basis": "ENSO según el índice ONI de NOAA: ahora El Niño (+2.5 °C). En esta zona, los años El Niño llovieron -4 % y los La Niña +0 % respecto al promedio en octubre–marzo. Es una tendencia histórica, no un pronóstico."
+          },
+          "flood": {
+            "heavy_rain_days_yr": 0.4,
+            "low_slope": false,
+            "basis": "0.4 días por año con lluvia fuerte (sobre 20 mm) y terreno con pendiente: el agua escurre, riesgo de anegamiento menor. Esta parcela comparte la celda de datos climáticos con otra parcela del lote."
+          },
+          "evaporation": {
+            "mm_per_year": 1559,
+            "monthly_mm": [
+              202.1,
+              161.3,
+              146.1,
+              103,
+              78,
+              72.7,
+              76.2,
+              94,
+              112,
+              148.7,
+              175.8,
+              204.3
+            ],
+            "balance_mm": {
+              "1": -166.2,
+              "2": -129,
+              "3": -120.1,
+              "4": -86.5,
+              "5": -53.1,
+              "6": -45.3,
+              "7": -53.7,
+              "8": -73,
+              "9": -101.2,
+              "10": -121.6,
+              "11": -151.3,
+              "12": -176.8
+            },
+            "basis": "Estimación de referencia ET0 FAO-56 (Penman-Monteith donde hay datos, Hargreaves en el resto) — EVLAND no está disponible en esta celda; el balance mensual es lluvia menos ET0 en mm. Esta parcela comparte la celda de datos climáticos con otra parcela del lote. Agua de cultivo ≈ ET0 × Kc 0.7 (FAO-56) del catálogo.",
+            "crop_water_mm_day": 3
+          },
+          "infiltration": {
+            "class": "media",
+            "score": 61,
+            "basis": "Puntaje 0-100 a partir de textura Franco-arenoso, MO 12 g/kg, pendiente 3.2 %, 122 días/año de suelo desnudo (grupos hidrológicos de suelo USDA; fórmula en knowledge/README). Ordena el riesgo relativo, no es una medición. Esta parcela comparte la celda de datos climáticos con otra parcela del lote."
+          }
+        },
+        "alerts": [
+          {
+            "kind": "fire",
+            "severity": "high",
+            "text": "Riesgo de fuego alto en esta parcela: no quemes rastrojos, revisá los guardafuegos y ante fuego o humo llamá al 100."
+          }
+        ],
+        "order": [
+          "frost",
+          "drought",
+          "fire",
+          "heat",
+          "enso",
+          "snow",
+          "hail"
+        ],
+        "extra": [
+          {
+            "id": "flood",
+            "hidden": true
+          }
+        ],
+        "economics": {
+          "expected_yield_t_ha": 14,
+          "yield_source": "user",
+          "revenue_per_ha": 3080,
+          "cost_per_ha": 2800,
+          "margin_per_ha": 280,
+          "margin_total": 14461,
+          "break_even_yield_t_ha": 12.73,
+          "risk_adjusted_margin_per_ha": 126,
+          "basis": "Rinde declarado por el productor (14 t/ha). Margen ajustado con supuestos aproximados: alerta de fuego −5 % del ingreso. No es un pronóstico.",
+          "currency": "USD"
+        }
+      },
+      {
+        "id": "olivo",
+        "crop": "olivo",
+        "area_ha": 29.7,
+        "indicators": {
+          "fire": {
+            "pct": 15,
+            "level": "alto",
+            "basis": "Probabilidad de fuego en los próximos 7 días según el modelo de la zona."
+          },
+          "water": {
+            "pct": 55,
+            "level": "humedo",
+            "basis": "Humedad de la raíz (NASA POWER GWETROOT), promedio de los últimos 30 días; está por encima del percentil 80 de noviembre en la historia de esta zona. Esta parcela comparte la celda de datos climáticos con otra parcela del lote."
+          },
+          "heat": {
+            "days_over_35": 17.8,
+            "basis": "Promedio anual de días por encima de 35 °C (serie diaria NASA POWER, con corrección por altura). Esta parcela comparte la celda de datos climáticos con otra parcela del lote."
+          },
+          "frost": {
+            "frost_free_days": 273,
+            "window": {
+              "start": "08-31",
+              "end": "05-31"
+            },
+            "basis": "Días del año entre la última helada de primavera y la primera de otoño (mediana de años completos, NASA POWER, con corrección por altura). Esta parcela comparte la celda de datos climáticos con otra parcela del lote."
+          },
+          "snow": {
+            "days_per_year": 21.2,
+            "pct_years_with_snow": 100,
+            "basis": "Días por año con nevada sobre 1 mm (NASA POWER PRECSNOLAND, 2001–hoy); nieva algunos años en esta zona. Esta parcela comparte la celda de datos climáticos con otra parcela del lote."
+          },
+          "hail": {
+            "available": false,
+            "basis": "No hay un dato satelital de granizo para tu zona en esta app; consultá el servicio meteorológico y tu aseguradora."
+          },
+          "enso": {
+            "phase_now": "el_nino",
+            "oni": 2.5,
+            "oni_period": "ASO 2026",
+            "rain_effect_pct": {
+              "el_nino": -4,
+              "la_nina": 0
+            },
+            "basis": "ENSO según el índice ONI de NOAA: ahora El Niño (+2.5 °C). En esta zona, los años El Niño llovieron -4 % y los La Niña +0 % respecto al promedio en octubre–marzo. Es una tendencia histórica, no un pronóstico."
+          },
+          "flood": {
+            "heavy_rain_days_yr": 0.4,
+            "low_slope": false,
+            "basis": "0.4 días por año con lluvia fuerte (sobre 20 mm) y terreno con pendiente: el agua escurre, riesgo de anegamiento menor. Esta parcela comparte la celda de datos climáticos con otra parcela del lote."
+          },
+          "evaporation": {
+            "mm_per_year": 1559,
+            "monthly_mm": [
+              202.1,
+              161.3,
+              146.1,
+              103,
+              78,
+              72.7,
+              76.2,
+              94,
+              112,
+              148.7,
+              175.8,
+              204.3
+            ],
+            "balance_mm": {
+              "1": -166.2,
+              "2": -129,
+              "3": -120.1,
+              "4": -86.5,
+              "5": -53.1,
+              "6": -45.3,
+              "7": -53.7,
+              "8": -73,
+              "9": -101.2,
+              "10": -121.6,
+              "11": -151.3,
+              "12": -176.8
+            },
+            "basis": "Estimación de referencia ET0 FAO-56 (Penman-Monteith donde hay datos, Hargreaves en el resto) — EVLAND no está disponible en esta celda; el balance mensual es lluvia menos ET0 en mm. Esta parcela comparte la celda de datos climáticos con otra parcela del lote. Agua de cultivo ≈ ET0 × Kc 0.65 (FAO-56) del catálogo.",
+            "crop_water_mm_day": 2.8
+          },
+          "infiltration": {
+            "class": "media",
+            "score": 61,
+            "basis": "Puntaje 0-100 a partir de textura Franco-arenoso, MO 12 g/kg, pendiente 3.2 %, 122 días/año de suelo desnudo (grupos hidrológicos de suelo USDA; fórmula en knowledge/README). Ordena el riesgo relativo, no es una medición. Esta parcela comparte la celda de datos climáticos con otra parcela del lote."
+          }
+        },
+        "alerts": [
+          {
+            "kind": "fire",
+            "severity": "high",
+            "text": "Riesgo de fuego alto en esta parcela: no quemes rastrojos, revisá los guardafuegos y ante fuego o humo llamá al 100."
+          }
+        ],
+        "order": [
+          "frost",
+          "drought",
+          "fire",
+          "heat",
+          "enso",
+          "snow",
+          "hail"
+        ],
+        "extra": [
+          {
+            "id": "flood",
+            "hidden": true
+          }
+        ],
+        "economics": {
+          "expected_yield_t_ha": 9,
+          "yield_source": "user",
+          "revenue_per_ha": 3420,
+          "cost_per_ha": 2400,
+          "margin_per_ha": 1020,
+          "margin_total": 30251,
+          "break_even_yield_t_ha": 6.32,
+          "risk_adjusted_margin_per_ha": 849,
+          "basis": "Rinde declarado por el productor (9 t/ha). Margen ajustado con supuestos aproximados: alerta de fuego −5 % del ingreso. No es un pronóstico.",
+          "currency": "USD"
+        }
+      },
+      {
+        "id": "frutal",
+        "crop": "frutal_carozo",
+        "area_ha": 20.3,
+        "indicators": {
+          "fire": {
+            "pct": 15,
+            "level": "alto",
+            "basis": "Probabilidad de fuego en los próximos 7 días según el modelo de la zona."
+          },
+          "water": {
+            "pct": 55,
+            "level": "humedo",
+            "basis": "Humedad de la raíz (NASA POWER GWETROOT), promedio de los últimos 30 días; está por encima del percentil 80 de noviembre en la historia de esta zona. Esta parcela comparte la celda de datos climáticos con otra parcela del lote."
+          },
+          "heat": {
+            "days_over_35": 17.8,
+            "basis": "Promedio anual de días por encima de 35 °C (serie diaria NASA POWER, con corrección por altura). Esta parcela comparte la celda de datos climáticos con otra parcela del lote."
+          },
+          "frost": {
+            "frost_free_days": 273,
+            "window": {
+              "start": "08-31",
+              "end": "05-31"
+            },
+            "basis": "Días del año entre la última helada de primavera y la primera de otoño (mediana de años completos, NASA POWER, con corrección por altura). Esta parcela comparte la celda de datos climáticos con otra parcela del lote."
+          },
+          "snow": {
+            "days_per_year": 21.2,
+            "pct_years_with_snow": 100,
+            "basis": "Días por año con nevada sobre 1 mm (NASA POWER PRECSNOLAND, 2001–hoy); nieva algunos años en esta zona. Esta parcela comparte la celda de datos climáticos con otra parcela del lote."
+          },
+          "hail": {
+            "available": false,
+            "basis": "No hay un dato satelital de granizo para tu zona en esta app; consultá el servicio meteorológico y tu aseguradora."
+          },
+          "enso": {
+            "phase_now": "el_nino",
+            "oni": 2.5,
+            "oni_period": "ASO 2026",
+            "rain_effect_pct": {
+              "el_nino": -4,
+              "la_nina": 0
+            },
+            "basis": "ENSO según el índice ONI de NOAA: ahora El Niño (+2.5 °C). En esta zona, los años El Niño llovieron -4 % y los La Niña +0 % respecto al promedio en octubre–marzo. Es una tendencia histórica, no un pronóstico."
+          },
+          "flood": {
+            "heavy_rain_days_yr": 0.4,
+            "low_slope": false,
+            "basis": "0.4 días por año con lluvia fuerte (sobre 20 mm) y terreno con pendiente: el agua escurre, riesgo de anegamiento menor. Esta parcela comparte la celda de datos climáticos con otra parcela del lote."
+          },
+          "evaporation": {
+            "mm_per_year": 1559,
+            "monthly_mm": [
+              202.1,
+              161.3,
+              146.1,
+              103,
+              78,
+              72.7,
+              76.2,
+              94,
+              112,
+              148.7,
+              175.8,
+              204.3
+            ],
+            "balance_mm": {
+              "1": -166.2,
+              "2": -129,
+              "3": -120.1,
+              "4": -86.5,
+              "5": -53.1,
+              "6": -45.2,
+              "7": -53.7,
+              "8": -73,
+              "9": -101.2,
+              "10": -121.6,
+              "11": -151.3,
+              "12": -176.8
+            },
+            "basis": "Estimación de referencia ET0 FAO-56 (Penman-Monteith donde hay datos, Hargreaves en el resto) — EVLAND no está disponible en esta celda; el balance mensual es lluvia menos ET0 en mm. Esta parcela comparte la celda de datos climáticos con otra parcela del lote. Agua de cultivo ≈ ET0 × Kc 0.9 (FAO-56) del catálogo.",
+            "crop_water_mm_day": 3.9
+          },
+          "infiltration": {
+            "class": "media",
+            "score": 61,
+            "basis": "Puntaje 0-100 a partir de textura Franco-arenoso, MO 12 g/kg, pendiente 3.2 %, 122 días/año de suelo desnudo (grupos hidrológicos de suelo USDA; fórmula en knowledge/README). Ordena el riesgo relativo, no es una medición. Esta parcela comparte la celda de datos climáticos con otra parcela del lote."
+          }
+        },
+        "alerts": [
+          {
+            "kind": "fire",
+            "severity": "high",
+            "text": "Riesgo de fuego alto en esta parcela: no quemes rastrojos, revisá los guardafuegos y ante fuego o humo llamá al 100."
+          },
+          {
+            "kind": "frost",
+            "severity": "medium",
+            "text": "El/La Frutales de carozo (durazno, ciruela, cereza) pasa su etapa más sensible entre 08-15 y 10-31; la última helada típica de esta zona cae el 08-31 — unos 16 días sensibles quedan expuestos a heladas tardías."
+          }
+        ],
+        "order": [
+          "frost",
+          "drought",
+          "fire",
+          "heat",
+          "enso",
+          "snow",
+          "hail"
+        ],
+        "extra": [
+          {
+            "id": "flood",
+            "hidden": true
+          }
+        ],
+        "economics": {
+          "expected_yield_t_ha": 22,
+          "yield_source": "user",
+          "revenue_per_ha": 9900,
+          "cost_per_ha": 2600,
+          "margin_per_ha": 7300,
+          "margin_total": 148135,
+          "break_even_yield_t_ha": 5.78,
+          "risk_adjusted_margin_per_ha": 6805,
+          "basis": "Rinde declarado por el productor (22 t/ha). Margen ajustado con supuestos aproximados: alerta de fuego −5 % del ingreso. No es un pronóstico.",
+          "currency": "USD"
+        }
+      },
+      {
+        "id": "ajo",
+        "crop": "ajo",
+        "area_ha": 19.5,
+        "indicators": {
+          "fire": {
+            "pct": 15,
+            "level": "alto",
+            "basis": "Probabilidad de fuego en los próximos 7 días según el modelo de la zona."
+          },
+          "water": {
+            "pct": 55,
+            "level": "humedo",
+            "basis": "Humedad de la raíz (NASA POWER GWETROOT), promedio de los últimos 30 días; está por encima del percentil 80 de noviembre en la historia de esta zona. Esta parcela comparte la celda de datos climáticos con otra parcela del lote."
+          },
+          "heat": {
+            "days_over_35": 17.8,
+            "basis": "Promedio anual de días por encima de 35 °C (serie diaria NASA POWER, con corrección por altura). Esta parcela comparte la celda de datos climáticos con otra parcela del lote."
+          },
+          "frost": {
+            "frost_free_days": 273,
+            "window": {
+              "start": "08-31",
+              "end": "05-31"
+            },
+            "basis": "Días del año entre la última helada de primavera y la primera de otoño (mediana de años completos, NASA POWER, con corrección por altura). Esta parcela comparte la celda de datos climáticos con otra parcela del lote."
+          },
+          "snow": {
+            "days_per_year": 21.2,
+            "pct_years_with_snow": 100,
+            "basis": "Días por año con nevada sobre 1 mm (NASA POWER PRECSNOLAND, 2001–hoy); nieva algunos años en esta zona. Esta parcela comparte la celda de datos climáticos con otra parcela del lote."
+          },
+          "hail": {
+            "available": false,
+            "basis": "No hay un dato satelital de granizo para tu zona en esta app; consultá el servicio meteorológico y tu aseguradora."
+          },
+          "enso": {
+            "phase_now": "el_nino",
+            "oni": 2.5,
+            "oni_period": "ASO 2026",
+            "rain_effect_pct": {
+              "el_nino": -4,
+              "la_nina": 0
+            },
+            "basis": "ENSO según el índice ONI de NOAA: ahora El Niño (+2.5 °C). En esta zona, los años El Niño llovieron -4 % y los La Niña +0 % respecto al promedio en octubre–marzo. Es una tendencia histórica, no un pronóstico."
+          },
+          "flood": {
+            "heavy_rain_days_yr": 0.4,
+            "low_slope": false,
+            "basis": "0.4 días por año con lluvia fuerte (sobre 20 mm) y terreno con pendiente: el agua escurre, riesgo de anegamiento menor. Esta parcela comparte la celda de datos climáticos con otra parcela del lote."
+          },
+          "evaporation": {
+            "mm_per_year": 1559,
+            "monthly_mm": [
+              202.1,
+              161.3,
+              146.1,
+              103,
+              78,
+              72.7,
+              76.2,
+              94,
+              112,
+              148.7,
+              175.8,
+              204.3
+            ],
+            "balance_mm": {
+              "1": -166.2,
+              "2": -129,
+              "3": -120.1,
+              "4": -86.5,
+              "5": -53.1,
+              "6": -45.2,
+              "7": -53.7,
+              "8": -73,
+              "9": -101.2,
+              "10": -121.6,
+              "11": -151.3,
+              "12": -176.8
+            },
+            "basis": "Estimación de referencia ET0 FAO-56 (Penman-Monteith donde hay datos, Hargreaves en el resto) — EVLAND no está disponible en esta celda; el balance mensual es lluvia menos ET0 en mm. Esta parcela comparte la celda de datos climáticos con otra parcela del lote. Agua de cultivo ≈ ET0 × Kc 1 (FAO-56) del catálogo.",
+            "crop_water_mm_day": 4.3
+          },
+          "infiltration": {
+            "class": "media",
+            "score": 61,
+            "basis": "Puntaje 0-100 a partir de textura Franco-arenoso, MO 12 g/kg, pendiente 3.2 %, 122 días/año de suelo desnudo (grupos hidrológicos de suelo USDA; fórmula en knowledge/README). Ordena el riesgo relativo, no es una medición. Esta parcela comparte la celda de datos climáticos con otra parcela del lote."
+          }
+        },
+        "alerts": [
+          {
+            "kind": "fire",
+            "severity": "high",
+            "text": "Riesgo de fuego alto en esta parcela: no quemes rastrojos, revisá los guardafuegos y ante fuego o humo llamá al 100."
+          }
+        ],
+        "order": [
+          "frost",
+          "drought",
+          "fire",
+          "heat",
+          "enso",
+          "snow",
+          "hail"
+        ],
+        "extra": [
+          {
+            "id": "flood",
+            "hidden": true
+          }
+        ],
+        "economics": {
+          "expected_yield_t_ha": 8,
+          "yield_source": "user",
+          "revenue_per_ha": 7200,
+          "cost_per_ha": 1800,
+          "margin_per_ha": 5400,
+          "margin_total": 105365,
+          "break_even_yield_t_ha": 2,
+          "risk_adjusted_margin_per_ha": 5040,
+          "basis": "Rinde declarado por el productor (8 t/ha). Margen ajustado con supuestos aproximados: alerta de fuego −5 % del ingreso. No es un pronóstico.",
+          "currency": "USD"
+        }
+      },
+      {
+        "id": "monte",
+        "crop": "monte_nativo",
+        "area_ha": 11.1,
+        "indicators": {
+          "fire": {
+            "pct": 15,
+            "level": "alto",
+            "basis": "Probabilidad de fuego en los próximos 7 días según el modelo de la zona."
+          },
+          "water": {
+            "pct": 55,
+            "level": "humedo",
+            "basis": "Humedad de la raíz (NASA POWER GWETROOT), promedio de los últimos 30 días; está por encima del percentil 80 de noviembre en la historia de esta zona. Esta parcela comparte la celda de datos climáticos con otra parcela del lote."
+          },
+          "heat": {
+            "days_over_35": 17.8,
+            "basis": "Promedio anual de días por encima de 35 °C (serie diaria NASA POWER, con corrección por altura). Esta parcela comparte la celda de datos climáticos con otra parcela del lote."
+          },
+          "frost": {
+            "frost_free_days": 273,
+            "window": {
+              "start": "08-31",
+              "end": "05-31"
+            },
+            "basis": "Días del año entre la última helada de primavera y la primera de otoño (mediana de años completos, NASA POWER, con corrección por altura). Esta parcela comparte la celda de datos climáticos con otra parcela del lote."
+          },
+          "snow": {
+            "days_per_year": 21.2,
+            "pct_years_with_snow": 100,
+            "basis": "Días por año con nevada sobre 1 mm (NASA POWER PRECSNOLAND, 2001–hoy); nieva algunos años en esta zona. Esta parcela comparte la celda de datos climáticos con otra parcela del lote."
+          },
+          "hail": {
+            "available": false,
+            "basis": "No hay un dato satelital de granizo para tu zona en esta app; consultá el servicio meteorológico y tu aseguradora."
+          },
+          "enso": {
+            "phase_now": "el_nino",
+            "oni": 2.5,
+            "oni_period": "ASO 2026",
+            "rain_effect_pct": {
+              "el_nino": -4,
+              "la_nina": 0
+            },
+            "basis": "ENSO según el índice ONI de NOAA: ahora El Niño (+2.5 °C). En esta zona, los años El Niño llovieron -4 % y los La Niña +0 % respecto al promedio en octubre–marzo. Es una tendencia histórica, no un pronóstico."
+          },
+          "flood": {
+            "heavy_rain_days_yr": 0.4,
+            "low_slope": false,
+            "basis": "0.4 días por año con lluvia fuerte (sobre 20 mm) y terreno con pendiente: el agua escurre, riesgo de anegamiento menor. Esta parcela comparte la celda de datos climáticos con otra parcela del lote."
+          },
+          "evaporation": {
+            "mm_per_year": 1559,
+            "monthly_mm": [
+              202.1,
+              161.3,
+              146.1,
+              103,
+              78,
+              72.7,
+              76.2,
+              94,
+              112,
+              148.7,
+              175.8,
+              204.3
+            ],
+            "balance_mm": {
+              "1": -166.2,
+              "2": -129,
+              "3": -120.1,
+              "4": -86.5,
+              "5": -53.1,
+              "6": -45.3,
+              "7": -53.7,
+              "8": -73,
+              "9": -101.2,
+              "10": -121.6,
+              "11": -151.3,
+              "12": -176.8
+            },
+            "basis": "Estimación de referencia ET0 FAO-56 (Penman-Monteith donde hay datos, Hargreaves en el resto) — EVLAND no está disponible en esta celda; el balance mensual es lluvia menos ET0 en mm. Esta parcela comparte la celda de datos climáticos con otra parcela del lote. Agua de cultivo ≈ ET0 × Kc 0.6 (FAO-56) del catálogo.",
+            "crop_water_mm_day": 2.6
+          },
+          "infiltration": {
+            "class": "media",
+            "score": 61,
+            "basis": "Puntaje 0-100 a partir de textura Franco-arenoso, MO 12 g/kg, pendiente 3.2 %, 122 días/año de suelo desnudo (grupos hidrológicos de suelo USDA; fórmula en knowledge/README). Ordena el riesgo relativo, no es una medición. Esta parcela comparte la celda de datos climáticos con otra parcela del lote."
+          }
+        },
+        "alerts": [
+          {
+            "kind": "fire",
+            "severity": "high",
+            "text": "Riesgo de fuego alto en esta parcela: no quemes rastrojos, revisá los guardafuegos y ante fuego o humo llamá al 100."
+          }
+        ],
+        "order": [
+          "frost",
+          "drought",
+          "fire",
+          "heat",
+          "enso",
+          "snow",
+          "hail"
+        ],
+        "extra": [
+          {
+            "id": "flood",
+            "hidden": true
+          }
+        ]
+      }
+    ],
+    "zones": [
+      {
+        "kind": "fire_risk",
+        "geometry": {
+          "type": "Polygon",
+          "coordinates": [
+            [
+              [
+                -69.085439,
+                -33.668797
+              ],
+              [
+                -69.141776,
+                -33.739427
+              ],
+              [
+                -69.097638,
+                -33.806917
+              ],
+              [
+                -68.997188,
+                -33.803766
+              ],
+              [
+                -68.940944,
+                -33.733167
+              ],
+              [
+                -68.985056,
+                -33.665687
+              ],
+              [
+                -69.085439,
+                -33.668797
+              ]
+            ]
+          ]
+        },
+        "center": [
+          -69.04132,
+          -33.73634
+        ],
+        "radius_m": null,
+        "pct": 15,
+        "label": "Zona de riesgo alto de fuego",
+        "source": "modelo ar-lgbm-0.1",
+        "date": "2026-11-15"
+      }
+    ],
+    "nearby": {
+      "fire_stations": [],
+      "hospitals": [],
+      "water": [],
+      "source": "OpenStreetMap contributors",
+      "degraded": true
+    },
+    "summary": {
+      "headline": "Hay focos o riesgo alto de fuego: vigilancia y guardafuegos al día.",
+      "bullets": [],
+      "source": "template"
+    },
+    "sources": [
+      {
+        "id": "power",
+        "text": "NASA POWER — clima diario 0,5°×0,625° (lluvia, temperatura, humedad de raíz GWETROOT)"
+      },
+      {
+        "id": "risk_model",
+        "text": "Modelo de riesgo de fuego — probabilidad a 7 días por celda H3"
+      },
+      {
+        "id": "firms",
+        "text": "NASA FIRMS — detecciones activas VIIRS/MODIS de las últimas 72 h"
+      },
+      {
+        "id": "enso",
+        "text": "NOAA CPC — índice ONI (El Niño / La Niña) y efecto histórico sobre la lluvia de la zona"
+      },
+      {
+        "id": "magyp",
+        "text": "MAGyP — rindes departamentales por cultivo cuando el productor no declara el propio"
+      },
+      {
+        "id": "field_grid",
+        "text": "Grilla de campo precalculada (IMERG lluvia, SRTM elevación, cobertura de suelo)"
+      },
+      {
+        "id": "osm",
+        "text": "OpenStreetMap contributors — servicios cercanos (bomberos, hospitales, agua)"
+      }
+    ],
+    "degraded": true,
+    "degraded_reason": "los servicios cercanos (OpenStreetMap) no respondieron"
+  }
+}
