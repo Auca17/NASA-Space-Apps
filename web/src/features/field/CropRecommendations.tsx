@@ -3,7 +3,8 @@ import { apiCropRecommendations } from "../../api";
 import type { CropEntry, CropRecommendations as Result, CurrentCrop, DiagnoseResponse } from "../../api/types";
 import { PRIORITY_IDS, prioWeights } from "../../domain/rotations";
 import { useT } from "../../i18n";
-import { outlookLine, technicalReasons } from "../../domain/cropReasons";
+import { detailSections } from "../../domain/cropDetail";
+import { outlookLine } from "../../domain/cropReasons";
 import { DecisionDetail } from "./DecisionDetail";
 
 const RESOURCES = ["irrigation", "livestock", "markets"] as const;
@@ -85,18 +86,25 @@ export function CropRecommendations({ diagnosis, crops, declared, observation, p
         gap: formatNumber.format(row.water_demand_mm - (row.rain_mm ?? 0)),
       })}
     </p>)}
-    <div className="rec-tech">
-      <h5>{t("recs.techTitle")}</h5>
-      <ul>{technicalReasons(row, result?.status === "ok" ? result.outlook : null, formatNumber.format)
-        .map((reason) => <li key={reason.key}>{t(reason.key, reason.vars)}</li>)}</ul>
-    </div>
-    <DecisionDetail decision={row.decision} fallback={t("decision.cropFallback")} facts={{
+    {(() => {
+      const sections = detailSections(row, result?.status === "ok" ? result.land : null,
+        result?.status === "ok" ? result.outlook : null, formatNumber.format);
+      const [decision, ...rest] = sections;
+      return <>
+        <div className="rec-tech">
+          <h5>{t("recs.techTitle")}</h5>
+          <ul>{decision.lines.map((line) => <li key={line.key} className={line.tone ? `rec-${line.tone}` : undefined}>
+            {t(line.key, line.vars)}</li>)}</ul>
+        </div>
+        <DecisionDetail decision={row.decision} fallback={t("decision.cropFallback")} sections={rest} facts={{
       ...(row.rain_mm != null ? { rain_mm: row.rain_mm } : {}), water_demand_mm: row.water_demand_mm,
       ...(row.balance_mm != null ? { balance_mm: row.balance_mm } : {}),
       ...(row.rain_expected_mm != null ? { rain_expected_mm: row.rain_expected_mm } : {}),
       ...(row.balance_expected_mm != null ? { balance_expected_mm: row.balance_expected_mm } : {}),
       ...(row.cover_days != null ? { cover_days: row.cover_days } : {}),
     }} />
+      </>;
+    })()}
   </li>;
   return <section className="crop-recs">
     <h2>{t(afterCrop ? "recs.next" : "recs.title", { crop: cropName })}</h2>

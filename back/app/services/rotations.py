@@ -1119,6 +1119,15 @@ def recommend_crops(diagnosis, current, priorities, constraints, *, today=None):
                        "needs_irrigation": needs_irrigation,
                        "fits_frost": fits_frost,
                        "erosion": erosion, "different_family": different_family,
+                       "erosion_level": (None if erosion is None else "baja" if erosion < EROSION_MED
+                                         else "media" if erosion < EROSION_HIGH else "alta"),
+                       "bare_days": 365 - len(cycle),
+                       "drought_tolerance": crop.drought_tolerance,
+                       "heat_tolerance": crop.heat_tolerance,
+                       "frost_tolerance": crop.frost_tolerance,
+                       "root_depth_cm": crop.root_depth_cm,
+                       "residue_t_ha": crop.residue_t_ha,
+                       "n_fixation": crop.n_fixation,
                        "same_family": bool(previous and not different_family),
                        "conditional": bool(conditions), "conditions": conditions,
                        "source": crop.sources[0]})

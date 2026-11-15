@@ -209,12 +209,24 @@ export interface CropOutlook {
   effects: { el_nino: number; la_nina: number } | null;
 }
 
+type Level = "low" | "medium" | "high";
+
+/** Soil and water condition of the field today, from the diagnosis. */
+export interface CropLand {
+  texture?: string; carbon_g_kg?: number;
+  infiltration?: number; infiltration_class?: "alta" | "media" | "baja";
+  slope_pct?: number; heavy_rain_days?: number; root_moisture_pct?: number;
+  rain_30d_mm?: number; rain_30d_normal_mm?: number; rain_30d_pct?: number;
+  bare_soil_days?: number; groundwater?: string; heat_days?: number;
+}
+
 export interface CropRecommendations {
   status: "ok" | "missing_climate" | "missing_harvest" | "perennial" | "no_catalog";
   available_from: string | null;
   soil_data?: boolean;
   ranking_source?: "gemini" | "catalog";
   outlook?: CropOutlook | null;
+  land?: CropLand;
   regional_crops?: CropEntry[];
   options: {
     id: string; name: CropEntry["name"]; score: number; conditional: boolean;
@@ -223,6 +235,9 @@ export interface CropRecommendations {
     water_demand_mm: number; rain_mm: number | null; rain_period?: "cycle" | "year";
     cover_days?: number;
     balance_mm?: number; rain_wet_mm?: number;
+    bare_days?: number; erosion?: number | null; erosion_level?: "baja" | "media" | "alta" | null;
+    drought_tolerance?: Level; heat_tolerance?: Level; frost_tolerance?: Level;
+    root_depth_cm?: number | null; residue_t_ha?: number; n_fixation?: boolean;
     rain_expected_mm?: number; balance_expected_mm?: number;
     decision?: RankedDecision;
     needs_irrigation: boolean;

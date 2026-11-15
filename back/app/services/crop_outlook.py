@@ -6,12 +6,14 @@ each crop cycle. It is a historical tendency, never a forecast.
 """
 import asyncio
 import logging
+import re
 from datetime import date, timedelta
 
 from ..h3util import h3_r6
 from . import enso
 from . import field_sources as src
-from .rotations import _daily_rain_mm
+from .infiltration import infiltration_class
+from .rotations import _card, _daily_rain_mm, _soil_infiltration
 
 log = logging.getLogger(__name__)
 OUTLOOK_TIMEOUT = 20
@@ -77,6 +79,44 @@ def apply_outlook(result: dict, diag: dict, outlook: dict | None, *, today: date
             row["rain_expected_mm"] = round(rain + wet * effect / 100)
             row["balance_expected_mm"] = row["rain_expected_mm"] - row["water_demand_mm"]
     return result
+
+
+def _num(diag: dict, cid: str):
+    value = (_card(diag, cid) or {}).get("value")
+    return value if isinstance(value, (int, float)) and not isinstance(value, bool) else None
+
+
+def land_state(diag: dict) -> dict:
+    """The soil and water condition of the field today, only from what
+    the diagnosis measured (missing data is left out, never guessed)."""
+    land: dict = {}
+    soil = _card(diag, "soil") or {}
+    texture = soil.get("texture") or (soil.get("text") or "").split(";")[0].strip()
+    if _num(diag, "soil") is not None:
+        if texture:
+            land["texture"] = texture
+        land["carbon_g_kg"] = _num(diag, "soil")
+        score = _soil_infiltration(diag)
+        if score is not None:
+            land["infiltration"] = score
+            land["infiltration_class"] = infiltration_class(score)
+    for key, cid in (("slope_pct", "slope"), ("heavy_rain_days", "heavy_rain"),
+                     ("root_moisture_pct", "soil_moisture"), ("heat_days", "heat")):
+        if (value := _num(diag, cid)) is not None:
+            land[key] = value
+    recent = re.search(r"([\d.]+) mm \(media histórica ([\d.]+) mm\)",
+                       (_card(diag, "recent_weather") or {}).get("text") or "")
+    if recent:
+        rain, normal = float(recent.group(1)), float(recent.group(2))
+        land["rain_30d_mm"], land["rain_30d_normal_mm"] = rain, normal
+        if normal > 0:
+            land["rain_30d_pct"] = round(100 * rain / normal)
+    if (value := _num(diag, "vigor_bare_soil")) is not None:
+        land["bare_soil_days"] = value
+    trend = (_card(diag, "water_trend") or {}).get("value")
+    if isinstance(trend, str):
+        land["groundwater"] = trend
+    return land
 
 
 async def _rain_history(lat: float, lon: float, h3_r6: str) -> dict | None:

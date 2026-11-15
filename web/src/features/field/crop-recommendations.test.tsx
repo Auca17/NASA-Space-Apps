@@ -101,12 +101,24 @@ it("explains each option with its water balance and the coming season's ENSO sce
     options: [{ id: "soja", name: { es: "Soja" }, score: .9, conditional: false, conditions: [],
       sow_from: "2026-11-15", sow_until: "2026-12-10", rain_mm: 620, water_demand_mm: 500,
       balance_mm: 120, rain_wet_mm: 520, rain_expected_mm: 516, balance_expected_mm: 16,
-      cover_days: 150, fits_frost: true, different_family: true, same_family: false }] });
+      cover_days: 150, bare_days: 215, fits_frost: true, different_family: true, same_family: false,
+      erosion_level: "baja", drought_tolerance: "medium", heat_tolerance: "medium", root_depth_cm: 120,
+      residue_t_ha: 2.5, n_fixation: true }],
+    land: { texture: "Franco-arcilloso", carbon_g_kg: 19.5, infiltration: 40, infiltration_class: "media",
+            slope_pct: 3.8, heavy_rain_days: 2, root_moisture_pct: 46, rain_30d_mm: 50.9,
+            rain_30d_normal_mm: 106, rain_30d_pct: 48, bare_soil_days: 122, heat_days: 20 } });
   render(<I18nProvider><CropRecommendations {...props} observation={null} /></I18nProvider>);
   expect(await screen.findByText(/clima de la campaña 2026-27: la niña/i)).toBeInTheDocument();
   expect(screen.getByText(/tendencia histórica, no un pronóstico/i)).toBeInTheDocument();
   expect(screen.getByText(/620 mm de lluvia media contra 500 mm.*\+120 mm.*124 %/i)).toBeInTheDocument();
   expect(screen.getByText(/lluvia esperada es 516 mm y el saldo \+16 mm/i)).toBeInTheDocument();
   expect(screen.getByText(/período libre de heladas/i)).toBeInTheDocument();
-  expect(screen.getByText(/corta el ciclo de plagas/i)).toBeInTheDocument();
+  expect(screen.getByText(/rota con el cultivo anterior/i)).toBeVisible();
+  expect(screen.getByText(/la lluvia cubre la demanda del ciclo \(saldo \+16 mm\)/i)).toBeVisible();
+  fireEvent.click(screen.getByText("Detalle", { exact: true }));
+  expect(screen.getByRole("heading", { name: /estado del suelo del lote/i })).toBeVisible();
+  expect(screen.getByText(/suelo franco-arcilloso con 19,5 g\/kg de carbono orgánico/i)).toBeVisible();
+  expect(screen.getByText(/arranque con poca agua.*46 %.*50,9 mm contra 106 mm/i)).toBeVisible();
+  expect(screen.getByText(/el balance esperado sigue positivo \(\+16 mm\)/i)).toBeVisible();
+  expect(screen.getByText(/20 días al año por encima de 35 °c/i)).toBeVisible();
 });

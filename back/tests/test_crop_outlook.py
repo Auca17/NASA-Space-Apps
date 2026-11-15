@@ -157,3 +157,63 @@ def test_target_season_is_the_running_or_next_october_to_march():
     assert target_season(date(2026, 11, 15)) == (date(2026, 10, 1), date(2027, 3, 31))
     assert target_season(date(2027, 2, 1)) == (date(2026, 10, 1), date(2027, 3, 31))
     assert target_season(date(2027, 6, 1)) == (date(2027, 10, 1), date(2028, 3, 31))
+
+
+def real_like_diagnosis():
+    return {"zone": "pampa_humeda", "cards": [
+        {"id": "rain", "value": 1122.8, "rain_monthly_mm": [93.6] * 12},
+        {"id": "heavy_rain", "value": 2.0},
+        {"id": "frost", "value": 294, "text": "Período libre de heladas: 25/08 – 11/06"},
+        {"id": "heat", "value": 20.0},
+        {"id": "soil_moisture", "value": 46},
+        {"id": "vigor_bare_soil", "value": 122.0},
+        {"id": "slope", "value": 3.8},
+        {"id": "soil", "value": 19.5, "text": "Franco-arcilloso; MO 19.5 g/kg"},
+        {"id": "water_trend", "value": "flat"},
+        {"id": "recent_weather", "value": 1,
+         "text": "Últimos 30 días: 50.9 mm (media histórica 106 mm); última lluvia >1 mm hace 1 días"},
+    ]}
+
+
+def test_land_state_reads_the_soil_and_water_condition_of_the_field():
+    from back.app.services.crop_outlook import land_state
+    land = land_state(real_like_diagnosis())
+    assert land == {
+        "texture": "Franco-arcilloso", "carbon_g_kg": 19.5, "infiltration": land["infiltration"],
+        "infiltration_class": land["infiltration_class"], "slope_pct": 3.8, "heavy_rain_days": 2.0,
+        "root_moisture_pct": 46, "rain_30d_mm": 50.9, "rain_30d_normal_mm": 106.0,
+        "rain_30d_pct": 48, "bare_soil_days": 122.0, "groundwater": "flat", "heat_days": 20.0,
+    }
+    assert 0 <= land["infiltration"] <= 100
+    assert land["infiltration_class"] in {"alta", "media", "baja"}
+
+
+def test_land_state_omits_what_the_diagnosis_does_not_have():
+    from back.app.services.crop_outlook import land_state
+    land = land_state({"cards": [{"id": "slope", "value": 1.2},
+                                 {"id": "recent_weather", "value": None, "text": "Sin datos recientes"}]})
+    assert land == {"slope_pct": 1.2}
+
+
+def test_options_carry_the_crop_traits_used_in_the_explanation():
+    diag = real_like_diagnosis()
+    result = recommend_crops(diag, "fallow", {}, {}, today=date(2026, 11, 15))
+    soja = next(row for row in result["options"] if row["id"] == "soja")
+    assert soja["bare_days"] == 365 - soja["cover_days"]
+    assert soja["erosion_level"] in {"baja", "media", "alta"}
+    for key in ("drought_tolerance", "heat_tolerance", "frost_tolerance"):
+        assert soja[key] in {"low", "medium", "high"}
+    assert isinstance(soja["root_depth_cm"], int)
+    assert isinstance(soja["residue_t_ha"], (int, float))
+    assert soja["n_fixation"] is True
+
+
+@pytest.mark.asyncio
+async def test_recommendations_endpoint_returns_the_land_state(monkeypatch):
+    async def no_index(client=None):
+        return {}
+    monkeypatch.setattr(crop_outlook.enso, "fetch_oni", no_index)
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        response = await client.post("/api/field/recommendations", json={
+            "diagnosis": real_like_diagnosis(), "current": "fallow"})
+    assert response.json()["land"]["rain_30d_pct"] == 48
