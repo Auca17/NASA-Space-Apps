@@ -4,17 +4,25 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useT } from "../../i18n";
 import { apiLiveResult } from "../../api";
-import { summarizeLive, type LiveSummary } from "../../domain/live";
+import { summarizeLive, type LiveBody, type LiveSummary } from "../../domain/live";
 import { emergencyText } from "../../domain/risk";
+import {
+  DIRECTION_KEYS, livePoints, nearestDetection,
+  type NearbyDetection,
+} from "../../domain/emergency";
+import { EmergencyBlock } from "../emergency/EmergencyBlock";
 import type { GlobeHandle } from "../globe/GlobeView";
 
 const COLORS = ["interpolate", ["linear"], ["get", "n"],
   0, "#f6d746", 5, "#e0532a", 20, "#8c1d40"];
 
+/** Distance under which a point detection counts as "near" (task 26). */
+const NEAR_KM = 10;
+
 type State =
   | { kind: "loading" }
   | { kind: "error" }
-  | { kind: "done"; sum: LiveSummary; at: Date };
+  | { kind: "done"; sum: LiveSummary; at: Date; body: LiveBody };
 
 export function LiveControls({ globe, country }: {
   globe: GlobeHandle | null; country: string | null;
@@ -43,7 +51,7 @@ export function LiveControls({ globe, country }: {
     try { sum = summarizeLive(res.data, view); }
     catch { setState({ kind: "error" }); return; }
     globe.setCells(sum.cells, COLORS);
-    setState({ kind: "done", sum, at: new Date() });
+    setState({ kind: "done", sum, at: new Date(), body: res.data });
   }, [globe]);
 
   useEffect(() => { load(); }, [load, window_]);
@@ -53,6 +61,20 @@ export function LiveControls({ globe, country }: {
 
   const time = (d: Date) => d.toLocaleTimeString(lang === "en" ? "en" : "es",
     { hour: "2-digit", minute: "2-digit" });
+
+  // Task 26: a point detection within NEAR_KM of the reference (map
+  // centre / reticle) opens the emergency block with distance, compass
+  // direction and how long ago the satellite saw it.
+  const done = state.kind === "done" ? state : null;
+  const ref: [number, number] | null = globe?.center
+    ? [globe.center().lat, globe.center().lon] : null;
+  const near: NearbyDetection | null = done && ref
+    ? (() => {
+        const n = nearestDetection(livePoints(done.body), ref);
+        return n && n.km <= NEAR_KM ? n : null;
+      })()
+    : null;
+  const respCountry = done?.body.country ?? null;
 
   let msg: React.ReactNode;
   if (state.kind === "loading") msg = t("live.loading");
@@ -86,8 +108,25 @@ export function LiveControls({ globe, country }: {
       {state.kind === "done" && state.sum.failed.length > 0 && (
         <p className="notice" role="alert">
           {t("live.partial", { s: state.sum.failed.join(", ") })}</p>)}
+      {near && (
+        <div className="emerg-near">
+          <p><strong>{t("emerg.nearby")}</strong>{" — "}
+            {t("emerg.nearby.detail", {
+              km: new Intl.NumberFormat(lang === "en" ? "en" : "es",
+                { maximumFractionDigits: 1 }).format(near.km),
+              dir: t(DIRECTION_KEYS[near.dir]) })}
+            {near.hoursAgo != null && (
+              <span className="muted"> — {t("emerg.nearby.ago",
+                { h: Math.round(near.hoursAgo) })}</span>)}
+          </p>
+          <EmergencyBlock
+            country={respCountry ?? country}
+            mapCenter={globe ? { lat: globe.center().lat,
+                                 lon: globe.center().lon } : null}
+            detection={near} />
+        </div>)}
       <p className="notice" style={{ margin: 0 }}>
-        {t("live.notice")}<br />{emergencyText(country, t)}
+        {t("live.notice")}<br />{emergencyText(respCountry ?? country, t)}
       </p>
     </div>
   );

@@ -63,15 +63,48 @@ describe("OrinCard", () => {
     const real = data(false);
     Object.assign(real.variables[0], {
       rmse: 5.05, rmse_adjusted: 2.86, bias_adjusted: -0.72,
-      r_adjusted: 0.675,
+      r_adjusted: 0.675, reference_kind: "field",
       adjustment: "Corrección por altura de 6,5 °C/km" });
     render(<OrinCard data={real} t={t} fmt={fmt} />);
     expect(screen.getByText(/se equivoca en promedio 5,1 °C/))
       .toBeInTheDocument();
-    expect(screen.getByText(/Corregido por altura: 2,9 °C \(antes 5,1\)/))
+    expect(screen.getByText(
+      /Sin corregir se equivoca 5,1 °C\. Con la corrección por altura que aplica la app, 2,9 °C/))
+      .toBeInTheDocument();
+    expect(screen.getByText(/desviación media pasa de -1,1 a -0,7 °C/))
       .toBeInTheDocument();
     expect(screen.getByText(/valles de montaña confirmá las heladas/))
       .toBeInTheDocument();
+  });
+  it("marks rows with n < 5 as few measurements", () => {
+    const real = data(false);
+    real.variables[0].n = 4;
+    render(<OrinCard data={real} t={t} fmt={fmt} />);
+    expect(screen.getByText("pocas mediciones")).toBeInTheDocument();
+  });
+  it("finer-satellite rows show the resolution-mixing lesson", () => {
+    const real = data(false);
+    real.variables.push({
+      id: "ndvi",
+      satellite: { dataset: "MODIS MOD13Q1 NDVI", resolution: "250 m",
+                   period: "2025" },
+      field: { source: "Sentinel-2 de 10 m sobre un viñedo de 263 ha",
+               n_sites: 1 },
+      n: 18, rmse: 0.11, bias: -0.04, r: 0.71, unit: "NDVI",
+      quality: "fair", reference_kind: "finer_satellite",
+    });
+    render(<OrinCard data={real} t={t} fmt={fmt} />);
+    expect(screen.getAllByText(
+      /Sentinel-2 de 10 m sobre un viñedo de 263 ha/).length)
+      .toBeGreaterThan(0);
+    expect(screen.getByText(/mezcla hileras, suelo y sombra/))
+      .toBeInTheDocument();
+    expect(screen.queryByText(/comparado con 1 estaciones/i)).toBeNull();
+  });
+  it("no finer-satellite wording when the row is absent", () => {
+    render(<OrinCard data={data(false)} t={t} fmt={fmt} />);
+    expect(screen.queryByText(/mezcla hileras, suelo y sombra/)).toBeNull();
+    expect(screen.queryByText(/Sentinel-2/)).toBeNull();
   });
   it("hides entirely when the file is missing", () => {
     const { container } = render(

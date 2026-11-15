@@ -64,7 +64,7 @@ input[type="range"] { min-height: var(--touch); }
 }
 
 .map-wrap { position: relative; flex: 1; min-height: 0; }
-.map { position: absolute; inset: 0; }
+.map { position: absolute; inset: 0; background: #0a0d0b; }
 .home-button { border: 0; background: transparent; padding: 0;
   display: inline-flex; align-items: center; gap: 8px;
   font-weight: inherit; color: inherit; }
@@ -517,3 +517,26 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
 }
 .meth-link .ml-short { display: none; }
 @media (max-width: 600px) { .meth-link .ml-short { display: inline; } }
+
+/* Task 26 — emergency call block */
+.emerg { border: 1px solid var(--border); border-left: 4px solid #b3401e;
+  border-radius: var(--radius); padding: 12px; margin: 10px 0;
+  background: var(--panel); }
+.emerg-lead { margin-top: 0; }
+.emerg-calls { display: flex; flex-direction: column; gap: 8px; }
+.emerg-call { display: block; text-align: center; min-height: 48px;
+  padding: 12px 14px; border-radius: var(--radius); font-weight: 700;
+  font-size: 1.05rem; text-decoration: none; color: #fff;
+  background: #b3401e; }
+.emerg-call:hover { background: #9c3517; }
+.emerg-call:focus-visible { outline: 2px solid var(--focus);
+  outline-offset: 2px; }
+.emerg-say { margin: 10px 0; }
+.emerg-msg { width: 100%; font: inherit; padding: 8px;
+  border: 1px solid var(--border); border-radius: var(--radius);
+  background: var(--bg); color: var(--fg); }
+.emerg-preview, .emerg-src { margin-top: 6px; }
+.emerg-near { margin-top: 8px; }
+.emerg-generic { font-weight: 600; }
+.emerg-link { color: #b3401e; font-weight: 600; }
+.diag-degraded { border-left: 4px solid #b3401e; }

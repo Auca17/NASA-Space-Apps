@@ -4,6 +4,8 @@ import { APP_NAME, DEFAULT_VIEW, DEMO_PLOT, WORLD_VIEW } from "./config";
 import { WindLogo } from "./components/WindLogo";
 import { Welcome } from "./features/welcome/Welcome";
 import { MethodsDrawer } from "./features/methods/MethodsDrawer";
+import { EmergencyBlock } from "./features/emergency/EmergencyBlock";
+import { BottomSheet } from "./components/ui";
 import { useGlobe, type GlobeHandle, type Shape } from "./features/globe/GlobeView";
 import { HistoricControls } from "./features/fire/HistoricControls";
 import { cellsInCircle } from "./domain/h3area";
@@ -98,6 +100,7 @@ export default function App() {
   const [lots, setLots] = useState<OrinLots["features"]>([]);
   const [playingMonth, setPlayingMonth] = useState<string | null>(null);
   const [methodsOpen, setMethodsOpen] = useState(false);
+  const [emergOpen, setEmergOpen] = useState(false);
   const [view, setView] = useState<{ lat: number; lon: number; zoom: number;
     bbox: [number, number, number, number] } | null>(null);
   const country = useRef<string | null>(null);
@@ -508,6 +511,9 @@ export default function App() {
                   onClick={() => setMode("live")}>{t("nav.live")}</button>
         </nav>
         <div className="spacer" />
+        <button className="emerg-link"
+                onClick={() => setEmergOpen(true)}>
+          {t("emerg.nav")}</button>
         <button className="meth-link"
                 onClick={() => setMethodsOpen(true)}>
           <span className="ml-long">{t("meth.link")}</span>
@@ -658,6 +664,19 @@ export default function App() {
         </Suspense>)}
       <MethodsDrawer open={methodsOpen}
                      onClose={() => setMethodsOpen(false)} />
+      <BottomSheet open={emergOpen}>
+        <div className="panel-head">
+          <h3>{t("emerg.title")}</h3>
+          <button onClick={() => setEmergOpen(false)}
+                  aria-label={t("ui.close")}>✕</button>
+        </div>
+        <EmergencyBlock country={country.current}
+                        mapCenter={globe
+                          ? { lat: globe.center().lat,
+                              lon: globe.center().lon }
+                          : null}
+                        lead={t("emerg.lead")} />
+      </BottomSheet>
     </div>
   );
 }

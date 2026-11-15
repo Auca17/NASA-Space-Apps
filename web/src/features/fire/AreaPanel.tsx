@@ -17,6 +17,7 @@ import {
 } from "../../domain/semaphore";
 import { groupByShard } from "../../domain/h3area";
 import { presentRisk, emergencyText } from "../../domain/risk";
+import { EmergencyBlock } from "../emergency/EmergencyBlock";
 import { viridis, css } from "../../domain/colors";
 import { semaphorePeriod } from "../../domain/clarity";
 import type { MetaJson } from "../../api/types";
@@ -66,6 +67,8 @@ export function AreaPanel({ lat, lon, cells, open, onClose, country,
   const { t, lang } = useT();
   const [meta, setMeta] = useState<MetaJson | null>(null);
   const [risk, setRisk] = useState<ReturnType<typeof presentRisk> | null>(null);
+  /** ISO A2 from /api/risk — preferred over the app's geolocated guess. */
+  const [riskCountry, setRiskCountry] = useState<string | null>(null);
   const [cal, setCal] = useState<{ months: string[]; values: number[] } | null>(null);
   const [sem, setSem] = useState<SemaphoreResult | null>(null);
   /** Day the semaphore window ends on (today when it was computed). */
@@ -83,7 +86,10 @@ export function AreaPanel({ lat, lon, cells, open, onClose, country,
     if (!open) return;
     let dead = false;
     apiRisk(lat, lon).then((r) => {
-      if (!dead) setRisk(r ? presentRisk(r) : null);
+      if (!dead) {
+        setRisk(r ? presentRisk(r) : null);
+        setRiskCountry(r?.country ?? null);
+      }
     });
     (async () => {
       // cal first (small): renders the calendar without waiting on the
@@ -151,6 +157,8 @@ export function AreaPanel({ lat, lon, cells, open, onClose, country,
             ? t("sem.noBaseline")
             : t("sem.percentile", { p: sem.percentile })))
     : "";
+  const effCountry = riskCountry ?? country;
+  const riskHigh = risk ? ["alto", "muy_alto"].includes(risk.cat) : false;
 
   return (
     <BottomSheet open={open}>
@@ -190,8 +198,13 @@ export function AreaPanel({ lat, lon, cells, open, onClose, country,
           </>
         ) : <p className="muted">{t("panel.noData")}</p>}
         <p className="notice">{t("panel.disclaimer")}<br />
-          {emergencyText(country, t)}</p>
+          {emergencyText(effCountry, t)}</p>
       </Card>
+
+      {(riskHigh || sem?.category === "extremo") && (
+        <EmergencyBlock country={effCountry}
+                        mapCenter={{ lat, lon }}
+                        lead={t("emerg.lead")} />)}
 
       {sem && (
         <Card title={t("panel.semaphore", { d: windowDays })}>

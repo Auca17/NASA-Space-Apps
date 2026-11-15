@@ -130,6 +130,23 @@ def test_analog_missing_goes_to_gaps():
         assert not any(e["indicator"] == "analogs" for e in s["evidence"])
 
 
+def test_gaps_use_human_card_titles():
+    """Gap sentences name the card (Lluvia anual), never the raw id
+    (rain, heavy_rain, ...) that ends up on screen (task 30)."""
+    out = eng.run(DIAG, None, {"soil": 5}, {}, ZONE)
+    card_ids = {c["id"] for c in DIAG["cards"]}
+    for s in out["strategies"]:
+        assert s["gaps"], f"{s['id']} has no gaps to check"
+        for g in s["gaps"]:
+            first = g.split(":")[0].split(" (")[0]
+            # a bare raw id would be a single snake_case token
+            assert first not in card_ids, f"raw card id in gap: {g}"
+    joined = " | ".join(
+        g for s in out["strategies"] for g in s["gaps"])
+    assert "Humedad del suelo tiene resolución 9 km" in joined
+    assert "Sin dato de Cobertura del suelo" in joined
+
+
 async def test_rotations_endpoint_with_analog_shard(tmp_path, monkeypatch):
     import h3
     from app.cache import CACHE

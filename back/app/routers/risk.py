@@ -34,8 +34,10 @@ async def risk(lat: float = Query(...), lon: float = Query(...)):
     if cell is None:
         return _not_found(r5)
     from ..services.measures import evaluate
+    from ..services.georef import country_at
     msr = evaluate({"risk_cat": cell.get("cat")})
     return JSONResponse(
         {**cell, "h3_r5": r5, "generated_at": shard.get("generated_at"),
+         "country": (country_at(lat, lon) or {}).get("iso2"),
          **msr},
         headers={"Cache-Control": CACHE_CONTROL})

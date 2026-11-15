@@ -50,7 +50,7 @@ export function pointsCsvUrl(r2: string, year: number): string {
 // ------------------------------------------------------------- endpoints --
 
 export function apiRisk(lat: number, lon: number) {
-  return fetchJson<RiskCell & { h3_r5?: string }>(
+  return fetchJson<RiskCell & { h3_r5?: string; country?: string | null }>(
     apiUrl(`/api/risk?lat=${lat}&lon=${lon}`));
 }
 

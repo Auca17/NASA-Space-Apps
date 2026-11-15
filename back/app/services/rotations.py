@@ -498,6 +498,29 @@ def _analog_evidence(rot: Rotation, analog: dict | None) -> dict | None:
             "source": tgt.get("src") or "field/analogs"}
 
 
+# Card ids -> the same plain titles the front shows (`card.<id>` in
+# web/src/i18n). Gaps name the card, never its internal id.
+_CARD_TITLES = {
+    "rain": "Lluvia anual",
+    "heavy_rain": "Días de lluvia fuerte",
+    "soil_moisture": "Humedad del suelo",
+    "frost": "Período sin heladas",
+    "heat": "Días de calor extremo",
+    "crop_water": "Agua que pide el cultivo",
+    "vigor_bare_soil": "Cobertura del suelo",
+    "slope": "Pendiente",
+    "soil": "Suelo",
+    "water_trend": "Agua subterránea",
+    "fire": "Fuego en la zona",
+    "fire_weather": "Clima de fuego",
+    "recent_weather": "Últimas semanas",
+}
+
+
+def _card_title(c: dict) -> str:
+    return _CARD_TITLES.get(c.get("id") or "", c.get("id") or "la tarjeta")
+
+
 def _gaps(diag: dict, analog_missing: bool = False,
           extra: list[str] | None = None) -> list[str]:
     out = list(extra or [])
@@ -507,12 +530,13 @@ def _gaps(diag: dict, analog_missing: bool = False,
         out.append("Sin climatología mensual de lluvia: el balance "
                    "hídrico usa el promedio anual")
     for c in diag.get("cards", []):
+        title = _card_title(c)
         if c.get("value") is None:
-            out.append(f"Sin dato de {c['id']} ({c.get('source')})")
+            out.append(f"Sin dato de {title} ({c.get('source')})")
         elif c.get("confidence") == "low":
-            out.append(f"{c['id']} con confianza baja")
+            out.append(f"{title} con confianza baja")
         if c.get("resolution") in ("9 km", "0.5°×0.625°"):
-            out.append(f"{c['id']} tiene resolución {c['resolution']}: "
+            out.append(f"{title} tiene resolución {c['resolution']}: "
                        "no distingue diferencias dentro del lote")
     if analog_missing:
         return out[:3] + ["Sin datos de zonas análogas (field/analogs)"]
