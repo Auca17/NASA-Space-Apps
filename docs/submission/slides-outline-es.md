@@ -28,8 +28,8 @@ responde qué conviene sembrar, con datos de la NASA detrás de cada número".
 - Los datos de la NASA existen pero están dispersos entre productos, resoluciones y portales — nunca a escala de lote
 - En Argentina se suma la quema de rastrojos: daña el suelo y es fuente importante de focos de calor
 
-**Visual:** imagen satelital de un lote (NASA GIBS) o captura de la app sobre el
-lote de Pergamino.
+**Visual:** imagen satelital de un lote (NASA GIBS) o captura de la app sobre la
+finca de ejemplo en Mendoza.
 
 **Nota:** El problema no es falta de datos — es que nadie los traduce a la
 decisión que el productor tiene que tomar esta campaña.
@@ -40,8 +40,9 @@ decisión que el productor tiene que tomar esta campaña.
 - Diagnóstico por parcela: % fuego y % agua con el motivo, evaporación/ET0, infiltración, alertas
 - Rotación actual + 3 alternativas — cada tarjeta: por qué, evidencia, beneficios, vacíos, riesgos
 
-**Visual:** captura de la app con las 4 tarjetas de rotación de Pergamino, una
-abierta en sus 5 secciones (grabación).
+**Visual:** captura de la app con las 4 tarjetas de rotación de un punto en la
+pampa (vía "Analizar mi campo"; la finca demo de Mendoza no rota: viñedos y
+olivos), una abierta en sus 5 secciones (grabación).
 
 **Nota:** No es un dashboard más: responde una pregunta concreta y cada número
 muestra su fuente y resolución.
@@ -112,8 +113,8 @@ brief de Field Shift sobre vacíos de información e incertidumbre.
 - El fuego queda donde pertenece: un riesgo del lote, medido con la misma grilla (ver apéndice)
 - Datos de la NASA, traducidos a decisiones — apoyo a la decisión, no consejo agronómico
 
-**Visual:** `web/public/brand/ashfield-cover.png` o la app en el lote de
-Pergamino con las 4 tarjetas visibles.
+**Visual:** `web/public/brand/ashfield-cover.png` o la app sobre la finca de
+Mendoza con las parcelas y sus indicadores visibles.
 
 **Nota:** Cerrar con la promesa del producto: "¿Qué conviene sembrar? — esto es
 lo que la NASA puede decirte, y esto es lo que tenés que validar con tu agrónomo".
