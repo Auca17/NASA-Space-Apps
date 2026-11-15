@@ -36,13 +36,53 @@
           "phase_now": "la_nina",
           "oni": -0.6,
           "oni_period": "ASO 2026",
-          "rain_effect_pct": {"el_nino": 18, "la_nina": -22},
+          "rain_effect_pct": {
+            "el_nino": 18,
+            "la_nina": -22
+          },
           "basis": "ENSO según el índice ONI de NOAA: ahora La Niña (-0,6 °C). En esta zona, los años El Niño llovieron 18 % más que el promedio y los La Niña 22 % menos en octubre–marzo. Es una tendencia histórica, no un pronóstico."
         },
         "flood": {
           "heavy_rain_days_yr": 2.5,
           "low_slope": true,
           "basis": "2,5 días por año con lluvia fuerte (sobre 20 mm) y terreno casi plano: riesgo de anegamiento bajo pero no nulo tras tormentas."
+        },
+        "evaporation": {
+          "mm_per_year": 1240,
+          "monthly_mm": [
+            160,
+            150,
+            130,
+            95,
+            65,
+            45,
+            50,
+            65,
+            90,
+            120,
+            145,
+            165
+          ],
+          "balance_mm": {
+            "1": -68,
+            "2": -62,
+            "3": -45,
+            "4": -25,
+            "5": -18,
+            "6": -15,
+            "7": -12,
+            "8": -18,
+            "9": -28,
+            "10": -35,
+            "11": -48,
+            "12": -60
+          },
+          "basis": "Cuánta agua pierde el suelo y las plantas al aire por año (NASA POWER EVLAND, mm/día sumada por mes y por año); el balance mensual es lluvia menos evaporación en mm."
+        },
+        "infiltration": {
+          "class": "media",
+          "score": 56,
+          "basis": "Puntaje 0-100 a partir de textura Franco, MO 17 g/kg, pendiente 0,4°, 60 días/año de suelo desnudo (grupos hidrológicos de suelo USDA; fórmula en knowledge/README). Ordena el riesgo relativo, no es una medición."
         }
       },
       "alerts": [
@@ -52,8 +92,21 @@
           "text": "Hay un foco satelital a 4,2 km del lote. Llamá al 100 (bomberos) si ves fuego o humo, mantené los guardafuegos despejados y no quemes rastrojos."
         }
       ],
-      "order": ["fire", "enso", "drought", "frost", "heat", "snow", "hail"],
-      "extra": [{"id": "flood", "hidden": true}],
+      "order": [
+        "fire",
+        "enso",
+        "drought",
+        "frost",
+        "heat",
+        "snow",
+        "hail"
+      ],
+      "extra": [
+        {
+          "id": "flood",
+          "hidden": true
+        }
+      ],
       "economics": {
         "currency": "USD",
         "expected_yield_t_ha": 4.0,
@@ -103,13 +156,53 @@
           "phase_now": "la_nina",
           "oni": -0.6,
           "oni_period": "ASO 2026",
-          "rain_effect_pct": {"el_nino": 18, "la_nina": -22},
+          "rain_effect_pct": {
+            "el_nino": 18,
+            "la_nina": -22
+          },
           "basis": "ENSO según el índice ONI de NOAA: ahora La Niña (-0,6 °C). En esta zona, los años El Niño llovieron 18 % más que el promedio y los La Niña 22 % menos en octubre–marzo. Es una tendencia histórica, no un pronóstico."
         },
         "flood": {
           "heavy_rain_days_yr": 2.5,
           "low_slope": true,
           "basis": "2,5 días por año con lluvia fuerte (sobre 20 mm) y terreno casi plano: riesgo de anegamiento bajo pero no nulo tras tormentas."
+        },
+        "evaporation": {
+          "mm_per_year": 1240,
+          "monthly_mm": [
+            160,
+            150,
+            130,
+            95,
+            65,
+            45,
+            50,
+            65,
+            90,
+            120,
+            145,
+            165
+          ],
+          "balance_mm": {
+            "1": -68,
+            "2": -62,
+            "3": -45,
+            "4": -25,
+            "5": -18,
+            "6": -15,
+            "7": -12,
+            "8": -18,
+            "9": -28,
+            "10": -35,
+            "11": -48,
+            "12": -60
+          },
+          "basis": "Cuánta agua pierde el suelo y las plantas al aire por año (NASA POWER EVLAND, mm/día sumada por mes y por año); el balance mensual es lluvia menos evaporación en mm."
+        },
+        "infiltration": {
+          "class": "media",
+          "score": 56,
+          "basis": "Puntaje 0-100 a partir de textura Franco, MO 17 g/kg, pendiente 0,4°, 60 días/año de suelo desnudo (grupos hidrológicos de suelo USDA; fórmula en knowledge/README). Ordena el riesgo relativo, no es una medición."
         }
       },
       "alerts": [
@@ -119,8 +212,21 @@
           "text": "El suelo está más seco que lo normal y el lote tiene maíz. Sin acceso a agua: priorizá el riego o el monitoreo en esta parcela."
         }
       ],
-      "order": ["drought", "enso", "fire", "frost", "heat", "snow", "hail"],
-      "extra": [{"id": "flood", "hidden": true}],
+      "order": [
+        "drought",
+        "enso",
+        "fire",
+        "frost",
+        "heat",
+        "snow",
+        "hail"
+      ],
+      "extra": [
+        {
+          "id": "flood",
+          "hidden": true
+        }
+      ],
       "economics": {
         "currency": "USD",
         "expected_yield_t_ha": 6.08,
@@ -170,18 +276,71 @@
           "phase_now": "la_nina",
           "oni": -0.6,
           "oni_period": "ASO 2026",
-          "rain_effect_pct": {"el_nino": 18, "la_nina": -22},
+          "rain_effect_pct": {
+            "el_nino": 18,
+            "la_nina": -22
+          },
           "basis": "ENSO según el índice ONI de NOAA: ahora La Niña (-0,6 °C). En esta zona, los años El Niño llovieron 18 % más que el promedio y los La Niña 22 % menos en octubre–marzo. Es una tendencia histórica, no un pronóstico."
         },
         "flood": {
           "heavy_rain_days_yr": 2.5,
           "low_slope": true,
           "basis": "2,5 días por año con lluvia fuerte (sobre 20 mm) y terreno casi plano: riesgo de anegamiento bajo pero no nulo tras tormentas."
+        },
+        "evaporation": {
+          "mm_per_year": 1240,
+          "monthly_mm": [
+            160,
+            150,
+            130,
+            95,
+            65,
+            45,
+            50,
+            65,
+            90,
+            120,
+            145,
+            165
+          ],
+          "balance_mm": {
+            "1": -68,
+            "2": -62,
+            "3": -45,
+            "4": -25,
+            "5": -18,
+            "6": -15,
+            "7": -12,
+            "8": -18,
+            "9": -28,
+            "10": -35,
+            "11": -48,
+            "12": -60
+          },
+          "basis": "Cuánta agua pierde el suelo y las plantas al aire por año (NASA POWER EVLAND, mm/día sumada por mes y por año); el balance mensual es lluvia menos evaporación en mm."
+        },
+        "infiltration": {
+          "class": "media",
+          "score": 56,
+          "basis": "Puntaje 0-100 a partir de textura Franco, MO 17 g/kg, pendiente 0,4°, 60 días/año de suelo desnudo (grupos hidrológicos de suelo USDA; fórmula en knowledge/README). Ordena el riesgo relativo, no es una medición."
         }
       },
       "alerts": [],
-      "order": ["enso", "fire", "drought", "frost", "heat", "snow", "hail"],
-      "extra": [{"id": "flood", "hidden": true}]
+      "order": [
+        "enso",
+        "fire",
+        "drought",
+        "frost",
+        "heat",
+        "snow",
+        "hail"
+      ],
+      "extra": [
+        {
+          "id": "flood",
+          "hidden": true
+        }
+      ]
     }
   ],
   "zones": [
@@ -191,15 +350,65 @@
         "type": "Polygon",
         "coordinates": [
           [
-            [-60.5122, -33.8814], [-60.5130, -33.8807], [-60.5141, -33.8804],
-            [-60.5152, -33.8807], [-60.5160, -33.8814], [-60.5163, -33.8825],
-            [-60.5160, -33.8836], [-60.5152, -33.8843], [-60.5141, -33.8846],
-            [-60.5130, -33.8843], [-60.5122, -33.8836], [-60.5119, -33.8825],
-            [-60.5122, -33.8814]
+            [
+              -60.5122,
+              -33.8814
+            ],
+            [
+              -60.513,
+              -33.8807
+            ],
+            [
+              -60.5141,
+              -33.8804
+            ],
+            [
+              -60.5152,
+              -33.8807
+            ],
+            [
+              -60.516,
+              -33.8814
+            ],
+            [
+              -60.5163,
+              -33.8825
+            ],
+            [
+              -60.516,
+              -33.8836
+            ],
+            [
+              -60.5152,
+              -33.8843
+            ],
+            [
+              -60.5141,
+              -33.8846
+            ],
+            [
+              -60.513,
+              -33.8843
+            ],
+            [
+              -60.5122,
+              -33.8836
+            ],
+            [
+              -60.5119,
+              -33.8825
+            ],
+            [
+              -60.5122,
+              -33.8814
+            ]
           ]
         ]
       },
-      "center": [-60.5141, -33.8825],
+      "center": [
+        -60.5141,
+        -33.8825
+      ],
       "radius_m": 375,
       "pct": null,
       "label": "Foco detectado por satélite",
@@ -212,13 +421,41 @@
         "type": "Polygon",
         "coordinates": [
           [
-            [-60.6095, -33.8283], [-60.6003, -33.8367], [-60.5842, -33.8362],
-            [-60.5750, -33.8278], [-60.5842, -33.8194], [-60.6003, -33.8199],
-            [-60.6095, -33.8283]
+            [
+              -60.6095,
+              -33.8283
+            ],
+            [
+              -60.6003,
+              -33.8367
+            ],
+            [
+              -60.5842,
+              -33.8362
+            ],
+            [
+              -60.575,
+              -33.8278
+            ],
+            [
+              -60.5842,
+              -33.8194
+            ],
+            [
+              -60.6003,
+              -33.8199
+            ],
+            [
+              -60.6095,
+              -33.8283
+            ]
           ]
         ]
       },
-      "center": [-60.5922, -33.8280],
+      "center": [
+        -60.5922,
+        -33.828
+      ],
       "radius_m": null,
       "pct": 62,
       "label": "Zona de riesgo alto de fuego",
@@ -231,12 +468,33 @@
         "type": "Polygon",
         "coordinates": [
           [
-            [-60.63, -33.898], [-60.565, -33.898], [-60.565, -33.886],
-            [-60.63, -33.886], [-60.63, -33.898]
+            [
+              -60.63,
+              -33.898
+            ],
+            [
+              -60.565,
+              -33.898
+            ],
+            [
+              -60.565,
+              -33.886
+            ],
+            [
+              -60.63,
+              -33.886
+            ],
+            [
+              -60.63,
+              -33.898
+            ]
           ]
         ]
       },
-      "center": [-60.5975, -33.892],
+      "center": [
+        -60.5975,
+        -33.892
+      ],
       "radius_m": null,
       "pct": 12,
       "label": "Suelo más seco que lo normal (maiz)",
@@ -249,13 +507,41 @@
         "type": "Polygon",
         "coordinates": [
           [
-            [-60.6281, -33.9056], [-60.6189, -33.9140], [-60.6028, -33.9135],
-            [-60.5936, -33.9051], [-60.6028, -33.8967], [-60.6189, -33.8972],
-            [-60.6281, -33.9056]
+            [
+              -60.6281,
+              -33.9056
+            ],
+            [
+              -60.6189,
+              -33.914
+            ],
+            [
+              -60.6028,
+              -33.9135
+            ],
+            [
+              -60.5936,
+              -33.9051
+            ],
+            [
+              -60.6028,
+              -33.8967
+            ],
+            [
+              -60.6189,
+              -33.8972
+            ],
+            [
+              -60.6281,
+              -33.9056
+            ]
           ]
         ]
       },
-      "center": [-60.6108, -33.9054],
+      "center": [
+        -60.6108,
+        -33.9054
+      ],
       "radius_m": null,
       "pct": 88,
       "label": "Suelo desnudo la mayor parte del año",
@@ -285,7 +571,7 @@
         "name": "Arroyo Pergamino",
         "kind": "river",
         "distance_km": 4.2,
-        "lon": -60.5890,
+        "lon": -60.589,
         "lat": -33.9102
       }
     ],

@@ -57,8 +57,9 @@ async def test_diagnose_all_sources_ok(monkeypatch):
     body = r.json()
     ids = [c["id"] for c in body["cards"]]
     assert ids == ["rain", "heavy_rain", "frost", "heat", "soil_moisture",
-                   "crop_water", "vigor_bare_soil", "slope", "soil",
-                   "water_trend", "fire", "fire_weather", "recent_weather"]
+                   "crop_water", "evaporation", "vigor_bare_soil",
+                   "slope", "soil", "infiltration", "water_trend",
+                   "fire", "fire_weather", "recent_weather"]
     assert all(k in body["cards"][0] for k in
                ("value", "unit", "text", "source", "resolution", "confidence"))
     assert body["h3_r5"] and body["h3_r6"]

@@ -744,6 +744,209 @@
         "MAGyP, Estimaciones Agrícolas (área, rinde y avance de siembra/cosecha por delegación)",
         "Rastrojo estimado = rinde medio × (1 − IC) / IC; rinde MAGyP Estimaciones Agrícolas, índice de cosecha (IC) de bibliografía — borrador a validar (REVIEW.md)"
       ]
+    },
+    {
+      "id": "vid",
+      "name": {
+        "es": "Vid (vinificación)",
+        "en": "Grapevine (wine)"
+      },
+      "family": "Vitaceae",
+      "color": "#7b2d8b",
+      "icon": "grape",
+      "rotatable": false,
+      "sowing": {},
+      "harvest": {
+        "cuyo": [
+          "02-15",
+          "04-30"
+        ]
+      },
+      "cycle_end": {
+        "cuyo": "04-15"
+      },
+      "frost_window": {
+        "cuyo": [
+          "09-01",
+          "11-15"
+        ]
+      },
+      "gdd_base10": null,
+      "frost_tolerance": "low",
+      "drought_tolerance": "high",
+      "heat_tolerance": "high",
+      "water_mm_cycle": 550,
+      "root_depth_cm": 110,
+      "n_fixation": false,
+      "residue_t_ha": 0.0,
+      "residue_note": "perenne; poda anual ~1-2 t MS/ha sin valor normalizado",
+      "forage": false,
+      "market_ar": "medium",
+      "sources": [
+        "FAO-56, Allen et al. (1998), Crop evapotranspiration, tabla 12 (Kc vid 0,30 ini / 0,70 mid / 0,45 end) — ETc estacional Mendoza ~450–700 mm (punto medio 550) — pendiente de validación local (REVIEW.md)",
+        "FAO-56, tabla 22: profundidad radicular vid 1,0–2,0 m (punto medio con riego 1,1 m)",
+        "INTA EEA Mendoza/Junín: ventana de brotación–cuajado sep–nov, sensible a heladas tardías — pendiente de validación local (REVIEW.md)",
+        "FAO ECOCROP: tolerancias cualitativas"
+      ]
+    },
+    {
+      "id": "olivo",
+      "name": {
+        "es": "Olivo",
+        "en": "Olive"
+      },
+      "family": "Oleaceae",
+      "color": "#5f7a3a",
+      "icon": "olive",
+      "rotatable": false,
+      "sowing": {},
+      "harvest": {
+        "cuyo": [
+          "03-01",
+          "06-15"
+        ]
+      },
+      "cycle_end": {
+        "cuyo": "05-31"
+      },
+      "frost_window": {
+        "cuyo": [
+          "09-15",
+          "11-30"
+        ]
+      },
+      "gdd_base10": null,
+      "frost_tolerance": "medium",
+      "drought_tolerance": "high",
+      "heat_tolerance": "high",
+      "water_mm_cycle": 700,
+      "root_depth_cm": 120,
+      "n_fixation": false,
+      "residue_t_ha": 0.0,
+      "residue_note": "perenne leñoso; poda sin valor normalizado",
+      "forage": false,
+      "market_ar": "medium",
+      "sources": [
+        "FAO-56, Allen et al. (1998), Crop evapotranspiration, tabla 12 (Kc olivo ~0,65 todo el año): ETc anual ~600–900 mm (punto medio 700) — pendiente de validación local (REVIEW.md)",
+        "FAO-56, tabla 22: profundidad radicular olivo 1,0–1,7 m",
+        "FAO ECOCROP: tolerancias cualitativas; floración oct–nov sensible a helada — pendiente de validación local (REVIEW.md)"
+      ]
+    },
+    {
+      "id": "ajo",
+      "name": {
+        "es": "Ajo",
+        "en": "Garlic"
+      },
+      "family": "Amaryllidaceae",
+      "color": "#d9d3b8",
+      "icon": "garlic",
+      "rotatable": true,
+      "sowing": {
+        "cuyo": [
+          "02-15",
+          "05-15"
+        ]
+      },
+      "harvest": {
+        "cuyo": [
+          "10-15",
+          "12-15"
+        ]
+      },
+      "cycle_end": {
+        "cuyo": "11-30"
+      },
+      "frost_window": {},
+      "gdd_base10": null,
+      "frost_tolerance": "high",
+      "drought_tolerance": "low",
+      "heat_tolerance": "medium",
+      "water_mm_cycle": 450,
+      "root_depth_cm": 30,
+      "n_fixation": false,
+      "residue_t_ha": 0.5,
+      "residue_note": "rastrojo de ajo bajo, orden de magnitud — borrador a validar (REVIEW.md)",
+      "forage": false,
+      "market_ar": "medium",
+      "sources": [
+        "FAO-56, Allen et al. (1998), Crop evapotranspiration: ETc ajo ~350–500 mm ciclo (punto medio 450) — pendiente de validación local (REVIEW.md)",
+        "FAO-56, tabla 22: profundidad radicular ajo 0,3–0,5 m",
+        "INTA EEA Mendoza (cuenca sur): calendario ajo siembra otoño, cosecha nov–dic — pendiente de validación local (REVIEW.md)"
+      ]
+    },
+    {
+      "id": "frutal_carozo",
+      "name": {
+        "es": "Frutales de carozo (durazno, ciruela, cereza)",
+        "en": "Stone fruit (peach, plum, cherry)"
+      },
+      "family": "Rosaceae",
+      "color": "#d96a4e",
+      "icon": "peach",
+      "rotatable": false,
+      "sowing": {},
+      "harvest": {
+        "cuyo": [
+          "12-01",
+          "03-31"
+        ]
+      },
+      "cycle_end": {
+        "cuyo": "03-15"
+      },
+      "frost_window": {
+        "cuyo": [
+          "08-15",
+          "10-31"
+        ]
+      },
+      "gdd_base10": null,
+      "frost_tolerance": "low",
+      "drought_tolerance": "medium",
+      "heat_tolerance": "high",
+      "water_mm_cycle": 800,
+      "root_depth_cm": 100,
+      "n_fixation": false,
+      "residue_t_ha": 0.0,
+      "residue_note": "perenne leñoso; poda sin valor normalizado",
+      "forage": false,
+      "market_ar": "low",
+      "sources": [
+        "FAO-56, Allen et al. (1998), Crop evapotranspiration, tabla 12 (Kc frutales de hoja caduca ~0,45 ini / 0,90 mid): ETc estacional ~700–900 mm (punto medio 800) — pendiente de validación local (REVIEW.md)",
+        "FAO-56, tabla 22: profundidad radicular frutales de carozo 1,0–2,0 m",
+        "Floración ago–sep muy sensible a heladas tardías (conocimiento agronómico general) — pendiente de validación local (REVIEW.md)"
+      ]
+    },
+    {
+      "id": "monte_nativo",
+      "name": {
+        "es": "Monte nativo",
+        "en": "Native woodland"
+      },
+      "family": "Fabaceae",
+      "color": "#4a6741",
+      "icon": "tree",
+      "rotatable": false,
+      "sowing": {},
+      "harvest": {},
+      "cycle_end": {},
+      "frost_window": {},
+      "gdd_base10": null,
+      "frost_tolerance": "high",
+      "drought_tolerance": "high",
+      "heat_tolerance": "high",
+      "water_mm_cycle": 350,
+      "root_depth_cm": 200,
+      "n_fixation": true,
+      "residue_t_ha": 0.0,
+      "residue_note": "cobertura nativa (algarrobo/chañar); no se cosecha",
+      "forage": true,
+      "market_ar": "low",
+      "sources": [
+        "Uso hídrico del monte (Prosopis/Chilean mesquite) ~300–400 mm anuales bajo secano — orden de magnitud bibliográfico, pendiente de validación local (REVIEW.md)",
+        "FAO ECOCROP: tolerancias cualitativas; especies nativas fijadoras de N (Prosopis)"
+      ]
     }
   ]
 }

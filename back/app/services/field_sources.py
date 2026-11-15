@@ -27,6 +27,7 @@ POWER_DAILY_TIMEOUT = 5.0  # D25 exception
 POWER_PARAMS = [
     "PRECTOTCORR", "T2M_MAX", "T2M_MIN", "RH2M", "WS2M",
     "GWETTOP", "GWETROOT", "GWETPROF", "EVPTRNS", "PRECSNOLAND",
+    "EVLAND",
 ]
 
 SOILGRIDS_URL = "https://rest.isric.org/soilgrids/v2.0/properties/query"

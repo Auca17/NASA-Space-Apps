@@ -27,9 +27,12 @@ from ..services.data import risk_shard
 from ..services.georef import zone_at
 from ..services.nearby import nearby
 from ..services import enso
+from ..services.infiltration import (infiltration_class,
+                                     infiltration_score)
 from ..services.knowledge import KNOWLEDGE
 from .field import (_json_body, _err, _self_intersects, parse_plot,
                     days_per_year, frost_free_window,
+                    rain_monthly_mm, monthly_sum_clim,
                     temp_adjust_for, DEGRADED_REASON)
 
 log = logging.getLogger("parcels")
@@ -318,25 +321,81 @@ def frost_indicator(grid_cell: dict | None, power: dict | None,
     ff = (grid_cell or {}).get("frost_free")
     days = _ff_days(ff)
     if days is not None:
-        return {"frost_free_days": days,
+        return {"frost_free_days": days, "window": ff,
                 "basis": "Días del año entre la última helada de "
                          "primavera y la primera de otoño (mediana "
                          "de años completos, NASA POWER, con "
                          "corrección por altura)." + shared_note}
     if grid_cell and "frost_free" in grid_cell:
-        return {"frost_free_days": 365,
+        return {"frost_free_days": 365, "window": None,
                 "basis": "No se miden heladas: todo el año es libre "
                          "de heladas en la historia de esta zona."
                 + shared_note}
     if power and power.get("T2M_MIN"):
-        days = _ff_days(frost_free_window(power["T2M_MIN"]))
+        win = frost_free_window(power["T2M_MIN"])
+        days = _ff_days(win)
         if days is not None:
-            return {"frost_free_days": days,
+            return {"frost_free_days": days, "window": win,
                     "basis": "Días del año entre la última helada de "
                              "primavera y la primera de otoño "
                              "(NASA POWER)." + shared_note}
-    return {"frost_free_days": None,
+    return {"frost_free_days": None, "window": None,
             "basis": "Sin datos de heladas." + shared_note}
+
+
+def evaporation_indicator(power: dict | None, shared_note: str = ""):
+    """Annual evaporation (POWER EVLAND, mm/day), the monthly profile
+    and the implied monthly water balance (rain - evaporation, mm)."""
+    ev = (power or {}).get("EVLAND")
+    if not ev:
+        return {"mm_per_year": None, "monthly_mm": None,
+                "balance_mm": None,
+                "basis": "Sin datos de evaporación: el servicio de "
+                         "clima no devolvió el parámetro EVLAND."
+                + shared_note}
+    by_year: dict[int, list[float]] = {}
+    for d, v in ev.items():
+        if v is not None:
+            by_year.setdefault(d.year, []).append(v)
+    years = [vs for vs in by_year.values() if len(vs) >= 300]
+    annual = statistics.fmean(sum(vs) for vs in years) if years else None
+    wb = monthly_sum_clim((power or {}).get("PRECTOTCORR") or {}, ev)
+    return {
+        "mm_per_year": round(annual) if annual is not None else None,
+        "monthly_mm": rain_monthly_mm(ev),
+        "balance_mm": ({m: v["balance_mm"] for m, v in wb.items()}
+                       if wb else None),
+        "basis": "Cuánta agua pierde el suelo y las plantas al aire "
+                 "por año (NASA POWER EVLAND, mm/día sumada por mes y "
+                 "por año); el balance mensual es lluvia menos "
+                 "evaporación en mm." + shared_note}
+
+
+def infiltration_indicator(grid_cell: dict | None, terr: dict | None,
+                           shared_note: str = ""):
+    """Soil texture + organic carbon + slope + bare-soil days -> 0-100
+    score and alta/media/baja class (formula: knowledge/README)."""
+    soil = (grid_cell or {}).get("soil") or {}
+    tex = soil.get("texture")
+    soc = soil.get("soc_g_kg")
+    slope = (terr or {}).get("slope")  # mean slope %, Terrarium SRTM
+    bare = (grid_cell or {}).get("bare_soil_days_yr")
+    score = infiltration_score(tex, soc, slope, bare)
+    if score is None:
+        return {"class": None, "score": None,
+                "basis": "Sin datos de suelo, pendiente ni cobertura "
+                         "para estimar la infiltración." + shared_note}
+    parts = [f"textura {tex}" if tex else "textura desconocida",
+             f"MO {soc:g} g/kg" if soc is not None else None,
+             f"pendiente {slope:g} %" if slope is not None else None,
+             f"{bare:g} días/año de suelo desnudo"
+             if bare is not None else None]
+    return {"class": infiltration_class(score), "score": score,
+            "basis": "Puntaje 0-100 a partir de " +
+                     ", ".join(p for p in parts if p) +
+                     " (grupos hidrológicos de suelo USDA; fórmula en "
+                     "knowledge/README). Ordena el riesgo relativo, "
+                     "no es una medición." + shared_note}
 
 
 def snow_indicator(power: dict | None, shared_note: str = ""):
@@ -380,7 +439,7 @@ def flood_indicator(grid_cell: dict | None, terr: dict | None,
     terreno. No hay dataset de inundaciones; esto solo ordena el
     riesgo relativo."""
     heavy = (grid_cell or {}).get("heavy_days_yr")
-    slope = (terr or {}).get("slope_deg")
+    slope = (terr or {}).get("slope")  # mean slope %, Terrarium SRTM
     if heavy is None and slope is None:
         return {"available": False,
                 "basis": "Sin datos suficientes para estimar "
@@ -517,9 +576,49 @@ def _fire_number(country: str | None) -> str:
     return FIRE_NUMBER.get(country or "", "emergencias")
 
 
+def _doy(mmdd: str) -> int:
+    m, d = map(int, mmdd.split("-"))
+    return date(2001, m, d).timetuple().tm_yday
+
+
+def _in_window(doy: int, start: int, end: int) -> bool:
+    return start <= doy <= end if start <= end \
+        else doy >= start or doy <= end
+
+
+def _window_doys(ws: int, we: int) -> range:
+    return range(ws, we + 1) if we >= ws else range(0)
+
+
+def _frost_window_alert(crop_obj, zone: str | None, ff: dict | None,
+                        crop_name: str) -> dict | None:
+    """Alert when the crop's frost-sensitive window (catalog) is not
+    fully covered by the frost-free window of this cell."""
+    win = (crop_obj.frost_window.get(zone)
+           if crop_obj and zone else None) or (
+        next(iter(crop_obj.frost_window.values()), None)
+        if crop_obj else None)
+    if not win or not ff or not ff.get("start") or not ff.get("end"):
+        return None
+    ws, we = _doy(win[0]), _doy(win[1])
+    fs, fe = _doy(ff["start"]), _doy(ff["end"])
+    days = _window_doys(ws, we) if we >= ws else \
+        list(range(ws, 366)) + list(range(1, we + 1))
+    exposed = sum(1 for d in days if not _in_window(d, fs, fe))
+    if exposed < 7:
+        return None
+    return {
+        "kind": "frost", "severity": "medium",
+        "text": f"El/La {crop_name} pasa su etapa más sensible entre "
+                f"{win[0]} y {win[1]}; la última helada típica de esta "
+                f"zona cae el {ff['start']} — unos {exposed} días "
+                "sensibles quedan expuestos a heladas tardías."}
+
+
 def build_alerts(ind: dict, crop: str, crop_name: str,
                  needs: dict, det_km: float | None,
-                 country: str | None) -> list[dict]:
+                 country: str | None, crop_obj=None,
+                 zone: str | None = None) -> list[dict]:
     out = []
     fire = ind["fire"]
     num = _fire_number(country)
@@ -567,6 +666,10 @@ def build_alerts(ind: dict, crop: str, crop_name: str,
             "kind": "frost", "severity": "medium",
             "text": f"Período sin heladas corto ({ffd} días): cuidado "
                     "con siembras tardías y cultivos de ciclo largo."})
+    cw = _frost_window_alert(crop_obj, zone,
+                             ind["frost"].get("window"), crop_name)
+    if cw:
+        out.append(cw)
     return out
 
 
@@ -952,12 +1055,16 @@ async def parcels(request: Request):
             "enso": enso.indicator(
                 oni, (power or {}).get("PRECTOTCORR")),
             "flood": flood_indicator(grid_cell, terr, note),
+            "evaporation": evaporation_indicator(power, note),
+            "infiltration": infiltration_indicator(grid_cell, terr,
+                                                   note),
         }
         cinfo = KNOWLEDGE.crops.get(p["crop"])
         cname = ((cinfo.name or {}).get(lang)
                  if cinfo and cinfo.name else p["crop"])
         alerts = build_alerts(ind, p["crop"], cname or p["crop"],
-                              needs, det_km, g["country"])
+                              needs, det_km, g["country"],
+                              crop_obj=cinfo, zone=g["zone"])
         order, extra = compute_order(ind, alerts, profile)
         row = {"id": p["id"], "crop": p["crop"],
                "area_ha": round(p["_ha"], 1),
