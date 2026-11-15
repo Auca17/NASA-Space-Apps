@@ -1,6 +1,6 @@
 /** Presentation helpers for the rotations response (pure, testable). */
 import type { Card as DiagCard, DiagnoseResponse,
-               Strategy } from "../api/types";
+               RotationEntry, Strategy } from "../api/types";
 
 /** One cereal swap that makes two catalog rotations near-identical. */
 const CEREAL_SWAPS: ReadonlySet<string> = new Set(["trigo", "cebada"]);
@@ -115,6 +115,83 @@ export function prioWeights(selected: string[]): Record<string, number> {
     const i = selected.indexOf(p);
     return [p, i >= 0 ? CHIP_WEIGHTS[i] : 0];
   }));
+}
+
+/* --- hazard profile -> rotation priorities (one model, task 52) ----- */
+
+/** Parcel-profile hazard ids that act through the engine's viability
+ * inputs (frost window, heat tolerance), not through priority weights:
+ * they are surfaced as a warning on the rotation cards. */
+export const CONSTRAINT_HAZARDS = ["frost", "heat"] as const;
+/** Hazard ids with no rotation-priority mapping; the UI says so. */
+export const UNMAPPED_ROT_HAZARDS = ["snow", "hail"] as const;
+
+const HAZARD_PRIO: Readonly<Record<string, readonly PriorityId[]>> = {
+  drought: ["water"],
+  enso: ["water"],           // El Niño/La Niña shifts the water balance
+  fire: ["avoid_burning"],
+  flood: ["erosion", "soil"],
+};
+
+/** Map the farmer's hazard ranking (profile.order, most important
+ * first) to at most three rotation priorities. Hazards the farmer
+ * hid (`profile.hidden` = "not a worry") are skipped entirely —
+ * otherwise a hidden flood would always land erosion and `income`
+ * could never surface. `income` fills the third slot when economics
+ * were declared and room is left. Returns also the hazards that act
+ * as constraints (warn) and the ones with no mapping (unmapped) so
+ * the UI can say it honestly. */
+export function deriveRotPriorities(
+    order: readonly string[], hasEcon: boolean,
+    hidden: readonly string[] = []): {
+      sel: PriorityId[]; warn: string[]; unmapped: string[] } {
+  const sel: PriorityId[] = [];
+  const warn: string[] = [];
+  const unmapped: string[] = [];
+  for (const h of order) {
+    if (hidden.includes(h)) continue;
+    if ((UNMAPPED_ROT_HAZARDS as readonly string[]).includes(h)) {
+      if (!unmapped.includes(h)) unmapped.push(h);
+      continue;
+    }
+    if ((CONSTRAINT_HAZARDS as readonly string[]).includes(h)) {
+      if (!warn.includes(h)) warn.push(h);
+      continue;
+    }
+    for (const p of HAZARD_PRIO[h] ?? []) {
+      if (!sel.includes(p) && sel.length < 3) sel.push(p);
+    }
+  }
+  if (hasEcon && sel.length < 3 && !sel.includes("income")) {
+    sel.push("income");
+  }
+  return { sel, warn, unmapped };
+}
+
+/** Guess the farmer's current rotation from the parcels' crops:
+ * the catalog rotation covering the most parcel crops wins; ties go
+ * to the one whose sequence overlaps the parcels best. `matched`
+ * means every parcel crop appears in the sequence; `null` when no
+ * catalog rotation covers any parcel crop (reference run). */
+export function inferCurrentRotation(
+    crops: readonly string[], catalog: RotationEntry[]):
+    { id: string; matched: boolean } | null {
+  const want = [...new Set(crops.filter((c) => c && c !== "sin_cultivo"
+                                             && c !== "otro"))];
+  if (!want.length) return null;
+  let best: { id: string; cov: number; seqCov: number } | null = null;
+  for (const rot of catalog) {
+    const seq = [...new Set(rot.sequence.map((s) => s.crop))];
+    const cov = want.filter((c) => seq.includes(c)).length / want.length;
+    const seqCov = seq.filter((c) => want.includes(c)).length /
+                   Math.max(1, seq.length);
+    if (cov <= 0) continue;
+    if (!best || cov > best.cov ||
+        (cov === best.cov && seqCov > best.seqCov)) {
+      best = { id: rot.id, cov, seqCov };
+    }
+  }
+  return best ? { id: best.id, matched: best.cov === 1 } : null;
 }
 
 /* --- diagnosis groups + summary ------------------------------------- */
