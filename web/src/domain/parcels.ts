@@ -16,6 +16,9 @@ export interface ParcelInput {
   /** crop id from knowledge/crops.json, or "otro" / "sin_cultivo". */
   crop: string;
   geom: import("./selection").Poly;
+  /** synthesized whole-field parcel (no user split, no crop picked):
+   * the UI labels it "Todo el campo" and hides the crop. */
+  wholeField?: boolean;
 }
 
 export type WaterAccess = "none" | "well" | "channel" | "irrigation" | "unknown";
@@ -46,6 +49,45 @@ export interface ApiAlert {
   text: string;
 }
 
+export interface SnowIndicator {
+  days_per_year: number | null;
+  pct_years_with_snow: number | null;
+  basis: string;
+}
+
+export interface HailIndicator {
+  available: boolean;
+  basis: string;
+}
+
+export interface EnsoIndicator {
+  phase_now: "el_nino" | "la_nina" | "neutral" | null;
+  oni: number | null;
+  oni_period?: string;
+  rain_effect_pct?: { el_nino?: number | null; la_nina?: number | null };
+  basis: string;
+}
+
+export interface FloodIndicator {
+  available?: boolean;
+  heavy_rain_days_yr?: number;
+  low_slope?: boolean;
+  basis: string;
+}
+
+export interface ApiEconomics {
+  currency?: string;
+  expected_yield_t_ha: number | null;
+  yield_source?: "user" | "magyp_department" | string;
+  revenue_per_ha?: number | null;
+  cost_per_ha?: number | null;
+  margin_per_ha?: number | null;
+  margin_total?: number | null;
+  break_even_yield_t_ha?: number | null;
+  risk_adjusted_margin_per_ha?: number | null;
+  basis?: string;
+}
+
 export interface ApiParcel {
   id: string;
   crop: string;
@@ -55,7 +97,16 @@ export interface ApiParcel {
     water: ApiIndicator;
     heat: ApiIndicator;
     frost: ApiIndicator;
+    snow?: SnowIndicator;
+    hail?: HailIndicator;
+    enso?: EnsoIndicator;
+    flood?: FloodIndicator;
   };
+  /** display order of hazard ids (profile ranks first, then severity). */
+  order?: string[];
+  /** computed but hidden from the main view. */
+  extra?: { id: string; hidden?: boolean }[];
+  economics?: ApiEconomics;
   alerts: ApiAlert[];
 }
 
@@ -123,10 +174,21 @@ export function largestPoly(m: Multi): import("./selection").Poly {
   return best;
 }
 
-/** Request body for POST /api/field/parcels. */
+/** Request body for POST /api/field/parcels. `profile` is the farmer
+ * profile from domain/parcelsProfile (priorities, hidden, economics). */
 export function parcelsBody(
     boundary: Multi, parcels: ParcelInput[], needs: Needs | null,
-    lang: string) {
+    lang: string,
+    profile?: {
+      priorities: { id: string; rank: number }[];
+      hidden: string[];
+      economics?: { currency: string;
+                    parcels: Record<string, {
+                      cost_per_ha?: number;
+                      price_per_t?: number;
+                      expected_yield_t_ha?: number;
+                    }> };
+    }) {
   const fallback: Needs = { water_access: "unknown", concerns: [] };
   const n = needs ?? fallback;
   return {
@@ -142,6 +204,7 @@ export function parcelsBody(
       concerns: n.concerns,
       ...(n.notes ? { notes: n.notes.slice(0, NOTE_MAX) } : {}),
     },
+    ...(profile ? { profile } : {}),
     lang,
   };
 }

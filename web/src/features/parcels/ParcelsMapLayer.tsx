@@ -7,21 +7,26 @@
  *   bare_soil diagonal stripes + faint fill
  * plus an icon badge per parcel (fire % / water %) anchored at its
  * centre, re-projected on every map move. */
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useT } from "../../i18n";
 import type { GlobeHandle, Shape } from "../globe/GlobeView";
 import {
   cropColor, type ParcelInput, type ParcelsResponse,
 } from "../../domain/parcels";
 import { mercatorProject, ringCenter } from "../../domain/parcelsGeo";
+import type { HazardId } from "../../domain/parcelsProfile";
 import { zoneShapes } from "./zoneShapes";
 import { Icon } from "./CropIcon";
+import { HAZARD_ICON, hazardText } from "./HazardInd";
 
 export function ParcelsMapLayer({ globe, parcels, res }: {
     globe: GlobeHandle;
     parcels: ParcelInput[];
     res: ParcelsResponse }) {
-  const { t } = useT();
+  const { t, lang } = useT();
+  const badgeFmt = useMemo(
+    () => new Intl.NumberFormat(lang === "en" ? "en" : "es",
+      { maximumFractionDigits: 1 }), [lang]);
   const ref = useRef<HTMLDivElement>(null);
   const [cam, setCam] = useState(() => globe.center());
   const [size, setSize] = useState<[number, number]>([0, 0]);
@@ -59,13 +64,21 @@ export function ParcelsMapLayer({ globe, parcels, res }: {
         if (!ring) return null;
         const [x, y] = proj(ringCenter(ring));
         if (x < -40 || y < -40 || x > w + 40 || y > h + 40) return null;
+        // badges follow the API order: first two visible hazards
+        const extra = new Set(
+          (ap.extra ?? []).filter((e) => e.hidden).map((e) => e.id));
+        const shown = ((ap.order ?? []) as HazardId[])
+          .filter((h) => h in HAZARD_ICON && !extra.has(h))
+          .slice(0, 2);
+        if (!shown.length) shown.push("fire", "drought");
         return (
           <div key={ap.id} className="parcel-badge"
                style={{ left: x, top: y }}>
-            <Icon kind="flame" size={13} />
-            <span>{ap.indicators.fire.pct ?? "–"}%</span>
-            <Icon kind="drop" size={13} />
-            <span>{ap.indicators.water.pct ?? "–"}%</span>
+            {shown.map((h) => (
+              <span key={h} className="badge-hz">
+                <Icon kind={HAZARD_ICON[h]} size={13} />
+                <span>{hazardText(ap, h, t, badgeFmt)}</span>
+              </span>))}
           </div>);
       })}
       {proj && res.zones

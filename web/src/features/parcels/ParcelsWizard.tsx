@@ -154,20 +154,23 @@ export function ParcelsWizard({ geom, globe, onDone, onCancel }: {
     const n = ring.length;
     const need = tool === "split" ? 2 : 3;
     return (
+      <>
+      {/* the draw layer must sit directly on .map-wrap to cover the
+          whole map — inside the panel it would only cover the picker */}
+      {tool === "points" ? (
+        <DrawLayer unproject={(x, y) => globe.unproject(x, y)}
+                   session={session ?? undefined}
+                   onSync={(r, c) => globe.setDraft(r, c)} />
+      ) : (
+        <DrawLayer unproject={(x, y) => globe.unproject(x, y)}
+                   session={session ?? undefined}
+                   onSync={(r) => globe.setDraft(r, false)} />
+      )}
       <div className="controls picker parcels-wizard" role="region"
            aria-label={t("parcels.title")}>
         <strong className="picker-mode">
           {t(tool === "split" ? "parcels.split.how" : "parcels.draw.how")}
         </strong>
-        {tool === "points" ? (
-          <DrawLayer unproject={(x, y) => globe.unproject(x, y)}
-                     session={session ?? undefined}
-                     onSync={(r, c) => globe.setDraft(r, c)} />
-        ) : (
-          <DrawLayer unproject={(x, y) => globe.unproject(x, y)}
-                     session={session ?? undefined}
-                     onSync={(r) => globe.setDraft(r, false)} />
-        )}
         <p aria-live="polite" className="picker-status">
           <span className="picker-count">
             {t("field.drawing.count", { n })}</span>{" "}
@@ -187,25 +190,28 @@ export function ParcelsWizard({ geom, globe, onDone, onCancel }: {
               {t("field.draw.removeVertex")}</button>)}
           <button onClick={stopTool}>{t("field.cancel")}</button>
         </div>
-      </div>);
+      </div>
+      </>);
   }
 
   if (tool === "free") {
     return (
+      <>
+      <FreehandLayer unproject={(x, y) => globe.unproject(x, y)}
+        onStroke={(pts) => globe.setDraft(pts, false)}
+        onDone={(r) => {
+          if (r) clipAndHold([[r]]);
+          else { setNotice("parcels.outside"); globe.setDraft(null); }
+        }} />
       <div className="controls picker parcels-wizard" role="region"
            aria-label={t("parcels.title")}>
         <strong className="picker-mode">{t("parcels.free.how")}</strong>
-        <FreehandLayer unproject={(x, y) => globe.unproject(x, y)}
-          onStroke={(pts) => globe.setDraft(pts, false)}
-          onDone={(r) => {
-            if (r) clipAndHold([[r]]);
-            else { setNotice("parcels.outside"); globe.setDraft(null); }
-          }} />
         {notice && <p className="notice" role="status">{t(notice)}</p>}
         <div className="row">
           <button onClick={stopTool}>{t("field.cancel")}</button>
         </div>
-      </div>);
+      </div>
+      </>);
   }
 
   /* ------------------------------------------------ needs step ------ */

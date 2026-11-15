@@ -1,5 +1,6 @@
 import { Suspense, lazy, useRef, useState, useCallback, useEffect } from "react";
-import { insertCheapest } from "./domain/parcelsGeo";
+import { DrawSession, activateDrawSession, deactivateDrawSession }
+  from "./features/field/drawEdit";
 import { useT } from "./i18n";
 import { APP_NAME, DEFAULT_VIEW, DEMO_PLOT, WORLD_VIEW } from "./config";
 import { WindLogo } from "./components/WindLogo";
@@ -20,6 +21,7 @@ import { FieldsList, FieldDetail } from "./features/field/FieldsPanel";
 import { useAreaLabel } from "./features/field/areaLabel";
 import { FreehandLayer } from "./features/field/FreehandLayer";
 import type { AnalysisTarget } from "./features/field/FieldLens";
+import type { ParcelInput, ParcelsResponse } from "./domain/parcels";
 import {
   classifyUrban, multiPoints, type LatLon, type Multi,
 } from "./domain/selection";
@@ -48,6 +50,12 @@ const LiveControls = lazy(() =>
   import("./features/live/LiveMode").then((m) => ({ default: m.LiveControls })));
 const FieldPanel = lazy(() =>
   import("./features/field/FieldLens").then((m) => ({ default: m.FieldPanel })));
+const ParcelsWizard = lazy(() =>
+  import("./features/parcels/ParcelsWizard")
+    .then((m) => ({ default: m.ParcelsWizard })));
+const ParcelsMapLayer = lazy(() =>
+  import("./features/parcels/ParcelsMapLayer")
+    .then((m) => ({ default: m.ParcelsMapLayer })));
 
 type Mode = "welcome" | "fire" | "live" | "field";
 
@@ -81,8 +89,12 @@ export default function App() {
     setDrawState(d);
     setMovingMap(false);
   };
+  /** One session owns the main field outline: every mutation updates
+   * the React draft AND the map preview from the same simple ring, so
+   * the fill can never diverge from the outline. */
+  const [fieldSession] = useState(() => new DrawSession());
   const setDraft = (pts: [number, number][]) => {
-    draftRef.current = pts; setDraftState(pts);
+    fieldSession.seed(pts, false);
   };
   /** The exact area sent to the diagnosis (also drawn on the map). */
   const [target, setTarget] = useState<AnalysisTarget | null>(null);
@@ -98,6 +110,11 @@ export default function App() {
   const [freeError, setFreeError] = useState(false);
   const targetRef = useRef<Target>({ kind: "selection" });
   const [fieldOpen, setFieldOpen] = useState(false);
+  /** The confirmed selection is being divided into parcels. */
+  const [parcelsWizard, setParcelsWizard] = useState(false);
+  /** Last parcels analysis: zones + per-parcel badges on the map. */
+  const [parcelRes, setParcelRes] = useState<{
+    res: ParcelsResponse; parcels: ParcelInput[] } | null>(null);
   const [lots, setLots] = useState<OrinLots["features"]>([]);
   const [playingMonth, setPlayingMonth] = useState<string | null>(null);
   const [methodsOpen, setMethodsOpen] = useState(false);
@@ -124,14 +141,14 @@ export default function App() {
       if (modeRef.current !== "field" || movingMapRef.current) return;
       const d = drawRef.current;
       if (d === "draw") {
-        // keep the outline a simple polygon whatever the click order
-        const n = insertCheapest(draftRef.current, [lat, lon]);
-        setDraft(n); h.setDraft(n);
+        // same DrawSession as the parcel wizard: the tap lands where
+        // the ring stays simple (never a bow tie)
+        fieldSession.click([lat, lon], draftTolM());
       } else if (d === "point") {
         onShapeRef.current(circleApprox(lat, lon), true);
       }
     });
-  }, []);
+  }, [fieldSession]);
 
   // 50 ha square-ish ring (circle approximation gives right area)
   const circleApprox = (lat: number, lon: number): [number, number][] => {
@@ -146,7 +163,35 @@ export default function App() {
     return pts;
   };
 
+  /** Grab radius (~14 px) in metres for tap-near-vertex handling. */
+  const draftTolM = (): number => {
+    const el = mapDiv.current, g = globeRef.current;
+    if (!el || !g) return 20;
+    const r = el.getBoundingClientRect();
+    const [la1, lo1] = g.unproject(r.width / 2, r.height / 2);
+    const [la2, lo2] = g.unproject(r.width / 2 + 14, r.height / 2);
+    return Math.max(5, Math.hypot((la2 - la1) * 111_000,
+      (lo2 - lo1) * 111_000 * Math.cos((la1 * Math.PI) / 180)));
+  };
+
   useGlobe(mapDiv, onGlobeReady);
+
+  // The session is the single source of truth for the outline: React
+  // state and the map preview both render its ring.
+  useEffect(() => fieldSession.subscribe(() => {
+    const r = fieldSession.state.ring;
+    draftRef.current = r;
+    setDraftState(r);
+    globeRef.current?.setDraft(r.length ? r : null);
+  }), [fieldSession]);
+
+  // While marking, the picker panel edits through the shared session
+  // (remove-vertex button, refusal notices).
+  useEffect(() => {
+    if (draw === "none") return;
+    activateDrawSession(fieldSession);
+    return () => deactivateDrawSession(fieldSession);
+  }, [draw, fieldSession]);
 
   useEffect(() => {
     globe?.setFieldBasemap(mode === "field", satellite, !fieldOpen && fieldGuide);
@@ -225,7 +270,8 @@ export default function App() {
     const g = globeRef.current;
     if (!g) return;
     const sh: Shape[] = [];
-    if (mode === "field") {
+    // the parcels wizard and the result layer own the map shapes
+    if (mode === "field" && !parcelsWizard && !parcelRes) {
       if (fieldOpen && target) {
         target.geom.forEach((p) => sh.push({ geom: p, kind: "field" }));
       } else if (adjust?.status === "ready" && adjust.result && selection) {
@@ -248,11 +294,15 @@ export default function App() {
         }
       }
     }
-    g.setShapes(sh);
-    if (mode !== "field") { g.setDraft(null); g.setMarker(null); }
+    if (!parcelsWizard && !parcelRes) g.setShapes(sh);
+    if (mode !== "field") {
+      g.setDraft(null); g.setMarker(null);
+      if (parcelRes) setParcelRes(null);
+      if (parcelsWizard) setParcelsWizard(false);
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selection, adjust, fields, fieldsView, shownField, pendingZone,
-      fieldOpen, target, mode, areaChoice]);
+      fieldOpen, target, mode, areaChoice, parcelsWizard, parcelRes]);
 
   // clear fire hexagons when leaving fire mode (else the layer lingers)
   useEffect(() => {
@@ -290,6 +340,7 @@ export default function App() {
     setMode("field");
     setDraw(dm); setFreeError(false);
     setDraft([]); setTarget(null); setFieldOpen(false);
+    setParcelRes(null); setParcelsWizard(false);
     setSelection(null); setAdjust(null);
     setFieldsView(null); setShownField(null);
     targetRef.current = { kind: "selection" };
@@ -332,6 +383,7 @@ export default function App() {
    * the geometry on the map: every piece, holes left out. */
   const analyze = (tg: AnalysisTarget) => {
     setTarget(tg); setFieldOpen(true);
+    setParcelRes(null); setParcelsWizard(false);
     setSelection(null); setAdjust(null); setFieldsView(null);
     globeRef.current?.setDraft(null);
     globeRef.current?.fitRing(multiPoints(tg.geom), coveredBottom());
@@ -437,9 +489,7 @@ export default function App() {
   };
 
   const undoPoint = () => {
-    const n = draftRef.current.slice(0, -1);
-    setDraft(n);
-    globeRef.current?.setDraft(n.length ? n : null);
+    fieldSession.undo();
   };
 
   const cancelDraw = () => {
@@ -462,6 +512,7 @@ export default function App() {
     setMode("field"); setDraw("none"); setSelection(null); setAdjust(null);
     setFieldsView(null);
     setTarget({ geom: [[r]], areaLabel: t("analyze.demo") });
+    setParcelRes(null); setParcelsWizard(false);
     setFieldOpen(true);
     globeRef.current?.flyTo(DEMO_PLOT.lat, DEMO_PLOT.lon, 11);
     country.current = "AR";
@@ -611,12 +662,24 @@ export default function App() {
                              checked: false });
             }}
             onRedraw={() => editRing(selection.approx ? null : selection.original)} />)}
-        {mode === "field" && !fieldOpen && selection && !adjust && (
+        {mode === "field" && !fieldOpen && selection && !adjust &&
+          !parcelsWizard && (
           <SelectionReview geom={selection.geom} approx={selection.approx}
                            check={landCheck} onEdit={editSelection}
                            onCancel={cancelSelection}
                            onConfirm={confirmSelection}
-                           onAdjust={startAdjust} onSave={saveSelection} />)}
+                           onAdjust={startAdjust} onSave={saveSelection}
+                           onParcels={() => setParcelsWizard(true)} />)}
+        {mode === "field" && !fieldOpen && parcelsWizard && selection &&
+          globe && (
+          <Suspense fallback={null}>
+            <ParcelsWizard geom={selection.geom} globe={globe}
+              onDone={(parcels, needs) => analyze({
+                geom: selection.geom, parcels, needs,
+                areaLabel: t(selection.approx
+                  ? "analyze.selectionApprox" : "analyze.selection") })}
+              onCancel={() => setParcelsWizard(false)} />
+          </Suspense>)}
         {mode === "field" && !fieldOpen && !selection && draw === "none" &&
           fieldsView === "list" && (
           <FieldsList fields={fields}
@@ -642,6 +705,11 @@ export default function App() {
             onRemoveZone={(id) => { removeZone(openField.id, id); refreshFields(); }}
             onBack={() => { setPendingZone(null); setAreaChoice("all");
                             setFieldsView("list"); }} />)}
+        {mode === "field" && parcelRes && globe && (
+          <Suspense fallback={null}>
+            <ParcelsMapLayer globe={globe} parcels={parcelRes.parcels}
+                             res={parcelRes.res} />
+          </Suspense>)}
         {mode === "field" && !fieldOpen && !selection &&
           (draw !== "none" || !fieldsView) && (
           <FieldPicker draw={draw} points={draft.length}
@@ -680,7 +748,10 @@ export default function App() {
         <Suspense fallback={null}>
           <FieldPanel target={target} open={fieldOpen}
                       onMethods={() => setMethodsOpen(true)}
-                      onClose={changePlot} onChangePlot={changePlot} />
+                      onClose={changePlot} onChangePlot={changePlot}
+                      onResult={(res, parcels) =>
+                        setParcelRes({ res, parcels })}
+                      onEmergency={() => setEmergOpen(true)} />
         </Suspense>)}
       <MethodsDrawer open={methodsOpen}
                      onClose={() => setMethodsOpen(false)} />

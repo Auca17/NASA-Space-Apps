@@ -29,7 +29,16 @@ import {
 } from "../../domain/parcels";
 import { apiParcels } from "../parcels/api";
 import { NeedsForm } from "../parcels/NeedsForm";
+import { PrioritiesEditor } from "../parcels/PrioritiesEditor";
+import { EconomicsForm } from "../parcels/EconomicsForm";
+import { Tabs } from "../parcels/Tabs";
+import { HazardChip, ensoRainText } from "../parcels/HazardInd";
 import { Icon } from "../parcels/CropIcon";
+import {
+  hiddenHazards, loadEconomics, loadProfile, profileBody,
+  saveEconomics, saveProfile, visibleHazards,
+  type Economics, type Profile,
+} from "../../domain/parcelsProfile";
 import "../../styles/parcels.css";
 
 /** The exact area sent to the diagnosis, and how to name it. */
@@ -560,7 +569,16 @@ export function FieldPanel({ target, open, onClose, onChangePlot, onMethods,
     import("../parcels/api").ParcelsResult | null>(null);
   const [pReading, setPReading] = useState(false);
   const [pRetry, setPRetry] = useState(0);
-  const [verMas, setVerMas] = useState(false);
+  // farmer profile (task 37): hazard order/visibility + economics,
+  // kept in localStorage and sent inside the parcels request
+  const [profile, setProfile] = useState<Profile>(loadProfile);
+  const [econ, setEcon] = useState<Economics>(loadEconomics);
+  const [tab, setTab] = useState<"resumen" | "prioridades" | "mas">(
+    "resumen");
+  /** The detailed diagnosis loads only in the "Más información" tab. */
+  const verMas = tab === "mas";
+  const updateProfile = (p: Profile) => { setProfile(p); saveProfile(p); };
+  const updateEcon = (e: Economics) => { setEcon(e); saveEconomics(e); };
   const [comparing, setComparing] = useState(false);
   const [compareFailed, setCompareFailed] = useState(false);
   const lastDiagnosisBody = useRef<PlotBody | null>(null);
@@ -594,16 +612,16 @@ export function FieldPanel({ target, open, onClose, onChangePlot, onMethods,
   const effParcels = useMemo<ParcelInput[]>(() => {
     if (!target) return [];
     if (target.parcels?.length) return target.parcels;
-    return [{ id: "p1", name: target.areaLabel,
+    return [{ id: "p1", name: t("parcels.wholeField"),
               crop: normalizeCropLabel(lot?.crop_label),
-              geom: largestPoly(target.geom) }];
-  }, [target, lot]);
+              geom: largestPoly(target.geom), wholeField: true }];
+  }, [target, lot, t]);
   /** undefined = the needs step still has to be answered/skipped. */
   const effNeeds = target?.needs !== undefined ? target.needs : needs;
 
   // New target: reset the whole flow.
   useEffect(() => {
-    setNeeds(undefined); setPres(null); setVerMas(false);
+    setNeeds(undefined); setPres(null); setTab("resumen");
     setDiag(null); setStep(1); setRots(null);
   }, [target]);
 
@@ -615,7 +633,8 @@ export function FieldPanel({ target, open, onClose, onChangePlot, onMethods,
     let active = true;
     setPReading(true); setPres(null);
     apiParcels(
-      parcelsBody(target.geom, effParcels, effNeeds, lang)).then((r) => {
+      parcelsBody(target.geom, effParcels, effNeeds, lang,
+                  profileBody(profile, econ))).then((r) => {
       if (!active) return;
       setPres(r); setPReading(false);
       if (r.ok) {
@@ -625,7 +644,7 @@ export function FieldPanel({ target, open, onClose, onChangePlot, onMethods,
     });
     return () => { active = false; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, target, effNeeds, effParcels, lang, pRetry]);
+  }, [open, target, effNeeds, effParcels, lang, pRetry, profile, econ]);
 
   // The detailed diagnosis only loads behind "Ver más".
   useEffect(() => {
@@ -753,7 +772,8 @@ export function FieldPanel({ target, open, onClose, onChangePlot, onMethods,
         </div>)}
       {lot?.synthetic && <SyntheticBanner t={t} />}
 
-      {/* needs step: short and skippable, before the analysis runs */}
+      {/* needs step: short and skippable, before the analysis runs;
+          priorities and numbers live in optional disclosures */}
       {target && effNeeds === undefined && (
         <section className="card" aria-labelledby="needs-h">
           <h4 id="needs-h" style={{ marginTop: 0 }}>
@@ -761,6 +781,17 @@ export function FieldPanel({ target, open, onClose, onChangePlot, onMethods,
           <NeedsForm compact
                      onDone={(n) => setNeeds(n)}
                      onSkip={() => setNeeds(null)} />
+          <details className="prio-details">
+            <summary>{t("parcels.prio.title")}</summary>
+            <p className="muted">{t("parcels.prio.how")}</p>
+            <PrioritiesEditor value={profile} onChange={updateProfile} />
+          </details>
+          <details className="prio-details">
+            <summary>{t("parcels.econ.title")}</summary>
+            <p className="muted">{t("parcels.econ.how")}</p>
+            <EconomicsForm parcels={effParcels} value={econ}
+                           onChange={updateEcon} />
+          </details>
         </section>)}
 
       {pReading && (
@@ -777,7 +808,9 @@ export function FieldPanel({ target, open, onClose, onChangePlot, onMethods,
       {pres?.ok && pres.fixture && (
         <p className="notice" role="status">{t("parcels.fixture")}</p>)}
 
-      {pres?.ok && pres.res.degraded && (
+      {/* a nearby-services failure alone is a quiet note inside the
+          nearby section, not a big "incomplete" card */}
+      {pres?.ok && pres.res.degraded && !pres.res.nearby.degraded && (
         <div className="card diag-degraded" role="alert">
           <p><strong>{t("field.degraded.title")}</strong>{" "}
             {pres.res.degraded_reason ?? t("field.degraded.unknown")}</p>
@@ -788,14 +821,41 @@ export function FieldPanel({ target, open, onClose, onChangePlot, onMethods,
 
       {pres?.ok && (
         <>
-          <ParcelsResult res={pres.res} parcels={effParcels} t={t}
-                         fmt={fmt} onEmergency={onEmergency} />
-
-          <details className="ver-mas"
-                   onToggle={(e) => {
-                     if (e.currentTarget.open) setVerMas(true); }}>
-            <summary>{t("parcels.verMas")}</summary>
-
+          {/* alerts stay above the tabs, whatever the priorities */}
+          <ParcelAlerts res={pres.res} parcels={effParcels} t={t}
+                        onEmergency={onEmergency} />
+          <Tabs active={tab} onSelect={(id) =>
+                  setTab(id as typeof tab)}
+                tabs={[
+                  { id: "resumen", label: t("parcels.tab.summary") },
+                  { id: "prioridades",
+                    label: t("parcels.tab.priorities") },
+                  { id: "mas", label: t("parcels.tab.more") },
+                ]} />
+          <div role="tabpanel" id={`panel-${tab}`}
+               aria-labelledby={`tab-${tab}`}>
+          {tab === "resumen" && (
+            <ParcelsResult res={pres.res} parcels={effParcels}
+                           profile={profile} t={t} fmt={fmt}
+                           onRetry={() => setPRetry((n) => n + 1)} />)}
+          {tab === "prioridades" && (
+            <section className="card prio-card">
+              <h4 style={{ marginTop: 0 }}>{t("parcels.prio.title")}</h4>
+              <p className="muted">{t("parcels.prio.how")}</p>
+              <PrioritiesEditor value={profile} onChange={updateProfile} />
+              <h4>{t("parcels.econ.title")}</h4>
+              <p className="muted">{t("parcels.econ.how")}</p>
+              <EconomicsForm parcels={effParcels} value={econ}
+                             onChange={updateEcon} />
+              <button type="button" className="primary"
+                      onClick={() => { setPRetry((n) => n + 1);
+                                       setTab("resumen"); }}>
+                {t("parcels.rerun")}</button>
+            </section>)}
+          {tab === "mas" && (
+            <>
+            <HiddenHazards res={pres.res} parcels={effParcels}
+                           profile={profile} t={t} fmt={fmt} />
       {verMas && (
         <>
       {reading && <p role="status">{t("field.diagnosing")}</p>}
@@ -1029,7 +1089,10 @@ export function FieldPanel({ target, open, onClose, onChangePlot, onMethods,
       {!rots && diag && <p className="notice">{t("rot.disclaimer")}</p>}
         </>
       )}
-          </details>
+            <SourcesBlock res={pres.res} t={t} />
+            </>
+          )}
+          </div>
         </>
       )}
     </BottomSheet>
@@ -1038,21 +1101,18 @@ export function FieldPanel({ target, open, onClose, onChangePlot, onMethods,
 
 /* ------------------------------------------------- parcels result --- */
 
-/** The compact, plain-language result: alerts first, then the summary
- * headline, one row per parcel (color + name + crop + fire/water % +
- * basis one tap away), and the nearest emergency services and water. */
-export function ParcelsResult({ res, parcels, t, fmt, onEmergency }: {
-    res: ParcelsResponse;
-    parcels: ParcelInput[];
-    t: (k: string, v?: Record<string, string | number>) => string;
-    fmt: Intl.NumberFormat;
+type TFn = (k: string, v?: Record<string, string | number>) => string;
+const parcelName = (parcels: ParcelInput[], id: string) =>
+  parcels.find((p) => p.id === id)?.name ?? id;
+
+/** Fire and drought alerts — they sit above the tabs and stay visible
+ * whatever the farmer's priorities are. */
+export function ParcelAlerts({ res, parcels, t, onEmergency }: {
+    res: ParcelsResponse; parcels: ParcelInput[]; t: TFn;
     onEmergency?: () => void }) {
   const highFire = parcelsWithHighFire(res);
   const dry = parcelsWithDry(res).filter((p) => !hasHighFireAlert(p));
-  const name = (id: string) =>
-    parcels.find((p) => p.id === id)?.name ?? id;
-  const km = (v: number) =>
-    t("parcels.nearby.km", { v: fmt.format(v) });
+  const name = (id: string) => parcelName(parcels, id);
   return (
     <>
       {highFire.map((p) =>
@@ -1079,47 +1139,101 @@ export function ParcelsResult({ res, parcels, t, fmt, onEmergency }: {
               <p><strong>{name(p.id)}:</strong> {a.text}</p>
             </div>
           </div>)))}
+    </>);
+}
 
+/** Economics line under a parcel row: margin per hectare and total,
+ * break-even yield, risk-adjusted margin — always marked as a rough
+ * estimate, with the basis one tap away. Never color alone. */
+function EconLine({ p, t, fmt }: {
+    p: import("../../domain/parcels").ApiParcel;
+    t: TFn; fmt: Intl.NumberFormat }) {
+  const e = p.economics;
+  if (!e || e.margin_per_ha == null) return null;
+  const cur = e.currency ?? "USD";
+  return (
+    <p className="econ-line">
+      <strong>{t("parcels.econ.margin")}</strong>{" "}
+      {fmt.format(e.margin_per_ha)} {cur}/ha
+      {e.margin_total != null &&
+        <> · {t("parcels.econ.total",
+               { v: `${fmt.format(e.margin_total)} ${cur}` })}</>}
+      {e.break_even_yield_t_ha != null &&
+        <> · {t("parcels.econ.breakEven",
+               { v: fmt.format(e.break_even_yield_t_ha) })}</>}
+      {e.risk_adjusted_margin_per_ha != null &&
+        <> · {t("parcels.econ.riskAdj",
+               { v: `${fmt.format(e.risk_adjusted_margin_per_ha)} ${cur}` })}</>}
+      {" "}<em className="muted">{t("parcels.econ.approx")}</em>
+      {e.yield_source === "magyp_department" && (
+        <> <em className="muted">
+            {t("parcels.econ.magypYield")}</em></>)}
+      {e.basis && <Tooltip text={e.basis}
+                           label={t("parcels.econ.margin")} />}
+    </p>);
+}
+
+/** The "Resumen" tab: summary headline, one row per parcel (hazards in
+ * the API order, first three visible, icon + word + value + basis),
+ * economics when declared, and the nearest services. */
+export function ParcelsResult({ res, parcels, profile, t, fmt,
+                                onRetry }: {
+    res: ParcelsResponse;
+    parcels: ParcelInput[];
+    profile: Profile;
+    t: TFn;
+    fmt: Intl.NumberFormat;
+    onRetry?: () => void }) {
+  const name = (id: string) => parcelName(parcels, id);
+  const km = (v: number) =>
+    t("parcels.nearby.km", { v: fmt.format(v) });
+  return (
+    <>
       <section className="parcel-summary"
                aria-labelledby="parcel-summary-h">
         <h4 id="parcel-summary-h">{res.summary.headline}</h4>
         {res.summary.bullets.length > 0 && (
           <ul>{res.summary.bullets.slice(0, 3)
             .map((b, i) => <li key={i}>{b}</li>)}</ul>)}
-        <p className="parcel-source">{res.summary.source}</p>
+        {res.summary.source === "gemini" && (
+          <p className="parcel-source">{t("parcels.summary.gemini")}</p>)}
+        {res.summary.source !== "gemini" &&
+         res.summary.source !== "template" && (
+          <p className="parcel-source">{res.summary.source}</p>)}
       </section>
 
       <ul className="parcel-rows">
         {res.parcels.map((p) => {
           const high = hasHighFireAlert(p);
+          const shown = visibleHazards(p, profile).slice(0, 3);
+          const enso = shown.includes("enso")
+            ? ensoRainText(p, t, fmt) : null;
           return (
             <li key={p.id} className="parcel-res-row">
-              <span className="parcel-swatch"
-                    style={{ background: cropColor(p.crop) }} />
-              <span className="parcel-name">{name(p.id)}</span>
-              <span className="parcel-crop muted">
-                {p.crop === "otro" ? t("parcels.cropOther")
-                  : p.crop === "sin_cultivo" ? t("parcels.cropNone")
-                  : p.crop}</span>
-              <span className={`parcel-ind${high ? " high" : ""}`}>
-                <Icon kind="flame" size={13}
-                      title={t("parcels.ind.fire")} />
-                {p.indicators.fire.pct ?? "–"}%
-                <Tooltip text={p.indicators.fire.basis}
-                         label={t("parcels.basis.fire")} />
-              </span>
-              <span className="parcel-ind">
-                <Icon kind="drop" size={13}
-                      title={t("parcels.ind.water")} />
-                {p.indicators.water.pct ?? "–"}%
-                <Tooltip text={p.indicators.water.basis}
-                         label={t("parcels.basis.water")} />
-              </span>
-              {p.alerts.length > 0 && (
-                <Icon kind="alert" size={14}
-                      title={t("parcels.alertHas")} />)}
-              <span className="parcel-ha muted">
-                {fmt.format(p.area_ha)} ha</span>
+              <div className="parcel-res-top">
+                <span className="parcel-swatch"
+                      style={{ background: cropColor(p.crop) }} />
+                <span className="parcel-name">{name(p.id)}</span>
+                {!parcels.find((x) => x.id === p.id)?.wholeField && (
+                  <span className="parcel-crop muted">
+                    {p.crop === "otro" ? t("parcels.cropOther")
+                      : p.crop === "sin_cultivo" ? t("parcels.cropNone")
+                      : p.crop}</span>)}
+                {p.alerts.length > 0 && (
+                  <Icon kind="alert" size={14}
+                        title={t("parcels.alertHas")} />)}
+                <span className="parcel-ha muted">
+                  {fmt.format(p.area_ha)} ha</span>
+              </div>
+              <div className="parcel-inds">
+                {shown.map((h) => (
+                  <HazardChip key={h} p={p} h={h} t={t} fmt={fmt}
+                              Tooltip={Tooltip} />))}
+                {high && <span className="sr-only">
+                  {t("parcels.alertHas")}</span>}
+              </div>
+              {enso && <p className="hz-sub muted">{enso}</p>}
+              <EconLine p={p} t={t} fmt={fmt} />
             </li>);
         })}
         {res.parcels.length === 0 && (
@@ -1153,19 +1267,64 @@ export function ParcelsResult({ res, parcels, t, fmt, onEmergency }: {
             </li>))}
         </ul>
         {!res.nearby.fire_stations.length &&
-         !res.nearby.hospitals.length && !res.nearby.water.length && (
+         !res.nearby.hospitals.length && !res.nearby.water.length &&
+         !res.nearby.degraded && (
           <p className="muted">{t("parcels.nearby.empty")}</p>)}
+        {res.nearby.degraded && (
+          <p className="muted">
+            {t("parcels.nearby.failed")}
+            {onRetry && (
+              <button type="button" className="chip nearby-retry"
+                      onClick={onRetry}>
+                {t("field.diagnosis.retry")}</button>)}
+          </p>)}
         <p className="parcel-source">{res.nearby.source}</p>
       </section>
-
-      {res.sources.length > 0 && (
-        <details className="sec more">
-          <summary>{t("parcels.sources")}</summary>
-          <ul>
-            {res.sources.map((s) => <li key={s.id}>{s.text}</li>)}
-          </ul>
-        </details>)}
     </>);
+}
+
+/** "Más información" extra: the hazards the farmer hid, still shown
+ * here honestly (hail = no satellite data). */
+export function HiddenHazards({ res, parcels, profile, t, fmt }: {
+    res: ParcelsResponse; parcels: ParcelInput[]; profile: Profile;
+    t: TFn; fmt: Intl.NumberFormat }) {
+  const rows = res.parcels
+    .map((p) => ({ p, hidden: hiddenHazards(p, profile) }))
+    .filter((x) => x.hidden.length > 0);
+  if (!rows.length) return null;
+  return (
+    <section className="card">
+      <h4 style={{ marginTop: 0 }}>{t("parcels.hz.moreHidden")}</h4>
+      <ul className="parcel-rows">
+        {rows.map(({ p, hidden }) => (
+          <li key={p.id} className="parcel-res-row">
+            <div className="parcel-res-top">
+              <span className="parcel-swatch"
+                    style={{ background: cropColor(p.crop) }} />
+              <span className="parcel-name">
+                {parcelName(parcels, p.id)}</span>
+            </div>
+            <div className="parcel-inds">
+              {hidden.map((h) => (
+                <HazardChip key={h} p={p} h={h} t={t} fmt={fmt}
+                            Tooltip={Tooltip} />))}
+            </div>
+          </li>))}
+      </ul>
+    </section>);
+}
+
+/** Data sources, moved to "Más información". */
+export function SourcesBlock({ res, t }: {
+    res: ParcelsResponse; t: TFn }) {
+  if (!res.sources.length) return null;
+  return (
+    <details className="sec more">
+      <summary>{t("parcels.sources")}</summary>
+      <ul>
+        {res.sources.map((s) => <li key={s.id}>{s.text}</li>)}
+      </ul>
+    </details>);
 }
 export type { PlotBody };
 /** Exported for tests only. */
