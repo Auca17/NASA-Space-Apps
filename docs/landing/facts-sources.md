@@ -13,6 +13,10 @@ backs it. Not for publication.
 | NASA data scattered across products/resolutions; plot-scale gap | `docs/idea-general.md`; `PRODUCT.md` | problema |
 | Stubble burning links fire lens and field lens | `docs/PRD.md`; `PRODUCT.md` | §1, "two lenses meet" |
 | Registered challenge: Field Shift; also covers Hot Spots | `docs/decisions.md` | D1 |
+| Hero promise: decide what to plant / rotation comparison | `back/app/services/rotations.py` (current + top-3); `web/src/features/field/` | producer-first pitch (task 45) |
+| Block: parcels fire/water % with reasons; agricultural calendar vulnerable months | `back/app/routers/parcels.py` (badges + reasons); `back/README.md` (`bare_soil_days_yr`, calendar) | |
+| Block: fire as plot risk — 7-day risk with reasons, burns avoided per rotation | `model/fire_risk/report.md`; `back/app/services/rotations.py` (`burns_avoided`) | |
+| Block: temperature checked vs 53 stations; rain vs 25 SIGA stations | `docs/validation/orin/README.md`; `docs/validation/rain-siga/validation.json` | |
 
 ## Requirement table — Field Shift (PRD §4.2)
 
@@ -54,6 +58,7 @@ backs it. Not for publication.
 | Risk model: LightGBM ROC-AUC 0.920 / PR-AUC 0.427 / Brier 0.0302; climatology 0.843/0.295/0.0350; persistence 0.852/0.310/0.0452; Platt calibration; holdout 2023–2025 | `model/fire_risk/report.md` | results table |
 | Outside Argentina: climatology + persistence, no ML | `docs/decisions.md` | D7 |
 | Orin: 53 stations, 742 station-days, 2026-10-04→20; Tmax RMSE 5.05→2.82 °C, bias −2.82 °C; Tmin 3.89→2.28 °C; POWER cell ~2,485 m vs stations 1,000–1,500 m; correction −6.5 °C/km | `docs/validation/orin/README.md` | elevation finding |
+| SIGA rain: 25 stations, 1,346 station-months 2015–2024; IMERG bias +22.1 / RMSE 51.2 / r 0.59; POWER bias +22.4 / RMSE 49.4 / r 0.62; Mendoza point-vs-pixel | `docs/validation/rain-siga/validation.json`; `docs/validation/rain-siga/README.md` | |
 | No field samples for NDVI / soil moisture | `docs/validation/orin/README.md` | limitations |
 
 ## Data table / pending / limits / human-in-the-loop / team
@@ -61,7 +66,7 @@ backs it. Not for publication.
 | Claim | Source | Section |
 |---|---|---|
 | Data table rows | `web/src/content/datasets.ts` (DATASETS_USED) | except NDVI row: file names `MOD13Q1` but `model/field_grid/README.md` + `back/README.md` show MOD13C2 (0.05° monthly) is what feeds `bare_soil_days_yr`, with MOD13Q1 used only on demand — page says both. |
-| IMERG pending (GES DISC EULA), GAEZ pending (manual license), SMAP anomaly rejected (no positive relation to POWER rain; GWETROOT fallback) | `web/src/content/datasets.ts` (DATASETS_PENDING) | |
+| IMERG monthly V07 used for the Argentina rain grid (2015–2024, precomputed); GAEZ pending (manual license); SMAP anomaly rejected (no positive relation to POWER rain; GWETROOT fallback) | `model/field_grid/`; `web/src/content/datasets.ts` (DATASETS_PENDING) | |
 | Field grid Argentina only; on-demand worldwide | `web/src/content/datasets.ts` LIMITATIONS; `model/field_grid/README.md` | |
 | 2000–2011 lowest confidence (2000-11 → 2012-01); Terra safe-mode gap Jun–Jul 2001 | `docs/data-contract.md` §2.1 (D30); `docs/metodo-fuego.md` | |
 | 365-day fire history incomplete Jan–Oct 2026 | `model/fire_risk/report.md` | limitations |
@@ -82,4 +87,4 @@ backs it. Not for publication.
 | Harmonized dataset download URL | Listed without link + visible `[PENDIENTE]` tag. |
 | Site domain (`[PENDIENTE: dominio]`) | Canonical/hreflang/OG bake `%SITE_URL%` → env `VITE_SITE_URL`; sitemap emits `PENDIENTE-DOMINIO` placeholder if unset. |
 | AI provider enabled in production | Page describes the mechanism (optional provider, template fallback) without claiming it is on; enablement requires `GEMINI_API_KEY`/`ANTHROPIC_API_KEY` in Vercel env, not verifiable from the repo. |
-| Code license | No `LICENSE` file in repo; not claimed anywhere on the page. |
+| Code license | `LICENSE` — MIT, copyright 2026 Ashfield team (added task 45; team must confirm the choice). |

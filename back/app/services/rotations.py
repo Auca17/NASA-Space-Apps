@@ -81,7 +81,8 @@ INDICATOR_LABEL = {
     "bare_soil_days": "días sin cultivo vivo",
     "erosion_risk": "riesgo de erosión",
     "infiltration": "infiltración estimada (relativa)",
-    "pest_break": "familias en el ciclo",
+    "pest_break": "pares consecutivos que comparten plaga",
+    "families": "familias en el ciclo",
     "income": "ingreso",
     "forage": "forraje",
     "burns_avoided": "quemas evitadas",
@@ -359,6 +360,63 @@ def rotation_viable(rot: Rotation, diag, constraints, zone, ff):
     return bad
 
 
+def host_sharing_pairs(rot: Rotation) -> list[tuple]:
+    """Consecutive pairs (incl. wrap-around last→first, the cycle
+    repeats) whose two crops share at least one cataloged
+    pest/disease host (pests.json). Each entry is
+    (crop_a, crop_b, [Pest...])."""
+    seq = [s.crop for s in rot.sequence]
+    pairs = []
+    for i in range(len(seq)):
+        a, b = seq[i], seq[(i + 1) % len(seq)]
+        shared = [p for p in KNOWLEDGE.pests
+                  if a in p.hosts and b in p.hosts]
+        if shared:
+            pairs.append((a, b, shared))
+    return pairs
+
+
+def hazard_viability(rot: Rotation, diag, zone: str | None,
+                     hazards: set | None,
+                     ff: set[int] | None) -> tuple[float, list[str]]:
+    """Score penalty + notes for hazard-profile viability checks.
+
+    When the farmer ranked "frost" or "heat" as a hazard, crops whose
+    sensitive frost window falls outside this cell's frost-free days,
+    or whose heat tolerance can't take the cell's hot-day count, get a
+    score penalty and a plain-language note."""
+    if not hazards or not (hazards & {"frost", "heat"}):
+        return 0.0, []
+    hot = None
+    card = _card(diag, "heat") or {}
+    if isinstance(card.get("value"), (int, float)):
+        hot = card["value"]
+    penalty, notes = 0.0, []
+    for crop in crops_unique(rot):
+        if "frost" in hazards and ff and crop.frost_window:
+            span = (crop.frost_window.get(zone or "") or
+                    crop.frost_window.get("other"))
+            if span:
+                a, b = _doy(span[0]), _doy(span[1])
+                doys = (range(a, b + 1) if a <= b else
+                        list(range(a, 366)) + list(range(1, b + 1)))
+                out = sum(1 for d in doys if d not in ff)
+                if out >= 14:
+                    penalty += 0.15
+                    notes.append(
+                        f"{crop.id}: {out} días sensibles a helada "
+                        "fuera de la ventana libre de la celda")
+        if "heat" in hazards and hot is not None:
+            tol = crop.heat_tolerance or "medium"
+            lim = {"low": 10, "medium": 50}.get(tol)
+            if lim is not None and hot > lim:
+                penalty += 0.15
+                notes.append(
+                    f"{crop.id}: tolerancia al calor {tol} con "
+                    f"{hot:g} días >35 °C en la celda")
+    return min(penalty, 0.45), notes
+
+
 # ------------------------------------------------------------- indicators --
 
 def indicators(rot: Rotation, diag: dict, zone: str | None,
@@ -409,6 +467,11 @@ def indicators(rot: Rotation, diag: dict, zone: str | None,
     out = {
         "water_balance": wb,
         "water_balance_mm": wb_mm,
+        # consecutive crop pairs that share a pest/disease host
+        # (pests.json); fewer = better, inverted in score()
+        "pest_break": len(host_sharing_pairs(rot)),
+        # botanical diversity kept as the secondary, coarser note
+        "families": len({c.family for c in crops}),
         "residue_t_ha_yr":
             round(sum(c.residue_t_ha for c in crops) / years, 1),
         "nitrogen": sum(1 for c in crops if c.n_fixation),
@@ -419,7 +482,6 @@ def indicators(rot: Rotation, diag: dict, zone: str | None,
         # residue). Texture, OM and slope do not change.
         "infiltration": _infiltration_alt(
             bare, sum(c.residue_t_ha for c in crops) / years),
-        "pest_break": len({c.family for c in crops}),
         "income": {1: "low", 2: "medium", 3: "high"}[round(income_lvl)],
         "forage": any(c.forage for c in crops),
         "burns_avoided": burns,
@@ -474,7 +536,8 @@ def score(alt: dict, cur: dict, priorities: dict) -> float:
         key = PRIORITY_MAP[p]
         a = _metric_value(alt, key)
         b = _metric_value(cur, key)
-        invert = key in ("water_balance_mm", "erosion_risk")
+        invert = key in ("water_balance_mm", "erosion_risk",
+                         "pest_break")
         num += w * _numeric_delta(a, b, invert)
     return round(0.5 + num / (2 * sum(used.values())), 3)
 
@@ -526,6 +589,7 @@ _CARD_TITLES = {
     "soil_moisture": "Humedad del suelo",
     "frost": "Período sin heladas",
     "heat": "Días de calor extremo",
+    "gdd_year": "Grados-día anuales",
     "crop_water": "Agua que pide el cultivo",
     "vigor_bare_soil": "Cobertura del suelo",
     "slope": "Pendiente",
@@ -566,6 +630,14 @@ def _gaps(diag: dict, analog_missing: bool = False,
 def _risks(rot: Rotation, viable: bool, reasons: list[str]) -> list[str]:
     per = CAUTIONS.get("per_crop", {})
     risks = [r for s in rot.sequence for r in per.get(s.crop, [])]
+    # host-sharing consecutive pairs get a specific warning, e.g.
+    # "maíz sobre maíz mantiene Fusarium y chicharrita"
+    for a, b, pests in host_sharing_pairs(rot):
+        names = ", ".join(p.name_es.split(" (")[0] for p in pests[:3])
+        how = pests[0].survival.split(":")[0]
+        risks.append(
+            f"{a} seguido de {b} mantiene {names} "
+            f"(inóculo: {how}).")
     risks += CAUTIONS.get("generic", [])
     if not viable:
         risks += [f"No viable: {r}" for r in reasons]
@@ -652,12 +724,31 @@ def _sections(rot: Rotation, ind: dict, cur_ind: dict,
                         f"{c.water_mm_cycle} mm)",
                 "indicator": "water_balance",
                 "source": c.water_observed_note or c.sources[0]})
+    # thermal-time check (task 44): "este lote acumula X °C·día por
+    # año; el maíz necesita Y" — viability visible per crop
+    gdd_ev = []
+    gdd_cell = (_card(diag, "gdd_year") or {}).get("value")
+    if isinstance(gdd_cell, (int, float)):
+        for c in crops_unique(rot):
+            if c.gdd_base10 is None:
+                continue
+            name = c.name.get("es", c.id)
+            short = ("" if gdd_cell >= c.gdd_base10
+                     else " — no alcanza en años típicos")
+            gdd_ev.append({
+                "text": f"{name}: este lote acumula "
+                        f"~{gdd_cell:g} °C·día por año; necesita "
+                        f"~{c.gdd_base10} para completar el ciclo "
+                        f"(base 10 °C){short}",
+                "indicator": "gdd_year",
+                "source": "gdd_base10 del catálogo (FAO/INTA, "
+                          "pendiente de validación local)"})
     # root/crown carbon of pastures is a declared knowledge gap
     root_gaps = [f"{c.id}: {c.root_carbon_note}"
                  for c in crops_unique(rot) if c.root_carbon_note]
     return {
         "why": _why(rot, is_current, priorities, diag, constraints or {}),
-        "evidence": evidence[:4] + water_ev,
+        "evidence": evidence[:4] + water_ev + gdd_ev,
         "benefits": benefits,
         "gaps": _gaps(diag, analog is None,
                       (extra_gaps or []) + root_gaps)
@@ -764,7 +855,8 @@ def _shift_for_zone(rot: Rotation,
 
 def run(diagnosis: dict, current: dict | None, priorities: dict,
         constraints: dict, zone: str | None,
-        analog: dict | None = None) -> dict:
+        analog: dict | None = None,
+        hazards: set | None = None) -> dict:
     zone = zone if zone in ZONE_CROPS else ("other" if zone else None)
     known = zone in ZONE_CROPS
     ff = _frost_free_doys(diagnosis)
@@ -800,6 +892,11 @@ def run(diagnosis: dict, current: dict | None, priorities: dict,
         bad = rotation_viable(rot2, diagnosis, constraints, zone, ff)
         ind = indicators(rot2, diagnosis, zone, constraints)
         sc = score(ind, cur_ind, priorities)
+        hpen, hnotes = hazard_viability(rot2, diagnosis, zone,
+                                        hazards, ff)
+        if hpen:
+            sc = max(0.0, round(sc - hpen, 3))
+            notes += hnotes
         cand.append({"rot": rot2, "ind": ind, "score": sc,
                      "bad": bad, "viable": not bad, "notes": notes})
     viable = [c for c in cand if c["viable"]]

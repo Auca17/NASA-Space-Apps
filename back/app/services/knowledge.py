@@ -151,9 +151,18 @@ class ZoneReference(BaseModel):
         return v
 
 
+class Pest(BaseModel):
+    id: str
+    name_es: str
+    hosts: list[str]            # crop ids that host this pest/disease
+    survival: str               # where the inoculum over-winters
+    sources: list[str]
+
+
 class Knowledge(BaseModel):
     crops: dict[str, Crop]
     rotations: list[Rotation]
+    pests: list[Pest] = []
     zone_references: list[ZoneReference] = []
 
 
@@ -167,6 +176,10 @@ def load(path: Path | None = None) -> Knowledge:
         rots_raw = rots_doc["rotations"]
         refs = [ZoneReference(**r)
                 for r in rots_doc.get("zone_references", [])]
+        pests_file = path / "pests.json"
+        pests = [Pest(**p) for p in (
+            json.loads(pests_file.read_text(encoding="utf-8"))["pests"]
+            if pests_file.exists() else [])]
     except Exception as exc:
         raise KnowledgeError(f"knowledge load failed: {exc}") from exc
     crops = {}
@@ -187,7 +200,13 @@ def load(path: Path | None = None) -> Knowledge:
                     f"rotation '{rot.id}' references unknown crop "
                     f"'{s.crop}'")
         rots.append(rot)
-    return Knowledge(crops=crops, rotations=rots, zone_references=refs)
+    for pest in pests:
+        unknown = [h for h in pest.hosts if h not in crops]
+        if unknown:
+            raise KnowledgeError(
+                f"pest '{pest.id}' references unknown crops {unknown}")
+    return Knowledge(crops=crops, rotations=rots, pests=pests,
+                     zone_references=refs)
 
 
 KNOWLEDGE = load()

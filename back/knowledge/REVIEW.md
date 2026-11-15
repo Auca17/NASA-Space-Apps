@@ -118,3 +118,18 @@ usa solo cuando EVLAND/EVPTRNS no están disponibles y el agua de
 cultivo se estima como ET0 × Kc. Valores representativos genéricos —
 **pendiente de validación local** con Kc regionales (INTA/FAO para
 Mendoza en vid/olivo/ajo pueden diferir por conducción y cobertura).
+
+## gdd_base10 y pests.json (task 44)
+
+`gdd_base10` por cultivo = grados-día siembra→madurez, base 10 °C,
+valores representativos de literatura FAO-56/INTA/extensión —
+**pendiente de validación local**: el GDD real depende de variedad,
+grupo de madurez y fecha de siembra. Perennes reportan el ciclo anual
+(brotación→cosecha); `alfalfa` y `monte_nativo` quedan null con motivo
+en `sources`.
+
+`pests.json`: enfermedades/plagas con hospedantes del catálogo y modo
+de supervivencia del inóculo (INTA, Aapresid, guías de patología) —
+**pendiente de validación local**: listas de hospedantes simplificadas
+a los cultivos del catálogo; cultivares con resistencia y variantes
+regionales no están modelados.
