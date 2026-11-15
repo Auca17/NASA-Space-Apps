@@ -18,7 +18,7 @@ threshold instead of an absolute one:
 - A month counts as bare/low cover when that mean falls at least 40%
   below the cell's own multi-year maximum NDVI (`NDVI < 0.60 x max`).
   The literal `0.35 x max` threshold was verified unreachable at
-  0.05 deg (Pergamino's five-year monthly minimum is 0.350 against a
+  0.05 deg (a Buenos Aires pampa cell's five-year monthly minimum is 0.350 against a
   0.267 threshold), so a relative drawdown from each field's peak is
   used instead of an absolute bare-signal NDVI that mixed pixels
   almost never reach.

@@ -10,12 +10,12 @@ Main is `6a0a275`: back 239 tests, front 365, tsc and build clean, Impeccable de
 - Drawing: simple polygon whatever the click order, draggable vertices and midpoints, undo, self-crossing refused; WebGL fill layer fixes the MapLibre tile-clip artifact at high zoom.
 - Back: /api/field/parcels, farmer profile (ENSO from NOAA ONI, snow, hail honestly unavailable, flood, economics), evaporation and FAO-56 ET0 fallback, infiltration score, degree days per crop, pest cycle with real hosts, accuracy block, hazards accepted by /rotations, Gemini summary with model fallback, 18 audit fixes, negative-cache TTL.
 - Data and validation: R2 refreshed (risk 2026-11-15, grid, analogs, knowledge, Orin), SIGA rain validation (25 stations, 1346 station-months), INTA data scan, Mendoza crops.
-- Demo: /app/#demo = Mendoza farm (live analysis, real captured fallback, guided tour). The Pergamino rotation-first demo is parked on branch feat/demo-rotations (78dbc69, WIP, 351 tests green, build/e2e not run).
+- Demo: /app/#demo = Mendoza farm (live analysis, real captured fallback, guided tour). The pampa rotation-first demo is parked on branch feat/demo-rotations (78dbc69, WIP, 351 tests green, build/e2e not run).
 - Alerts: idea and setup guide (docs/ideas, docs/ops); Ezequiel's n8n workflows in ops/n8n (Twilio sandbox because Meta blocked the account).
 
 ## Open
 
-- Demo rework to Pergamino ending in rotation cards (parked by the team lead).
+- Demo rework to pampa ending in rotation cards (parked by the team lead).
 - Not covered from the review: field-variable timeline (moisture, heat, long-term water), data outside Argentina.
 - Deploy on Vercel (function about 197 MB of 250 with rasterio), env vars, GEMINI quota on the production key, nearby services (OpenStreetMap unreachable from the dev network), real phone test.
 - Placeholders: demo, video and dataset URLs; categories; license confirmation; agronomist review of literature values.

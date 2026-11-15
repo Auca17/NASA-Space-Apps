@@ -32,4 +32,4 @@ Turn risk into action: for a place or a plot, return the prevention measures tha
 
 ## Combined report (tasks 04 and 05)
 
-Changed files, test results, trigger thresholds, the measures returned for the Pergamino diagnosis and for its top rotation, the validator output on `fixtures/`, and anything the knowledge schemas lack.
+Changed files, test results, trigger thresholds, the measures returned for the pampa diagnosis and for its top rotation, the validator output on `fixtures/`, and anything the knowledge schemas lack.

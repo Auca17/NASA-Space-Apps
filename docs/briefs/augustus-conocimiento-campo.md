@@ -32,7 +32,7 @@ Esquema en `docs/data-contract.md` sección 3.1. Por cultivo:
 - `gdd_base10`, tolerancias (`low` | `medium` | `high`), `water_mm_cycle`, `root_depth_cm`, `n_fixation`, `residue_t_ha`, `forage`, `market_ar`.
 - `sources`: lista de strings con nombre del documento y año (INTA, FAO ECOCROP, MAGyP, bibliografía). Mínimo una por cultivo; ideal una por dato dudoso.
 
-Prioridad B1: los 5 cultivos deben estar **completos** (sin `null` salvo que realmente no aplique) y con la zona `pampa_humeda` sí o sí, porque el lote de demo es Pergamino (D19).
+Prioridad B1: los 5 cultivos deben estar **completos** (sin `null` salvo que realmente no aplique) y con la zona `pampa_humeda` sí o sí, porque el lote de demo es pampa (D19).
 
 ## B1 y B2: `rotations.json`
 

@@ -24,4 +24,4 @@ Write `docs/research/inta-data.md`: what INTA publishes openly that could valida
 
 ## Report
 
-Values for the Pergamino demo and for a point in Valle de Uco (-33.73, -69.12): evaporation, water balance, infiltration, the crops added with sources, the INTA findings, tests.
+Values for the pampa demo and for a point in Valle de Uco (-33.73, -69.12): evaporation, water balance, infiltration, the crops added with sources, the INTA findings, tests.

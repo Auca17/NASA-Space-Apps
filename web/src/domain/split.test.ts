@@ -172,7 +172,7 @@ describe("simplifyRing / freehandToRing", () => {
 });
 
 describe("urban enclaves", () => {
-  // found in the walkthrough: a park inside Pergamino was left as the only
+  // found in the walkthrough: a park inside a town was left as the only
   // "usable" piece of a selection that is otherwise all town
   it("treats small pockets inside a mostly urban selection as urban", () => {
     const sel: Multi = [[squareRing(LAT, LON, 500)]];          // 100 ha

@@ -1,5 +1,5 @@
 /** Repro: field fill breaks into tile blocks at high zoom.
- * Coords -> 50 ha selection near Pergamino, then zoom +/- through the
+ * Coords -> 50 ha selection in the pampa, then zoom +/- through the
  * in-app controls and screenshot at ~z12 / ~z16 / ~z17.
  * Usage: node scripts/repro-fillbug.mjs [base] [tag] */
 import { chromium } from "playwright";

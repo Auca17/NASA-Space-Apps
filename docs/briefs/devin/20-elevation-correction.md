@@ -26,7 +26,7 @@ Source of the finding: Ezequiel validated POWER daily temperature against 53 Ori
 
 ## Report
 
-Per section: what changed, the Pergamino (no adjustment) and a Valle de Uco point (about -33.37, -69.15) before and after in frost-free days and hot days, the counts of adjusted grid cells, the stations table before and after, tests, and files to upload to R2 (`orin/validation.json`, `orin/lots.geojson` if present, the regenerated `field/grid/` shards) with the exact commands.
+Per section: what changed, the pampa (no adjustment) and a Valle de Uco point (about -33.37, -69.15) before and after in frost-free days and hot days, the counts of adjusted grid cells, the stations table before and after, tests, and files to upload to R2 (`orin/validation.json`, `orin/lots.geojson` if present, the regenerated `field/grid/` shards) with the exact commands.
 
 ## Then
 

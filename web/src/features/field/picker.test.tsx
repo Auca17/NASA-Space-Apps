@@ -37,7 +37,7 @@ describe("FieldPicker", () => {
     expect(screen.getByText(/aproximada de 50 ha/i)).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: /punto por punto/i }));
     fireEvent.click(screen.getByRole("button", { name: /tocar un punto/i }));
-    fireEvent.click(screen.getByRole("button", { name: /ejemplo de pergamino/i }));
+    fireEvent.click(screen.getByRole("button", { name: /ejemplo: finca en mendoza/i }));
     expect(onPick.mock.calls).toEqual([["draw"], ["point"]]);
     expect(onDemo).toHaveBeenCalledOnce();
   });

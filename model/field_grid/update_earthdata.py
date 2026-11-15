@@ -255,7 +255,7 @@ def do_baresoil(cells):
     natural cycles, not fallow ground.
 
     NOTE: the literal 0.35 x max rule yields 0 for essentially every
-    cell at 0.05 deg (Pergamino min 0.350 vs threshold 0.267), so a
+    cell at 0.05 deg (a pampa cell, min 0.350 vs threshold 0.267), so a
     relative drawdown from the cell's own peak is used instead —
     consistent with the brief's expected magnitudes.
     """

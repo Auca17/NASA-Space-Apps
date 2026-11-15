@@ -36,4 +36,4 @@ Tests for priority ordering and hidden, snow from a stubbed POWER series, ENSO p
 
 ## Report
 
-Real calls on the Pergamino demo with a profile (enso rank 1, economics for soja and maiz), values, timings, tests, and anything approximate.
+Real calls on the pampa demo with a profile (enso rank 1, economics for soja and maiz), values, timings, tests, and anything approximate.

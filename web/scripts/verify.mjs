@@ -141,7 +141,7 @@ await cdp.send("Network.emulateNetworkConditions", {
 });
 await cdp.send("Network.setCacheDisabled", { cacheDisabled: true });
 for (const [name, ll] of [["corrientes", "-27.95,-56.95"],
-                          ["pergamino", "-33.89,-60.57"]]) {
+                          ["pampa", "-33.89,-60.57"]]) {
   const t0 = Date.now();
   await page.goto(BASE + `/app/?t=${name}#${ll}`,
     { waitUntil: "domcontentloaded" });

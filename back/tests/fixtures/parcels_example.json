@@ -552,7 +552,7 @@
   "nearby": {
     "fire_stations": [
       {
-        "name": "Bomberos Voluntarios de Pergamino",
+        "name": "Bomberos Voluntarios de la zona",
         "distance_km": 9.4,
         "lon": -60.5736,
         "lat": -33.8987
@@ -568,7 +568,7 @@
     ],
     "water": [
       {
-        "name": "Arroyo Pergamino",
+        "name": "Arroyo de la zona",
         "kind": "river",
         "distance_km": 4.2,
         "lon": -60.589,
@@ -583,7 +583,7 @@
     "bullets": [
       "La parcela de maíz tiene el suelo más seco que lo normal para noviembre; sin riego declarado, es la primera en mirar.",
       "El resto de las parcelas muestra humedad y riesgo dentro de lo normal para la época.",
-      "Los bomberos voluntarios más cercanos están a unos 9 km, en Pergamino."
+      "Los bomberos voluntarios más cercanos están a unos 9 km."
     ],
     "source": "template"
   },

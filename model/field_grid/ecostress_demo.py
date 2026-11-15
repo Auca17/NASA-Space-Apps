@@ -24,8 +24,6 @@ DL = ROOT / "data/earthdata/ecostress"
 OUT = ROOT / "data/processed/ecostress_demo.json"
 N_SCENES = 10
 SITES = {
-    "pergamino": {"bbox": (-60.60, -33.92, -60.54, -33.86),
-                  "center": (-33.89, -60.57), "crop": "Soja/maíz"},
     "mendoza": {"bbox": (-68.95, -33.07, -68.88, -33.01),
                 "center": (-33.04, -68.91), "crop": "Viña"},
 }

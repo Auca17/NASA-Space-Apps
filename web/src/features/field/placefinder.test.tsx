@@ -33,16 +33,16 @@ describe("PlaceFinder", () => {
 
   it("searches a place on OpenStreetMap and flies to the picked hit", async () => {
     const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => ({
-      hits: [{ lat: -33.89, lon: -60.57, name: "Pergamino, Buenos Aires" }] }) });
+      hits: [{ lat: -34.64, lon: -60.47, name: "Chacabuco, Buenos Aires" }] }) });
     vi.stubGlobal("fetch", fetchMock);
     const onGo = renderFinder();
     fireEvent.change(screen.getByRole("textbox"),
-      { target: { value: "Pergamino" } });
+      { target: { value: "Chacabuco" } });
     fireEvent.click(screen.getByRole("button", { name: /buscar/i }));
     fireEvent.click(await screen.findByRole("button",
-      { name: /pergamino, buenos aires/i }));
-    expect(fetchMock.mock.calls[0][0]).toContain("/api/geocode?q=Pergamino&bias=ar");
-    expect(onGo).toHaveBeenCalledWith(-33.89, -60.57);
+      { name: /chacabuco, buenos aires/i }));
+    expect(fetchMock.mock.calls[0][0]).toContain("/api/geocode?q=Chacabuco&bias=ar");
+    expect(onGo).toHaveBeenCalledWith(-34.64, -60.47);
   });
 
   it("tells the user when nothing was found", async () => {

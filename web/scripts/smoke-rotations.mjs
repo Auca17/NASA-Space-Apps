@@ -34,7 +34,7 @@ for (const w of [390, 1280]) {
   await page.locator("summary", { hasText: /Probar con un ejemplo/ })
     .first().click().catch(() => {});
   await page.waitForTimeout(400);
-  await click(/Abrir el ejemplo de Pergamino/i);
+  await click(/Abrir el ejemplo: finca en Mendoza/i);
   await page.waitForSelector(".dtile, .card", { timeout: 120000 })
     .catch(() => {});
   await page.waitForTimeout(1500);

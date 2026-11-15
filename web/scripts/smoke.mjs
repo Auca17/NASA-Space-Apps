@@ -95,13 +95,13 @@ for (const s of SIZES) {
   const lShot = await snap("live");
   flushErrs("live", lShot);
 
-  /* 5 --------------------------------- field lens: Pergamino demo ----- */
+  /* 5 --------------------------------- field lens: example farm ----- */
   await click(/^Analizar mi campo$/i);
   await page.waitForTimeout(1500);
-  // expand the examples disclosure, then open the Pergamino demo
+  // expand the examples disclosure, then open the example farm
   await openDetails(/Probar con un ejemplo/);
   await page.waitForTimeout(400);
-  const demoClicked = await click(/Abrir el ejemplo de Pergamino/i);
+  const demoClicked = await click(/Abrir el ejemplo: finca en Mendoza/i);
   await page.waitForSelector(".dtile, .diag-grid, .strategy",
     { timeout: 120000 }).catch(() => {});
   await page.waitForTimeout(2500);
@@ -182,7 +182,7 @@ for (const s of SIZES) {
   const search = page.locator(
     'input[placeholder*="Localidad"], input[type="search"]').first();
   if (await search.count()) {
-    await search.fill("Pergamino").catch(() => {});
+    await search.fill("Chacabuco").catch(() => {});
     await click(/^Buscar$/i);
     await page.waitForTimeout(3000);
   }
@@ -196,7 +196,7 @@ for (const s of SIZES) {
     await res.click().catch(() => {});
     await page.waitForTimeout(2000);
   } else {
-    note("place-finder", "low", "no search results for 'Pergamino'", pShot);
+    note("place-finder", "low", "no search results for 'Chacabuco'", pShot);
   }
   const pShot2 = await snap("place-finder-result");
   flushErrs("place-finder", pShot2);

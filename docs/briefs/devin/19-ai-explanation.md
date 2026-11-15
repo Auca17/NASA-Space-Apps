@@ -16,7 +16,7 @@ Last part of the chain started in task 17. Rules as in task 17. The challenge br
 6. Tests with a stub of the HTTP client: valid answer accepted, a paragraph with an invented number rejected (falls back), unknown id rejected, timeout falls back, missing key falls back, cache hit does not call twice. A front test for the label.
 7. `back/README.md`: how to enable it (set `ANTHROPIC_API_KEY` in the Vercel project variables), the approximate cost per call at the model's published prices, and the exact validation rules.
 
-Do not call the real API in tests. If a key is present in the environment while you work, you may run one real call against the Pergamino rotations to check the output validates, and report the paragraph; if no key exists, say that the live path is untested.
+Do not call the real API in tests. If a key is present in the environment while you work, you may run one real call against the pampa rotations to check the output validates, and report the paragraph; if no key exists, say that the live path is untested.
 
 ## Report
 

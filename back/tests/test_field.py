@@ -236,7 +236,7 @@ def test_zone_at_test_points():
     """The four brief points resolve to the expected zone."""
     from app.services.georef import zone_at
     cases = [
-        ((-33.89, -60.57), "pampa_humeda", "Buenos Aires", "AR"),  # Pergamino
+        ((-33.89, -60.57), "pampa_humeda", "Buenos Aires", "AR"),  # pampa húmeda
         ((-24.80, -65.40), "noa", "Salta", "AR"),
         ((-54.80, -68.30), "patagonia", None, "AR"),               # Ushuaia
         ((40.40, -3.70), "other", None, "ES"),                     # Spain
@@ -273,9 +273,9 @@ async def test_geocode_proxy(respx_mock):
     """Same-origin Nominatim proxy: trimmed hits, short-q shortcut."""
     respx_mock.get("https://nominatim.openstreetmap.org/search").respond(
         json=[{"lat": "-33.9", "lon": "-60.6",
-               "display_name": "Pergamino, Buenos Aires"}])
+               "display_name": "Chacabuco, Buenos Aires"}])
     async with client() as c:
-        r = await c.get("/api/geocode", params={"q": "pergamino"})
+        r = await c.get("/api/geocode", params={"q": "chacabuco"})
         assert r.status_code == 200
         assert r.json()["hits"][0]["lat"] == -33.9
         assert (await c.get("/api/geocode", params={"q": "x"})

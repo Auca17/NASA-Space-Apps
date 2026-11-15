@@ -43,4 +43,4 @@ Fix:
 
 ## Report
 
-What changed for each point, new test counts, and the strategies and scores returned for the Pergamino plot (pampa_humeda), a NOA plot (-26.8, -65.2) and a Patagonia plot (-39.0, -67.5), each with default current rotation, plus one plot with `irrigation: true`.
+What changed for each point, new test counts, and the strategies and scores returned for the pampa plot (pampa_humeda), a NOA plot (-26.8, -65.2) and a Patagonia plot (-39.0, -67.5), each with default current rotation, plus one plot with `irrigation: true`.

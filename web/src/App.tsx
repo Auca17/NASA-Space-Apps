@@ -2,7 +2,7 @@ import { Suspense, lazy, useRef, useState, useCallback, useEffect } from "react"
 import { DrawSession, activateDrawSession, deactivateDrawSession }
   from "./features/field/drawEdit";
 import { useT } from "./i18n";
-import { APP_NAME, DEFAULT_VIEW, DEMO_PLOT, WORLD_VIEW } from "./config";
+import { APP_NAME, DEFAULT_VIEW, WORLD_VIEW } from "./config";
 import { WindLogo } from "./components/WindLogo";
 import { Welcome } from "./features/welcome/Welcome";
 import { MethodsDrawer } from "./features/methods/MethodsDrawer";
@@ -734,16 +734,6 @@ export default function App() {
     });
   };
 
-  const demoPlot = () => {
-    const r = circleApprox(DEMO_PLOT.lat, DEMO_PLOT.lon);
-    setMode("field"); setDraw("none"); setSelection(null); setAdjust(null);
-    setFieldsView(null);
-    setTarget({ geom: [[r]], areaLabel: t("analyze.demo") });
-    setParcelRes(null); setParcelsWizard(false);
-    setFieldOpen(true);
-    globeRef.current?.flyTo(DEMO_PLOT.lat, DEMO_PLOT.lon, 11);
-  };
-
   const zoneField = targetRef.current.kind === "zone"
     ? fields.find((x) => targetRef.current.kind === "zone" &&
                          x.id === targetRef.current.fieldId)
@@ -1010,7 +1000,7 @@ export default function App() {
         {mode === "field" && !fieldOpen && !selection &&
           (draw !== "none" || !fieldsView) && (
           <FieldPicker draw={mapUnavailable ? "none" : draw} points={draft.length}
-                       onPick={startField} onDemo={demoPlot}
+                       onPick={startField} onDemo={startDemo}
                        demoLots={lots.map((feature) => ({
                          id: feature.properties.id,
                          label: feature.properties.crop_label || feature.properties.name,

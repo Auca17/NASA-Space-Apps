@@ -105,6 +105,6 @@ soil moisture and NDVI. Small access probes only; no bulk download.
 | NDVI | Mapa Nacional de Cultivos field samples + campaign maps; vineyard proximal-NDVI study shows ground↔satellite is not a 1:1 transfer | partial: validates crop/vigor classification, not continuous NDVI; our S2-vs-MODIS cross-check (task 24) remains the honest in-app comparison |
 
 **Suggested F10 pilot**: download SIGA XLS for Junín (A872938) and a
-Pergamino-area station, compute monthly rain vs IMERG/POWER cell —
+a pampa-area station, compute monthly rain vs IMERG/POWER cell —
 small, scriptable, no auth. Soil moisture second (probe coverage
 uncertain). NDVI stays satellite-vs-satellite + crop-map checks.

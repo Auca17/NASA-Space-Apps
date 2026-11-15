@@ -29,7 +29,7 @@ page.on("console", (m) => {
 // ---- part 1: demo plot -> needs -> result + tabs ----------------------
 await page.goto(BASE + "/app/", { waitUntil: "networkidle" });
 await page.waitForTimeout(1500);
-await page.getByRole("button", { name: /ejemplo|pergamino/i }).first()
+await page.getByRole("button", { name: /ejemplo/i }).first()
   .click();
 // the Mendoza demo carries its own needs: it goes straight to the
 // parcels analysis instead of asking first

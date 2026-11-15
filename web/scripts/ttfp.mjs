@@ -11,7 +11,7 @@ await cdp.send("Network.emulateNetworkConditions", {
   uploadThroughput: 3 * 1024 * 1024 / 8,
 });
 for (const [name, ll] of [["corrientes", "-27.95,-56.95"],
-                          ["pergamino", "-33.89,-60.57"]]) {
+                          ["pampa", "-33.89,-60.57"]]) {
   await cdp.send("Network.setCacheDisabled", { cacheDisabled: true });
   const t0 = Date.now();
   await page.goto(BASE + `/app/?t=${name}#${ll}`,
@@ -26,5 +26,5 @@ const t0 = Date.now();
 await page.goto(BASE + "/app/?t=warm#-33.89,-60.57",
   { waitUntil: "domcontentloaded" });
 await page.waitForSelector("table.cal", { timeout: 90000 }).catch(() => {});
-console.log(`pergamino warm: ${Date.now() - t0} ms`);
+console.log(`pampa warm: ${Date.now() - t0} ms`);
 await browser.close();

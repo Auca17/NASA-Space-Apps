@@ -57,7 +57,7 @@ describe("parseLatLon", () => {
     expect(parseLatLon(" -33,96 ; -60,69 ")).toEqual([-33.96, -60.69]);
   });
   it("rejects place names and out-of-range values", () => {
-    expect(parseLatLon("Pergamino, Buenos Aires")).toBeNull();
+    expect(parseLatLon("Chacabuco, Buenos Aires")).toBeNull();
     expect(parseLatLon("95, 10")).toBeNull();
     expect(parseLatLon("10, 200")).toBeNull();
   });

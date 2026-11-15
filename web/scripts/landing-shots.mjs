@@ -45,10 +45,10 @@ for (const { w, h } of SIZES) {
   await page.waitForSelector("table.cal", { timeout: 30000 }).catch(() => {});
   await snap("area-panel", 1800);
 
-  // 3. field diagnosis (Pergamino demo plot — real data only)
+  // 3. field diagnosis (Mendoza demo farm — real data only)
   await page.goto(BASE + "/app/", { waitUntil: "domcontentloaded" });
   await page.getByRole("button",
-    { name: /ejemplo.*pergamino/i }).click().catch(() => {});
+    { name: /ejemplo.*mendoza/i }).click().catch(() => {});
   await page.waitForSelector(".card", { timeout: 60000 }).catch(() => {});
   await snap("field-diagnosis", 2000);
 

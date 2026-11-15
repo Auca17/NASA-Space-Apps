@@ -8,7 +8,7 @@ Use the **NASA POWER daily point API** as the main source for on-demand (real-ti
 
 `https://power.larc.nasa.gov/api/temporal/daily/point?parameters=...&community=AG&latitude=..&longitude=..&start=YYYYMMDD&end=YYYYMMDD&format=JSON`
 
-## Measured on 2026-11-14 (Pergamino point, 5 parameters)
+## Measured on 2026-11-14 (pampa point, 5 parameters)
 
 | Range | Size | Time |
 |---|---|---|
@@ -34,4 +34,4 @@ The last two days come back as the fill value `-999` (data latency). Treat `-999
 
 ## Report (add to the task 03 report)
 
-A table: POWER parameter → card or calendar row it feeds → why. Plus the real latency of the daily call from your machine for Pergamino and for the non-Argentine plot.
+A table: POWER parameter → card or calendar row it feeds → why. Plus the real latency of the daily call from your machine for pampa and for the non-Argentine plot.

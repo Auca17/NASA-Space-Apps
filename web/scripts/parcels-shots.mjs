@@ -16,7 +16,7 @@ for (const s of [{ n: "390", w: 390, h: 844 }, { n: "1280", w: 1280, h: 800 }]) 
 
   await page.goto(BASE + "/app/", { waitUntil: "networkidle" }).catch(() => {});
   await page.waitForTimeout(1200);
-  await page.getByRole("button", { name: /ejemplo|pergamino/i }).first()
+  await page.getByRole("button", { name: /ejemplo/i }).first()
     .click().catch((e) => console.log("demo:", e.message.slice(0, 80)));
   await snap("parcels-needs", 2500);
   await page.getByRole("button", { name: /omitir|saltar|continuar|analizar/i })

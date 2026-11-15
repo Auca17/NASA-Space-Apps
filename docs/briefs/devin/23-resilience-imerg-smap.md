@@ -26,4 +26,4 @@ Prepare the staging folder `r2-stage/` (git-ignored) with everything new since t
 
 ## Report
 
-Per section: what changed, the 429 behavior shown with a stubbed run and the degraded response for Pergamino, the SMAP investigation result, the IMERG agreement numbers, the staging dry-run, and test counts (back and front).
+Per section: what changed, the 429 behavior shown with a stubbed run and the degraded response for pampa, the SMAP investigation result, the IMERG agreement numbers, the staging dry-run, and test counts (back and front).

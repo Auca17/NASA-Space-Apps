@@ -4,11 +4,11 @@ Task 03 structure and most cards are accepted. Two defects must be fixed in one 
 
 ## 1. Frost-free period is wrong in the southern hemisphere (blocker)
 
-`frost_free_window` in `back/app/routers/field.py` takes the last frost before day 182 and the first frost after it. In the southern hemisphere frosts fall in June to August, so it reports the gap inside winter: Pergamino came out as 16 days, 23/06 to 09/07. The real frost-free period there runs from spring to autumn, around 200 to 250 days.
+`frost_free_window` in `back/app/routers/field.py` takes the last frost before day 182 and the first frost after it. In the southern hemisphere frosts fall in June to August, so it reports the gap inside winter: pampa came out as 16 days, 23/06 to 09/07. The real frost-free period there runs from spring to autumn, around 200 to 250 days.
 
 Make the algorithm hemisphere-agnostic:
 
-- Find the coldest month of the climatology (lowest median `T2M_MIN`). Start each "frost year" on the first day of that month (July in Pergamino, January in Burgos).
+- Find the coldest month of the climatology (lowest median `T2M_MIN`). Start each "frost year" on the first day of that month (July in pampa, January in Burgos).
 - Inside each frost year: last frost = last day with `T2M_MIN <= 0` in its first half; first frost = first such day in its second half. Frost-free days = first frost minus last frost.
 - Median over years, with at least 3 years having both frosts; otherwise `null`. If a frost year has no frost at all, count it as a 365-day frost-free year for the median and say so in the text ("sin heladas en N de M años").
 - Labels stay `DD/MM` as today. The calendar row `frost` (monthly fraction below 0 °C) is correct and stays.
@@ -25,4 +25,4 @@ Measured today from this machine: both time out even at 15 seconds, three attemp
 
 ## Report
 
-Changed files, test results, and the real Pergamino and Burgos frost cards after the fix (labels and days).
+Changed files, test results, and the real pampa and Burgos frost cards after the fix (labels and days).

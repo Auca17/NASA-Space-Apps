@@ -74,7 +74,7 @@ for (const s of SIZES) {
   await page.waitForTimeout(1500);
   await page.locator("summary", { hasText: /ejemplo/i }).first()
     .click().catch(() => {});
-  await page.getByRole("button", { name: /Pergamino/i }).first()
+  await page.getByRole("button", { name: /ejemplo: finca en Mendoza/i }).first()
     .click().catch(() => {});
   await page.waitForSelector(".diag-degraded, [role='alert']",
     { timeout: 20000 }).catch(() => {});
@@ -92,7 +92,7 @@ for (const s of SIZES) {
   await page.waitForTimeout(1500);
   await page.locator("summary", { hasText: /ejemplo/i }).first()
     .click().catch(() => {});
-  await page.getByRole("button", { name: /Pergamino/i }).first()
+  await page.getByRole("button", { name: /ejemplo: finca en Mendoza/i }).first()
     .click().catch(() => {});
   await page.waitForSelector(".dtile, .diag-grid",
     { timeout: 120000 }).catch(() => {});

@@ -29,4 +29,4 @@ A page or drawer reachable from a visible footer/menu link "Datos y métodos" (e
 
 ## Report (combined at the end of the chain)
 
-Per section: what changed, tests, measured effects (for the scenarios give the Pergamino numbers at baseline and at -20 % rain +1 °C), screenshots, and anything not done and why.
+Per section: what changed, tests, measured effects (for the scenarios give the pampa numbers at baseline and at -20 % rain +1 °C), screenshots, and anything not done and why.

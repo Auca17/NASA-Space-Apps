@@ -74,8 +74,8 @@ Response:
 
 ## Tests and docs
 
-Unit tests for validation (all error codes), clipping and overlap, indicator math with fixtures (no network), alert rules (pct 50 boundary, nearby detection, dry plus crop), zones capping, Overpass failure, AI fallback. One integration test through FastAPI with stubbed upstreams. Document the endpoint in `docs/data-contract.md` (new section) with the example above. Also add `back/tests/fixtures/parcels_example.json` with a realistic full response for the Pergamino demo plot split into three parcels (soja, maiz, sin_cultivo), at least one hotspot zone, one fire_risk zone, one dry parcel and a fire alert, so the UI terminal can use it; push it early (first commit, within the first 30 minutes) because the UI terminal waits for it.
+Unit tests for validation (all error codes), clipping and overlap, indicator math with fixtures (no network), alert rules (pct 50 boundary, nearby detection, dry plus crop), zones capping, Overpass failure, AI fallback. One integration test through FastAPI with stubbed upstreams. Document the endpoint in `docs/data-contract.md` (new section) with the example above. Also add `back/tests/fixtures/parcels_example.json` with a realistic full response for the pampa demo plot split into three parcels (soja, maiz, sin_cultivo), at least one hotspot zone, one fire_risk zone, one dry parcel and a fire alert, so the UI terminal can use it; push it early (first commit, within the first 30 minutes) because the UI terminal waits for it.
 
 ## Report
 
-Endpoint behavior with a real call on the Pergamino demo plot (three parcels) and on a plot in Valle de Uco, timings, test counts, what is approximate and why, and anything you could not do.
+Endpoint behavior with a real call on the pampa demo plot (three parcels) and on a plot in Valle de Uco, timings, test counts, what is approximate and why, and anything you could not do.

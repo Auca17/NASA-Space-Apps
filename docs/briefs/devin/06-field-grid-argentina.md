@@ -22,4 +22,4 @@ Produce `data/processed/field_grid/{h3_r2}.json` for every H3 res-2 shard that i
 
 ## Report
 
-Per dataset: access route used, runtime, cells covered, blockers. The Pergamino cell (`85c2e8bbfffffff`) values next to the fixture for sanity (rain near 1,000 mm, SMAP anomaly sign). The validator output. Which diagnose cards now have real values for Pergamino.
+Per dataset: access route used, runtime, cells covered, blockers. The pampa cell (`85c2e8bbfffffff`) values next to the fixture for sanity (rain near 1,000 mm, SMAP anomaly sign). The validator output. Which diagnose cards now have real values for pampa.

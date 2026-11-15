@@ -55,4 +55,4 @@ Also add `POST /api/field/explain` as the template-based version (contract 4.5):
 
 ## Report
 
-Changed files; the priority-to-indicator weight mapping and the viability thresholds you chose; the four strategies returned for the Pergamino diagnosis (ids and scores) with `current: null`; test results; and anything the knowledge schema lacks that the engine needed (so the teammate can add it).
+Changed files; the priority-to-indicator weight mapping and the viability thresholds you chose; the four strategies returned for the pampa diagnosis (ids and scores) with `current: null`; test results; and anything the knowledge schema lacks that the engine needed (so the teammate can add it).

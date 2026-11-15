@@ -34,4 +34,4 @@ Fix: in `fire_weather_card`, evaluate `stop_conditions` on the last valid day on
 
 ## Report
 
-For each item: reproduced yes or no, the fix, the new tests, and the Pergamino, NOA and Cuyo numbers before and after.
+For each item: reproduced yes or no, the fix, the new tests, and the pampa, NOA and Cuyo numbers before and after.

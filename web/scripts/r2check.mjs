@@ -1,4 +1,4 @@
-/** Task-13 R2 check: welcome + Corrientes panel + Pergamino rotations
+/** Task-13 R2 check: welcome + Corrientes panel + pampa rotations
  * against a build pointed at the real R2 bucket (VITE_DATA_BASE_URL). */
 import { chromium } from "playwright";
 import { fileURLToPath } from "node:url";
@@ -28,7 +28,7 @@ await page.waitForSelector("table.cal", { timeout: 60000 })
 await page.waitForTimeout(1500);
 await page.screenshot({ path: `${OUT}13-r2-corrientes.png` });
 
-// Pergamino field -> rotations (zone header must read Pampa húmeda)
+// pampa field -> rotations (zone header must read Pampa húmeda)
 await page.goto(BASE + "/app/?r2=2#-33.89,-60.57",
   { waitUntil: "domcontentloaded" });
 await page.getByRole("button", { name: /analizar mi campo/i }).click()

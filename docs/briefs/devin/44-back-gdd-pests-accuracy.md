@@ -31,4 +31,4 @@ Values read from `docs/validation/orin/validation.json` and `docs/validation/rai
 
 ## Report
 
-Values for Pergamino and Valle de Uco, tests before and after, sources used.
+Values for pampa and Valle de Uco, tests before and after, sources used.

@@ -1,6 +1,6 @@
 # Devin task 09 — Analog zones, analog evidence in rotations, and the R2 uploader (one long unit)
 
-Task 08 accepted (Pergamino: crop, 122 bare-soil days; SMAP set to null everywhere on purpose). Read first: `docs/data-contract.md` sections 2.8 (`field/analogs`), 4.3 and 5, `docs/decisions.md` D16. Inputs on disk: `data/processed/field/grid/*.json` (13,471 res-5 cells), `data/processed/risk/*.json`. Do not modify `docs/` or `fixtures/`. Do not commit. Never print secrets. Skip a blocked piece, finish the rest, report.
+Task 08 accepted (pampa: crop, 122 bare-soil days; SMAP set to null everywhere on purpose). Read first: `docs/data-contract.md` sections 2.8 (`field/analogs`), 4.3 and 5, `docs/decisions.md` D16. Inputs on disk: `data/processed/field/grid/*.json` (13,471 res-5 cells), `data/processed/risk/*.json`. Do not modify `docs/` or `fixtures/`. Do not commit. Never print secrets. Skip a blocked piece, finish the rest, report.
 
 ## Steps
 
@@ -14,4 +14,4 @@ Task 08 accepted (Pergamino: crop, 122 bare-soil days; SMAP set to null everywhe
 
 ## Report
 
-Chosen k and silhouette; the cluster of the Pergamino cell with label and its MAGyP crops; validator result; test count; uploader dry-run output against `data/processed/field`; blockers.
+Chosen k and silhouette; the cluster of the pampa cell with label and its MAGyP crops; validator result; test count; uploader dry-run output against `data/processed/field`; blockers.

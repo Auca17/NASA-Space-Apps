@@ -148,9 +148,9 @@ describe("ParcelsResult", () => {
     expect(screen.getByText("Media")).toBeInTheDocument();
     expect(screen.getAllByText("34 %").length).toBeGreaterThan(0);
     // nearby services
-    expect(screen.getByText("Bomberos Voluntarios de Pergamino"))
+    expect(screen.getByText("Bomberos Voluntarios de la zona"))
       .toBeInTheDocument();
-    expect(screen.getByText("Arroyo Pergamino")).toBeInTheDocument();
+    expect(screen.getByText("Arroyo de la zona")).toBeInTheDocument();
   });
 
   it("shows a prominent role=alert for high-severity fire", () => {

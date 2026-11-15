@@ -2,7 +2,7 @@
 
 Qué produce cada parte del sistema y qué espera la otra. Cuatro productores trabajan en paralelo sin verse (pipeline de fuego, conocimiento agronómico, modelos de Devin, back a demanda) y un consumidor (front). Este documento es el plano común.
 
-Los ejemplos reales de cada archivo están en `fixtures/`, con celdas H3 válidas (Corrientes y Pergamino) y valores inventados. El front puede arrancar con ellos desde el minuto uno.
+Los ejemplos reales de cada archivo están en `fixtures/`, con celdas H3 válidas (Corrientes y la pampa) y valores inventados. El front puede arrancar con ellos desde el minuto uno.
 
 Decisiones que lo sustentan: `docs/decisions.md` (D2, D4, D5, D7, D9, D10, D12, D16, D18).
 
@@ -446,7 +446,7 @@ Indicadores extra (D36): `snow` = días/año con `PRECSNOLAND` >1 mm + % de año
 
 Indicadores informativos (F1–F6, 2026-12): `evaporation` = total anual `EVLAND` (mm), perfil mensual y balance lluvia − evaporación por mes (helper `monthly_sum_clim` compartido con `/diagnose`); si `EVLAND` falta o viene degradado se estima con la misma serie ET0 FAO-56 de `/diagnose` (método declarado en `basis`) y se agrega `crop_water_mm_day` = ET0 × `kc_mid` del catálogo (FAO-56 tabla 12) cuando la parcela declara cultivo; `infiltration` = clase + puntaje 0–100 (textura/USDA HSG, MO, pendiente, suelo desnudo — fórmula en `back/knowledge/README.md`). No son peligros: no entran en `order` ni en `priorities`. Además de la alerta de helada genérica, los cultivos con `frost_window` en `crops.json` (vid, olivo, frutales de carozo) generan una alerta `frost`/`medium` cuando su tramo sensible queda ≥7 días fuera de la ventana libre de heladas de la celda. Cultivos nuevos del catálogo: `vid`, `olivo`, `ajo`, `frutal_carozo`, `monte_nativo` (perennes con `rotatable:false` salvo `ajo`).
 
-`degraded`/`degraded_reason` agregan cualquier fuente caída (POWER, FIRMS, Overpass). Ejemplo completo de respuesta: `back/tests/fixtures/parcels_example.json` (Pergamino, 3 parcelas).
+`degraded`/`degraded_reason` agregan cualquier fuente caída (POWER, FIRMS, Overpass). Ejemplo completo de respuesta: `back/tests/fixtures/parcels_example.json` (lote pampeano, 3 parcelas).
 
 ---
 

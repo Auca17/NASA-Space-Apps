@@ -20,4 +20,4 @@ For each H3 res-5 cell of Argentina, the probability of at least one VIIRS fire 
 
 ## Report
 
-Row count and positive rate; test-set table for model versus both baselines (ROC-AUC, PR-AUC, Brier); the honest verdict; top 5 SHAP features; runtime of training and of `predict.py`; the risk object for the Pergamino cell (`85c2e8bbfffffff`) and the Corrientes cell (`85a963c3fffffff`); validator output; anything the data lacked.
+Row count and positive rate; test-set table for model versus both baselines (ROC-AUC, PR-AUC, Brier); the honest verdict; top 5 SHAP features; runtime of training and of `predict.py`; the risk object for the pampa cell (`85c2e8bbfffffff`) and the Corrientes cell (`85a963c3fffffff`); validator output; anything the data lacked.

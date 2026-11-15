@@ -15,7 +15,7 @@ from app.routers import parcels as P  # noqa: E402
 from app.services import firms, parcel_geo  # noqa: E402
 from app.services import ai_explain, nearby  # noqa: E402
 
-# ~200 ha square boundary near Pergamino; 0.05 deg ~= 4.6 km x 5.6 km
+# ~200 ha square boundary in the pampa; 0.05 deg ~= 4.6 km x 5.6 km
 BND = {"type": "Polygon", "coordinates": [[
     [-60.60, -33.91], [-60.52, -33.91], [-60.52, -33.87],
     [-60.60, -33.87], [-60.60, -33.91]]]}

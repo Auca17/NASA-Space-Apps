@@ -55,4 +55,4 @@ Rows `bare_soil`, `frost`, `water_stress`, `heat`, `burn_season`, each 12 intege
 
 ## Report
 
-Changed files; for each card the source finally used and the latency you measured with one real call for the public demo plot near Pergamino (lat -33.89, lon -60.57, 50 ha; `point` input) and one for a plot outside Argentina of your choice; which cards came back null and why; total wall time of both calls; test results. If a source needs a key or account, do not create one: report it.
+Changed files; for each card the source finally used and the latency you measured with one real call for the public demo plot near pampa (lat -33.89, lon -60.57, 50 ha; `point` input) and one for a plot outside Argentina of your choice; which cards came back null and why; total wall time of both calls; test results. If a source needs a key or account, do not create one: report it.
