@@ -876,7 +876,7 @@ export default function App() {
     analyze({ geom: [[ring]], areaLabel: t("fields.nearby"), nearby: true });
   };
 
-  const useLocationFor = (action: "add" | "nearby") => {
+  const requestLocationFor = (action: "add" | "nearby") => {
     const revision = ++locationRequest.current;
     setLocationState("loading");
     const denied = () => {
@@ -1203,7 +1203,7 @@ export default function App() {
           fieldsView === "list" && (
           <FieldsList fields={fields} actions={<div className="field-entry-actions">
             <details onToggle={(event) => {
-              if (event.currentTarget.open) useLocationFor("add");
+              if (event.currentTarget.open) requestLocationFor("add");
             }}>
               <summary>{t("fields.addNew")}</summary>
               <button type="button" onClick={() => {
@@ -1213,7 +1213,7 @@ export default function App() {
               }}>{t("place.search")}</button>
             </details>
             <button type="button" disabled={locationState === "loading"}
-                    onClick={() => useLocationFor("nearby")}>{t("fields.nearby")}</button>
+                    onClick={() => requestLocationFor("nearby")}>{t("fields.nearby")}</button>
             {locationState === "loading" && <p role="status">{t("place.locating")}</p>}
             {locationState === "denied" && <p role="status">{t("fields.locationDenied")}{" "}
               {globe && <button onClick={() => {
