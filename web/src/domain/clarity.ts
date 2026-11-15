@@ -55,15 +55,6 @@ export function plainSummary(d: DiagnoseResponse,
     .filter((g) => g.facts.length > 0);
 }
 
-/** Inclusive date range the fire semaphore sums: the `windowDays`
- * ending on `endDate` (YYYY-MM-DD, UTC). */
-export function semaphorePeriod(endDate: string, windowDays: number):
-    { from: string; to: string } {
-  const end = new Date(`${endDate}T00:00:00Z`);
-  const from = new Date(end.getTime() - (windowDays - 1) * 86_400_000);
-  return { from: from.toISOString().slice(0, 10), to: endDate };
-}
-
 /** The backend explains alternatives "frente a la actual" even when the
  * baseline is the zone's typical rotation; relabel it as a reference. */
 export function referenceText(text: string, reference: boolean): string {

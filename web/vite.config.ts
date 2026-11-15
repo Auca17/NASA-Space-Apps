@@ -111,8 +111,6 @@ export default defineConfig({
       output: {
         manualChunks: {
           maplibre: ["maplibre-gl"],
-          plot: ["@observablehq/plot"],
-          h3: ["h3-js"],
         },
       },
     },

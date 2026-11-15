@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { fetchJson, dataUrl } from "./client";
-import { meta, fireCal } from "./index";
+import { orinLots } from "./index";
 
 // The test owns its configuration: a local .env (VITE_DATA_BASE_URL
 // pointing at a bucket) must not change what the client is checked against.
@@ -19,8 +19,7 @@ describe("api client", () => {
   it("404 resolves to null (missing shard is normal)", async () => {
     vi.stubGlobal("fetch", vi.fn(async () =>
       new Response("nf", { status: 404 })));
-    expect(await meta()).toBeNull();
-    expect(await fireCal("82ffffffffff")).toBeNull();
+    expect(await orinLots()).toBeNull();
   });
 
   it("parses json on 200", async () => {

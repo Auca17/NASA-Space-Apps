@@ -14,11 +14,11 @@ const IND_KEYS = [
 ];
 const UI_KEYS = [
   "ui.close", "ui.panel", "ui.and",
-  "calendar.aria", "calendar.year",
+  "calendar.aria",
   "rot.affinity", "rot.affinityTip", "prio.choose", "prio.hint",
   "rot.verdict.current", "rot.verdict.balanced", "rot.verdict.parts",
   "rot.cmp.title", "rot.cmp.up", "rot.cmp.down", "rot.cmp.same",
-  "rot.carousel", "legend.unit", "legend.maxMonth", "sem.median",
+  "rot.carousel",
   "field.source", "field.group.water", "field.group.temp",
   "field.group.soil", "field.group.fire", "field.group.other",
   "field.sum.l1z", "field.sum.l1",

@@ -1,16 +1,11 @@
-/** Area selection -> H3 res-5 cells grouped by their res-2 shard (D4). */
-import {
-  latLngToCell,
-  polygonToCells,
-  cellToParent,
-  gridDisk,
-} from "h3-js";
-
+/** Area geometry helpers. The H3 res-5 fire queries are gone with the
+ * fire view (task 49); `circleRing` stays for the location-accuracy
+ * circle the field flow draws. */
 export type LatLon = [number, number]; // [lat, lon]
 
 const EARTH_R_KM = 6371;
 
-/** Circle approximated as a 32-vertex polygon (lon/lat for h3-js). */
+/** Circle approximated as a 32-vertex polygon. */
 export function circleRing(lat: number, lon: number, radiusKm: number) {
   const pts: LatLon[] = [];
   const ang = radiusKm / EARTH_R_KM;
@@ -28,37 +23,4 @@ export function circleRing(lat: number, lon: number, radiusKm: number) {
     pts.push([(la2 * 180) / Math.PI, (lo2 * 180) / Math.PI]);
   }
   return pts;
-}
-
-/** Res-5 cells covering a circle around a point. */
-export function cellsInCircle(lat: number, lon: number,
-                              radiusKm = 50): string[] {
-  return polygonToCells(circleRing(lat, lon, radiusKm), 5);
-}
-
-/** Res-5 cells inside an arbitrary [lat, lon] ring. */
-export function cellsInPolygon(ring: LatLon[]): string[] {
-  return polygonToCells(ring, 5);
-}
-
-/** The single res-5 cell under a point (reticle mode). */
-export function cellAt(lat: number, lon: number): string[] {
-  return [latLngToCell(lat, lon, 5)];
-}
-
-/** Group res-5 cells by their res-2 shard parent. */
-export function groupByShard(cells: string[]): Map<string, string[]> {
-  const out = new Map<string, string[]>();
-  for (const c of cells) {
-    const r2 = cellToParent(c, 2);
-    const g = out.get(r2);
-    if (g) g.push(c);
-    else out.set(r2, [c]);
-  }
-  return out;
-}
-
-/** All res-5 cells in the k-ring around a cell (for "cell + neighbours"). */
-export function cellDisk(cell: string, k = 1): string[] {
-  return gridDisk(cell, k);
 }

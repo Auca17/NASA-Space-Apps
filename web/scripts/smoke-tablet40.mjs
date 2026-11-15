@@ -1,10 +1,10 @@
-/** Task 40 layout test: the compact shell must cover ≤900 px and the
- * desktop bar must never truncate from 901 px up. Checks:
+/** Task 40 layout test (task 49: fire/live tabs and the bottom tab
+ * bar are gone — the field flow is the whole app). Checks:
  *  - no topbar element is clipped or overflows the bar
  *  - the frame control (.field-frame/.field-extents) never intersects
  *    a sheet (.panel) or the chooser
  *  - one sheet at a time ≤900: chooser hidden while a .panel is open
- *  - B3 still holds: playback controls clear of the fire sheet
+ *  - no mode switch / bottom tab bar anywhere
  * Screenshots to web/screenshots/40-*.
  * Usage: node scripts/smoke-tablet40.mjs [baseUrl] */
 import { chromium } from "playwright";
@@ -38,8 +38,8 @@ const topbarOverflow = () => {
     if (b.width <= 2 && b.height <= 2 &&
         (cs.overflow === "hidden" || cs.clipPath !== "none"))
       continue;                                  // sr-only text
-    // fixed descendants (the ≤900 bottom tab bar) legitimately leave
-    // the bar's own box — check their content, not their position
+    // fixed descendants legitimately leave the bar's own box —
+    // check their content, not their position
     let fixed = false;
     for (let n = el; n && n !== tb; n = n.parentElement)
       if (getComputedStyle(n).position === "fixed") { fixed = true; break; }
@@ -77,19 +77,12 @@ for (const { w, h } of [...WIDTHS, ...LANDSCAPE]) {
   check(`${w}x${h} topbar`, trunc.length === 0, trunc.join(" | "));
 
   const compact = w <= 900;
-  const tabsBottom = await page.evaluate(() => {
-    const nav = document.querySelector(".topbar nav");
-    const b = nav.getBoundingClientRect();
-    return { y: b.y, bottom: b.bottom, vh: innerHeight };
-  });
-  check(`${w}x${h} shell mode`,
-    compact ? tabsBottom.bottom > tabsBottom.vh - 80
-            : tabsBottom.y < 90,
-    `nav bottom ${tabsBottom.bottom.toFixed(0)} vh ${tabsBottom.vh}`);
+  const noTabs = await page.evaluate(
+    () => !document.querySelector(".topbar nav"));
+  check(`${w}x${h} no mode tabs`, noTabs);
 
-  // field mode: chooser + frame control
-  const fieldBtn = page.locator(".topbar nav button").first();
-  await fieldBtn.click();
+  // field mode: chooser + frame control (welcome's main button)
+  await page.locator(".welcome button.primary").click();
   await page.waitForTimeout(800);
   await page.waitForSelector(".field-chooser", { timeout: 8000 })
     .catch(() => {});
@@ -134,16 +127,6 @@ for (const { w, h } of [...WIDTHS, ...LANDSCAPE]) {
     check(`${w}x${h} chooser restored`,
       await page.locator(".field-chooser").isVisible());
   }
-
-  // fire mode: panel + playback controls
-  await page.locator(".topbar nav button").nth(1).click();
-  await page.waitForTimeout(1500);
-  const firePanel = await page.locator(".panel").boundingBox()
-    .catch(() => null);
-  const hist = await page.locator(".controls.hist").boundingBox()
-    .catch(() => null);
-  check(`${w}x${h} controls vs fire panel`, !overlap(hist, firePanel));
-  await page.screenshot({ path: `${OUT}40-fire-${w}x${h}.png` });
 
   check(`${w}x${h} pageerrors`, errors.length === 0,
     errors.join(" | ").slice(0, 300));

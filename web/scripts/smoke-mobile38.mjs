@@ -1,5 +1,6 @@
-/** Task 38 mobile shell check: compact top bar, bottom tab bar,
- * peekable field chooser, Encuadre control, Más sheet.
+/** Task 38 mobile shell check (task 49: no bottom tab bar — the field
+ * flow is the whole app): compact top bar, peekable field chooser,
+ * Encuadre control, Más sheet.
  * Real device emulation: iPhone 13 + a 360px Android profile, plus 1280.
  * Screenshots to web/screenshots/38-*.
  * Usage: node scripts/smoke-mobile38.mjs [baseUrl] */
@@ -19,10 +20,6 @@ const PROFILES = [
   { name: "1280", conf: { viewport: { width: 1280, height: 800 } } },
 ];
 
-const liveBody = { updated_at: "2026-11-15T03:00:00Z", window_h: 24,
-  mode: "cells", sources: ["VIIRS"], country: "AR",
-  cells: [["85c2e8bbfffffff", 12], ["85c2e83fffffff", 8]] };
-
 for (const { name, conf } of PROFILES) {
   const browser = await chromium.launch();
   const page = await browser.newPage(conf);
@@ -31,9 +28,6 @@ for (const { name, conf } of PROFILES) {
   page.on("pageerror", (e) => errors.push(String(e)));
   await page.route("**/api/**", (route) => route.fulfill({
     status: 200, contentType: "application/json", body: "{}" }));
-  await page.route("**/api/live**", (route) => route.fulfill({
-    status: 200, contentType: "application/json",
-    body: JSON.stringify(liveBody) }));
 
   const shot = (n) => page.screenshot({ path: `${OUT}38-${n}-${name}.png` });
 
@@ -51,7 +45,7 @@ for (const { name, conf } of PROFILES) {
   }
 
   // field mode: chooser peek (default) then expand via handle
-  await page.locator("nav button").first().click();
+  await page.locator(".welcome button.primary").click();
   await page.waitForTimeout(1600);
   await shot("field-peek");
   await tap(".field-chooser .picker-head button:first-child");

@@ -1,10 +1,10 @@
-/** MapLibre map: Blue Marble base, res-3 overview cells, res-5 on zoom,
- * center reticle, debounced panel updates, reduced-motion aware. */
+/** MapLibre map: Blue Marble base, field shapes and drawing tools,
+ * reduced-motion aware. The res-3/res-5 fire cells and their helpers
+ * left with the fire view (task 49). */
 import { useEffect, useRef } from "react";
 import maplibregl from "maplibre-gl";
 import { Protocol } from "pmtiles";
 import "maplibre-gl/dist/maplibre-gl.css";
-import { cellToBoundary, latLngToCell } from "h3-js";
 import { DEFAULT_VIEW } from "../../config";
 import {
   BASE_STYLE, FALLBACK_LAYERS, FIELD_GUIDE_SOURCE, MAX_TILE_ERRORS,
@@ -28,31 +28,10 @@ export type ShapeKind = "piece-on" | "piece-off" | "excluded" | "original"
   | "field" | "zone" | "moisture" | "moisture-selected" | "moisture-missing";
 export type Shape = { geom: Poly; kind: ShapeKind; color?: string };
 
-export function hexGeoJSON(cells: Map<string, number>): GeoJSON.FeatureCollection {
-  const feats: GeoJSON.Feature[] = [];
-  for (const [h, v] of cells) {
-    try {
-      const ring = cellToBoundary(h).map(([la, lo]) => [lo, la]);
-      // skip cells that wrap the antimeridian/poles: flat GeoJSON
-      // renders them as artifacts (bands, stray hexagons)
-      const lons = ring.map((p) => p[0]);
-      if (Math.max(...lons) - Math.min(...lons) > 180) continue;
-      feats.push({
-        type: "Feature",
-        properties: { h3: h, n: v },
-        geometry: { type: "Polygon", coordinates: [[...ring, ring[0]]] },
-      });
-    } catch { /* skip malformed cell */ }
-  }
-  return { type: "FeatureCollection", features: feats };
-}
-
 export interface GlobeHandle {
   /** `bottomPx`: height covered by a bottom panel; the point is centred
    * in the visible part of the map. */
   flyTo(lat: number, lon: number, zoom?: number, bottomPx?: number): void;
-  setCells(cells: Map<string, number>, colorExpr: unknown): void;
-  setOutline(cells: string[], color?: string): void;
   setDraft(ring: LatLon[] | null, showVertices?: boolean,
            showMidpoints?: boolean): void;
   /** Location reference (search hit, GPS, coordinates); null clears it. */
@@ -150,24 +129,6 @@ export function useGlobe(
       }
     };
     map.on("load", () => {
-      map.addSource("cells", { type: "geojson",
-        data: { type: "FeatureCollection", features: [] } });
-      map.addLayer({
-        id: "cells-fill", type: "fill", source: "cells",
-        paint: { "fill-color": "#e0532a", "fill-opacity": 0.55 },
-      });
-      map.addLayer({
-        id: "cells-line", type: "line", source: "cells",
-        paint: { "line-color": "#e0532a", "line-opacity": 0.8,
-          "line-width": 0.6 },
-      });
-      map.addSource("outline", { type: "geojson",
-        data: { type: "FeatureCollection", features: [] } });
-      map.addLayer({
-        id: "outline-line", type: "line", source: "outline",
-        paint: { "line-color": "#ffffff", "line-width": 1.4,
-          "line-opacity": 0.9 },
-      });
       // invisible OpenMapTiles layers: they make MapLibre load the
       // landuse/building tiles that the urban check reads. The `omt`
       // source itself lives in BASE_STYLE so the fallback base can use
@@ -357,20 +318,6 @@ export function useGlobe(
         map.flyTo({ center: [lon, lat], zoom, duration: 1600,
                     offset: [0, -bottomPx / 2] });
       },
-      setCells(cells, colorExpr) {
-        const src = map.getSource("cells") as maplibregl.GeoJSONSource | undefined;
-        src?.setData(hexGeoJSON(cells));
-        if (map.getLayer("cells-fill") && colorExpr) {
-          map.setPaintProperty("cells-fill", "fill-color", colorExpr);
-          map.setPaintProperty("cells-line", "line-color", colorExpr);
-        }
-      },
-      setOutline(cells, color = "#ffffff") {
-        const src = map.getSource("outline") as maplibregl.GeoJSONSource | undefined;
-        src?.setData(hexGeoJSON(new Map(cells.map((c) => [c, 1]))));
-        if (map.getLayer("outline-line"))
-          map.setPaintProperty("outline-line", "line-color", color);
-      },
       setDraft(ring, showVertices = true, showMidpoints = true) {
         const src = map.getSource("draft") as maplibregl.GeoJSONSource | undefined;
         if (!src) return;
@@ -537,8 +484,6 @@ export function useGlobe(
   }, []);
   return handleRef;
 }
-
-export { latLngToCell };
 
 export function MapLoader({ container, onReady, onUnavailable }: {
   container: React.RefObject<HTMLDivElement | null>;

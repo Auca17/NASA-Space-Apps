@@ -23,6 +23,9 @@ for (const s of SIZES) {
   const browser = await chromium.launch();
   const ctx = await browser.newContext({
     viewport: { width: s.width, height: s.height }, locale: "es" });
+  // dismiss the guided demo tour so it never blocks the panel
+  await ctx.addInitScript(
+    "localStorage.setItem('ashfield.demoTour.v1','1')");
   const page = await ctx.newPage();
 
   const errs = [];
@@ -61,6 +64,14 @@ for (const s of SIZES) {
     if (await sm.count()) { await sm.click().catch(() => {}); return true; }
     return false;
   };
+  /* on compact widths the field chooser is a peekable sheet: expand
+   * it before touching the option details, which peek hides. */
+  const expandChooser = async () => {
+    const h = page.locator(
+      ".picker-head button[aria-expanded='false']").first();
+    if (await h.count()) await h.click().catch(() => {});
+    await page.waitForTimeout(400);
+  };
 
   /* 1 ---------------------------------------------------- welcome ---- */
   await page.goto(BASE, { waitUntil: "domcontentloaded" });
@@ -70,35 +81,21 @@ for (const s of SIZES) {
     note("welcome", "high", "no .map element on welcome", wShot);
   flushErrs("welcome", wShot);
 
-  /* 2 --------------------------------------------- Corrientes panel -- */
-  await page.goto(`${BASE}/?r2=1#-27.95,-56.95`,
+  /* 2 ----------------- #lat,lon deep link opens the field flow ------ */
+  await page.goto(`${BASE}#-27.95,-56.95`,
     { waitUntil: "domcontentloaded" });
   await page.waitForTimeout(5000);
   const cShot = await snap("corrientes");
-  flushErrs("corrientes", cShot);
-
-  /* 3 ------------------------------------------------ historic player - */
-  await page.goto(BASE, { waitUntil: "domcontentloaded" });
-  await page.waitForTimeout(1500);
-  await click(/Abrir el mapa de fuego|Fuego/i);
-  await page.waitForTimeout(2500);
-  const play = page.locator(
-    'button[aria-label*="eproduc"], button:has-text("▶")').first();
-  if (await play.count()) await play.click().catch(() => {});
-  await page.waitForTimeout(2500);
-  const hShot = await snap("historic");
-  flushErrs("historic", hShot);
-
-  /* 4 ------------------------------------------------------ live mode - */
-  await click(/^En vivo$/i);
-  await page.waitForTimeout(4000);
-  const lShot = await snap("live");
-  flushErrs("live", lShot);
+  if (await page.locator(".field-chooser").count() === 0)
+    note("deeplink", "high", "#lat,lon did not open the field flow",
+         cShot);
+  flushErrs("deeplink", cShot);
 
   /* 5 --------------------------------- field lens: example farm ----- */
   await click(/^Analizar mi campo$/i);
   await page.waitForTimeout(1500);
   // expand the examples disclosure, then open the example farm
+  await expandChooser();
   await openDetails(/Probar con un ejemplo/);
   await page.waitForTimeout(400);
   const demoClicked = await click(/Abrir el ejemplo: finca en Mendoza/i);
@@ -176,6 +173,7 @@ for (const s of SIZES) {
   await page.waitForTimeout(2000);
   await click(/^Analizar mi campo$/i);
   await page.waitForTimeout(1500);
+  await expandChooser();
   await snap("field-chooser");
 
   // place finder
@@ -202,6 +200,7 @@ for (const s of SIZES) {
   flushErrs("place-finder", pShot2);
 
   // freehand: open "Otras formas de marcar" then pick free draw
+  await expandChooser();
   await openDetails(/Otras formas de marcar/);
   await page.waitForTimeout(400);
   await click(/mano alzada/i);

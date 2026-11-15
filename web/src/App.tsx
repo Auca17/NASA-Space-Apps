@@ -10,7 +10,7 @@ import { EmergencyBlock } from "./features/emergency/EmergencyBlock";
 import { BottomSheet } from "./components/ui";
 import type { GlobeHandle, Shape } from "./features/globe/GlobeView";
 import { moistureGeometry, MOISTURE_COLORS } from "./domain/moisture";
-import { cellsInCircle, circleRing } from "./domain/h3area";
+import { circleRing } from "./domain/h3area";
 import { apiRisk, orinLots } from "./api";
 import type { OrinLots, MoistureZone } from "./api/types";
 import { drawStatus } from "./domain/clarity";
@@ -55,12 +55,6 @@ const ARGENTINA_FRAME: LatLon[] = [[-55.2, -73.7], [-21.7, -53.5]];
 
 const MapLoader = lazy(() => import("./features/globe/GlobeView")
   .then((m) => ({ default: m.MapLoader })));
-const HistoricControls = lazy(() => import("./features/fire/HistoricControls")
-  .then((m) => ({ default: m.HistoricControls })));
-const AreaPanel = lazy(() =>
-  import("./features/fire/AreaPanel").then((m) => ({ default: m.AreaPanel })));
-const LiveControls = lazy(() =>
-  import("./features/live/LiveMode").then((m) => ({ default: m.LiveControls })));
 const FieldPanel = lazy(() =>
   import("./features/field/FieldLens").then((m) => ({ default: m.FieldPanel })));
 const ParcelsWizard = lazy(() =>
@@ -70,7 +64,7 @@ const ParcelsMapLayer = lazy(() =>
   import("./features/parcels/ParcelsMapLayer")
     .then((m) => ({ default: m.ParcelsMapLayer })));
 
-type Mode = "welcome" | "fire" | "live" | "field";
+type Mode = "welcome" | "field";
 
 export default function App() {
   const { t, lang, setLang } = useT();
@@ -98,8 +92,6 @@ export default function App() {
     setStorageError(false);
   };
   const [globe, setGlobe] = useState<GlobeHandle | null>(null);
-  const [area, setArea] = useState<{ lat: number; lon: number; cells: string[] } | null>(null);
-  const [panelOpen, setPanelOpen] = useState(false);
   const [zoom, setZoom] = useState(DEFAULT_VIEW.zoom);
   const [satellite, setSatellite] = useState(true);
   const [fieldGuide, setFieldGuide] = useState(false);
@@ -152,7 +144,6 @@ export default function App() {
    * here and applied once the globe reports ready. */
   const demoFitPending = useRef(false);
   const [lots, setLots] = useState<OrinLots["features"]>([]);
-  const [playingMonth, setPlayingMonth] = useState<string | null>(null);
   const [methodsOpen, setMethodsOpen] = useState(false);
   const [emergOpen, setEmergOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -181,21 +172,18 @@ export default function App() {
   const swallowClick = useRef(false);
   const frameArgentinaOnOpen = useRef(false);
 
-  const fireArea = (lat: number, lon: number) =>
-    setArea({ lat, lon, cells: cellsInCircle(lat, lon, 50) });
-
   const onGlobeReady = useCallback((h: GlobeHandle) => {
     globeRef.current = h;
     setGlobe(h);
-    if (initialLocation.current && modeRef.current === "fire") {
+    if (initialLocation.current) {
       const [lat, lon] = initialLocation.current;
       h.flyTo(lat, lon, 7);
+      h.setMarker([lat, lon]);
       initialLocation.current = null;
     }
     h.onMove((lat, lon, zoom, bbox) => {
       setZoom(zoom);
       setView({ lat, lon, zoom, bbox });
-      if (modeRef.current === "fire") fireArea(lat, lon);
     });
     h.onClick((lat, lon) => {
       if (modeRef.current !== "field" || movingMapRef.current) return;
@@ -483,13 +471,8 @@ export default function App() {
       fieldOpen, target, mode, areaChoice, parcelsWizard, parcelRes,
       globe, moistureZones, selectedMoisture, locationAccuracy]);
 
-  // clear fire hexagons when leaving fire mode (else the layer lingers)
-  useEffect(() => {
-    if (mode !== "fire") globeRef.current?.setCells(new Map(), null);
-  }, [mode]);
-
-  // deep-link: #lat,lon jumps straight to a location (dev + sharing),
-  // #demo opens the guided Mendoza example
+  // deep-link: #lat,lon opens the field flow centred there (dev +
+  // sharing), #demo opens the guided Mendoza example
   useEffect(() => {
     if (isDemoHash(location.hash)) { startDemo(); return; }
     const m = location.hash.match(/^#(-?\d+(?:\.\d+)?),(-?\d+(?:\.\d+)?)$/);
@@ -505,22 +488,15 @@ export default function App() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  /** Location picked on the welcome screen or via #lat,lon: the field
+   * flow opens centred there with a marker. */
   const locate = (lat: number, lon: number) => {
-    setMode("fire");
-    setPanelOpen(true);
+    if (modeRef.current !== "field") setMode("field");
     if (!globeRef.current) initialLocation.current = [lat, lon];
     setTimeout(() => {
       globeRef.current?.flyTo(lat, lon, 7);
-      fireArea(lat, lon);
+      globeRef.current?.setMarker([lat, lon]);
     }, 100);
-  };
-
-  /** Fire tab: the area panel starts from the current map centre and
-   * follows the map from then on. */
-  const openFire = () => {
-    setMode("fire"); setPanelOpen(true);
-    const c = globeRef.current?.center() ?? DEFAULT_VIEW;
-    fireArea(c.lat, c.lon);
   };
 
   const startField = (dm: DrawMode) => {
@@ -765,8 +741,7 @@ export default function App() {
 
   // A right-side .panel is open: the map's top-right controls step
   // left of it so nothing sits on the panel (task 33.2).
-  const sidePanel = (mode === "fire" && panelOpen) ||
-    (mode === "field" && fieldOpen) || emergOpen;
+  const sidePanel = (mode === "field" && fieldOpen) || emergOpen;
 
   return (
     <div className={`app${sidePanel ? " has-side-panel" : ""}`}>
@@ -782,28 +757,6 @@ export default function App() {
             <span className="topbar-name">{APP_NAME}</span>
           </button>
         </h1>
-        <nav aria-label={t("nav.modes")}>
-          <button aria-pressed={mode === "field"}
-                  onClick={() => {
-                    if (modeRef.current !== "field") startField("none");
-                  }}>
-            <svg className="nav-ico" viewBox="0 0 24 24" aria-hidden="true">
-              <path d="M12 21v-8m0 0c-4.5-.5-6.5-3-7-7 4.5.5 6.5 3 7 7Zm0 0c4.5-.5
-                6.5-3 7-7-4.5.5-6.5 3-7 7Z"/></svg>
-            <span className="nav-text">{t("nav.field")}</span></button>
-          <button aria-pressed={mode === "fire"} onClick={openFire}>
-            <svg className="nav-ico" viewBox="0 0 24 24" aria-hidden="true">
-              <path d="M12 21c-4 0-7-2.8-7-6.5C5 9 9.5 6 11 2c.6 2.4 2.6 3.8
-                3.4 6.2.4-1 .6-2.1.4-3.2 2.6 1.7 4.2 4.6 4.2 8 0 4.4-3 8-7 8Z"/></svg>
-            <span className="nav-text">{t("nav.fire")}</span></button>
-          <button aria-pressed={mode === "live"}
-                  onClick={() => setMode("live")}>
-            <svg className="nav-ico" viewBox="0 0 24 24" aria-hidden="true">
-              <circle cx="12" cy="12" r="3.4"/>
-              <path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3"
-                    fill="none" strokeWidth="1.8" strokeLinecap="round"/></svg>
-            <span className="nav-text">{t("nav.live")}</span></button>
-        </nav>
         <div className="spacer" />
         <button className="emerg-link" aria-label={t("emerg.nav")}
                 onClick={() => setEmergOpen(true)}>
@@ -860,18 +813,9 @@ export default function App() {
                      onUnavailable={() => setMapUnavailable(true)} />
         </Suspense>}
         {mapUnavailable && mode !== "welcome" && <p className="map-warning" role="status">
-          {t(mode === "field" ? "field.map.unavailable" : "field.map.unavailableOther")}
+          {t("field.map.unavailable")}
         </p>}
         {storageError && <p className="storage-warning" role="alert">{t("fields.storageFailure")}</p>}
-        {(mode === "fire" || mode === "live") && (
-          /* marks the map centre — the exact point the fire risk is
-           * queried at and the reference live distances are measured
-           * from (B2/B4) */
-          <div className="reticle" aria-hidden="true" />)}
-        {mode === "fire" && area && !panelOpen && (
-          <button type="button" className="fire-reopen"
-                  onClick={() => setPanelOpen(true)}>
-            {t("panel.reopen")}</button>)}
         {mode === "field" && !fieldOpen && (
           <>
             {draw === "none" && !selection && !fieldsView && (
@@ -917,19 +861,8 @@ export default function App() {
         {mode === "welcome" && (
           <div className="welcome-overlay">
             <Welcome onAnalyze={() => startField("none")} onDemo={startDemo}
-                     onLocate={locate}
-                     onExplore={openFire}
-                     onLive={() => setMode("live")} />
+                     onLocate={locate} />
           </div>)}
-
-        {mode === "fire" && <Suspense fallback={null}>
-          <HistoricControls globe={globe} onMonth={setPlayingMonth} view={view} />
-        </Suspense>}
-
-        {mode === "live" && (
-          <Suspense fallback={null}>
-            <LiveControls globe={globe} country={null} />
-          </Suspense>)}
 
         {mode === "field" && !fieldOpen && selection && adjust && (
           <AdjustPanel adjust={adjust}
@@ -1026,12 +959,6 @@ export default function App() {
                          : undefined} />)}
       </div>
 
-      {mode === "fire" && area && (
-        <Suspense fallback={null}>
-          <AreaPanel lat={area.lat} lon={area.lon} cells={area.cells}
-                     open={panelOpen} onClose={() => setPanelOpen(false)}
-                     country={null} month={playingMonth} />
-        </Suspense>)}
       {mode === "field" && (
         <Suspense fallback={null}>
           <FieldPanel target={target} open={fieldOpen}

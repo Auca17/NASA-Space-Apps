@@ -4,11 +4,12 @@
  *  - map fallback with every raster domain blocked (map-fallback)
  *  - degraded diagnosis from a STUBBED response (degraded)
  *  - Orin validation card, "Un caso real", ECOSTRESS (real R2 data)
- *  - emergency block: menu entry, live nearby detection (stubbed live
- *    response — harness only), high-risk area panel (stubbed risk)
+ *  - emergency block: menu entry + country numbers from a stubbed
+ *    risk response (harness only). The live nearby detection and the
+ *    fire area panel left with the fire/live views (task 49).
  * Usage: node scripts/smoke-ui30.mjs [baseUrl] */
 import { chromium } from "playwright";
-import { mkdirSync } from "node:fs";
+import { mkdirSync, readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 
 const BASE = process.argv[2] ?? "http://localhost:4173";
@@ -23,19 +24,29 @@ const RASTER = /gibs\.earthdata\.nasa\.gov|tile\.openstreetmap\.org|tiles\.maps\
 const defects = [];
 const note = (sev, what) => defects.push(`[${sev}] ${what}`);
 
-const DEGRADED = {
-  diagnosis_id: "stub-degraded", area_ha: 12.4,
-  centroid: [-33.9, -60.57], h3_r5: [], h3_r6: [], cards: [],
-  calendar: { months: [], rows: [] },
-  degraded: true,
-  degraded_reason: "NASA POWER no respondió: se muestran solo los datos locales.",
-};
+/* The demo calls POST /api/field/parcels; the degraded card renders
+ * when the response is degraded but the nearby block is not. Base the
+ * stub on the captured real response so every other section still
+ * renders. */
+const DEGRADED = (() => {
+  const res = JSON.parse(readFileSync(fileURLToPath(new URL(
+    "../src/features/demo/mendozaCached.json", import.meta.url)),
+    "utf8")).response;
+  res.degraded = true;
+  res.degraded_reason =
+    "NASA POWER no respondió: se muestran solo los datos locales.";
+  res.nearby = { ...(res.nearby ?? {}), degraded: false };
+  return res;
+})();
 
 for (const s of SIZES) {
   const tag = `${s.width}px`;
   const browser = await chromium.launch();
   const ctx = await browser.newContext({
     viewport: { width: s.width, height: s.height }, locale: "es" });
+  // dismiss the guided demo tour so it never blocks the panel
+  await ctx.addInitScript(
+    "localStorage.setItem('ashfield.demoTour.v1','1')");
   const page = await ctx.newPage();
   const errs = [];
   page.on("pageerror", (e) => errs.push(`pageerror: ${e.message}`));
@@ -44,8 +55,20 @@ for (const s of SIZES) {
     await page.screenshot({ path: `${OUT}${name}-${tag}.png` });
   };
 
-  /* -- 1. real base map ------------------------------------------- */
+  /* the chooser is a peekable sheet on compact widths — expand before
+   * touching the option details it hides. */
+  const expandChooser = async () => {
+    const h = page.locator(
+      ".picker-head button[aria-expanded='false']").first();
+    if (await h.count()) await h.click().catch(() => {});
+    await page.waitForTimeout(400);
+  };
+
+  /* -- 1. real base map (mounts on entering the field flow) ------- */
   await page.goto(`${BASE}/app/`, { waitUntil: "domcontentloaded" });
+  await page.waitForTimeout(2500);
+  await page.getByRole("button", { name: /Analizar mi campo/i }).first()
+    .click().catch(() => {});
   await page.waitForTimeout(6000);
   await snap("map-base", 500);
   const px = await page.evaluate(() => {
@@ -63,38 +86,44 @@ for (const s of SIZES) {
   await snap("map-fallback", 500);
   await page.unroute(RASTER);
 
-  /* -- 3. degraded diagnosis (stubbed — harness only) ------------- */
-  await page.route("**/api/field/diagnose", (r) => r.fulfill({
+  /* -- 3. degraded parcels analysis (stubbed — harness only) ------ */
+  await page.route("**/api/field/parcels", (r) => r.fulfill({
     status: 200, contentType: "application/json",
     body: JSON.stringify(DEGRADED) }));
   await page.goto(`${BASE}/app/`, { waitUntil: "domcontentloaded" });
   await page.waitForTimeout(2500);
-  await page.getByRole("button", { name: /Analizar mi campo/i }).first()
-    .click().catch(() => {});
-  await page.waitForTimeout(1500);
-  await page.locator("summary", { hasText: /ejemplo/i }).first()
-    .click().catch(() => {});
-  await page.getByRole("button", { name: /ejemplo: finca en Mendoza/i }).first()
-    .click().catch(() => {});
+  await page.getByRole("button", { name: /ejemplo: finca en Mendoza/i })
+    .first().click().catch(() => {});
   await page.waitForSelector(".diag-degraded, [role='alert']",
-    { timeout: 20000 }).catch(() => {});
+    { timeout: 30000 }).catch(() => {});
   await page.waitForTimeout(1500);
   const d = await page.locator(".diag-degraded").count();
   if (!d) note("high", `degraded notice missing @${tag}`);
   await snap("degraded");
-  await page.unroute("**/api/field/diagnose");
+  await page.unroute("**/api/field/parcels");
 
-  /* -- 4. real field flow: Orin + case + ECOSTRESS ---------------- */
+  /* -- 4. real field flow: Orin demo lot → "Más información" ------ */
   await page.goto(`${BASE}/app/`, { waitUntil: "domcontentloaded" });
   await page.waitForTimeout(2500);
   await page.getByRole("button", { name: /Analizar mi campo/i }).first()
     .click().catch(() => {});
   await page.waitForTimeout(1500);
+  await expandChooser();
   await page.locator("summary", { hasText: /ejemplo/i }).first()
     .click().catch(() => {});
-  await page.getByRole("button", { name: /ejemplo: finca en Mendoza/i }).first()
+  await page.waitForTimeout(400);
+  await page.getByRole("button", { name: /\(ejemplo\)/i }).first()
     .click().catch(() => {});
-  await page.waitForSelector(".dtile, .diag-grid",
+  /* the Orin lot asks needs first — skip them */
+  await page.waitForTimeout(800);
+  await page.getByRole("button", { name: /Saltear|Skip/i }).first()
+    .click().catch(() => {});
+  /* the diagnosis (and the Orin/ECOSTRESS cards with it) loads lazily
+   * inside the "Más información" tab */
+  await page.waitForSelector("#tab-mas", { timeout: 120000 })
+    .catch(() => {});
+  await page.locator("#tab-mas").first().click().catch(() => {});
+  await page.waitForSelector(".dtile, .diag-grid, .orin-row",
     { timeout: 120000 }).catch(() => {});
   await page.waitForTimeout(3000);
 
@@ -134,37 +163,21 @@ for (const s of SIZES) {
   await page.locator("button[aria-label*='errar'], .panel-head button")
     .last().click().catch(() => {});
 
-  /* -- 6. live nearby detection (stubbed live body — harness only) - */
-  await page.route("**/api/live**", (r) => r.fulfill({
-    status: 200, contentType: "application/json",
-    body: JSON.stringify({ mode: "points", country: "AR",
-      sources: ["VIIRS_SNPP_NRT"], updated_at: "2026-11-15T03:00:00Z",
-      points: [[-33.45, -60.70, 12.4, "N20",
-                "2026-11-14T22:00:00Z"]] }) }));
-  /* `?s=` forces a full reload — a hash-only goto is a same-document
-   * navigation and the deep link's locate() never runs. */
-  await page.goto(`${BASE}/app/?s=live#-33.4,-60.7`,
-    { waitUntil: "domcontentloaded" });
-  await page.waitForTimeout(3500);
-  await page.getByRole("button", { name: /^En vivo$/i }).first()
-    .click().catch(() => {});
-  await page.waitForTimeout(4000);
-  const near = await page.locator(".emerg-near").count();
-  if (!near) note("high", `live nearby emergency missing @${tag}`);
-  await snap("emerg-live");
-  await page.unroute("**/api/live**");
-
-  /* -- 7. high-risk area panel (stubbed risk — harness only) ------ */
+  /* -- 6. emergency sheet picks the country via the risk endpoint
+   *      (stubbed — harness only) ------------------------------- */
   await page.route("**/api/risk**", (r) => r.fulfill({
     status: 200, contentType: "application/json",
     body: JSON.stringify({ p: 0.41, clim: 0.08, ratio: 5.1,
       cat: "alto", level: "clima", country: "AR",
       reasons: ["stub"], h3_r5: "85c2e827fffffff" }) }));
-  await page.goto(`${BASE}/app/?s=risk#-33.4,-60.7`,
+  await page.goto(`${BASE}/app/`,
     { waitUntil: "domcontentloaded" });
-  await page.waitForTimeout(5000);
-  const ea = await page.locator(".emerg").count();
-  if (!ea) note("high", `area-panel emergency missing @${tag}`);
+  await page.waitForTimeout(2500);
+  await page.getByRole("button", { name: /Emergencias/i }).first()
+    .click().catch(() => {});
+  await page.waitForTimeout(2500);
+  const ar911 = await page.locator("a[href='tel:911']").count();
+  if (!ar911) note("high", `AR emergency numbers missing @${tag}`);
   await snap("emerg-area");
   await page.unroute("**/api/risk**");
 

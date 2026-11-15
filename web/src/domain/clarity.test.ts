@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import type { DiagnoseResponse, Card } from "../api/types";
 import {
-  plainSummary, semaphorePeriod, referenceText, drawStatus, localizeDiag,
+  plainSummary, referenceText, drawStatus, localizeDiag,
 } from "./clarity";
 
 const card = (id: string, value: Card["value"], extra = {}): Card =>
@@ -54,17 +54,6 @@ describe("plainSummary", () => {
 
   it("ignores unknown fire categories instead of inventing a label", () => {
     expect(plainSummary(diag([card("fire", "???")]))).toEqual([]);
-  });
-});
-
-describe("semaphorePeriod", () => {
-  it("covers the last N days ending today, not the map's month", () => {
-    expect(semaphorePeriod("2026-11-14", 30))
-      .toEqual({ from: "2026-10-16", to: "2026-11-14" });
-  });
-  it("crosses year boundaries", () => {
-    expect(semaphorePeriod("2026-01-10", 30))
-      .toEqual({ from: "2025-12-12", to: "2026-01-10" });
   });
 });
 

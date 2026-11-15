@@ -1,46 +1,6 @@
-/** Contract types, hand-written from docs/data-contract.md. */
-
-export interface MetaJson {
-  version: string;
-  generated_at: string;
-  range: { start: string; end: string };
-  baseline: { start: string; end: string };
-  h3: { globe: number; panel: number; shard: number; cache: number };
-  semaphore: {
-    window_days: number;
-    categories: Record<string, [number, number]>;
-    ratio_min_median: number;
-  };
-  low_confidence_periods?: [string, string][];
-}
-
-export interface GlobeShard {
-  month: string;
-  cells: [string, number][]; // [h3_res3, n]
-}
-
-export type { CalShard } from "../domain/fireSeries";
-export type { DailyShard } from "../domain/semaphore";
-export type { RiskCell } from "../domain/risk";
-
-export interface RiskShard {
-  generated_at: string;
-  horizon_days?: number;
-  fires_365d_complete?: boolean;
-  cells: Record<string, import("../domain/risk").RiskCell>;
-}
-
-export interface LiveResponse {
-  mode?: "points" | "cells";
-  generated_at?: string;
-  window?: string;
-  bbox?: number[];
-  points?: { lat: number; lon: number; frp?: number; acq_datetime?: string }[];
-  cells?: { h3: string; n: number; frp_max?: number }[];
-  /** ISO A2 of the bbox centre (Natural Earth), when resolved. */
-  country?: string | null;
-  note?: string;
-}
+/** Contract types, hand-written from docs/data-contract.md.
+ * The fire-history, risk-shard and live-detection contracts left with
+ * the fire/live views (task 49); the field-engine contracts follow. */
 
 export interface Card {
   id: string;
