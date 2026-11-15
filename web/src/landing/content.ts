@@ -115,8 +115,8 @@ const en: Landing = {
   skip: "Skip to content",
   nav: { openApp: "Open the app" },
   hero: {
-    title: "Check the fire risk on your field with NASA data.",
-    lede: "One engine, two lenses: 25 years of harmonized fire history, and a diagnosis that helps a producer choose the next rotation.",
+    title: "Decide what to plant on your field with NASA data.",
+    lede: "Draw your plot and compare your current rotation against alternatives — with a plain-language diagnosis of rain, soil, frost and fire risk behind every card.",
     openApp: "Open the app",
     example: { label: "See an example", href: "/app/#demo" },
     video: undefined, // [PENDIENTE: URL del video] — hidden until it exists
@@ -131,8 +131,13 @@ const en: Landing = {
   },
   blocks: [
     {
-      heading: "What you see",
-      text: "Fires detected right now by NASA's MODIS and VIIRS satellites, 25 years of monthly history on a 3D globe, and an estimate of fire risk for the next 7 days in your area.",
+      heading: "What your field gets",
+      text: "Parcels with their own fire and water percentages — each with the reason for the number — an agricultural calendar marking vulnerable months, and rotation cards that explain why, evidence, benefits, gaps and risks.",
+      stat: { value: "1 + 3", note: "your current rotation plus up to three alternatives, each with why, evidence, benefits, gaps and risks" },
+    },
+    {
+      heading: "Fire as a plot risk",
+      text: "The fire lens is the same engine seen from the territory: 25 years of MODIS and VIIRS harmonized onto one grid, the 7-day risk with its reasons, the burning months on your calendar and 'burns avoided' scored per rotation.",
       figure: {
         src: "/landing/app_fire_risk_en.webp",
         alt: "The Ashfield fire view over South America: harmonized detection hexagons on the map, a 7-day fire-risk card reading 'low' and a fire calendar panel.",
@@ -141,13 +146,8 @@ const en: Landing = {
       },
     },
     {
-      heading: "What your field gets",
-      text: "Outline a plot and get a diagnosis in plain words: rain, frost, heat, soil and bare-soil months — plus your current rotation compared with alternatives ranked by your own priorities.",
-      stat: { value: "1 + 3", note: "your current rotation plus up to three alternatives, each with why, evidence, benefits, gaps and risks" },
-    },
-    {
       heading: "Why trust it",
-      text: "Built only on named NASA data — MODIS, VIIRS, POWER, GRACE-FO, SRTM. The harmonized fire series is validated on data never used in calibration; the lowest-confidence stretch, 2000–2011, is flagged in the app.",
+      text: "Built only on named NASA data — MODIS, VIIRS, POWER, GRACE-FO, SRTM. Temperature is checked against 53 real stations and rain against 25 INTA SIGA stations; the harmonized fire series is validated on data never used in calibration, and the lowest-confidence stretch is flagged in the app.",
       stat: { value: "R² 0.979", note: "harmonized global monthly series, validated on a 2023–2024 holdout" },
     },
   ],
@@ -160,8 +160,8 @@ const en: Landing = {
   problem: {
     heading: "The problem",
     paragraphs: [
-      "Two NASA sensors have watched the same fires for 25 years, but their numbers cannot be compared directly: MODIS at 1 km since 2000, VIIRS at 375 m since 2012, with a second VIIRS instrument arriving in April 2018. Any long series built by simply joining them inherits artificial jumps exactly where the instruments change.",
-      "Meanwhile a producer deciding next season's rotation faces climate stress with the relevant NASA data scattered across products, resolutions and portals. Soil, rain, frost, heat and water stress exist, but not in one place, and not at the scale of a plot.",
+      "A producer deciding next season's rotation faces climate stress with the relevant NASA data scattered across products, resolutions and portals. Soil, rain, frost, heat and water stress exist, but not in one place, and not at the scale of a plot.",
+      "Fire adds to the decision — and the satellite record of it is split between sensors that cannot be compared directly: MODIS at 1 km since 2000, VIIRS at 375 m since 2012, with a second VIIRS instrument arriving in April 2018. Any long series built by simply joining them inherits artificial jumps exactly where the instruments change.",
       "The two problems meet in stubble burning. A rotation that keeps soil covered and spreads risk is also a field less likely to burn. Ashfield treats fire and field as one story, not two products.",
     ],
   },
@@ -373,8 +373,8 @@ const es: Landing = {
   skip: "Saltar al contenido",
   nav: { openApp: "Abrir la app" },
   hero: {
-    title: "Mirá el riesgo de fuego de tu campo con datos de la NASA.",
-    lede: "Un motor, dos lentes: 25 años de historia de fuego armonizada, y un diagnóstico del lote que ayuda a decidir la próxima rotación.",
+    title: "Decidí qué sembrar en tu lote con datos de la NASA.",
+    lede: "Dibujá tu parcela y compará tu rotación actual con alternativas — con un diagnóstico en palabras simples de lluvia, suelo, heladas y riesgo de fuego detrás de cada tarjeta.",
     openApp: "Abrir la app",
     example: { label: "Ver un ejemplo", href: "/app/#demo" },
     video: undefined, // [PENDIENTE: URL del video] — oculto hasta que exista
@@ -389,8 +389,13 @@ const es: Landing = {
   },
   blocks: [
     {
-      heading: "Lo que ves",
-      text: "Los focos que detectan ahora los satélites MODIS y VIIRS de la NASA, 25 años de historia mensual en un globo 3D, y una estimación del riesgo de fuego para los próximos 7 días en tu zona.",
+      heading: "Lo que obtenés para tu lote",
+      text: "Parcelas con su porcentaje de fuego y de agua — cada uno con el motivo del número —, un calendario agrícola que marca los meses vulnerables y tarjetas de rotación que explican por qué, evidencia, beneficios, vacíos y riesgos.",
+      stat: { value: "1 + 3", note: "tu rotación actual más hasta tres alternativas, cada una con por qué, evidencia, beneficios, vacíos y riesgos" },
+    },
+    {
+      heading: "El fuego como riesgo del lote",
+      text: "La lente de fuego es el mismo motor visto desde el territorio: 25 años de MODIS y VIIRS armonizados en una sola grilla, el riesgo a 7 días con sus razones, los meses de quema en tu calendario y las «quemas evitadas» puntuadas por rotación.",
       figure: {
         src: "/landing/app_fire_risk.webp",
         alt: "La vista de fuego de Ashfield sobre Sudamérica: hexágonos de detecciones armonizadas en el mapa, la tarjeta de riesgo a 7 días marcando «bajo» y el calendario de fuego.",
@@ -399,13 +404,8 @@ const es: Landing = {
       },
     },
     {
-      heading: "Lo que obtenés para tu lote",
-      text: "Dibujá un lote y recibí un diagnóstico en palabras simples: lluvia, heladas, calor, suelo y meses de suelo desnudo — más tu rotación actual comparada con alternativas ordenadas por tus prioridades.",
-      stat: { value: "1 + 3", note: "tu rotación actual más hasta tres alternativas, cada una con por qué, evidencia, beneficios, vacíos y riesgos" },
-    },
-    {
       heading: "Por qué confiar",
-      text: "Construida solo sobre datos NASA nombrados — MODIS, VIIRS, POWER, GRACE-FO, SRTM. La serie de fuego armonizada se valida contra datos nunca usados en la calibración; el tramo de menor confianza, 2000–2011, está señalado en la app.",
+      text: "Construida solo sobre datos NASA nombrados — MODIS, VIIRS, POWER, GRACE-FO, SRTM. La temperatura se contrasta con 53 estaciones reales y la lluvia con 25 estaciones INTA SIGA; la serie de fuego armonizada se valida contra datos que la calibración nunca vio, y el tramo de menor confianza está señalado en la app.",
       stat: { value: "R² 0,979", note: "serie mensual global armonizada, validada en un holdout 2023–2024" },
     },
   ],
@@ -418,8 +418,8 @@ const es: Landing = {
   problem: {
     heading: "El problema",
     paragraphs: [
-      "Dos sensores de la NASA miran los mismos fuegos hace 25 años, pero sus números no se pueden comparar directo: MODIS a 1 km desde 2000, VIIRS a 375 m desde 2012, y un segundo VIIRS que llegó en abril de 2018. Toda serie que simplemente los une hereda saltos artificiales justo donde cambia el instrumento.",
-      "Mientras tanto, un productor que decide la rotación de la próxima campaña enfrenta el estrés climático con los datos de la NASA dispersos entre productos, resoluciones y portales. Suelo, lluvia, heladas, calor y estrés hídrico existen — pero no en un solo lugar ni a escala de lote.",
+      "Un productor que decide la rotación de la próxima campaña enfrenta el estrés climático con los datos de la NASA dispersos entre productos, resoluciones y portales. Suelo, lluvia, heladas, calor y estrés hídrico existen — pero no en un solo lugar ni a escala de lote.",
+      "El fuego se suma a la decisión — y su registro satelital está partido entre sensores que no se pueden comparar directo: MODIS a 1 km desde 2000, VIIRS a 375 m desde 2012, y un segundo VIIRS que llegó en abril de 2018. Toda serie que simplemente los une hereda saltos artificiales justo donde cambia el instrumento.",
       "Los dos problemas se cruzan en la quema de rastrojo. Una rotación que mantiene el suelo cubierto y reparte el riesgo también es un campo que arde menos. Ashfield cuenta fuego y campo como una sola historia.",
     ],
   },

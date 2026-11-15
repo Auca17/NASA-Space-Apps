@@ -1,30 +1,31 @@
-# Ashfield — Fuego y Campo
+# Ashfield — Field Shift: Adapting Farms with NASA Data
 
 ![Ashfield](web/public/brand/ashfield-lockup-light.svg)
 
 **NASA Space Apps Challenge 2026 · Challenge inscripto: Field Shift: Adapting Farms with NASA Data** — el proyecto también cubre **Harmonization of MODIS and VIIRS Hot Spots**.
 
-Un solo motor de armonización que lleva datos de NASA de distintos sensores y resoluciones a una grilla común, mirado desde dos lentes: **Fuego**, 25 años de focos de calor en una sola serie comparable, y **Campo**, un diagnóstico del lote con datos de NASA y la rotación actual comparada con 3 alternativas. Las dos lentes se cruzan en la quema de rastrojos.
+Un productor dibuja su lote y hace la pregunta de verdad: **¿qué conviene sembrar?** Ashfield responde con datos de la NASA — un diagnóstico por parcela, la rotación actual comparada con hasta tres alternativas en tarjetas que explican *por qué, evidencia, beneficios, vacíos y riesgos*, y validación contra estaciones meteorológicas reales. El mismo motor lleva datos dispersos de la NASA — distintos sensores, distintas resoluciones — a una grilla común; la armonización de 25 años de focos MODIS/VIIRS es el ejemplo que funciona.
 
 **Demo:** [PENDIENTE: URL de la demo] · **Video:** [PENDIENTE: URL del video]
+
+**Categorías (decisión del equipo pendiente):** Best Use of Data · Local Impact · Galactic Impact — las tres candidatas en `docs/PRD.md` §15.
 
 ---
 
 ## El problema
 
-**Fuego.** El registro satelital de focos de calor está partido entre sensores que no se pueden comparar: MODIS (píxel de 1 km, desde 2000, termina su misión en 2026) y VIIRS (píxel de 375 m, desde 2012), que ve fuegos más chicos y fragmenta un mismo incendio en más detecciones. Sin armonizar, la serie salta cuando entra VIIRS y no hay forma de saber si un año fue peor por el fuego o por el sensor.
-
 **Campo.** Los productores enfrentan temperaturas cambiantes, lluvias menos predecibles, falta de agua y suelos degradados. Elegir una rotación que cuide el suelo y el agua es difícil: un cultivo que mejora el suelo en un lugar puede consumir demasiada agua o quedar fuera de temporada en otro. En Argentina se suma la quema de rastrojos y pastizales, que daña el suelo y es una fuente importante de focos de calor.
+
+**Fuego.** El registro satelital de focos de calor está partido entre sensores que no se pueden comparar: MODIS (píxel de 1 km, desde 2000, termina su misión en 2026) y VIIRS (píxel de 375 m, desde 2012), que ve fuegos más chicos y fragmenta un mismo incendio en más detecciones. Sin armonizar, la serie salta cuando entra VIIRS y no hay forma de saber si un año fue peor por el fuego o por el sensor.
 
 **Lo que une a los dos:** datos de NASA dispersos, en resoluciones distintas, que nadie traduce a decisiones para quien está en el territorio.
 
 ## Qué hace la app
 
-- **Lente Fuego (Hot Spots):** un globo 3D con modo histórico animado mes a mes desde noviembre de 2000 hasta hoy, modo live con las detecciones de las últimas 24 h / 48 h / 7 d sobre la imagen satelital del día, calendario de fuego año × mes, semáforo que compara el mes actual contra la línea base 2003–2022, riesgo de fuego en 7 días con 2–3 razones y descarga en CSV.
 - **Lente Campo (Field Shift):** el productor dibuja su lote, lo divide en **parcelas con su cultivo**, ordena los ocho riesgos que más le preocupan (fuego, sequía, El Niño, heladas, calor, nevadas, granizo, inundación) y, si quiere, agrega acceso al agua, distancia a emergencias y costos, precios y márgenes por parcela. El diagnóstico le da a cada parcela un porcentaje de fuego y uno de agua **con el motivo de cada número**, evaporación/evapotranspiración (`EVLAND` de NASA POWER, con respaldo ET0 FAO-56 Penman-Monteith o Hargreaves donde POWER la enmascara), un puntaje de infiltración del suelo (grupos hidrológicos USDA desde textura de SoilGrids, materia orgánica, pendiente y días de suelo desnudo), alertas y las zonas de riesgo de fuego, suelo seco y suelo desnudo en el mapa — después su **rotación actual + 3 alternativas**, cada una con su efecto de infiltración y las cinco secciones que pide el brief: por qué, evidencia, beneficios, vacíos de información y riesgos a validar con un agrónomo. Un resumen opcional con IA (Gemini) pone los números en palabras simples; los teléfonos de emergencia están a un toque y nunca se marcan solos.
 - **Planeado:** alertas proactivas cuando el riesgo de una parcela sube (el aviso con los contactos de emergencia ya está; el aviso tipo notificación todavía no).
 
-**Recorrido de demo de dos minutos:** bienvenida → **"Ver mi zona"** (ubicación, el globo vuela a una vista de 50 km) → modo histórico reproduciendo **Corrientes 2022** → riesgo y semáforo en el panel del área → **"Analizar mi campo"** → elegir el **lote de demo de Pergamino** → comparar la rotación actual con las 3 alternativas, incluidos los sliders de escenario climático (lluvia −20 %, +1 °C).
+**Recorrido de demo de dos minutos:** bienvenida → **"Analizar mi campo"** → elegir el **lote de demo de Pergamino** → el diagnóstico por parcela → comparar la rotación actual con las 3 alternativas, incluidos los sliders de escenario climático (lluvia −20 %, +1 °C) → después **"Ver mi zona"** (ubicación, el globo vuela a una vista de 50 km) → modo histórico reproduciendo **Corrientes 2022** → riesgo y semáforo en el panel del área.
 
 La ubicación y los lotes quedan en el navegador: sin cuentas, sin guardado en el servidor.
 
@@ -59,7 +60,15 @@ Todas las fuentes satelitales de NASA son globales. La resolución y el período
 
 ## Método
 
-**Armonización de fuego.** Todos los conteos se expresan en **detecciones equivalentes a VIIRS NOAA-20**, porque MODIS se apaga y todo dato nuevo llega en VIIRS. La calibración se hace por estrato — banda de latitud de 10° × mes (18 bandas, 208 estratos con datos) — sobre el solapamiento 2012–2025:
+**Motor del campo.** Determinístico y explicable — nunca una caja negra. Una base de conocimiento de **15 cultivos** y **12 rotaciones agronómicamente válidas** (cada dato con su fuente) se filtra por viabilidad contra el diagnóstico del lote (ventana libre de heladas, agua disponible, aptitud, restricciones del productor) y se puntúa por indicadores ponderados por los sliders de prioridad: balance de agua, carbono/rastrojo, nitrógeno, riesgo de erosión (días de suelo desnudo × lluvias extremas × pendiente), infiltración del suelo, diversidad de familias para cortar plagas, forraje, ingreso y **quemas evitadas**. Se devuelve la rotación actual más el top-3 de alternativas; cada indicador guarda qué dato lo produjo, y eso es lo que llena la sección "Evidencia". Los sliders de escenario (lluvia −20 %, +1 °C) recalculan viabilidad e indicadores.
+
+**Zonas análogas.** Las celdas se agrupan por clima, suelo y fenología NDVI armonizados; en Argentina cada grupo se cruza con registros de MAGyP para que la evidencia pueda decir qué se siembra de verdad, y con qué rendimiento, en campos parecidos al tuyo.
+
+**Explicación con IA.** Un proveedor de LLM opcional e intercambiable (Gemini Flash por defecto) solo traduce los números del motor a lenguaje simple: el prompt lleva indicadores calculados, unidades y fuentes — nunca coordenadas, ids de lote ni datos de Orin — y cada número y cita de la respuesta se valida contra la salida del motor antes de mostrar nada. Cualquier fallo vuelve al texto de plantillas generado desde los mismos indicadores.
+
+**Incertidumbre.** Cada número del diagnóstico muestra su fuente y su resolución; las tarjetas marcan baja confianza cuando hay pocos datos, resolución gruesa o un estrato chico en la calibración.
+
+**Una grilla, muchas resoluciones — la armonización (requisito F8 en acción).** El brief de Field Shift pide datos heterogéneos sobre una grilla común; la serie de fuego es el ejemplo que funciona. Todos los conteos se expresan en **detecciones equivalentes a VIIRS NOAA-20**, porque MODIS se apaga y todo dato nuevo llega en VIIRS. La calibración se hace por estrato — banda de latitud de 10° × mes (18 bandas, 208 estratos con datos) — sobre el solapamiento 2012–2025:
 
 1. **Terra → Terra + Aqua** (2000-11 → 2002-06): factor (T+A)/T por estrato medido en 2003–2011.
 2. **S-NPP → NOAA-20** (2012-02 → 2018-03): factor N20/N por estrato calculado solo con los meses en que funcionan los dos satélites (2018-04 → 2025-12); en Argentina el factor queda entre 0,98 y 1,0.
@@ -70,15 +79,25 @@ Serie final: MODIS convertido para 2000-11 → 2012-01, S-NPP × factor para 201
 
 **Riesgo de fuego en 7 días.** Dos niveles. En todo el mundo, sin ML: `p = min(0,95, clim × (1 + 2·A + B))`, donde `clim` es la climatología semanal (fracción de los años 2003–2022 con ≥ 1 foco en esa semana) y A/B indican si hubo focos en la celda en los últimos 7 y 30 días. En Argentina, un modelo **LightGBM** suma el clima de NASA POWER (lluvia acumulada, días sin lluvia, humedad, temperatura, viento) más historial de fuego, estacionalidad, cobertura y focos en celdas vecinas; las probabilidades se calibran con Platt y cada predicción trae 2–3 razones basadas en SHAP. La climatología se calcula en todo el mundo y es la línea base que el modelo debe superar.
 
-**Motor del campo.** Determinístico y explicable — nunca una caja negra. Una base de conocimiento de **15 cultivos** y **12 rotaciones agronómicamente válidas** (cada dato con su fuente) se filtra por viabilidad contra el diagnóstico del lote (ventana libre de heladas, agua disponible, aptitud, restricciones del productor) y se puntúa por indicadores ponderados por los sliders de prioridad: balance de agua, carbono/rastrojo, nitrógeno, riesgo de erosión (días de suelo desnudo × lluvias extremas × pendiente), diversidad de familias para cortar plagas, forraje, ingreso y **quemas evitadas**. Se devuelve la rotación actual más el top-3 de alternativas; cada indicador guarda qué dato lo produjo, y eso es lo que llena la sección "Evidencia". Los sliders de escenario (lluvia −20 %, +1 °C) recalculan viabilidad e indicadores.
-
-**Zonas análogas.** Las celdas se agrupan por clima, suelo y fenología NDVI armonizados; en Argentina cada grupo se cruza con registros de MAGyP para que la evidencia pueda decir qué se siembra de verdad, y con qué rendimiento, en campos parecidos al tuyo.
-
-**Explicación con IA.** Un proveedor de LLM opcional e intercambiable (Gemini Flash por defecto) solo traduce los números del motor a lenguaje simple: el prompt lleva indicadores calculados, unidades y fuentes — nunca coordenadas, ids de lote ni datos de Orin — y cada número y cita de la respuesta se valida contra la salida del motor antes de mostrar nada. Cualquier fallo vuelve al texto de plantillas generado desde los mismos indicadores.
-
-**Incertidumbre.** Cada número del diagnóstico muestra su fuente y su resolución; las tarjetas marcan baja confianza cuando hay pocos datos, resolución gruesa o un estrato chico en la calibración.
-
 ## Validación
+
+**Satélite contra campo (estaciones de Orin).** Temperatura diaria de NASA POWER contra **53 estaciones meteorológicas de Orin** en Mendoza, 2026-10-04 → 2026-10-20 (742 pares estación-día por variable):
+
+| Variable | RMSE | Sesgo (POWER − estación) | r |
+|---|---|---|---|
+| Temperatura máxima | 5,05 °C | −2,82 °C | 0,63 |
+| Temperatura mínima | 3,89 °C | −0,67 °C | 0,46 |
+
+El error lo explica la altura: una celda de POWER (~55 × 60 km) tiene una sola altura media — 2.485 m en la celda que incluye la cordillera en el Valle de Uco — mientras esas estaciones están entre 1.000 y 1.500 m, lo que produce un sesgo de −6,7 °C en la máxima allí. Corregir POWER con la altura real del lote (SRTM, 6,5 °C/km) reduce el RMSE casi a la mitad (máxima: 2,82 °C; mínima: 2,28 °C); excluyendo las 10 estaciones dentro de la celda con cordillera da 3,32 / 2,31 °C. Lección que la app reporta con honestidad: en llanura POWER sirve para patrones, pero un error de 2–3 °C en la mínima cambia si la noche hiela — confirmá las decisiones de helada con una estación cercana o con tu agrónomo.
+
+**Satélite contra pluviómetros (INTA SIGA).** Lluvia mensual de IMERG y POWER contra **25 estaciones automáticas INTA SIGA**, 2015–2024 (1.346 estación-meses) — `docs/validation/rain-siga/`:
+
+| Producto | Sesgo | RMSE | r |
+|---|---|---|---|
+| IMERG | +22,1 mm/mes | 51,2 mm/mes | 0,59 |
+| POWER | +22,4 mm/mes | 49,4 mm/mes | 0,62 |
+
+Ambos productos marcan de más en promedio, concentrado en la Mendoza árida: la estación es un pluviómetro puntual en el valle seco mientras el píxel satelital promedia toda la celda, incluida la lluvia orográfica que el pluviómetro no ve — una limitación punto vs píxel, no un producto roto. El acuerdo mensual no prueba la climatología de largo plazo; el registro completo de pares está en `pairs.csv`.
 
 **Hold-out de la armonización.** Entrenada con 2012-02 → 2022-12 y evaluada con **2023–2024** — años que la calibración no vio — convirtiendo el MODIS del hold-out y comparándolo con el NOAA-20 real:
 
@@ -99,24 +118,6 @@ El R² log1p es más bajo porque le da el mismo peso a cada celda y la mayoría 
 | LightGBM (clima + historial) | **0,920** | **0,427** | **0,0302** |
 | Climatología | 0,843 | 0,295 | 0,0350 |
 | Persistencia | 0,852 | 0,310 | 0,0452 |
-
-**Satélite contra campo (estaciones de Orin).** Temperatura diaria de NASA POWER contra **53 estaciones meteorológicas de Orin** en Mendoza, 2026-10-04 → 2026-10-20 (742 pares estación-día por variable):
-
-| Variable | RMSE | Sesgo (POWER − estación) | r |
-|---|---|---|---|
-| Temperatura máxima | 5,05 °C | −2,82 °C | 0,63 |
-| Temperatura mínima | 3,89 °C | −0,67 °C | 0,46 |
-
-El error lo explica la altura: una celda de POWER (~55 × 60 km) tiene una sola altura media — 2.485 m en la celda que incluye la cordillera en el Valle de Uco — mientras esas estaciones están entre 1.000 y 1.500 m, lo que produce un sesgo de −6,7 °C en la máxima allí. Corregir POWER con la altura real del lote (SRTM, 6,5 °C/km) reduce el RMSE casi a la mitad (máxima: 2,82 °C; mínima: 2,28 °C); excluyendo las 10 estaciones dentro de la celda con cordillera da 3,32 / 2,31 °C. Lección que la app reporta con honestidad: en llanura POWER sirve para patrones, pero un error de 2–3 °C en la mínima cambia si la noche hiela — confirmá las decisiones de helada con una estación cercana o con tu agrónomo.
-
-**Satélite contra pluviómetros (INTA SIGA).** Lluvia mensual de IMERG y POWER contra **25 estaciones automáticas INTA SIGA**, 2015–2024 (1.346 estación-meses) — `docs/validation/rain-siga/`:
-
-| Producto | Sesgo | RMSE | r |
-|---|---|---|---|
-| IMERG | +22,1 mm/mes | 51,2 mm/mes | 0,59 |
-| POWER | +22,4 mm/mes | 49,4 mm/mes | 0,62 |
-
-Ambos productos marcan de más en promedio, concentrado en la Mendoza árida: la estación es un pluviómetro puntual en el valle seco mientras el píxel satelital promedia toda la celda, incluida la lluvia orográfica que el pluviómetro no ve — una limitación punto vs píxel, no un producto roto. El acuerdo mensual no prueba la climatología de largo plazo; el registro completo de pares está en `pairs.csv`.
 
 ## Limitaciones
 
@@ -141,6 +142,16 @@ Ambos productos marcan de más en promedio, concentrado en la Mendoza árida: la
 ## De dónde salen los datos de Orin
 
 Los datos de Orin (lotes, muestreos y 53 estaciones meteorológicas en Mendoza) fueron **recolectados antes del hackatón** por el proyecto Orin. Según la decisión D17 del equipo, su uso está autorizado sin restricciones: **se usan solo los datos recolectados, nunca el código de Orin**. Se aclara acá por transparencia, como piden las reglas del challenge para trabajos preexistentes.
+
+## También construido: Hot Spots (Armonización de MODIS y VIIRS)
+
+La segunda lente de la misma app — comparte el motor y la grilla H3, y es lo que convierte al fuego en un dato del lote y no en una curiosidad del mapa: el porcentaje de fuego por parcela, los meses de quema del calendario agrícola, el indicador de *quemas evitadas* por rotación y las medidas de prevención INTA salen de esta capa.
+
+- **Modo histórico:** un globo 3D reproduciendo la serie mensual armonizada, noviembre 2000 → hoy — 25 años en una sola unidad comparable.
+- **Modo live:** detecciones de las últimas 24 h / 48 h / 7 d sobre la imagen NASA GIBS del día.
+- **Calendario + semáforo:** calendario de fuego año × mes y comparación del mes actual contra su línea base 2003–2022.
+- **Riesgo a 7 días:** el modelo descrito arriba, con sus 2–3 razones, más descarga en CSV.
+- **Idea de alertas:** notificaciones proactivas (por ejemplo un flujo n8n) cuando el riesgo de una celda sube — bosquejado, no implementado.
 
 ## Cómo correrlo localmente
 
@@ -199,11 +210,14 @@ tools/       Subida a R2, assets de marca (logo y paleta: ember #b3401e, verde c
 
 ## Equipo
 
-Ariel · Augustus · Ezequiel · Alex
+- **Ariel** — documentación y README.
+- **Augustus** — datos de campo de Orin y conocimiento agronómico.
+- **Ezequiel** — datos de fuego y pipeline, deploy, datos de Orin y conocimiento agronómico.
+- **Alex** — front end y presentación.
 
 ## Licencias y agradecimientos
 
-- **Licencia del código:** [PENDIENTE: licencia del código]
+- **Licencia del código:** MIT — ver [`LICENSE`](LICENSE).
 - Dataset de fuego armonizado: se publica en Parquet + CSV con metadatos y `CITATION.cff` — [PENDIENTE: URL de descarga del dataset armonizado]
 - Datos: NASA FIRMS (MODIS, VIIRS S-NPP, VIIRS NOAA-20), NASA POWER, GPM IMERG, SMAP, MODIS (NDVI, cobertura), SRTM, GRACE-FO, NASA GIBS, FAO GAEZ, ISRIC SoilGrids, MAGyP Estimaciones Agrícolas (Argentina), IGN (Argentina), Natural Earth, INTA (medidas de prevención y parámetros de cultivos, en revisión; estaciones automáticas SIGA como verdad de campo para la validación de lluvia), datos de campo de Orin (con autorización).
 - Herramientas: MapLibre GL JS, OpenFreeMap, Uber H3, DuckDB, LightGBM, FastAPI, React/Vite, Cloudflare R2, Vercel.

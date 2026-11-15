@@ -1,130 +1,137 @@
-# Outline de slides (español) — Ashfield
+# Outline de slides (español) — Ashfield · Field Shift primero
 
-Diez slides para la presentación. Cada una: título, máximo 3 bullets, el visual
-a usar (archivo del repo) y la nota del orador. Números solo de archivos del
-repo; el mapeo figura → fuente está en `facts-sources.md` (interno).
+Nueve slides para la presentación principal. Cada una: título, máximo 3 bullets,
+el visual a usar (archivo del repo) y la nota del orador. Números solo de archivos
+del repo; el mapeo figura → fuente está en `facts-sources.md` (interno).
+Las slides de la lente Fuego (modo live, exportación CSV, alertas n8n) van al
+apéndice, listadas al final — el jurado de Field Shift no las necesita en la
+narrativa principal.
 
 ---
 
 ## Slide 1 — Título
 
-- Ashfield — Fuego y Campo
+- Ashfield — ¿Qué conviene sembrar en tu lote?
 - NASA Space Apps 2026 · Field Shift (también cubre Hot Spots)
-- Equipo: Ariel, Augustus, Ezequiel, Alex
+- Equipo: Ariel (documentación) · Augustus (datos Orin, agronomía) · Ezequiel (datos y pipeline, deploy, agronomía) · Alex (front, presentación)
 
 **Visual:** `web/public/brand/ashfield-cover.png` (portada de marca; lockup en
 `web/public/brand/ashfield-lockup-light.svg`, paleta ember #b3401e, verde
 cultivo, beige rastrojo).
 
-**Nota:** Una sola frase de apertura: "Un motor de armonización que lleva datos
-de la NASA a una grilla común, visto desde dos lentes: el fuego cerca tuyo y la
-rotación de tu campo".
+**Nota:** Una sola frase de apertura: "Un productor dibuja su lote y Ashfield le
+responde qué conviene sembrar, con datos de la NASA detrás de cada número".
 
 ## Slide 2 — El problema
 
-- Focos de calor partidos entre MODIS (1 km, 2000 → 2026) y VIIRS (375 m, 2012 → hoy): la serie salta al cambiar de sensor
-- Productores eligiendo rotaciones con clima cambiante y suelos degradados
-- En Argentina los dos problemas se cruzan en la quema de rastrojos
+- Productores eligiendo rotaciones con clima cambiante, agua escasa y suelos degradados
+- Los datos de la NASA existen pero están dispersos entre productos, resoluciones y portales — nunca a escala de lote
+- En Argentina se suma la quema de rastrojos: daña el suelo y es fuente importante de focos de calor
 
-**Visual:** `docs/validation/series_argentina.png` (la serie se ve partida antes
-de armonizar) o captura del modo histórico sobre Sudamérica.
+**Visual:** imagen satelital de un lote (NASA GIBS) o captura de la app sobre el
+lote de Pergamino.
 
-**Nota:** Sin armonizar no se puede saber si 2022 fue peor por el fuego o por el
-sensor. Los datos de la NASA existen; falta traducirlos a una decisión.
+**Nota:** El problema no es falta de datos — es que nadie los traduce a la
+decisión que el productor tiene que tomar esta campaña.
 
-## Slide 3 — La solución en una imagen
+## Slide 3 — Lo que hace Ashfield
 
-- Un motor de armonización (grilla H3) + dos lentes: Fuego y Campo
-- Fuego: globo 3D, histórico animado, live, calendario, semáforo, riesgo 7 días, CSV
-- Campo: diagnóstico del lote, calendario agrícola, rotación actual + 3 alternativas
+- El productor dibuja su lote → parcelas con cultivo, 8 riesgos ordenables, prioridades propias
+- Diagnóstico por parcela: % fuego y % agua con el motivo, evaporación/ET0, infiltración, alertas
+- Rotación actual + 3 alternativas — cada tarjeta: por qué, evidencia, beneficios, vacíos, riesgos
 
-**Visual:** el diagrama ASCII de `docs/idea-general.md` convertido en imagen, o
-captura de la app con el globo y el panel (generar en la grabación).
+**Visual:** captura de la app con las 4 tarjetas de rotación de Pergamino, una
+abierta en sus 5 secciones (grabación).
 
-**Nota:** No son dos proyectos pegados: las dos lentes usan la misma grilla y se
-cruzan en la quema de rastrojos, el riesgo del lote y el suelo desnudo.
+**Nota:** No es un dashboard más: responde una pregunta concreta y cada número
+muestra su fuente y resolución.
 
-## Slide 4 — Datos y armonización
-
-- ~568 M de detecciones FIRMS → una serie en equivalente VIIRS NOAA-20
-- Calibración por estrato (banda de latitud 10° × mes): Terra→T+A, S-NPP→NOAA-20, MODIS→VIIRS `log(V+1)=a+b·log(M+1)` + factor de totales
-- Campo a la misma grilla: POWER, MODIS NDVI, SRTM, SoilGrids, GRACE, MAGyP (IMERG, SMAP y GAEZ quedaron pendientes)
-
-**Visual:** `docs/validation/series_global.png` — la serie armonizada sin salto
-en 2012 ni en 2018.
-
-**Nota:** Todo se expresa en la unidad del sensor que queda (NOAA-20), porque
-MODIS se apaga en 2026. Cada indicador conserva su fuente y resolución.
-
-## Slide 5 — Validación
-
-- Hold-out 2023–2024 (años no vistos): R² mundial 0,979 · R² lineal 0,926 · R² log1p 0,654 · sesgo −0,8 %
-- Riesgo 7 días (test 2023–2025): LightGBM ROC-AUC 0,920 vs. climatología 0,843 y persistencia 0,852
-- Satélite vs. campo: 53 estaciones Orin, 742 pares — RMSE 5,05 °C crudo → 2,82 °C corrigiendo por altura
-
-**Visual:** `docs/validation/holdout_scatter.png` + `docs/validation/orin/satelite_vs_estaciones.png` lado a lado (o `docs/case-study/validacion_video.png`, ya en 16:9).
-
-**Nota:** El R² logarítmico es más bajo porque pesa igual a celdas con 1 o 3
-focos, donde domina el ruido de muestreo; las celdas con mucho fuego se predicen
-bien. La honestidad es parte del producto.
-
-## Slide 6 — El motor del campo
+## Slide 4 — El motor del campo
 
 - Determinístico y explicable: 15 cultivos + 12 rotaciones con fuentes, filtro de viabilidad y puntaje por prioridades
-- Indicadores: agua, carbono, nitrógeno, erosión, plagas, forraje, ingreso, quemas evitadas
+- Indicadores: agua, carbono, nitrógeno, erosión, infiltración (grupos hidrológicos USDA), plagas, forraje, ingreso, quemas evitadas
 - El LLM solo traduce: debe citar un indicador por afirmación; fallback a plantillas
 
-**Visual:** captura de las 4 tarjetas de rotación del lote de Pergamino con las
-5 secciones abiertas (grabación de la app).
+**Visual:** captura de una tarjeta de rotación con la sección "Evidencia" abierta
+mostrando la fuente NASA de cada indicador.
 
 **Nota:** Nunca una caja negra: cada estrategia dice por qué quedó primera y qué
 dato de la NASA la respalda. Las medidas de prevención de incendios (INTA) se
 activan con los datos del lote.
 
-## Slide 7 — El humano en el loop
+## Slide 5 — Método: una grilla, muchas resoluciones
 
-- Cada tarjeta: "apoyo a la decisión — validar con tu agrónomo"
-- Base agronómica en revisión abierta con agrónomos y productores (`docs/revision-agronomica.md`)
-- Datos de campo de Orin (53 estaciones, Mendoza) para validar lo que ve el satélite
+- El brief pide datos heterogéneos en una grilla común (F8) — el ejemplo: la serie de fuego armonizada
+- ~568 M de detecciones FIRMS → equivalente VIIRS NOAA-20, calibración por estrato (banda 10° × mes)
+- Campo a la misma grilla: POWER, MODIS NDVI, SRTM, SoilGrids, GRACE, MAGyP (SMAP rechazada por QA, GAEZ pendiente)
+
+**Visual:** `docs/validation/series_global.png` — la serie armonizada sin salto
+en 2012 ni en 2018.
+
+**Nota:** Todo se expresa en la unidad del sensor que queda (NOAA-20), porque
+MODIS se apaga en 2026. La misma grilla H3 sirve al lote y al fuego.
+
+## Slide 6 — Validación
+
+- Satélite vs. campo: 53 estaciones Orin, 742 pares — RMSE 5,05 °C crudo → 2,82 °C corrigiendo por altura
+- Lluvia vs. pluviómetros: 25 estaciones INTA SIGA, 1.346 estación-meses — ambos productos ~+22 mm/mes (punto vs. píxel, Mendoza)
+- Armonización, hold-out 2023–2024: R² mundial 0,979 · R² lineal 0,926 · sesgo −0,8 %
 
 **Visual:** `docs/validation/orin/satelite_vs_estaciones.png` (los puntos rojos
 de la celda con cordillera cuentan la historia solos).
+
+**Nota:** La honestidad es parte del producto: mostramos dónde el satélite falla
+y por qué — no solo los números buenos.
+
+## Slide 7 — El humano en el loop
+
+- Cada tarjeta: "apoyo a la decisión — validar con tu agrónomo"
+- Base agronómica en revisión abierta (`docs/revision-agronomica.md`); Patagonia dice "sin rotaciones validadas" antes que adivinar
+- Datos de campo de Orin (53 estaciones, Mendoza) como verdad de terreno — recolectados antes del hackatón, autorizados (D17)
+
+**Visual:** `docs/validation/orin/satelite_vs_estaciones.png` o captura del
+disclaimer en la app.
 
 **Nota:** El caso Orin resume la filosofía: el satélite da 25 años de historia,
 la estación da el valor exacto; mostramos el error y corregimos por altura real.
 
 ## Slide 8 — Límites, dichos en voz alta
 
-- 2000-11 → 2012-01 marcado como baja confianza; hueco de Terra jun–jul 2001
-- POWER puede errar varios grados en celdas de montaña (la app corrige por altura); SMAP calculada pero rechazada por las pruebas de calidad
-- Capas de campo precalculadas solo en Argentina; rotaciones = apoyo, no consejo
+- Indicadores relativos y cualitativos — ordenan alternativas, no predicen rindes; Kc genérico FAO pendiente de revisión local
+- POWER puede errar varios grados en celdas de montaña (la app corrige por altura); capas de campo precalculadas solo en Argentina
+- Granizo: "sin dato satelital" — mejor decirlo que inventar un número
 
-**Visual:** captura del calendario con la franja de baja confianza marcada, o
-`docs/validation/series_argentina.png`.
+**Visual:** captura de la tarjeta de granizo "sin dato" o de los límites en la app.
 
 **Nota:** Mostrar los límites en la app (no solo en esta slide) es lo que pide el
 brief de Field Shift sobre vacíos de información e incertidumbre.
 
-## Slide 9 — Impacto para Argentina
+## Slide 9 — Cierre
 
-- Corrientes ene–feb 2022: 33.255 focos, 18× la mediana 2003–2022 (vs. 883 en 2021)
-- La quema de rastrojos une fuego y campo: una mejor rotación reduce la necesidad de quemar
-- Prevención accionable: medidas INTA activadas por clima de fuego, cosecha en seco y suelo desnudo
+- Un productor, una pregunta, una respuesta con evidencia NASA: rotación actual + 3 alternativas
+- El fuego queda donde pertenece: un riesgo del lote, medido con la misma grilla (ver apéndice)
+- Datos de la NASA, traducidos a decisiones — apoyo a la decisión, no consejo agronómico
 
-**Visual:** `docs/case-study/mapa_ene-feb_2022_vs_2021.png` (hexágonos res 5 de
-Corrientes 2021 vs. 2022).
+**Visual:** `web/public/brand/ashfield-cover.png` o la app en el lote de
+Pergamino con las 4 tarjetas visibles.
 
-**Nota:** En el corazón de los Esteros del Iberá la mediana de febrero es 0
-focos y en 2022 hubo 416. La herramienta convierte ese dato en acción concreta.
+**Nota:** Cerrar con la promesa del producto: "¿Qué conviene sembrar? — esto es
+lo que la NASA puede decirte, y esto es lo que tenés que validar con tu agrónomo".
 
-## Slide 10 — Próximos pasos
+---
 
-- Estratificar la calibración por cobertura del suelo (MCD12C1) y expandir la grilla de campo al mundo
-- Completar la revisión agronómica (agua, rastrojo, rotación de Patagonia) y el modelo 2026
-- Publicar el dataset armonizado con `CITATION.cff`
+## Apéndice — slides de la lente Fuego (fuera de la narrativa principal)
 
-**Visual:** `docs/case-study/serie_85a9441bfffffff.png` (serie mensual de la
-celda del Iberá contra su mediana) como cierre, o la portada de marca.
+Usar solo si el jurado pregunta por el segundo challenge o por la cobertura
+completa del producto:
 
-**Nota:** Cerrar con la frase del caso de estudio: "donde en un febrero típico
-no hay ni un foco, hubo 416". Los datos de la NASA, traducidos a decisiones.
+- **Serie armonizada en vivo:** `docs/validation/series_global.png` +
+  `docs/validation/holdout_scatter.png` (R² 0,979 / 0,926 / 0,654, sesgo −0,8 %).
+- **Modo histórico:** globo 3D reproduciendo mes a mes 2000 → hoy; caso Corrientes
+  ene–feb 2022: 33.255 focos, 18× la mediana (`docs/case-study/mapa_ene-feb_2022_vs_2021.png`).
+- **Modo live:** detecciones 24 h / 48 h / 7 d sobre imagen GIBS del día.
+- **Semáforo y riesgo a 7 días:** mes actual vs. línea base 2003–2022; LightGBM
+  ROC-AUC 0,920 vs. climatología 0,843 (`model/fire_risk/report.md`).
+- **Descarga CSV** de la serie de la celda.
+- **Alertas n8n (idea):** notificaciones proactivas cuando el riesgo de una celda
+  sube — bosquejado, no implementado.
