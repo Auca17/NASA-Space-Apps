@@ -4,27 +4,20 @@
  * absent the card still renders with the generic limits text. */
 import { useT } from "../../i18n";
 import { Glossary } from "../../components/Glossary";
+import type { DiagAccuracy } from "../../api/types";
 
-export interface DiagAccuracy {
-  temp_rmse_c?: number;
-  temp_rmse_adjusted_c?: number;
-  rain_bias_mm_month?: number;
-  rain_rmse_mm_month?: number;
-  rain_r?: number;
-  stations?: { temperature?: number; rain?: number };
-  note?: string;
-  sources?: string[];
-}
+export type { DiagAccuracy };
 
 export function SatelliteAccuracy({ accuracy, tempAdjustC, elevationM,
                                     cellElevationM }: {
     accuracy?: DiagAccuracy | null;
-    tempAdjustC?: number;
+    tempAdjustC?: number | null;
     elevationM?: number | null;
     cellElevationM?: number | null }) {
   const { t, lang } = useT();
   const fmt = new Intl.NumberFormat(lang, { maximumFractionDigits: 1 });
   const a = accuracy ?? null;
+  const tempAdj = tempAdjustC ?? a?.elevation_correction_c ?? null;
   const elevDiff = elevationM != null && cellElevationM != null
     ? Math.round(elevationM - cellElevationM) : null;
   const srcName = (s: string) => {
@@ -52,9 +45,9 @@ export function SatelliteAccuracy({ accuracy, tempAdjustC, elevationM,
             " " + t("field.accuracy.rainR",
               { v: fmt.format(a.rain_r) })}
         </p>)}
-      {tempAdjustC != null && tempAdjustC !== 0 && (
+      {tempAdj != null && tempAdj !== 0 && (
         <p>{t("field.accuracy.elev",
-          { v: `${tempAdjustC > 0 ? "+" : ""}${fmt.format(tempAdjustC)}`,
+          { v: `${tempAdj > 0 ? "+" : ""}${fmt.format(tempAdj)}`,
             d: elevDiff != null ? fmt.format(elevDiff) : "?" })}</p>)}
       {a?.stations && (a.stations.temperature != null ||
                        a.stations.rain != null) && (

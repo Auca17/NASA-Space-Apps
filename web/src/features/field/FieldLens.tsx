@@ -7,7 +7,7 @@ import { Card, BottomSheet, Tooltip } from "../../components/ui";
 import { GlossDefs } from "../../components/Glossary";
 import { DiagTile } from "./DiagTile";
 import { Calendar, calendarCrops, type CatalogCrop } from "./Calendar";
-import { SatelliteAccuracy, type DiagAccuracy } from "./SatelliteAccuracy";
+import { SatelliteAccuracy } from "./SatelliteAccuracy";
 import {
   apiDiagnose, apiRotations, apiExplain, apiFieldCatalog, ecostressDemo, knowledgeCases, orinValidation,
 } from "../../api";
@@ -976,7 +976,7 @@ export function FieldPanel({ target, open, onClose, onChangePlot, onMethods,
                 </div>
               </section>))}
             <SatelliteAccuracy
-              accuracy={(diag as { accuracy?: DiagAccuracy }).accuracy}
+              accuracy={diag.accuracy}
               tempAdjustC={diag.temp_adjust_c}
               elevationM={diag.elevation_m}
               cellElevationM={diag.power_cell_elevation_m} />

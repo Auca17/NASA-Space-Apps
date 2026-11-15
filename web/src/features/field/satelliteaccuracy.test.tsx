@@ -45,6 +45,14 @@ describe("SatelliteAccuracy", () => {
     expect(screen.getByText(/Límites típicos/)).toBeInTheDocument();
   });
 
+  it("uses elevation_correction_c when no separate prop is passed", () => {
+    wrap(<SatelliteAccuracy accuracy={{ ...FULL,
+      elevation_correction_c: 9.4 }} />);
+    const text = document.querySelector(".acc-card")!.textContent!;
+    expect(text).toContain("Corrección de altura aplicada");
+    expect(text).toContain("+9,4 °C");
+  });
+
   it("offers the satellite-vs-ground glossary term", () => {
     wrap(<SatelliteAccuracy accuracy={FULL} />);
     expect(screen.getByRole("button", { name: /satélite vs\. campo\?/ }))
