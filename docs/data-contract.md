@@ -383,6 +383,8 @@ Diagnóstico multi-parcela dentro de un campo: indicadores llanos por parcela, z
 
 Validación (HTTP 400 con `error` estable): `boundary` pasa las mismas reglas del polígono de `/diagnose` (`invalid_boundary` / `invalid_polygon`: anillo cerrado, sin autointersección, sin antimeridiano, 0,5–5000 ha, máx. vértices). `parcels`: 1–20, `id` único, `crop` en `crops.json` más `otro` y `sin_cultivo` (`unknown_crop`). Cada parcela se recorta al `boundary`; si queda afuera o con <0,1 ha dentro → `parcel_outside_boundary`. Dos parcelas no pueden superponerse en más del 1 % de la menor → `parcels_overlap`. `needs` es opcional; concerns desconocidos se ignoran y `notes` se recorta a 300 caracteres (`invalid_needs`). Centro fuera de tierra → `no_land`.
 
+`profile` opcional (D36): `priorities` = `[{id, rank}]` con ids de peligro (`fire|drought|frost|heat|snow|hail|enso|flood`), ranks 1–8 únicos (desconocidos se ignoran); `hidden` = ids que van al bloque `extra` (se computan igual, la UI los muestra en "más información"); `economics` = `{currency, parcels: {parcel_id: {cost_per_ha, price_per_t, expected_yield_t_ha|null}}}`. Objeto mal formado → `invalid_profile`.
+
 **Salida**
 
 ```json
@@ -392,8 +394,20 @@ Validación (HTTP 400 con `error` estable): `boundary` pasa las mismas reglas de
       "fire":  {"pct", "level": "bajo|moderado|alto|muy_alto", "basis"},
       "water": {"pct", "level": "seco|normal|humedo", "basis"},
       "heat":  {"days_over_35", "basis"},
-      "frost": {"frost_free_days", "basis"}},
-    "alerts": [{"kind": "fire|dry|heat|frost", "severity": "high|medium", "text"}]}],
+      "frost": {"frost_free_days", "basis"},
+      "snow":  {"days_per_year", "pct_years_with_snow", "basis"},
+      "hail":  {"available": false, "basis"},
+      "enso":  {"phase_now", "oni", "oni_period",
+                "rain_effect_pct": {"el_nino", "la_nina"}, "basis"},
+      "flood": {"heavy_rain_days_yr", "low_slope", "basis"}
+             | {"available": false, "basis"}},
+    "alerts": [{"kind": "fire|dry|heat|frost", "severity": "high|medium", "text"}],
+    "order": ["ids de peligro en orden de pantalla"],
+    "extra": [{"id", "hidden": true}],
+    "economics": {"currency", "expected_yield_t_ha", "yield_source",
+                  "revenue_per_ha", "cost_per_ha", "margin_per_ha",
+                  "margin_total", "break_even_yield_t_ha",
+                  "risk_adjusted_margin_per_ha", "basis"}}],
   "zones": [{"kind": "hotspot|fire_risk|dry|bare_soil", "geometry",
              "center": [lon, lat], "radius_m", "pct", "label",
              "source", "date"}],
@@ -407,6 +421,8 @@ Validación (HTTP 400 con `error` estable): `boundary` pasa las mismas reglas de
 ```
 
 **Cómputo** — `water.pct`: media de `GWETROOT` de los últimos 30 días ×100; `level` contra los percentiles 20/80 del mismo mes calendario en la historia POWER de la celda (2001→año pasado). Sin `GWETROOT` se usa anomalía de lluvia a 30 días (dicho en `basis`). `fire.pct`: probabilidad del modelo a 7 días ×100; `level` = `cat` de la celda, sube a `alto` si hay una detección FIRMS ≤5 km de la parcela. Alerta de fuego `high` si `pct≥50`, `level` alto/muy_alto o detección cercana. `heat`/`frost`: derivaciones de `/diagnose` con corrección por altura. Parcelas que comparten celda climática lo aclaran en `basis`.
+
+Indicadores extra (D36): `snow` = días/año con `PRECSNOLAND` >1 mm + % de años con nieve (misma serie POWER; `null` si falta el parámetro). `hail`: siempre `available:false` — no hay dataset de granizo. `enso`: fase actual del ONI de NOAA CPC (`oni.ascii.txt`, cache 24 h, timeout 6 s → `phase_now:null` si falla) + `rain_effect_pct`: lluvia oct–mar en temporadas El Niño vs La Niña vs todas (umbral ONI ±0,5 sobre la media de la temporada) en la historia POWER de la celda — tendencia histórica, no pronóstico. `flood`: días/año de lluvia fuerte de la grilla + pendiente del terreno; `available:false` si falta todo. `order`: ids en orden de pantalla (prioridades del perfil primero, resto por severidad); los `hidden` van en `extra` con `hidden:true`. `economics` por parcela solo si el request trae economía para ella: rinde esperado del usuario o `ar_crops[].yield_kg_ha` del shard `field/analogs` (`magyp_department`, kg→t) o `null` sin margen; `risk_adjusted_margin_per_ha` = margen − ingreso × factores aproximados documentados en `basis` (seco 15 %, alerta de fuego 5 %, heladas cortas 5 %, mucho calor 5 %) — nunca pronóstico.
 
 **Zonas** — `hotspot`: detecciones FIRMS 72 h a ≤25 km del boundary, círculo de 32 vértices (375 m VIIRS, 1000 m MODIS). `fire_risk`: celdas res-5 `alto`/`muy_alto` del shard de riesgo que intersectan un buffer de 10 km. `dry`: cada parcela con `water.level="seco"` (su propia geometría). `bare_soil`: celdas del grid con días de suelo desnudo > p80 regional. Máx. 200, más cercanas primero.
 

@@ -26,6 +26,7 @@ from ..services import parcel_geo as geo
 from ..services.data import risk_shard
 from ..services.georef import zone_at
 from ..services.nearby import nearby
+from ..services import enso
 from ..services.knowledge import KNOWLEDGE
 from .field import (_json_body, _err, _self_intersects, parse_plot,
                     days_per_year, frost_free_window,
@@ -50,6 +51,8 @@ CONCERNS = {"fire", "water", "frost", "heat", "flood", "access"}
 WATER_ACCESS = {"none", "well", "channel", "irrigation", "unknown"}
 EXTRA_CROPS = {"otro", "sin_cultivo"}
 LEVELS = ("bajo", "moderado", "alto", "muy_alto")
+HAZARDS = ("fire", "drought", "frost", "heat", "snow", "hail",
+           "enso", "flood")
 
 # emergency fire numbers by ISO A2 (public, generic knowledge)
 FIRE_NUMBER = {"AR": "100", "BR": "193", "CL": "131", "UY": "104",
@@ -128,6 +131,54 @@ def parse_needs(body: dict):
     notes = str(needs.get("notes") or "")[:300]
     return {"water_access": wa, "emergency_distance_km": dist,
             "concerns": concerns, "notes": notes}, None
+
+
+def parse_profile(body: dict):
+    """Optional `profile`: priorities (hazard ids ranked 1..8, unique),
+    hidden ids and per-parcel economics. Unknown ids ignored."""
+    prof = body.get("profile")
+    if prof is None:
+        return {"priorities": [], "hidden": [], "economics": {}}, None
+    if not isinstance(prof, dict):
+        return None, _err("invalid_profile",
+                          "profile must be an object")[1]
+    seen_rank, seen_id, prio = set(), set(), []
+    for e in prof.get("priorities") or []:
+        if not isinstance(e, dict):
+            continue
+        hid, rk = e.get("id"), e.get("rank")
+        if hid not in HAZARDS or hid in seen_id:
+            continue
+        try:
+            rk = int(rk)
+        except (TypeError, ValueError):
+            continue
+        if not 1 <= rk <= len(HAZARDS) or rk in seen_rank:
+            continue
+        seen_rank.add(rk)
+        seen_id.add(hid)
+        prio.append(hid)
+    hidden = {h for h in (prof.get("hidden") or []) if h in HAZARDS}
+    econ_raw = prof.get("economics") or {}
+    if not isinstance(econ_raw, dict):
+        return None, _err("invalid_profile",
+                          "profile.economics must be an object")[1]
+    parcels_econ = {}
+    for pid, e in (econ_raw.get("parcels") or {}).items():
+        if not isinstance(e, dict):
+            continue
+        try:
+            cost = float(e["cost_per_ha"])
+            price = float(e["price_per_t"])
+            y = e.get("expected_yield_t_ha")
+        except (KeyError, TypeError, ValueError):
+            continue
+        parcels_econ[pid] = {
+            "cost_per_ha": cost, "price_per_t": price,
+            "expected_yield_t_ha": float(y) if y is not None else None}
+    return {"priorities": prio, "hidden": hidden,
+            "economics": {"currency": econ_raw.get("currency") or "USD",
+                          "parcels": parcels_econ}}, None
 
 
 # ------------------------------------------------------------ indicators ---
@@ -288,6 +339,178 @@ def frost_indicator(grid_cell: dict | None, power: dict | None,
             "basis": "Sin datos de heladas." + shared_note}
 
 
+def snow_indicator(power: dict | None, shared_note: str = ""):
+    """Days per year with snowfall >1 mm water equivalent and the share
+    of years with at least one snow day (POWER PRECSNOLAND)."""
+    sn = (power or {}).get("PRECSNOLAND")
+    if not sn:
+        return {"days_per_year": None, "pct_years_with_snow": None,
+                "basis": "Sin datos de nieve: el servicio de clima no "
+                         "devolvió el parámetro PRECSNOLAND."
+                + shared_note}
+    by_year: dict[int, int] = {}
+    for d, v in sn.items():
+        if v is not None and v > 1:
+            by_year[d.year] = by_year.get(d.year, 0) + 1
+    years = {d.year for d, v in sn.items() if v is not None}
+    n = len(years)
+    if not n:
+        return {"days_per_year": None, "pct_years_with_snow": None,
+                "basis": "Sin datos de nieve." + shared_note}
+    total = sum(by_year.values())
+    dpy = round(total / n, 1)
+    pct = round(100 * len(by_year) / n)
+    word = ("casi nunca nieva en esta zona" if pct <= 10 else
+            "nieva algunos años en esta zona")
+    return {"days_per_year": dpy, "pct_years_with_snow": pct,
+            "basis": f"Días por año con nevada sobre 1 mm (NASA POWER "
+                     f"PRECSNOLAND, 2001–hoy); {word}." + shared_note}
+
+
+HAIL_INDICATOR = {
+    "available": False,
+    "basis": "No hay un dato satelital de granizo para tu zona en "
+             "esta app; consultá el servicio meteorológico y tu "
+             "aseguradora."}
+
+
+def flood_indicator(grid_cell: dict | None, terr: dict | None,
+                    shared_note: str = ""):
+    """Anegamiento: días de lluvia fuerte de la grilla + pendiente del
+    terreno. No hay dataset de inundaciones; esto solo ordena el
+    riesgo relativo."""
+    heavy = (grid_cell or {}).get("heavy_days_yr")
+    slope = (terr or {}).get("slope_deg")
+    if heavy is None and slope is None:
+        return {"available": False,
+                "basis": "Sin datos suficientes para estimar "
+                         "anegamiento en esta zona." + shared_note}
+    low = slope is None or slope < 1.0
+    if heavy is None:
+        basis = "Sin dato de lluvias fuertes; "
+    else:
+        basis = (f"{heavy:g} días por año con lluvia fuerte "
+                 "(sobre 20 mm) y ")
+    basis += ("terreno casi plano" if low else "terreno con pendiente")
+    basis += (": riesgo de anegamiento bajo pero no nulo tras "
+              "tormentas." if low else
+              ": el agua escurre, riesgo de anegamiento menor.")
+    return {"heavy_rain_days_yr": heavy, "low_slope": low,
+            "basis": basis + shared_note}
+
+
+# ------------------------------------------------------ order + economics --
+
+_SEV_FIRE = {"muy_alto": 4, "alto": 3, "moderado": 2, "bajo": 1}
+
+
+def _severity(hid: str, ind: dict, alerts: list) -> int:
+    """0..4 how much attention a hazard deserves on this parcel, for
+    the default ordering of non-priority ids."""
+    if hid == "fire":
+        if any(a["kind"] == "fire" and a["severity"] == "high"
+               for a in alerts):
+            return 4
+        return _SEV_FIRE.get(ind["fire"].get("level"), 0)
+    if hid == "drought":
+        return {"seco": 3, "normal": 1, "humedo": 0}.get(
+            ind["water"].get("level"), 0)
+    if hid == "frost":
+        ff = ind["frost"].get("frost_free_days")
+        return 2 if ff is not None and ff <= 150 else \
+            (1 if ff is not None and ff <= 240 else 0)
+    if hid == "heat":
+        hot = ind["heat"].get("days_over_35")
+        return 2 if hot is not None and hot >= 60 else \
+            (1 if hot is not None and hot >= 30 else 0)
+    if hid == "snow":
+        return 1 if (ind["snow"].get("days_per_year") or 0) > 0 else 0
+    if hid == "enso":
+        return 1 if ind["enso"].get("phase_now") in (
+            "el_nino", "la_nina") else 0
+    if hid == "flood":
+        return 1 if ind["flood"].get("heavy_rain_days_yr") or \
+            ind["flood"].get("low_slope") else 0
+    return 0  # hail: never available
+
+
+def compute_order(ind: dict, alerts: list, profile: dict):
+    """-> (order, extra). Profile ranks first, then the rest by
+    severity; hidden ids go to `extra` (still computed)."""
+    hidden = set(profile["hidden"])
+    ranked = [h for h in profile["priorities"] if h not in hidden]
+    rest = [h for h in HAZARDS
+            if h not in profile["priorities"] and h not in hidden]
+    rest.sort(key=lambda h: -_severity(h, ind, alerts))
+    extra_ranked = [h for h in profile["priorities"] if h in hidden]
+    extra_rest = [h for h in HAZARDS
+                  if h not in profile["priorities"] and h in hidden]
+    extra_rest.sort(key=lambda h: -_severity(h, ind, alerts))
+    return (ranked + rest,
+            [{"id": h, "hidden": True} for h in extra_ranked + extra_rest])
+
+
+# rough, documented loss shares on revenue for the risk-adjusted margin
+LOSS_FACTORS = {"drought_seco": 0.15, "fire_high_alert": 0.05,
+                "frost_short": 0.05, "heat_many": 0.05}
+
+
+def economics_block(pe: dict, crop: str, analog_cell: dict | None,
+                    area_ha: float, ind: dict, alerts: list) -> dict:
+    """Margin per ha from declared costs/price and a yield (user's or
+    MAGyP department). All factors are rough assumptions, stated in
+    the basis — never a forecast."""
+    y = pe.get("expected_yield_t_ha")
+    ysrc = "user"
+    if y is None:
+        kg = next((c.get("yield_kg_ha") for c in
+                   (analog_cell or {}).get("ar_crops") or []
+                   if c.get("crop") == crop), None)
+        if kg is not None:
+            y = kg / 1000
+            ysrc = "magyp_department"
+    cost, price = pe["cost_per_ha"], pe["price_per_t"]
+    out = {"expected_yield_t_ha": y,
+           "yield_source": ysrc if y is not None else None}
+    if y is None:
+        out["basis"] = ("Sin rinde esperado: el productor no lo "
+                        "declaró y no hay un rinde departamental "
+                        "MAGyP para este cultivo en la zona.")
+        return out
+    revenue = y * price
+    margin = revenue - cost
+    share, why = 0.0, []
+    if ind["water"].get("level") == "seco":
+        share += LOSS_FACTORS["drought_seco"]
+        why.append("suelo seco −15 %")
+    if any(a["kind"] == "fire" and a["severity"] == "high"
+           for a in alerts):
+        share += LOSS_FACTORS["fire_high_alert"]
+        why.append("alerta de fuego −5 %")
+    if (ind["frost"].get("frost_free_days") or 999) <= 150:
+        share += LOSS_FACTORS["frost_short"]
+        why.append("período sin heladas corto −5 %")
+    if (ind["heat"].get("days_over_35") or 0) >= 60:
+        share += LOSS_FACTORS["heat_many"]
+        why.append("muchos días de calor −5 %")
+    adjusted = margin - revenue * share
+    src_txt = ("declarado por el productor" if ysrc == "user" else
+               "departamental MAGyP para la zona")
+    factors = "; ".join(why) if why else "sin factores de riesgo"
+    out.update({
+        "revenue_per_ha": round(revenue),
+        "cost_per_ha": round(cost),
+        "margin_per_ha": round(margin),
+        "margin_total": round(margin * area_ha),
+        "break_even_yield_t_ha": round(cost / price, 2)
+        if price else None,
+        "risk_adjusted_margin_per_ha": round(adjusted),
+        "basis": f"Rinde {src_txt} ({y:g} t/ha). Margen ajustado "
+                 f"con supuestos aproximados: {factors} del ingreso. "
+                 "No es un pronóstico."})
+    return out
+
+
 # ---------------------------------------------------------------- alerts ---
 
 def _fire_number(country: str | None) -> str:
@@ -419,19 +642,45 @@ def build_zones(parcels: list[dict], detections: list,
 # ---------------------------------------------------------------- summary --
 
 def template_summary(parcels: list[dict], nearby_res: dict,
-                     lang: str) -> dict:
-    """Deterministic fallback mirroring the AI output shape."""
+                     lang: str, priorities: list | None = None) -> dict:
+    """Deterministic fallback mirroring the AI output shape. The
+    headline follows the farmer's first priority, unless a fire
+    alert fires — fire always leads."""
     fire_high = [p for p in parcels if any(
         a["kind"] == "fire" and a["severity"] == "high"
         for a in p["alerts"])]
     dry = [p for p in parcels
            if p["indicators"]["water"].get("level") == "seco"]
     en = lang == "en"
+    first = (priorities or [None])[0]
     if fire_high:
         head = ("Hay focos o riesgo alto de fuego: vigilancia y "
                 "guardafuegos al día." if not en else
                 "Fire risk is high or detections are nearby: stay "
                 "watchful and keep firebreaks clear.")
+    elif first == "enso" and parcels:
+        e = parcels[0]["indicators"]["enso"]
+        ph, eff = e.get("phase_now"), e.get("rain_effect_pct") or {}
+        if ph in ("el_nino", "la_nina") and eff:
+            pct = eff.get(ph)
+            sign = "más" if (pct or 0) >= 0 else "menos"
+            head = (f"{'El Niño' if ph == 'el_nino' else 'La Niña'} "
+                    f"activo: en esta zona suele llover {abs(pct)} % "
+                    f"{sign} en la temporada." if not en else
+                    f"{'El Niño' if ph == 'el_nino' else 'La Niña'} "
+                    f"is active: this area tends to get {abs(pct)} % "
+                    f"{'more' if (pct or 0) >= 0 else 'less'} rain in "
+                    "the season.")
+        else:
+            head = ("ENSO está neutro: sin señal fuerte para la "
+                    "lluvia de la temporada." if not en else
+                    "ENSO is neutral: no strong signal for seasonal "
+                    "rain.")
+    elif first == "drought" and dry:
+        head = ("El agua es la prioridad: hay parcelas más secas "
+                "que lo normal." if not en else
+                "Water is the priority: some parcels are drier "
+                "than usual.")
     else:
         head = ("El riesgo de fuego está bajo; lo que más conviene "
                 "mirar es el agua." if not en else
@@ -531,6 +780,9 @@ async def parcels(request: Request):
     needs, nerr = parse_needs(body)
     if nerr:
         return nerr
+    profile, perr = parse_profile(body)
+    if perr:
+        return perr
 
     g = zone_at(clat, clon)
     if g["country"] is None:
@@ -569,9 +821,14 @@ async def parcels(request: Request):
                 for r2 in r2s], return_exceptions=True),
             "risks": asyncio.gather(*[
                 risk_shard(r2) for r2 in r2s], return_exceptions=True),
-                "firms": (firms.fetch_all(map_key, fbox, "72h")
+            "analogs": asyncio.gather(*[
+                src.json_shard(clat, clon, f"field/analogs/{r2}.json",
+                               r6s[0], f"analogs_{r2}")
+                for r2 in r2s], return_exceptions=True),
+            "firms": (firms.fetch_all(map_key, fbox, "72h")
                       if map_key else asyncio.sleep(0, result=None)),
             "nearby": nearby(clat, clon, client),
+            "oni": enso.fetch_oni(client),
         }
         # every source bounds itself (POWER 5 s + one retry, shards 3 s,
         # Overpass 6 s, FIRMS 10 s); a global cap covers pathological
@@ -591,10 +848,12 @@ async def parcels(request: Request):
     terrs = ok(results[1], []) or []
     grids = [gg for gg in (ok(results[2], []) or []) if gg]
     risks = [rr for rr in (ok(results[3], []) or []) if rr]
-    fres = ok(results[4])
-    nearby_res = ok(results[5]) or {
+    analogs = [aa for aa in (ok(results[4], []) or []) if aa]
+    fres = ok(results[5])
+    nearby_res = ok(results[6]) or {
         "fire_stations": [], "hospitals": [], "water": [],
         "source": "OpenStreetMap contributors", "degraded": True}
+    oni = ok(results[7], {}) or {}
 
     # ---- detections --------------------------------------------------------
     detections = []
@@ -618,6 +877,8 @@ async def parcels(request: Request):
                   for cid, c in (s.get("cells") or {}).items()}
     risk_cells_all = {cid: c for s in risks
                       for cid, c in (s.get("cells") or {}).items()}
+    analog_cells = {cid: c for s in analogs
+                    for cid, c in (s.get("cells") or {}).items()}
 
     # regional bare-soil p80 across the fetched shards
     bare_vals = sorted(c["bare_soil_days_yr"] for c in
@@ -686,17 +947,31 @@ async def parcels(request: Request):
             "water": water_indicator(power, note),
             "heat": heat_indicator(grid_cell, power, note),
             "frost": frost_indicator(grid_cell, power, note),
+            "snow": snow_indicator(power, note),
+            "hail": dict(HAIL_INDICATOR),
+            "enso": enso.indicator(
+                oni, (power or {}).get("PRECTOTCORR")),
+            "flood": flood_indicator(grid_cell, terr, note),
         }
         cinfo = KNOWLEDGE.crops.get(p["crop"])
         cname = ((cinfo.name or {}).get(lang)
                  if cinfo and cinfo.name else p["crop"])
         alerts = build_alerts(ind, p["crop"], cname or p["crop"],
                               needs, det_km, g["country"])
-        out_parcels.append({
-            "id": p["id"], "crop": p["crop"],
-            "area_ha": round(p["_ha"], 1),
-            "indicators": ind, "alerts": alerts,
-            "_geom": p["_geom"]})
+        order, extra = compute_order(ind, alerts, profile)
+        row = {"id": p["id"], "crop": p["crop"],
+               "area_ha": round(p["_ha"], 1),
+               "indicators": ind, "alerts": alerts,
+               "order": order, "extra": extra,
+               "_geom": p["_geom"]}
+        pe = profile["economics"].get("parcels", {}).get(p["id"])
+        if pe is not None:
+            econ = economics_block(
+                pe, p["crop"], analog_cells.get(r5c), p["_ha"],
+                ind, alerts)
+            econ["currency"] = profile["economics"]["currency"]
+            row["economics"] = econ
+        out_parcels.append(row)
 
     zones = build_zones(out_parcels, detections, risk_zone_cells,
                         bare_zone_cells, (bgeom, clat))
@@ -715,12 +990,21 @@ async def parcels(request: Request):
                      "hot_threshold_c": 35,
                      "frost_free_days":
                      p["indicators"]["frost"]["frost_free_days"],
+                     "snow_days_per_year":
+                     p["indicators"]["snow"]["days_per_year"],
+                     "enso_phase":
+                     p["indicators"]["enso"]["phase_now"],
+                     "margin_per_ha": (p.get("economics") or {})
+                     .get("margin_per_ha"),
                      "alerts": [{"kind": a["kind"],
                                  "severity": a["severity"],
                                  "text": a["text"]}
                                 for a in p["alerts"]]}
                     for p in out_parcels],
-        "needs": needs, "fire_horizon_days": 7}
+        "needs": needs, "fire_horizon_days": 7,
+        "priorities": profile["priorities"],
+        "enso_phase": (out_parcels[0]["indicators"]["enso"]
+                       .get("phase_now") if out_parcels else None)}
     from ..services.ai_explain import parcels_summary
     summ = None
     try:
@@ -728,7 +1012,8 @@ async def parcels(request: Request):
     except Exception:
         summ = None
     if summ is None:
-        summ = template_summary(out_parcels, nearby_res, lang)
+        summ = template_summary(out_parcels, nearby_res, lang,
+                                profile["priorities"])
     else:
         summ["source"] = os.environ.get("AI_PROVIDER", "gemini")
 
@@ -756,6 +1041,12 @@ async def parcels(request: Request):
             {"id": "firms",
              "text": "NASA FIRMS — detecciones activas VIIRS/MODIS "
                      "de las últimas 72 h"},
+            {"id": "enso",
+             "text": "NOAA CPC — índice ONI (El Niño / La Niña) y "
+                     "efecto histórico sobre la lluvia de la zona"},
+            {"id": "magyp",
+             "text": "MAGyP — rindes departamentales por cultivo "
+                     "cuando el productor no declara el propio"},
             {"id": "field_grid",
              "text": "Grilla de campo precalculada (IMERG lluvia, "
                      "SRTM elevación, cobertura de suelo)"},
