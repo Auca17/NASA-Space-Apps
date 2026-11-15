@@ -110,3 +110,11 @@ regional trial.
 | `color`/`icon` de los 5 cultivos | hex + hint | Solo display; sin base agronómica — **pendiente de validación local** | — |
 | `residue_t_ha` perennes | 0.0 con `residue_note` | Poda sin valor normalizado — **pendiente de validación local** | Contar carbono de poda/raíz. |
 | `sowing`/`harvest`/`cycle_end` nuevos | ver crops.json | Calendario general Mendoza, no validado con EEA — **pendiente de validación local** | Especialmente ajo (siembra otoño). |
+
+## Kc mid-season (task 40, ET0 fallback)
+
+`kc_mid` por cultivo viene de FAO-56 tabla 12 (Allen et al., 1998) y se
+usa solo cuando EVLAND/EVPTRNS no están disponibles y el agua de
+cultivo se estima como ET0 × Kc. Valores representativos genéricos —
+**pendiente de validación local** con Kc regionales (INTA/FAO para
+Mendoza en vid/olivo/ajo pueden diferir por conducción y cobertura).

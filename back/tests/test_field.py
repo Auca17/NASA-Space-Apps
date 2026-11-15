@@ -561,3 +561,54 @@ def test_scenario_recomputes_cards():
     dry = rain_stats(apply_scenario(
         s, {"rain_pct": -20, "temp_delta_c": 0})["PRECTOTCORR"])[0]
     assert abs(dry - base * 0.8) < 1.5  # ~ -20 % of annual rain
+
+
+@respx.mock
+async def test_diagnose_et0_fallback_when_ev_masked(monkeypatch):
+    """EVPTRNS/EVLAND masked (-999) -> crop_water and evaporation fall
+    back to a computed FAO-56 ET0 series and the source says so."""
+    monkeypatch.setenv("DATA_BASE_URL", FIXTURES.as_uri() + "/")
+    _mock_all_ok()
+    body = _power_body()
+    for p in ("EVPTRNS", "EVLAND"):
+        body["properties"]["parameter"][p] = {
+            d: -999 for d in body["properties"]["parameter"][p]}
+    body["properties"]["parameter"]["ALLSKY_SFC_SW_DWN"] = {
+        d: 20.0 for d in
+        body["properties"]["parameter"]["T2M_MAX"]}
+    body["properties"]["parameter"]["RH2M"] = {
+        d: 50.0 for d in body["properties"]["parameter"]["T2M_MAX"]}
+    body["properties"]["parameter"]["WS2M"] = {
+        d: 2.0 for d in body["properties"]["parameter"]["T2M_MAX"]}
+    respx.get(url__regex=r".*power\.larc\.nasa\.gov.*").respond(
+        200, json=body)
+    plot = {"point": [-33.73, -69.12], "ha": 50}  # fresh r6 cache key
+    r = await client().post("/api/field/diagnose", json=plot)
+    assert r.status_code == 200
+    cards = {c["id"]: c for c in r.json()["cards"]}
+    cw = cards["crop_water"]
+    assert cw["value"] is not None and cw["value"] > 0
+    assert "ET0" in cw["source"] and "Penman-Monteith" in cw["source"]
+    ev = cards["evaporation"]
+    assert ev["value"] is not None and ev["value"] > 0
+    assert "ET0" in ev["source"]
+    assert ev["monthly_mm"] and len(ev["monthly_mm"]) == 12
+
+
+@respx.mock
+async def test_diagnose_et0_hargreaves_without_radiation(monkeypatch):
+    """No radiation in the cell -> Hargreaves method in the source."""
+    monkeypatch.setenv("DATA_BASE_URL", FIXTURES.as_uri() + "/")
+    _mock_all_ok()
+    body = _power_body()
+    for p in ("EVPTRNS", "EVLAND", "ALLSKY_SFC_SW_DWN"):
+        body["properties"]["parameter"][p] = {
+            d: -999 for d in body["properties"]["parameter"][p]}
+    respx.get(url__regex=r".*power\.larc\.nasa\.gov.*").respond(
+        200, json=body)
+    plot = {"point": [-32.2, -64.8], "ha": 50}  # fresh r6 cache key
+    r = await client().post("/api/field/diagnose", json=plot)
+    assert r.status_code == 200
+    cw = {c["id"]: c for c in r.json()["cards"]}["crop_water"]
+    assert cw["value"] is not None and cw["value"] > 0
+    assert "Hargreaves" in cw["source"]

@@ -37,6 +37,7 @@ class Crop(BaseModel):
     icon: str | None = None
     rotatable: bool = True  # False: perennials/nativo never in sequences
     frost_window: dict[str, list[str]] = {}  # zone -> [MM-DD, MM-DD]
+    kc_mid: float | None = None  # FAO-56 tab.12 mid-season Kc for ET0*Kc
     water_mm_cycle: int
     water_mm_observed: float | None = None
     water_observed_note: str | None = None

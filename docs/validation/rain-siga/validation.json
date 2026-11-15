@@ -1,0 +1,500 @@
+{
+  "version": "v1",
+  "synthetic": false,
+  "generated_at": "2026-11-15T16:30:59Z",
+  "source": "INTA SIGA estaciones automáticas (25 estaciones), 2015-01 a 2024-12",
+  "variables": [
+    {
+      "id": "rain_imerg",
+      "satellite": {
+        "dataset": "GPM IMERG monthly V07",
+        "resolution": "0.1° mensual",
+        "period": "2015-01 a 2024-12"
+      },
+      "field": {
+        "source": "INTA SIGA estaciones automáticas",
+        "n_sites": 25
+      },
+      "unit": "mm/mes",
+      "reference_kind": "field",
+      "n": 1346,
+      "rmse": 51.24,
+      "bias": 22.08,
+      "r": 0.586,
+      "per_station": [
+        {
+          "station_id": "0000030F",
+          "station": "INTA - La Para",
+          "region": "pampas",
+          "n": 4,
+          "bias": null,
+          "rmse": null,
+          "r": null
+        },
+        {
+          "station_id": "00000A50",
+          "station": "INTA - Victorica",
+          "region": "pampas",
+          "n": 13,
+          "bias": 61.92,
+          "rmse": 81.0,
+          "r": 0.038
+        },
+        {
+          "station_id": "00000A55",
+          "station": "INTA - General Acha",
+          "region": "pampas",
+          "n": 9,
+          "bias": 48.02,
+          "rmse": 64.57,
+          "r": null
+        },
+        {
+          "station_id": "A872700",
+          "station": "Zampalito - EEA Consulta",
+          "region": "mendoza",
+          "n": 19,
+          "bias": 8.85,
+          "rmse": 21.9,
+          "r": 0.554
+        },
+        {
+          "station_id": "A872732",
+          "station": "Alej. Roca - EEA Marcos Juarez",
+          "region": "pampas",
+          "n": 24,
+          "bias": -9.69,
+          "rmse": 69.31,
+          "r": 0.62
+        },
+        {
+          "station_id": "A872821",
+          "station": "Gral San Martin - EEA Anguil",
+          "region": "pampas",
+          "n": 35,
+          "bias": 12.0,
+          "rmse": 30.6,
+          "r": 0.376
+        },
+        {
+          "station_id": "A872822",
+          "station": "Huinca Renanco - EEA Anguil",
+          "region": "pampas",
+          "n": 26,
+          "bias": 32.4,
+          "rmse": 60.91,
+          "r": 0.616
+        },
+        {
+          "station_id": "A872823",
+          "station": "Anguil -EEA Anguil",
+          "region": "pampas",
+          "n": 93,
+          "bias": 3.65,
+          "rmse": 33.7,
+          "r": 0.709
+        },
+        {
+          "station_id": "A872824",
+          "station": "Balcarce - EEA Balcarce",
+          "region": "pampas",
+          "n": 103,
+          "bias": 69.99,
+          "rmse": 99.82,
+          "r": 0.303
+        },
+        {
+          "station_id": "A872826",
+          "station": "Villa Dolores - EEA Manfredi",
+          "region": "pampas",
+          "n": 76,
+          "bias": 56.74,
+          "rmse": 78.99,
+          "r": 0.441
+        },
+        {
+          "station_id": "A872827",
+          "station": "M Juarez - EEA Marcos Juarez",
+          "region": "pampas",
+          "n": 74,
+          "bias": 20.12,
+          "rmse": 47.51,
+          "r": 0.686
+        },
+        {
+          "station_id": "A872829",
+          "station": "Dean Funes - EEA Manfredi",
+          "region": "pampas",
+          "n": 97,
+          "bias": 14.75,
+          "rmse": 37.96,
+          "r": 0.82
+        },
+        {
+          "station_id": "A872861",
+          "station": "Viamonte - ICyA CIRN",
+          "region": "pampas",
+          "n": 40,
+          "bias": 15.24,
+          "rmse": 48.41,
+          "r": 0.629
+        },
+        {
+          "station_id": "A872907",
+          "station": "Manfredi - EEA Manfredi",
+          "region": "pampas",
+          "n": 119,
+          "bias": 31.59,
+          "rmse": 53.35,
+          "r": 0.771
+        },
+        {
+          "station_id": "A872933",
+          "station": "Rama Caida - EEA Rama Caida",
+          "region": "mendoza",
+          "n": 76,
+          "bias": 10.01,
+          "rmse": 31.35,
+          "r": 0.451
+        },
+        {
+          "station_id": "A872934",
+          "station": "La Guevarina - EEA Rama Caida",
+          "region": "mendoza",
+          "n": 82,
+          "bias": 25.32,
+          "rmse": 39.82,
+          "r": 0.429
+        },
+        {
+          "station_id": "A872935",
+          "station": "Malargüe - EEA Rama Caida",
+          "region": "mendoza",
+          "n": 48,
+          "bias": 15.77,
+          "rmse": 23.06,
+          "r": -0.024
+        },
+        {
+          "station_id": "A872936",
+          "station": "Rivadavia - EEA Junin Mendoza",
+          "region": "mendoza",
+          "n": 44,
+          "bias": 25.96,
+          "rmse": 39.23,
+          "r": 0.068
+        },
+        {
+          "station_id": "A872937",
+          "station": "Santa Rosa - EEA Junin Mendoza",
+          "region": "mendoza",
+          "n": 15,
+          "bias": 36.73,
+          "rmse": 49.88,
+          "r": 0.61
+        },
+        {
+          "station_id": "A872938",
+          "station": "Junín - EEA Junin Mendoza",
+          "region": "mendoza",
+          "n": 34,
+          "bias": 20.6,
+          "rmse": 30.76,
+          "r": 0.695
+        },
+        {
+          "station_id": "A872939",
+          "station": "La Consulta - EEA Consulta",
+          "region": "mendoza",
+          "n": 106,
+          "bias": -6.51,
+          "rmse": 25.82,
+          "r": 0.606
+        },
+        {
+          "station_id": "A872940",
+          "station": "Pareditas - EEA Consulta",
+          "region": "mendoza",
+          "n": 87,
+          "bias": -6.56,
+          "rmse": 28.33,
+          "r": 0.662
+        },
+        {
+          "station_id": "A872941",
+          "station": "Tupungato - EEA La Consulta",
+          "region": "mendoza",
+          "n": 40,
+          "bias": 28.84,
+          "rmse": 34.57,
+          "r": -0.122
+        },
+        {
+          "station_id": "A872945",
+          "station": "Capilla de Siton - ICyA CIRN",
+          "region": "pampas",
+          "n": 48,
+          "bias": 35.62,
+          "rmse": 61.82,
+          "r": 0.593
+        },
+        {
+          "station_id": "A872948",
+          "station": "Villa Ramallo - EEA San Pedro",
+          "region": "pampas",
+          "n": 34,
+          "bias": 11.07,
+          "rmse": 43.9,
+          "r": 0.753
+        }
+      ],
+      "quality": "fair"
+    },
+    {
+      "id": "rain_power",
+      "satellite": {
+        "dataset": "NASA POWER PRECTOTCORR",
+        "resolution": "0.5°×0.625° diario → mensual",
+        "period": "2015-01 a 2024-12"
+      },
+      "field": {
+        "source": "INTA SIGA estaciones automáticas",
+        "n_sites": 25
+      },
+      "unit": "mm/mes",
+      "reference_kind": "field",
+      "n": 1346,
+      "rmse": 49.4,
+      "bias": 22.43,
+      "r": 0.623,
+      "per_station": [
+        {
+          "station_id": "0000030F",
+          "station": "INTA - La Para",
+          "region": "pampas",
+          "n": 4,
+          "bias": null,
+          "rmse": null,
+          "r": null
+        },
+        {
+          "station_id": "00000A50",
+          "station": "INTA - Victorica",
+          "region": "pampas",
+          "n": 13,
+          "bias": 74.95,
+          "rmse": 93.01,
+          "r": 0.025
+        },
+        {
+          "station_id": "00000A55",
+          "station": "INTA - General Acha",
+          "region": "pampas",
+          "n": 9,
+          "bias": 77.11,
+          "rmse": 99.65,
+          "r": null
+        },
+        {
+          "station_id": "A872700",
+          "station": "Zampalito - EEA Consulta",
+          "region": "mendoza",
+          "n": 19,
+          "bias": 15.6,
+          "rmse": 26.23,
+          "r": 0.569
+        },
+        {
+          "station_id": "A872732",
+          "station": "Alej. Roca - EEA Marcos Juarez",
+          "region": "pampas",
+          "n": 24,
+          "bias": -9.52,
+          "rmse": 51.35,
+          "r": 0.803
+        },
+        {
+          "station_id": "A872821",
+          "station": "Gral San Martin - EEA Anguil",
+          "region": "pampas",
+          "n": 35,
+          "bias": 29.93,
+          "rmse": 47.31,
+          "r": 0.434
+        },
+        {
+          "station_id": "A872822",
+          "station": "Huinca Renanco - EEA Anguil",
+          "region": "pampas",
+          "n": 26,
+          "bias": 21.21,
+          "rmse": 39.53,
+          "r": 0.779
+        },
+        {
+          "station_id": "A872823",
+          "station": "Anguil -EEA Anguil",
+          "region": "pampas",
+          "n": 93,
+          "bias": 19.43,
+          "rmse": 39.83,
+          "r": 0.777
+        },
+        {
+          "station_id": "A872824",
+          "station": "Balcarce - EEA Balcarce",
+          "region": "pampas",
+          "n": 103,
+          "bias": 72.2,
+          "rmse": 91.27,
+          "r": 0.419
+        },
+        {
+          "station_id": "A872826",
+          "station": "Villa Dolores - EEA Manfredi",
+          "region": "pampas",
+          "n": 76,
+          "bias": 53.88,
+          "rmse": 76.67,
+          "r": 0.479
+        },
+        {
+          "station_id": "A872827",
+          "station": "M Juarez - EEA Marcos Juarez",
+          "region": "pampas",
+          "n": 74,
+          "bias": 16.87,
+          "rmse": 41.27,
+          "r": 0.768
+        },
+        {
+          "station_id": "A872829",
+          "station": "Dean Funes - EEA Manfredi",
+          "region": "pampas",
+          "n": 97,
+          "bias": 8.21,
+          "rmse": 32.97,
+          "r": 0.826
+        },
+        {
+          "station_id": "A872861",
+          "station": "Viamonte - ICyA CIRN",
+          "region": "pampas",
+          "n": 40,
+          "bias": 19.65,
+          "rmse": 58.77,
+          "r": 0.568
+        },
+        {
+          "station_id": "A872907",
+          "station": "Manfredi - EEA Manfredi",
+          "region": "pampas",
+          "n": 119,
+          "bias": 18.48,
+          "rmse": 40.77,
+          "r": 0.782
+        },
+        {
+          "station_id": "A872933",
+          "station": "Rama Caida - EEA Rama Caida",
+          "region": "mendoza",
+          "n": 76,
+          "bias": 20.08,
+          "rmse": 41.67,
+          "r": 0.533
+        },
+        {
+          "station_id": "A872934",
+          "station": "La Guevarina - EEA Rama Caida",
+          "region": "mendoza",
+          "n": 82,
+          "bias": 31.77,
+          "rmse": 53.82,
+          "r": 0.218
+        },
+        {
+          "station_id": "A872935",
+          "station": "Malargüe - EEA Rama Caida",
+          "region": "mendoza",
+          "n": 48,
+          "bias": 19.87,
+          "rmse": 28.47,
+          "r": 0.081
+        },
+        {
+          "station_id": "A872936",
+          "station": "Rivadavia - EEA Junin Mendoza",
+          "region": "mendoza",
+          "n": 44,
+          "bias": 18.51,
+          "rmse": 30.29,
+          "r": 0.28
+        },
+        {
+          "station_id": "A872937",
+          "station": "Santa Rosa - EEA Junin Mendoza",
+          "region": "mendoza",
+          "n": 15,
+          "bias": 13.21,
+          "rmse": 28.98,
+          "r": 0.321
+        },
+        {
+          "station_id": "A872938",
+          "station": "Junín - EEA Junin Mendoza",
+          "region": "mendoza",
+          "n": 34,
+          "bias": 11.4,
+          "rmse": 21.63,
+          "r": 0.747
+        },
+        {
+          "station_id": "A872939",
+          "station": "La Consulta - EEA Consulta",
+          "region": "mendoza",
+          "n": 106,
+          "bias": -4.5,
+          "rmse": 24.93,
+          "r": 0.626
+        },
+        {
+          "station_id": "A872940",
+          "station": "Pareditas - EEA Consulta",
+          "region": "mendoza",
+          "n": 87,
+          "bias": -5.31,
+          "rmse": 29.26,
+          "r": 0.623
+        },
+        {
+          "station_id": "A872941",
+          "station": "Tupungato - EEA La Consulta",
+          "region": "mendoza",
+          "n": 40,
+          "bias": 19.14,
+          "rmse": 27.7,
+          "r": 0.053
+        },
+        {
+          "station_id": "A872945",
+          "station": "Capilla de Siton - ICyA CIRN",
+          "region": "pampas",
+          "n": 48,
+          "bias": 28.46,
+          "rmse": 56.5,
+          "r": 0.549
+        },
+        {
+          "station_id": "A872948",
+          "station": "Villa Ramallo - EEA San Pedro",
+          "region": "pampas",
+          "n": 34,
+          "bias": 21.21,
+          "rmse": 43.55,
+          "r": 0.877
+        }
+      ],
+      "quality": "fair"
+    }
+  ]
+}

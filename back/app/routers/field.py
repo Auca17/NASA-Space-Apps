@@ -18,6 +18,7 @@ from ..services.geodesy import ring_area_ha, ring_centroid
 from ..services.data import risk_shard
 from ..services.infiltration import (infiltration_class,
                                      infiltration_score)
+from ..services.et0 import METHOD_LABEL, et0_series
 
 log = logging.getLogger("field")
 
@@ -30,6 +31,13 @@ MIN_HA, MAX_HA = 0.5, 5_000.0
 MAX_VERTICES = 2_000
 NDVI_BARE = 0.25          # NDVI below this counts as bare soil
 POWER_RES = "0.5°×0.625°"
+# Yearly-mean EVPTRNS energy flux below this (MJ/m2/day) is treated as
+# masked/degraded: real land ET0 fluxes are ~2-15 MJ/m2/day.
+EVPTRNS_MIN = 1.0
+# Same for EVLAND (mm/day): a yearly mean below this (~365 mm/yr) is
+# implausible for Argentina -- even Patagonian land evaporates more --
+# and in practice flags POWER cells where the field is degraded.
+EVLAND_MIN = 1.0
 MONTH_FULL_ES = ["enero", "febrero", "marzo", "abril", "mayo", "junio",
                  "julio", "agosto", "septiembre", "octubre", "noviembre",
                  "diciembre"]
@@ -570,9 +578,21 @@ def build_cards(power, soilg, slope, ndvi, grid_cell, fire_cal,
     # EVPTRNS is an evapotranspiration ENERGY flux (MJ/m^2/day per the
     # POWER catalogue), not a mm depth: convert with the FAO-56 latent
     # heat of vaporization ~2.45 MJ/kg so the card stays in mm/day.
+    # When POWER returns it masked or empty (e.g. Valle de Uco), fall
+    # back to a computed FAO-56 ET0 series and say so in `source`.
     et = P("EVPTRNS") or {}
     et_years = _years(et)
-    if et_years:
+    # EVPTRNS sometimes comes back not missing but *masked*: e.g. the
+    # Valle de Uco cell returns a mean of 0.05 MJ/m2/day, an order of
+    # magnitude below any plausible ET0 energy flux. Treat a yearly
+    # mean under EVPTRNS_MIN as unusable and fall back to ET0.
+    et_suspect = et_years and statistics.fmean(
+        statistics.fmean(vs) for vs in et_years.values()) < EVPTRNS_MIN
+    et0, et0_method = (None, None)
+    if (not et_years or et_suspect) and adj.get("lat") is not None:
+        et0, et0_method = et0_series(
+            power, adj["lat"], adj.get("elevation_m") or 0.0)
+    if et_years and not et_suspect:
         mean_et = statistics.fmean(
             statistics.fmean(vs) for vs in et_years.values()) / 2.45
         cards.append(_card("crop_water", round(mean_et, 1), "mm/día",
@@ -580,13 +600,33 @@ def build_cards(power, soilg, slope, ndvi, grid_cell, fire_cal,
                            "NASA POWER (EVPTRNS, MJ/m²/día ÷ 2,45)",
                            POWER_RES, "medium",
                            f"Potential water demand: {mean_et:.1f} mm/day"))
+    elif et0:
+        mean_et = statistics.fmean(et0.values())
+        cards.append(_card("crop_water", round(mean_et, 1), "mm/día",
+                           f"Demanda hídrica potencial: {mean_et:.1f} mm/día",
+                           METHOD_LABEL[et0_method],
+                           POWER_RES, "medium",
+                           f"Potential water demand (ET0 {et0_method}): "
+                           f"{mean_et:.1f} mm/day"))
     else:
         cards.append(_null_card("crop_water", "NASA POWER", POWER_RES))
 
-    # EVLAND is evaporation over land, mm/day (POWER catalogue).
+    # EVLAND is evaporation over land, mm/day (POWER catalogue). When
+    # POWER returns it masked/empty, fall back to the same computed
+    # FAO-56 ET0 series used by crop_water (ET0 is a reference estimate,
+    # not a direct evaporation measurement — the basis says so).
     ev = P("EVLAND") or {}
     ev_years = _years(ev)
-    if ev_years:
+    # Same masked-data guard as EVPTRNS: a yearly mean under
+    # EVLAND_MIN mm/day is implausible for land with rain ~350 mm/yr
+    # and almost always means POWER returned a degraded field.
+    ev_suspect = ev_years and statistics.fmean(
+        statistics.fmean(vs) for vs in ev_years.values()) < EVLAND_MIN
+    if (not ev_years or ev_suspect) and et0 is None \
+            and adj.get("lat") is not None:
+        et0, et0_method = et0_series(
+            power, adj["lat"], adj.get("elevation_m") or 0.0)
+    if ev_years and not ev_suspect:
         annual_ev = statistics.fmean(
             sum(v for v in vs if v is not None)
             for vs in ev_years.values())
@@ -598,6 +638,23 @@ def build_cards(power, soilg, slope, ndvi, grid_cell, fire_cal,
                      "water to the air per year")
         card["monthly_mm"] = rain_monthly_mm(ev)
         wb = monthly_sum_clim(P("PRECTOTCORR") or {}, ev)
+        card["balance_mm"] = ({m: v["balance_mm"] for m, v in wb.items()}
+                              if wb else None)
+        cards.append(card)
+    elif et0:
+        ev_y = _years(et0)
+        annual_ev = statistics.fmean(
+            sum(v for v in vs if v is not None)
+            for vs in ev_y.values())
+        card = _card("evaporation", round(annual_ev), "mm/año",
+                     f"El suelo y las plantas pierden al aire unos "
+                     f"{_fmt_es(annual_ev, 0)} mm de agua por año "
+                     "(estimación ET0, no medida directa)",
+                     METHOD_LABEL[et0_method], POWER_RES, "medium",
+                     f"Soil and plants lose ~{round(annual_ev)} mm of "
+                     "water to the air per year (ET0 estimate)")
+        card["monthly_mm"] = rain_monthly_mm(et0)
+        wb = monthly_sum_clim(P("PRECTOTCORR") or {}, et0)
         card["balance_mm"] = ({m: v["balance_mm"] for m, v in wb.items()}
                               if wb else None)
         cards.append(card)
@@ -1208,7 +1265,7 @@ async def diagnose(request: Request):
 
     degraded = power is None
     adj = {"temp_adjust_c": temp_adjust, "elevation_m": elevation_m,
-           "power_cell_elevation_m": cell_elev_m}
+           "power_cell_elevation_m": cell_elev_m, "lat": clat}
     if degraded:
         cards, monthly_burn = degraded_cards(
             grid_cell, terr, soilg, fire_cal, risk_cell, r5c)

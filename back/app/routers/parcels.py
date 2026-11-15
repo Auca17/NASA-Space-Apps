@@ -29,11 +29,13 @@ from ..services.nearby import nearby
 from ..services import enso
 from ..services.infiltration import (infiltration_class,
                                      infiltration_score)
+from ..services.et0 import (METHOD_LABEL, et0_series,
+                            series_is_masked)
 from ..services.knowledge import KNOWLEDGE
 from .field import (_json_body, _err, _self_intersects, parse_plot,
                     days_per_year, frost_free_window,
                     rain_monthly_mm, monthly_sum_clim,
-                    temp_adjust_for, DEGRADED_REASON)
+                    temp_adjust_for, DEGRADED_REASON, EVLAND_MIN)
 
 log = logging.getLogger("parcels")
 
@@ -343,32 +345,61 @@ def frost_indicator(grid_cell: dict | None, power: dict | None,
             "basis": "Sin datos de heladas." + shared_note}
 
 
-def evaporation_indicator(power: dict | None, shared_note: str = ""):
+def evaporation_indicator(power: dict | None, lat: float | None = None,
+                          crop: str | None = None,
+                          shared_note: str = ""):
     """Annual evaporation (POWER EVLAND, mm/day), the monthly profile
-    and the implied monthly water balance (rain - evaporation, mm)."""
+    and the implied monthly water balance (rain - evaporation, mm).
+
+    When POWER EVLAND is missing/masked, falls back to a FAO-56 ET0
+    series computed from the cell's own T/RH/wind/radiation (the basis
+    says which method was used). `crop_water_mm_day` multiplies the
+    ET0 daily mean by the catalog Kc of the parcel's crop."""
     ev = (power or {}).get("EVLAND")
-    if not ev:
+    # EVLAND sometimes comes back degraded rather than empty (mean
+    # far below any plausible land evaporation) -- same guard as
+    # /diagnose: treat it as masked and fall back to computed ET0.
+    if ev and series_is_masked(ev, EVLAND_MIN):
+        ev = None
+    et0, method = {}, None
+    if not ev and lat is not None:
+        et0, method = et0_series(power or {}, lat)
+    if not ev and not et0:
         return {"mm_per_year": None, "monthly_mm": None,
                 "balance_mm": None,
                 "basis": "Sin datos de evaporación: el servicio de "
-                         "clima no devolvió el parámetro EVLAND."
+                         "clima no devolvió el parámetro EVLAND ni "
+                         "temperaturas para estimar ET0."
                 + shared_note}
+    src = ev if ev else et0
     by_year: dict[int, list[float]] = {}
-    for d, v in ev.items():
+    for d, v in src.items():
         if v is not None:
             by_year.setdefault(d.year, []).append(v)
     years = [vs for vs in by_year.values() if len(vs) >= 300]
     annual = statistics.fmean(sum(vs) for vs in years) if years else None
-    wb = monthly_sum_clim((power or {}).get("PRECTOTCORR") or {}, ev)
-    return {
+    wb = monthly_sum_clim((power or {}).get("PRECTOTCORR") or {}, src)
+    basis = ("Cuánta agua pierde el suelo y las plantas al aire "
+             "por año (NASA POWER EVLAND, mm/día sumada por mes y "
+             "por año); el balance mensual es lluvia menos "
+             "evaporación en mm." + shared_note) if ev else (
+            f"Estimación de referencia {METHOD_LABEL.get(method, '')} "
+            "— EVLAND no está disponible en esta celda; el balance "
+            "mensual es lluvia menos ET0 en mm." + shared_note)
+    out = {
         "mm_per_year": round(annual) if annual is not None else None,
-        "monthly_mm": rain_monthly_mm(ev),
+        "monthly_mm": rain_monthly_mm(src),
         "balance_mm": ({m: v["balance_mm"] for m, v in wb.items()}
                        if wb else None),
-        "basis": "Cuánta agua pierde el suelo y las plantas al aire "
-                 "por año (NASA POWER EVLAND, mm/día sumada por mes y "
-                 "por año); el balance mensual es lluvia menos "
-                 "evaporación en mm." + shared_note}
+        "basis": basis}
+    if et0 and crop:
+        kc = getattr(KNOWLEDGE.crops.get(crop), "kc_mid", None)
+        if kc is not None:
+            out["crop_water_mm_day"] = round(
+                statistics.fmean(et0.values()) * kc, 1)
+            out["basis"] += (f" Agua de cultivo ≈ ET0 × Kc {kc:g} "
+                             "(FAO-56) del catálogo.")
+    return out
 
 
 def infiltration_indicator(grid_cell: dict | None, terr: dict | None,
@@ -1055,7 +1086,9 @@ async def parcels(request: Request):
             "enso": enso.indicator(
                 oni, (power or {}).get("PRECTOTCORR")),
             "flood": flood_indicator(grid_cell, terr, note),
-            "evaporation": evaporation_indicator(power, note),
+            "evaporation": evaporation_indicator(
+                power, lat=p["_cent"][0], crop=p["crop"],
+                shared_note=note),
             "infiltration": infiltration_indicator(grid_cell, terr,
                                                    note),
         }
