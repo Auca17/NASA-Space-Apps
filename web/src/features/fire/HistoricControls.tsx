@@ -1,12 +1,30 @@
-/** Historic playback: month slider + play over globe/{YYYY-MM}.json. */
+/** Historic playback: month slider + play over globe/{YYYY-MM}.json,
+ * plus Argentina field layers from field/grid shards (task 18.4). */
 import { useEffect, useRef, useState } from "react";
 import { useT } from "../../i18n";
-import { globeMonth } from "../../api";
+import { globeMonth, gridShard } from "../../api";
 import { viridis, css } from "../../domain/colors";
 import { Legend } from "../../components/ui";
+import { polygonToCells, latLngToCell } from "h3-js";
 import type { GlobeHandle } from "../globe/GlobeView";
 
 const START = "2000-11";
+const AR = { w: -74, s: -56.5, e: -52.5, n: -21 };
+
+type FieldLayer = "fire" | "rain" | "heat" | "bare" | "sm" | "wt";
+interface View { lat: number; lon: number; zoom: number;
+                 bbox: [number, number, number, number] }
+
+const FIELD_METRIC: Record<Exclude<FieldLayer, "fire">, {
+    key: string; unit: string; diverging?: boolean }> = {
+  rain: { key: "rain_mm_yr", unit: "mm/año" },
+  heat: { key: "hot_days_gt35", unit: "días/año" },
+  bare: { key: "bare_soil_days_yr", unit: "días/año" },
+  sm: { key: "sm_anom_pct", unit: "%", diverging: true },
+  wt: { key: "grace_trend", unit: "", diverging: true },
+};
+
+const WT_MAP: Record<string, number> = { down: -1, flat: 0, up: 1 };
 
 function monthSeq(start: string, end: string): string[] {
   const out: string[] = [];
@@ -20,9 +38,10 @@ function monthSeq(start: string, end: string): string[] {
   return out;
 }
 
-export function HistoricControls({ globe, onMonth }: {
+export function HistoricControls({ globe, onMonth, view }: {
   globe: GlobeHandle | null;
   onMonth?: (month: string) => void;
+  view?: View | null;
 }) {
   const { t } = useT();
   const now = new Date().toISOString().slice(0, 7);
@@ -33,6 +52,13 @@ export function HistoricControls({ globe, onMonth }: {
   const [maxN, setMaxN] = useState(0);
   const cache = useRef(new Map<string, Map<string, number> | null>());
   const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  // field layers state
+  const [layer, setLayer] = useState<FieldLayer>("fire");
+  const [fvals, setFvals] = useState<Map<string, number> | null>(null);
+  const [fmax, setFmax] = useState(0);
+  const [fmsg, setFmsg] = useState<string | null>(null);
+  const [hasSm, setHasSm] = useState(false);
 
   const show = async (i: number) => {
     if (!globe) return;
@@ -54,8 +80,80 @@ export function HistoricControls({ globe, onMonth }: {
     ]);
   };
 
-  useEffect(() => { show(idx); // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [idx, globe]);
+  useEffect(() => {
+    if (layer !== "fire") return;
+    show(idx); // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [idx, globe, layer]);
+
+  // ---- field layers: load res-5 cells for the view bbox (zoom >= 5) --
+  useEffect(() => {
+    if (!globe || layer === "fire") return;
+    let cancelled = false;
+    const run = async () => {
+      if (!view || view.zoom < 5) {
+        setFmsg(t("layers.zoomHint")); setFvals(null);
+        globe.setCells(new Map(), null); return;
+      }
+      const [w, s, e, n] = view.bbox;
+      if (e < AR.w || w > AR.e || n < AR.s || s > AR.n) {
+        setFmsg(t("layers.onlyAR")); setFvals(null);
+        globe.setCells(new Map(), null); return;
+      }
+      const ring: [number, number][] = [[s, w], [s, e], [n, e], [n, w]];
+      let r2s: string[];
+      try { r2s = polygonToCells(ring, 2); }
+      catch { setFmsg(t("layers.onlyAR")); return; }
+      if (r2s.length > 20) {
+        setFmsg(t("layers.zoomHint")); setFvals(null);
+        globe.setCells(new Map(), null); return;
+      }
+      const metric = FIELD_METRIC[layer];
+      const vals = new Map<string, number>();
+      const shards = await Promise.all(r2s.map((r) => gridShard(r)));
+      if (cancelled) return;
+      let smSeen = false;
+      for (const sh of shards) {
+        if (!sh) continue;
+        for (const [cid, c] of Object.entries(sh.cells)) {
+          const cv = c as Record<string, unknown>;
+          if (cv.sm_anom_pct != null) smSeen = true;
+          const raw = cv[metric.key];
+          let v: number | null = null;
+          if (typeof raw === "number") v = raw;
+          else if (typeof raw === "string" && metric.key === "grace_trend")
+            v = WT_MAP[raw] ?? 0;
+          if (v != null) vals.set(cid, v);
+        }
+      }
+      if (smSeen) setHasSm(true);
+      if (vals.size === 0) {
+        setFmsg(t("layers.noData")); setFvals(null);
+        globe.setCells(new Map(), null); return;
+      }
+      setFmsg(null); setFvals(vals);
+      const mx = Math.max(1e-9, ...[...vals.values()].map(Math.abs));
+      const dom = metric.diverging ? Math.max(mx, 1) : Math.max(...vals.values());
+      setFmax(dom);
+      const expr = metric.diverging
+        ? ["interpolate", ["linear"], ["get", "n"],
+           -dom, "#2166ac", 0, "#f7f7f7", dom, "#b2182b"]
+        : ["interpolate", ["linear"], ["/", ["get", "n"], dom],
+           0, css(viridis(0.1)), 0.5, css(viridis(0.6)),
+           1, css(viridis(1))];
+      globe.setCells(vals, expr);
+    };
+    run().catch(() => setFmsg(t("layers.noData")));
+    return () => { cancelled = true; };
+  }, [globe, layer, view, t]);
+
+  // value under the reticle for the summary line
+  const centerVal = (() => {
+    if (!view || !fvals) return null;
+    try {
+      const c = latLngToCell(view.lat, view.lon, 5);
+      return fvals.has(c) ? fvals.get(c)! : null;
+    } catch { return null; }
+  })();
 
   useEffect(() => {
     if (!playing) return;
@@ -106,7 +204,7 @@ export function HistoricControls({ globe, onMonth }: {
              value={idx} aria-label={t("historic.month")}
              onChange={(e) => { setIdx(Number(e.target.value)); setPlaying(false); }}
              style={{ width: "100%" }} />
-      {maxN > 0 && (
+      {layer === "fire" && maxN > 0 && (
         <>
           <Legend from="0" to={String(maxN)}
             colors={[css(viridis(0.1)), css(viridis(0.55)),
@@ -116,6 +214,44 @@ export function HistoricControls({ globe, onMonth }: {
               { max: maxN, month: months.current[idx] })}
           </p>
         </>)}
+
+      <label className="layer-sel">{t("layers.title")}
+        <select value={layer}
+                aria-label={t("layers.title")}
+                onChange={(e) => {
+                  setLayer(e.target.value as FieldLayer);
+                  setPlaying(false);
+                }}>
+          <option value="fire">{t("layers.fire")}</option>
+          <option value="rain">{t("layers.rain")}</option>
+          <option value="heat">{t("layers.heat")}</option>
+          <option value="bare">{t("layers.bare")}</option>
+          {hasSm && <option value="sm">{t("layers.sm")}</option>}
+          <option value="wt">{t("layers.wt")}</option>
+        </select>
+      </label>
+
+      {layer !== "fire" && (
+        <div className="field-layer">
+          {fmsg && <p className="muted" role="status">{fmsg}</p>}
+          {fvals && (
+            <>
+              <Legend
+                from={FIELD_METRIC[layer].diverging ? `−${fmax}` : "0"}
+                to={`${fmax}`} mid={FIELD_METRIC[layer].diverging ? "0"
+                  : undefined}
+                colors={FIELD_METRIC[layer].diverging
+                  ? ["#2166ac", "#f7f7f7", "#b2182b"]
+                  : [css(viridis(0.1)), css(viridis(0.55)),
+                     css(viridis(1))]} />
+              <p className="muted" style={{ margin: 0,
+                fontSize: "0.72rem" }}>
+                {FIELD_METRIC[layer].unit}
+                {centerVal != null &&
+                  ` · ${t("field.center")}: ${centerVal}`}
+              </p>
+            </>)}
+        </div>)}
     </div>
   );
 }

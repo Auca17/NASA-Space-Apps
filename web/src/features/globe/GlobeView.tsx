@@ -7,8 +7,8 @@ import { cellToBoundary, latLngToCell } from "h3-js";
 import { DEFAULT_VIEW } from "../../config";
 
 const GIBS = "https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/" +
-  "BlueMarble_NextGeneration/default//GoogleMapsCompatible_Level8" +
-  "/{z}/{y}/{x}.jpeg";
+  "BlueMarble_NextGeneration/default/2004-08/" +
+  "GoogleMapsCompatible_Level8/{z}/{y}/{x}.jpeg";
 
 const BASE_STYLE: maplibregl.StyleSpecification = {
   version: 8,
@@ -42,7 +42,7 @@ export function hexGeoJSON(cells: Map<string, number>): GeoJSON.FeatureCollectio
 }
 
 export interface GlobeHandle {
-  flyTo(lat: number, lon: number, zoom?: number): void;
+  flyTo(lat: number, lon: number, zoom?: number, padBottom?: number): void;
   setCells(cells: Map<string, number>, colorExpr: unknown): void;
   setOutline(cells: string[], color?: string): void;
   setDraft(ring: [number, number][] | null): void;
@@ -129,8 +129,10 @@ export function useGlobe(
     const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
 
     const h: GlobeHandle = {
-      flyTo(lat, lon, zoom = 6) {
-        map.flyTo({ center: [lon, lat], zoom, duration: 1600 });
+      flyTo(lat, lon, zoom = 6, padBottom = 0) {
+        // padBottom keeps the target above a bottom sheet on mobile
+        map.flyTo({ center: [lon, lat], zoom, duration: 1600,
+                    padding: { bottom: padBottom } });
       },
       setCells(cells, colorExpr) {
         const src = map.getSource("cells") as maplibregl.GeoJSONSource | undefined;

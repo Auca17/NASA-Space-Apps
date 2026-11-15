@@ -81,3 +81,36 @@ describe("strategy card sections (P1-3.3)", () => {
       .toBeGreaterThan(0);
   });
 });
+
+
+describe("scenario + AI label (tasks 17A/19)", () => {
+  const rots: RotationsResponse = {
+    disclaimer: "", confidence: "high",
+    baseline_order: ["b", "a"],
+    strategies: [
+      strat("a", { score: 0.7, name: "Alfa" }),
+      strat("b", { score: 0.5, name: "Beta" }),
+    ],
+  };
+  it("shows the order-change sentence from baseline_order", () => {
+    render(<RotationResults rots={rots} diag={patagonia}
+                            explain={{}} t={t} />);
+    expect(screen.getByText(/pasa de Beta a Alfa/)).toBeInTheDocument();
+  });
+  it("same order renders the no-change sentence", () => {
+    render(<RotationResults
+      rots={{ ...rots, baseline_order: ["a", "b"] }}
+      diag={patagonia} explain={{}} t={t} />);
+    expect(screen.getByText(/el orden de las rotaciones no cambia/))
+      .toBeInTheDocument();
+  });
+  it("mode ai shows the AI label; template does not", () => {
+    const { rerender } = render(
+      <RotationResults rots={rots} diag={patagonia} explain={{}}
+                       explainMode="ai" t={t} />);
+    expect(screen.getByText(/generada con IA/)).toBeInTheDocument();
+    rerender(<RotationResults rots={rots} diag={patagonia} explain={{}}
+                             explainMode="template" t={t} />);
+    expect(screen.queryByText(/generada con IA/)).toBeNull();
+  });
+});

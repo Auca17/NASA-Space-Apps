@@ -50,6 +50,9 @@ export interface Card {
   confidence: "high" | "medium" | "low";
   /** rain card: 12 monthly means mm/month (2001 -> last full year). */
   rain_monthly_mm?: number[];
+  /** Scenario present: unmodified baseline value + numeric delta. */
+  baseline_value?: number | string | null;
+  delta?: number;
   /** fire_weather card: single INTA stop conditions met (last 3 days). */
   stop_conditions?: string[];
   stop_detail?: Record<string, string>;
@@ -87,6 +90,13 @@ export interface DiagnoseResponse {
   calendar: { months: string[]; rows: CalendarRow[] };
   measures?: Measure[];
   measures_gaps?: string[];
+  /** Climate scenario applied to the daily series (echoed). */
+  scenario?: { rain_pct: number; temp_delta_c: number };
+  /** Elevation correction (task 20): plot vs POWER cell altitude and
+   * the adjustment applied to T2M_MAX/T2M_MIN (−6.5 °C/km). */
+  elevation_m?: number | null;
+  power_cell_elevation_m?: number | null;
+  temp_adjust_c?: number;
 }
 
 export interface Strategy {
@@ -114,10 +124,14 @@ export interface RotationsResponse {
   confidence?: string;
   /** Top-level gaps, e.g. "sin rotaciones validadas para esta zona". */
   gaps?: string[];
+  /** Strategy ids ranked without scenario (diagnosis carried one). */
+  baseline_order?: string[];
 }
 
 export interface ExplainResponse {
-  strategies: { id: string; text: string }[];
+  strategies: { id: string; text: string; cites?: string[] }[];
+  /** "ai" = validated model paragraph; "template" = fallback. */
+  mode?: "ai" | "template";
 }
 
 export interface RotationEntry {
@@ -142,6 +156,10 @@ export interface OrinVariable {
   rmse: number;
   bias: number;                     // satellite minus field
   r: number;
+  rmse_adjusted?: number;           // after elevation correction (task 20)
+  bias_adjusted?: number;
+  r_adjusted?: number;
+  adjustment?: string;
   unit: string;
   quality: "good" | "fair" | "poor";
 }
