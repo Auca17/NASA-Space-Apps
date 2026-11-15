@@ -2,7 +2,7 @@
 
 **NASA Space Apps Challenge 2026**
 **Challenges:** Field Shift: Adapting Farms with NASA Data + Harmonization of MODIS and VIIRS Hot Spots
-Versión 2 · 14/11/2026 · Equipo de 4 personas · *Nombre de trabajo, a definir*
+Versión 2 · 14/11/2026 · Equipo de 4 personas · **Ashfield**
 
 ---
 
@@ -489,4 +489,4 @@ Evaluación virtual con lo entregado. Criterios de la sede, con el mismo peso: *
 - ¿Qué lote pampeano usamos para la demo de rotaciones?
 - ¿Qué datos de Orin exportamos exactamente (lotes, muestreos, estaciones) y en qué formato?
 - ¿Qué LLM usamos (créditos disponibles)?
-- ¿Nombre del proyecto?
+- ~~¿Nombre del proyecto?~~ Resuelto: **Ashfield** (D20).
