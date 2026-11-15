@@ -246,6 +246,104 @@ body:has(.app) { background: #0f110e; }
  * panel inside the first (task 33.6, layout only) */
 .app .emerg { background: var(--surface); border-radius: var(--radius-ctl); }
 
+/* ---------- mobile shell (task 38): one compact bar, bottom tabs ---------- */
+.app .menu-btn { display: none; }
+.app .field-frame { display: none; }
+.app .topbar .nav-ico, .app .emerg-ico { display: none; }
+
+@media (max-width: 640px) {
+  /* 1 · the bar is a single row again (the nav moved to the bottom) */
+  .app { --top-safe: 66px; }
+  .app .topbar .meth-link, .app .topbar .lang-btn { display: none; }
+  .app .topbar .menu-btn { display: inline-flex; align-items: center;
+    justify-content: center; min-width: 44px; min-height: 44px;
+    border-radius: var(--radius-ctl); }
+  .app .topbar .menu-btn svg { width: 20px; height: 20px;
+    stroke: currentColor; }
+  /* emergencies stay one tap away: icon button next to the menu */
+  .app .topbar .emerg-link { display: inline-flex; align-items: center;
+    justify-content: center; min-width: 44px; min-height: 44px;
+    padding: 0; }
+  .app .topbar .emerg-ico { display: block; width: 20px; height: 20px;
+    fill: currentColor; }
+  .app .topbar .emerg-text { position: absolute; width: 1px; height: 1px;
+    overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+
+  /* 2 · mode switch becomes a bottom tab bar above the safe area */
+  .app .topbar nav { position: fixed; left: 0; right: 0; bottom: 0;
+    z-index: 30; margin: 0; display: grid;
+    grid-template-columns: repeat(3, 1fr); gap: 4px;
+    padding: 4px 8px calc(4px + env(safe-area-inset-bottom, 0px));
+    border-radius: 0; border-top: 1px solid var(--glass-border);
+    background: var(--glass-bg-strong); }
+  .app .topbar nav button { display: flex; flex-direction: column;
+    align-items: center; justify-content: center; gap: 3px;
+    min-height: 52px; padding: 2px 4px; font-size: 0.72rem;
+    white-space: normal; line-height: 1.1; overflow: hidden;
+    text-overflow: ellipsis; }
+  .app .topbar nav .nav-ico { display: block; width: 20px; height: 20px;
+    fill: currentColor; stroke: currentColor; }
+
+  /* 3 · map furniture: no zoom buttons on touch (pinch exists), the
+   *     two extents collapse into one "Encuadre" popover */
+  .app .field-zoom { display: none; }
+  .app .field-extents { display: none; }
+  .app .field-frame { display: block; position: absolute;
+    top: var(--top-safe); left: 10px; z-index: 8; }
+  .app .field-frame summary { list-style: none; cursor: pointer;
+    display: inline-flex; align-items: center; min-height: 44px;
+    padding: 0 14px; border-radius: var(--radius-ctl);
+    background: var(--glass-bg-strong);
+    border: 1px solid var(--glass-border); }
+  .app .field-frame summary::-webkit-details-marker { display: none; }
+  .app .field-frame .frame-list { display: grid; gap: 4px; margin-top: 4px;
+    padding: 6px; border-radius: var(--radius-ctl);
+    background: var(--glass-bg-strong);
+    border: 1px solid var(--glass-border); }
+  .app .field-frame .frame-list button { min-height: 44px; }
+
+  /* the "Más" sheet: emergencies, methods and language in one tap */
+  .app .menu-backdrop { position: fixed; inset: 0; z-index: 34;
+    border: 0; padding: 0; background: transparent; cursor: default; }
+  .app .topbar-menu { position: absolute; top: var(--top-safe);
+    right: 10px; z-index: 35; display: grid; gap: 2px; min-width: 210px;
+    padding: 6px; border-radius: var(--radius-ctl);
+    background: var(--glass-bg-strong);
+    border: 1px solid var(--glass-border); box-shadow: var(--glass-shadow);
+    animation: rise-in 200ms var(--ease-out) both; }
+  .app .topbar-menu button { min-height: 44px; padding: 0 12px;
+    text-align: left; }
+
+  /* 4 · sheets and cards clear the tab bar */
+  .app .panel { bottom: calc(64px + env(safe-area-inset-bottom, 0px));
+    max-height: 62%; }
+  .app .controls { bottom: calc(64px + env(safe-area-inset-bottom, 0px)); }
+  .app .welcome-overlay {
+    padding-bottom: calc(72px + env(safe-area-inset-bottom, 0px)); }
+
+  /* field chooser as a peekable bottom sheet (task 38.4). The
+   * component's "expanded" state is the default and renders as the
+   * peek: handle + the main action only. The "collapsed" state
+   * (options list is [hidden]) is un-hidden here and shows the full
+   * sheet — tapping the handle moves between peek and full. */
+  .app .field-chooser { left: 8px; right: 8px;
+    bottom: calc(64px + env(safe-area-inset-bottom, 0px));
+    max-height: 64%; overflow-y: auto; }
+  .app .field-chooser .picker-head button:first-child {
+    font-size: 0; display: inline-flex; align-items: center;
+    justify-content: center; min-width: 44px; flex: 1; }
+  .app .field-chooser .picker-head button:first-child::before {
+    content: ""; display: block; width: 34px; height: 5px;
+    border-radius: 3px; background: var(--muted); }
+  .app .field-chooser:has(.picker-head [aria-expanded="true"])
+      #field-chooser-options > :not(.row) { display: none; }
+  .app .field-chooser:has(.picker-head [aria-expanded="false"])
+      #field-chooser-options[hidden] { display: grid; gap: 8px; }
+}
+@media (hover: none) {
+  .app .field-zoom { display: none; }
+}
+
 /* ---------- motion ---------- */
 @keyframes rise-in {
   from { opacity: 0; transform: translateY(8px); }

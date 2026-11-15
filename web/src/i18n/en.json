@@ -598,5 +598,8 @@
   "shell.home": "Ashfield, home",
   "welcome.row.fire": "Fire history and 7-day risk near you",
   "welcome.row.live": "Hotspots the satellite sees now, worldwide",
-  "welcome.row.geo": "Use your location to open the fire map"
+  "welcome.row.geo": "Use your location to open the fire map",
+  "nav.modes": "Sections",
+  "shell.menu": "More",
+  "map.frame": "Frame"
 }

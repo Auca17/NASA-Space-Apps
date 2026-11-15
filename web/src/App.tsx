@@ -102,6 +102,7 @@ export default function App() {
   const [playingMonth, setPlayingMonth] = useState<string | null>(null);
   const [methodsOpen, setMethodsOpen] = useState(false);
   const [emergOpen, setEmergOpen] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
   const [view, setView] = useState<{ lat: number; lon: number; zoom: number;
     bbox: [number, number, number, number] } | null>(null);
   const country = useRef<string | null>(null);
@@ -516,20 +517,37 @@ export default function App() {
             <span className="topbar-name">{APP_NAME}</span>
           </button>
         </h1>
-        <nav>
+        <nav aria-label={t("nav.modes")}>
           <button aria-pressed={mode === "field"}
                   onClick={() => {
                     if (modeRef.current !== "field") startField("none");
-                  }}>{t("nav.field")}</button>
+                  }}>
+            <svg className="nav-ico" viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M12 21v-8m0 0c-4.5-.5-6.5-3-7-7 4.5.5 6.5 3 7 7Zm0 0c4.5-.5
+                6.5-3 7-7-4.5.5-6.5 3-7 7Z"/></svg>
+            <span className="nav-text">{t("nav.field")}</span></button>
           <button aria-pressed={mode === "fire"} onClick={openFire}>
-            {t("nav.fire")}</button>
+            <svg className="nav-ico" viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M12 21c-4 0-7-2.8-7-6.5C5 9 9.5 6 11 2c.6 2.4 2.6 3.8
+                3.4 6.2.4-1 .6-2.1.4-3.2 2.6 1.7 4.2 4.6 4.2 8 0 4.4-3 8-7 8Z"/></svg>
+            <span className="nav-text">{t("nav.fire")}</span></button>
           <button aria-pressed={mode === "live"}
-                  onClick={() => setMode("live")}>{t("nav.live")}</button>
+                  onClick={() => setMode("live")}>
+            <svg className="nav-ico" viewBox="0 0 24 24" aria-hidden="true">
+              <circle cx="12" cy="12" r="3.4"/>
+              <path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3"
+                    fill="none" strokeWidth="1.8" strokeLinecap="round"/></svg>
+            <span className="nav-text">{t("nav.live")}</span></button>
         </nav>
         <div className="spacer" />
-        <button className="emerg-link"
+        <button className="emerg-link" aria-label={t("emerg.nav")}
                 onClick={() => setEmergOpen(true)}>
-          {t("emerg.nav")}</button>
+          <svg className="emerg-ico" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M6.6 3.2c.8-.2 1.6.3 1.9 1.1l1 2.6c.2.6.1 1.3-.4 1.7L7.4
+              10a12.6 12.6 0 0 0 6.6 6.6l1.4-1.7c.4-.5 1.1-.6 1.7-.4l2.6
+              1c.8.3 1.3 1.1 1.1 1.9l-.6 2.3c-.2.9-1.1 1.5-2 1.3C10.4 19.7
+              4.3 13.6 3 5.8c-.2-.9.4-1.8 1.3-2l2.3-.6Z"/></svg>
+          <span className="emerg-text">{t("emerg.nav")}</span></button>
         <button className="meth-link"
                 onClick={() => setMethodsOpen(true)}>
           <span className="ml-long">{t("meth.link")}</span>
@@ -537,7 +555,29 @@ export default function App() {
         <button className="lang-btn"
                 onClick={() => setLang(lang === "es" ? "en" : "es")}
                 aria-label={t("nav.langLabel")}>{t("nav.lang")}</button>
+        <button type="button" className="menu-btn"
+                aria-expanded={menuOpen} aria-controls="topbar-menu"
+                aria-label={t("shell.menu")}
+                onClick={() => setMenuOpen(!menuOpen)}>
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M4 7h16M4 12h16M4 17h16" fill="none"
+                  strokeWidth="2" strokeLinecap="round"/></svg>
+        </button>
       </header>
+      {menuOpen && (
+        <>
+          <button type="button" className="menu-backdrop" tabIndex={-1}
+                  aria-hidden="true" onClick={() => setMenuOpen(false)} />
+          <div className="topbar-menu" id="topbar-menu">
+            <button type="button" onClick={() => {
+              setEmergOpen(true); setMenuOpen(false); }}>{t("emerg.nav")}</button>
+            <button type="button" onClick={() => {
+              setMethodsOpen(true); setMenuOpen(false); }}>{t("meth.link")}</button>
+            <button type="button" onClick={() =>
+              setLang(lang === "es" ? "en" : "es")}>
+              {t("nav.langLabel")} · {t("nav.lang")}</button>
+          </div>
+        </>)}
 
       <div className={`map-wrap${mode === "field" && draw !== "none" && !movingMap ? " marking" : ""}`}>
         {mode === "field" && draw === "free" && !movingMap && (
@@ -554,10 +594,21 @@ export default function App() {
         {mode === "field" && !fieldOpen && (
           <>
             {draw === "none" && !selection && !fieldsView && (
-              <div className="field-extents" role="group" aria-label={t("field.map.extent")}>
-                <button type="button" onClick={showArgentina}>Argentina</button>
-                <button type="button" onClick={showWorld}>{t("field.map.world")}</button>
-              </div>)}
+              <>
+                <div className="field-extents" role="group" aria-label={t("field.map.extent")}>
+                  <button type="button" onClick={showArgentina}>Argentina</button>
+                  <button type="button" onClick={showWorld}>{t("field.map.world")}</button>
+                </div>
+                {/* phones: the two extents collapse into one "Encuadre"
+                    popover so nothing floats in the middle of the map */}
+                <details className="field-frame">
+                  <summary>{t("map.frame")}</summary>
+                  <div className="frame-list">
+                    <button type="button" onClick={showArgentina}>Argentina</button>
+                    <button type="button" onClick={showWorld}>{t("field.map.world")}</button>
+                  </div>
+                </details>
+              </>)}
             <div className="field-map-tools">
               {zoom >= 8 && <div className="field-basemap" role="group" aria-label={t("field.map.style")}>
                 <button type="button" aria-pressed={satellite}

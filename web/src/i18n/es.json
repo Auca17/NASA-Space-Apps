@@ -598,5 +598,8 @@
   "shell.home": "Ashfield, inicio",
   "welcome.row.fire": "Historia de focos y riesgo de los próximos 7 días",
   "welcome.row.live": "Focos que el satélite ve ahora, en todo el mundo",
-  "welcome.row.geo": "Usar tu ubicación para abrir el mapa de fuego"
+  "welcome.row.geo": "Usar tu ubicación para abrir el mapa de fuego",
+  "nav.modes": "Secciones",
+  "shell.menu": "Más",
+  "map.frame": "Encuadre"
 }
