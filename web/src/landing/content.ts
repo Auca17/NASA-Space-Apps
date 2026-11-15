@@ -17,7 +17,7 @@ export interface ReqRow {
   limit?: string;
 }
 
-export interface ReqGroup { title: string; rows: ReqRow[]; }
+export interface ReqGroup { title: string; short: string; rows: ReqRow[]; }
 
 export interface MetricRow { label: string; value: string; note?: string; }
 export interface DataRow { name: string; what: string; resolution: string; where: string; }
@@ -51,7 +51,8 @@ export interface Landing {
     shot: { src: string; alt: string; width: number; height: number; caption: string };
   };
   blocks: Block[];
-  details: { summary: string; caption: string };
+  details: { summary: string; caption: string; scoreSep: string; statusSep: string };
+  pendTag: string;
   problem: { heading: string; paragraphs: string[] };
   brief: {
     heading: string;
@@ -121,9 +122,9 @@ const en: Landing = {
     tagline: "NASA Space Apps Challenge 2026 · Field Shift (also covers Harmonization of MODIS and VIIRS Hot Spots)",
     markAlt: "Ashfield mark",
     shot: {
-      src: "/landing/app_diagnosis.webp",
+      src: "/landing/app_diagnosis_en.webp",
       alt: "The Ashfield app diagnosing a 50 ha demo plot near Pergamino over satellite imagery: climate, soil and 7-day fire-risk results in plain language.",
-      width: 1200, height: 794,
+      width: 1100, height: 688,
       caption: "The app: a field diagnosis on the Pergamino demo plot, satellite base map included.",
     },
   },
@@ -132,9 +133,9 @@ const en: Landing = {
       heading: "What you see",
       text: "Fires detected right now by NASA's MODIS and VIIRS satellites, 25 years of monthly history on a 3D globe, and an estimate of fire risk for the next 7 days in your area.",
       figure: {
-        src: "/landing/app_fire_risk.webp",
+        src: "/landing/app_fire_risk_en.webp",
         alt: "The Ashfield fire view over South America: harmonized detection hexagons on the map, a 7-day fire-risk card reading 'low' and a fire calendar panel.",
-        width: 1200, height: 750,
+        width: 1280, height: 800,
         caption: "The app, fire view: harmonized detections and the 7-day risk card.",
       },
     },
@@ -152,7 +153,9 @@ const en: Landing = {
   details: {
     summary: "How it meets the challenge brief",
     caption: "Every requirement of both challenges, the method, the validation numbers and the honest limits — nothing removed.",
+    scoreSep: " · ", statusSep: " · ",
   },
+  pendTag: "[PENDING]",
   problem: {
     heading: "The problem",
     paragraphs: [
@@ -169,6 +172,7 @@ const en: Landing = {
     groups: [
       {
         title: "Field Shift: Adapting Farms with NASA Data",
+        short: "Field Shift",
         rows: [
           { id: "F1", status: "partial",
             requirement: "NASA Earth data: temperature, heat stress, precipitation, soil moisture, evaporation, frost, extremes, vegetation stress, long-term water availability",
@@ -227,6 +231,7 @@ const en: Landing = {
       },
       {
         title: "Harmonization of MODIS and VIIRS Hot Spots",
+        short: "MODIS & VIIRS Hot Spots",
         rows: [
           { id: "H1", status: "done",
             requirement: "Harmonize MODIS and VIIRS into one comparable historical series",
@@ -376,7 +381,7 @@ const es: Landing = {
     shot: {
       src: "/landing/app_diagnosis.webp",
       alt: "La app Ashfield diagnosticando un lote demo de 50 ha cerca de Pergamino sobre imagen satelital: clima, suelo y riesgo de fuego a 7 días en lenguaje simple.",
-      width: 1200, height: 794,
+      width: 1100, height: 688,
       caption: "La app: diagnóstico de un lote demo en Pergamino, con mapa satelital incluido.",
     },
   },
@@ -387,7 +392,7 @@ const es: Landing = {
       figure: {
         src: "/landing/app_fire_risk.webp",
         alt: "La vista de fuego de Ashfield sobre Sudamérica: hexágonos de detecciones armonizadas en el mapa, la tarjeta de riesgo a 7 días marcando «bajo» y el calendario de fuego.",
-        width: 1200, height: 750,
+        width: 1280, height: 844,
         caption: "La app, vista fuego: detecciones armonizadas y la tarjeta de riesgo a 7 días.",
       },
     },
@@ -405,7 +410,9 @@ const es: Landing = {
   details: {
     summary: "Cómo cumple el desafío",
     caption: "Cada requisito de los dos desafíos, el método, los números de validación y los límites honestos — nada se quitó.",
+    scoreSep: " · ", statusSep: " · ",
   },
+  pendTag: "[PENDIENTE]",
   problem: {
     heading: "El problema",
     paragraphs: [
@@ -422,6 +429,7 @@ const es: Landing = {
     groups: [
       {
         title: "Field Shift: Adapting Farms with NASA Data",
+        short: "Field Shift",
         rows: [
           { id: "F1", status: "partial",
             requirement: "Datos NASA: temperatura, estrés por calor, precipitación, humedad del suelo, evaporación, heladas, extremos, estrés de la vegetación, agua a largo plazo",
@@ -480,6 +488,7 @@ const es: Landing = {
       },
       {
         title: "Armonización de focos de calor MODIS y VIIRS",
+        short: "Focos MODIS y VIIRS",
         rows: [
           { id: "H1", status: "done",
             requirement: "Armonizar MODIS y VIIRS en una serie histórica comparable",
