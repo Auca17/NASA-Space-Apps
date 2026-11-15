@@ -104,6 +104,7 @@ async def live(window: str = Query("24h"), bbox: str | None = Query(None)):
     cache_control = ("public, s-maxage=600" if failed else CACHE_CONTROL)
     body = {
         "updated_at": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+        "latest_observation": max((point[4] for point in points), default=None),
         "window_h": WINDOW_H[window],
         "sources": ok,
         "mode": "points",

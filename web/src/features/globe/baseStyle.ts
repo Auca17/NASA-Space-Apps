@@ -38,6 +38,7 @@ export const FIELD_GUIDE_SOURCE: VectorSourceSpecification = {
 
 export const BASE_STYLE: StyleSpecification = {
   version: 8,
+  glyphs: "https://tiles.openfreemap.org/fonts/{fontstack}/{range}.pbf",
   projection: { type: "mercator" },
   sources: {
     omt: LANDUSE_SOURCE,

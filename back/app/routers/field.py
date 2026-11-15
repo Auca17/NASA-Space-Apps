@@ -5,16 +5,23 @@ import hashlib
 import logging
 import statistics
 from datetime import date, timedelta
+from collections import defaultdict
 
 import h3
 import httpx
+from shapely.geometry import LinearRing, Polygon, MultiPolygon
 from fastapi import APIRouter, Request
 from fastapi.responses import JSONResponse
 
 from ..cache import utc_today
 from ..h3util import h3_r5, h3_r6
 from ..services import field_sources as src
-from ..services.geodesy import ring_area_ha, ring_centroid
+from ..services.geodesy import ring_area_ha
+from ..services.field_geometry import cell_weights, sample_locations, weather_locations
+from ..services.field_moisture import moisture_zones
+from ..services.crop_map import crop_zones, detect_crop
+from ..services import current_crop as now_crop
+from ..services.risk_validity import risk_dates
 from ..services.data import risk_shard
 from ..services.infiltration import (infiltration_class,
                                      infiltration_score)
@@ -63,49 +70,10 @@ def _err(code: str, detail: str):
                               content={"error": code, "detail": detail})
 
 
-async def _json_body(request: Request):
-    """Parsed JSON object body or a 400 (empty/malformed must not 500)."""
-    try:
-        body = await request.json()
-    except Exception:
-        return None, JSONResponse(
-            status_code=400,
-            content={"error": "invalid_input",
-                     "detail": "body must be a JSON object"})
-    if not isinstance(body, dict):
-        return None, JSONResponse(
-            status_code=400,
-            content={"error": "invalid_input",
-                     "detail": "body must be a JSON object"})
-    return body, None
-
-
-def _seg_intersect(a, b, c, d) -> bool:
-    """Proper intersection of segments ab and cd (excl. shared endpoints)."""
-    def orient(p, q, r):
-        return (q[0] - p[0]) * (r[1] - p[1]) - (q[1] - p[1]) * (r[0] - p[0])
-    o1, o2 = orient(a, b, c), orient(a, b, d)
-    o3, o4 = orient(c, d, a), orient(c, d, b)
-    return ((o1 > 0) != (o2 > 0) and (o1 != 0 or o2 != 0)
-            and (o3 > 0) != (o4 > 0) and (o3 != 0 or o4 != 0))
-
-
-def _self_intersects(ring) -> bool:
-    """True if any non-adjacent edges of the ring properly cross."""
-    n = len(ring)
-    edges = [(ring[i], ring[(i + 1) % n]) for i in range(n)]
-    for i in range(n):
-        for j in range(i + 2, n):
-            if i == 0 and j == n - 1:
-                continue  # closing edge shares vertex 0 with edge 0
-            if _seg_intersect(edges[i][0], edges[i][1],
-                              edges[j][0], edges[j][1]):
-                return True
-    return False
-
-
 def parse_plot(body: dict):
-    """-> (centroid(lat,lon), area_ha, r5_list, r6_list, bbox|None) or 400."""
+    """-> (centroid(lat,lon), area_ha, r5_list, r6_list, geometry|None) or 400."""
+    if not isinstance(body, dict):
+        return _err("invalid_input", "expected a JSON object")
     polygon, point = body.get("polygon"), body.get("point")
     if bool(polygon) == bool(point):
         return _err("invalid_input", "send exactly one of 'polygon' or 'point'")
@@ -113,14 +81,14 @@ def parse_plot(body: dict):
     if point is not None:
         try:
             lat, lon = float(point[0]), float(point[1])
-        except (TypeError, IndexError, KeyError, ValueError):
+        except (TypeError, IndexError, KeyError, ValueError, OverflowError):
             return _err("invalid_point", "point must be [lat, lon]")
         if not (-90 <= lat <= 90 and -180 <= lon <= 180):
             return _err("invalid_point", "lat -90..90, lon -180..180")
         ha = body.get("ha", 50)
         try:
             ha = float(ha)
-        except (TypeError, ValueError):
+        except (TypeError, ValueError, OverflowError):
             return _err("invalid_input", "ha must be a number")
         if not (MIN_HA <= ha <= MAX_HA):
             return _err("invalid_input",
@@ -129,7 +97,9 @@ def parse_plot(body: dict):
 
     # Polygon: coordinates = [outer, hole...]; MultiPolygon: a list of
     # those. A single closed ring (the original contract) still works.
-    kind = (polygon or {}).get("type") or "Polygon"
+    if not isinstance(polygon, dict):
+        return _err("invalid_polygon", "polygon must be an object")
+    kind = polygon.get("type") or "Polygon"
     coords = (polygon or {}).get("coordinates") or []
     if kind == "MultiPolygon":
         polys_raw = coords
@@ -137,7 +107,7 @@ def parse_plot(body: dict):
         polys_raw = [coords]
     else:
         return _err("invalid_polygon", "type must be Polygon or MultiPolygon")
-    if not polys_raw or not all(
+    if not isinstance(polys_raw, list) or not polys_raw or not all(
             isinstance(pr, list) and pr and isinstance(pr[0], list)
             and pr[0] and isinstance(pr[0][0], (list, tuple))
             for pr in polys_raw):
@@ -148,8 +118,13 @@ def parse_plot(body: dict):
     for pr in polys_raw:
         rings = []
         for raw in pr:
-            ring = [[float(q[0]), float(q[1])] for q in raw
-                    if isinstance(q, (list, tuple)) and len(q) >= 2]
+            if not isinstance(raw, list) or any(
+                    not isinstance(q, (list, tuple)) or len(q) < 2 for q in raw):
+                return _err("invalid_polygon", "invalid coordinate ring")
+            try:
+                ring = [[float(q[0]), float(q[1])] for q in raw]
+            except (TypeError, ValueError, OverflowError):
+                return _err("invalid_polygon", "coordinates must be numeric")
             if len(ring) >= 2 and ring[0] == ring[-1]:
                 ring = ring[:-1]  # closed ring -> unclosed for h3
             elif len(ring) >= 2:
@@ -165,7 +140,7 @@ def parse_plot(body: dict):
                    for i in range(n)):
                 return _err("invalid_polygon",
                             "polygon crosses the antimeridian, not supported")
-            if _self_intersects(ring):
+            if not LinearRing(ring).is_simple:
                 return _err("invalid_polygon", "polygon self-intersects")
             n_vertices += len(ring)
             rings.append(ring)
@@ -177,31 +152,23 @@ def parse_plot(body: dict):
     areas = [max(0.0, ring_area_ha(rs[0]) - sum(ring_area_ha(h)
                                                for h in rs[1:]))
              for rs in polys]
+    geom_parts = [Polygon(rs[0], rs[1:]) for rs in polys]
+    if any(not p.is_valid for p in geom_parts):
+        return _err("invalid_polygon", "polygon has invalid holes or rings")
     area_ha = sum(areas)
     if not (MIN_HA <= area_ha <= MAX_HA):
         return _err("invalid_polygon",
                     f"area must be between {MIN_HA} and {MAX_HA} ha "
                     f"(got {area_ha:.1f})")
-    # area-weighted centroid of the pieces (vertex mean inside each)
-    cents = [ring_centroid(rs[0]) for rs in polys]
-    w = area_ha or 1.0
-    centroid = (sum(c[0] * a for c, a in zip(cents, areas)) / w,
-                sum(c[1] * a for c, a in zip(cents, areas)) / w)
-    try:
-        shape = h3.LatLngMultiPoly(*[
-            h3.LatLngPoly(*[[(q[1], q[0]) for q in r] for r in rs])
-            for rs in polys])
-        r5 = sorted(h3.polygon_to_cells(shape, 5))
-        r6 = sorted(h3.polygon_to_cells(shape, 6))
-    except Exception:
-        r5 = r6 = []
-    # plots smaller than a cell contain no cell centre -> use centroid's cell
-    r5 = r5 or [h3_r5(*centroid)]
-    r6 = r6 or [h3_r6(*centroid)]
-    outer = [q for rs in polys for q in rs[0]]
-    lats, lons = [q[1] for q in outer], [q[0] for q in outer]
-    bbox = (min(lons), min(lats), max(lons), max(lats))
-    return (centroid, area_ha, r5, r6, bbox), None
+    pieces = geom_parts
+    geom = pieces[0] if len(pieces) == 1 else MultiPolygon(pieces)
+    if not geom.is_valid or any(p.bounds[2] - p.bounds[0] > 2 or
+                                p.bounds[3] - p.bounds[1] > 2 for p in pieces):
+        return _err("invalid_polygon", "crossing rings or unsupported extent")
+    representative = pieces[max(range(len(areas)), key=areas.__getitem__)].representative_point()
+    center = representative.y, representative.x
+    return (center, area_ha, list(cell_weights(geom, 5)),
+            list(cell_weights(geom, 6)), geom), None
 
 
 # ----------------------------------------------------------- derivation -----
@@ -589,9 +556,9 @@ def build_cards(power, soilg, slope, ndvi, grid_cell, fire_cal,
     et_suspect = et_years and statistics.fmean(
         statistics.fmean(vs) for vs in et_years.values()) < EVPTRNS_MIN
     et0, et0_method = (None, None)
-    if (not et_years or et_suspect) and adj.get("lat") is not None:
+    if (not et_years or et_suspect) and (adj or {}).get("lat") is not None:
         et0, et0_method = et0_series(
-            power, adj["lat"], adj.get("elevation_m") or 0.0)
+            power, adj["lat"], (adj or {}).get("elevation_m") or 0.0)
     if et_years and not et_suspect:
         mean_et = statistics.fmean(
             statistics.fmean(vs) for vs in et_years.values()) / 2.45
@@ -623,9 +590,9 @@ def build_cards(power, soilg, slope, ndvi, grid_cell, fire_cal,
     ev_suspect = ev_years and statistics.fmean(
         statistics.fmean(vs) for vs in ev_years.values()) < EVLAND_MIN
     if (not ev_years or ev_suspect) and et0 is None \
-            and adj.get("lat") is not None:
+            and (adj or {}).get("lat") is not None:
         et0, et0_method = et0_series(
-            power, adj["lat"], adj.get("elevation_m") or 0.0)
+            power, adj["lat"], (adj or {}).get("elevation_m") or 0.0)
     if ev_years and not ev_suspect:
         annual_ev = statistics.fmean(
             sum(v for v in vs if v is not None)
@@ -1191,59 +1158,148 @@ def apply_scenario(power: dict | None, sc: dict) -> dict:
     return out
 
 
+def build_scenario_cards(power, scenario, args, *, adj, zone):
+    cards, burns = build_cards(power, *args, adj=adj, zone=zone)
+    calendar = build_calendar(power, args[2], burns)
+    if not scenario:
+        return cards, calendar, None
+    baseline = {"cards": cards, "calendar": calendar}
+    simulated_power = apply_scenario(power, scenario)
+    soil, slope, ndvi, grid, fire_cal, risk, cell = args
+    simulated_grid = dict(grid or {})
+    if scenario["rain_pct"]:
+        factor = 1 + scenario["rain_pct"] / 100
+        for key in ("rain_mm_yr", "rain_p25_mm"):
+            if simulated_grid.get(key) is not None:
+                simulated_grid[key] = round(simulated_grid[key] * factor, 1)
+    simulated, _ = build_cards(simulated_power, soil, slope, ndvi, simulated_grid,
+                               fire_cal, risk, cell, adj=adj, zone=zone)
+    actual = {card["id"]: card for card in cards}
+    operational = {"fire", "fire_weather", "recent_weather", "soil_moisture"}
+    for index, card in enumerate(simulated):
+        previous = actual[card["id"]]
+        if card["id"] in operational:
+            simulated[index] = previous
+            continue
+        before, after = previous["value"], card["value"]
+        if before is not None and before != after:
+            card["baseline_value"] = before
+            if isinstance(before, (int, float)) and isinstance(after, (int, float)):
+                card["delta"] = round(after - before, 1)
+    return simulated, build_calendar(simulated_power, args[2], burns), baseline
+
+
+async def json_object(request):
+    try:
+        body = await request.json()
+    except (ValueError, UnicodeError):
+        return None
+    return body if isinstance(body, dict) else None
+
+
+def weighted_rows(samples):
+    totals = defaultdict(float)
+    weights = defaultdict(float)
+    for row, weight in samples:
+        for key, value in row.items():
+            if isinstance(value, (int, float)):
+                totals[key] += value * weight
+                weights[key] += weight
+    return {key: totals[key] / weights[key] for key in totals}
+
+
+async def field_shards(cells, path, loader):
+    parents = {h3.cell_to_parent(cell, 2) for cell in cells}
+    results = await asyncio.gather(*(loader(parent, path) for parent in parents),
+                                   return_exceptions=True)
+    return {cid: value for result in results if isinstance(result, dict)
+            for cid, value in result.get("cells", {}).items() if cid in cells}
+
+
 # -------------------------------------------------------------- endpoint ----
 
 @router.post("/api/field/diagnose")
 async def diagnose(request: Request):
-    body, err = await _json_body(request)
-    if err:
-        return err
+    body = await json_object(request)
+    if body is None:
+        return _err("invalid_input", "expected a JSON object")[1]
     scenario, err = parse_scenario(body)
     if err:
         return err
     parsed, err = parse_plot(body)
     if err:
         return err
-    (clat, clon), area_ha, r5s, r6s, bbox = parsed
-    r6c = r6s[0]
-    r5c = r5s[0]
-    # shard index is the res-2 parent of the res-5 cell, NOT the res-2
-    # of the centroid: ~6% of res-5 centroids fall across a res-2
-    # boundary, which would fetch a shard missing this cell (audit, t29)
-    r2 = h3.cell_to_parent(r5c, 2)
-
+    (clat, clon), area_ha, r5s, r6s, geom = parsed
+    r6c = h3_r6(clat, clon)
+    r5c = h3_r5(clat, clon)
     from ..services.georef import zone_at
     geo = zone_at(clat, clon)
     if geo["country"] is None:
-        return JSONResponse(
-            status_code=400,
-            content={"error": "no_land",
-                     "detail": "plot centroid is not on land "
-                               "(ocean or unmapped area)"})
+        return _err("no_land", "plot is not on land (ocean or unmapped area)")[1]
+    weights = cell_weights(geom, 5) if geom is not None else {r5c: 1}
+
+    async def shard(parent, path):
+        return await src.json_shard(clat, clon, f"{path}/{parent}.json", parent, path)
+
+    async def published_risk(parent, _):
+        result = await risk_shard(parent)
+        dates = risk_dates(result)
+        if not dates["current"]:
+            return None
+        return {"cells": {cid: {**value, **dates} for cid, value in result.get("cells", {}).items()}}
 
     async with httpx.AsyncClient(timeout=TIMEOUT) as client:
-        fetches = asyncio.gather(
-            src.power_daily(client, clat, clon, r6c),
-            src.soilgrids(client, clat, clon, r6c),
-            src.terrain_stats(client, clat, clon, r6c, bbox),
-            src.ornl_modis(client, "MOD13Q1", "250m_16_days_NDVI",
-                           clat, clon, r6c, scale=1e-4),
-            src.json_shard(clat, clon, f"fire/cal/{r2}.json",
-                           r6c, "fire_cal"),
-            src.json_shard(clat, clon, f"field/grid/{r2}.json",
-                           r6c, "field_grid"),
-            return_exceptions=True)
+        async def weather():
+            points = weather_locations(geom) if geom is not None else [(clat, clon, 1, r6c)]
+            results = await asyncio.gather(*(src.power_daily(client, lat, lon, key)
+                                             for lat, lon, _, key in points),
+                                           return_exceptions=True)
+            rows = [(row, point[2]) for point, row in zip(points, results)
+                    if isinstance(row, dict)]
+            if not rows:
+                return None
+            combined = weighted_rows(rows)
+            for param in src.POWER_PARAMS:
+                series = [(row[param], weight) for row, weight in rows if row.get(param)]
+                if series:
+                    combined[param] = weighted_rows(series)
+            return combined
+
+        async def samples():
+            points = sample_locations(geom) or [(clat, clon, 1)]
+            values = await asyncio.gather(*(
+                src.soilgrids(client, lat, lon, h3.latlng_to_cell(lat, lon, 10))
+                for lat, lon, _ in points), *(
+                src.ornl_modis(client, "MOD13Q1", "250m_16_days_NDVI",
+                               lat, lon, h3.latlng_to_cell(lat, lon, 10), scale=1e-4)
+                for lat, lon, _ in points), return_exceptions=True)
+            split = len(points)
+            soils = [(row, w) for row, (_, _, w) in zip(values[:split], points)
+                     if isinstance(row, dict)]
+            vegetation = [(dict(row), w) for row, (_, _, w) in zip(values[split:], points)
+                          if isinstance(row, list)]
+            ndvi = sorted(weighted_rows(vegetation).items())
+            return weighted_rows(soils), ndvi
+
+        fetches = [asyncio.create_task(awaitable) for awaitable in (
+            weather(), src.terrain_stats(client, clat, clon, r6c, geom),
+            samples(), field_shards(weights, "fire/cal", shard),
+            field_shards(weights, "field/grid", shard),
+            field_shards(weights, "", published_risk),
+        )]
         try:
-            results = await asyncio.wait_for(fetches, DIAG_BUDGET)
-        except TimeoutError:
-            log.warning("diagnose: %.0fs budget exceeded", DIAG_BUDGET)
-            results = [TimeoutError("budget")] * 6
+            _, pending = await asyncio.wait(fetches, timeout=DIAG_BUDGET)
+            if pending:
+                log.warning("diagnose: %.0fs budget exceeded", DIAG_BUDGET)
+        finally:
+            for task in fetches:
+                if not task.done():
+                    task.cancel()
+            results = await asyncio.gather(*fetches, return_exceptions=True)
 
-    def ok(v):
-        return None if isinstance(v, Exception) else v
-    power, soilg, terr, ndvi, fire_cal, grid = \
-        map(ok, results)
-
+    power, terr, local, fire_cells, grid_cells, risks = (
+        None if isinstance(value, BaseException) else value for value in results)
+    soilg, ndvi = local or (None, None)
     slope = (terr or {}).get("slope")
     elevation_m = (terr or {}).get("elevation_m")
     cell_elev_m = (power or {}).get("_elev_m")
@@ -1256,58 +1312,49 @@ async def diagnose(request: Request):
                     d: (v + temp_adjust if v is not None else None)
                     for d, v in power[key].items()}
 
-    grid_cell = (grid or {}).get("cells", {}).get(r5c)
-    try:
-        risk = await risk_shard(r2)  # shares the 6 h cache with /api/risk
-    except Exception:  # missing DATA_BASE_URL etc. -> fire card degrades, not 503
-        risk = None
-    risk_cell = (risk or {}).get("cells", {}).get(r5c)
+    regional = [(row, weights[cid]) for cid, row in (grid_cells or {}).items()]
+    grid_cell = weighted_rows(regional)
+    # Categorical context represents the largest covered cell with data.
+    if anchor := next((cid for cid in weights if cid in (grid_cells or {})), None):
+        grid_cell = {**grid_cells[anchor], **grid_cell}
+    # Burn season is derived from the union of detections across intersecting cells.
+    weeks = [row["clim"] for row in (fire_cells or {}).values()
+             if len(row.get("clim") or []) >= 12]
+    fire_cal = ({"cells": {r5c: {"clim": [sum(values) for values in zip(*weeks)]}}}
+                if weeks else None)
+    risk_cell = max((risks or {}).values(),
+                    key=lambda row: row.get("p") or 0, default=None)
 
     degraded = power is None
     adj = {"temp_adjust_c": temp_adjust, "elevation_m": elevation_m,
            "power_cell_elevation_m": cell_elev_m, "lat": clat}
+    args = (soilg, slope, ndvi, grid_cell, fire_cal, risk_cell, r5c)
     if degraded:
-        cards, monthly_burn = degraded_cards(
-            grid_cell, terr, soilg, fire_cal, risk_cell, r5c)
-        calendar = build_calendar(None, ndvi, monthly_burn)
+        cards, burns = degraded_cards(grid_cell, terr, soilg, fire_cal, risk_cell, r5c)
+        calendar, baseline = build_calendar(None, ndvi, burns), None
     else:
-        cards, monthly_burn = build_cards(
-            power, soilg, slope, ndvi, grid_cell, fire_cal, risk_cell,
-            r5c, adj=adj, zone=geo["zone"])
-    baseline = None
-    if scenario and not degraded:
-        baseline = {"cards": cards,
-                    "calendar": build_calendar(power, ndvi, monthly_burn)}
-        spower = apply_scenario(power, scenario)
-        sgrid = grid_cell
-        if grid_cell and scenario["rain_pct"]:
-            k = 1 + scenario["rain_pct"] / 100
-            sgrid = dict(grid_cell)
-            for key in ("rain_mm_yr", "rain_p25_mm"):
-                if sgrid.get(key) is not None:
-                    sgrid[key] = round(sgrid[key] * k, 1)
-        base_map = {c["id"]: c["value"] for c in cards}
-        cards, monthly_burn = build_cards(
-            spower, soilg, slope, ndvi, sgrid, fire_cal, risk_cell,
-            r5c, adj=adj, zone=geo["zone"])
-        calendar = build_calendar(spower, ndvi, monthly_burn)
-        for c in cards:
-            bv = base_map.get(c["id"])
-            if bv is not None and c["value"] != bv:
-                c["baseline_value"] = bv
-                if isinstance(bv, (int, float)) and \
-                        isinstance(c["value"], (int, float)):
-                    c["delta"] = round(c["value"] - bv, 1)
-    else:
-        calendar = build_calendar(power, ndvi, monthly_burn)
-    dx = hashlib.sha256(
-        (";".join(sorted(r6s)) + "|" + utc_today()).encode()).hexdigest()[:8]
+        cards, calendar, baseline = build_scenario_cards(
+            power, scenario, args, adj=adj, zone=geo["zone"])
+    if risk_cell:
+        next(c for c in cards if c["id"] == "fire").update(
+            generated_at=risk_cell["generated_at"], valid_until=risk_cell["valid_until"])
+    geometry_key = geom.wkb if geom is not None else repr((clat, clon, area_ha)).encode()
+    dx = hashlib.sha256(geometry_key + utc_today().encode()).hexdigest()[:12]
 
     from ..services.measures import evaluate
-    card_map = {c["id"]: c for c in cards}
+    observed = baseline or {"cards": cards, "calendar": calendar}
+    card_map = {c["id"]: c for c in observed["cards"]}
     msr = evaluate({"cards": card_map,
-                    "calendar": calendar["rows"],
+                    "calendar": observed["calendar"]["rows"],
                     "risk_cat": (risk_cell or {}).get("cat")})
+    available = sum(card["value"] is not None for card in observed["cards"])
+    agricultural = {"rain", "heavy_rain", "frost", "heat", "soil_moisture",
+                    "crop_water", "vigor_bare_soil", "slope", "soil"}
+    comparable = any(c["id"] in agricultural and c["value"] is not None
+                     for c in observed["cards"])
+    sources = [{"id": card["id"], "source": card["source"],
+                "available": card["value"] is not None}
+               for card in observed["cards"]]
 
     return JSONResponse(
         {"diagnosis_id": f"dx_{dx}", "area_ha": round(area_ha, 1),
@@ -1317,13 +1364,63 @@ async def diagnose(request: Request):
          "elevation_m": elevation_m,
          "power_cell_elevation_m": cell_elev_m,
          "temp_adjust_c": temp_adjust,
+         "terrain_coverage": (terr or {}).get("coverage"),
+         "coverage": {"available_cards": available, "total_cards": len(cards),
+                      "comparable": comparable, "indicators": sources},
          "h3_r5": r5s, "h3_r6": r6s, "cards": cards, "calendar": calendar,
          **({"degraded": True,
              "degraded_reason": DEGRADED_REASON} if degraded else {}),
-         **({"scenario": scenario} if scenario else {}),
+         **({"scenario": scenario} if baseline else {}),
          **({"baseline": baseline} if baseline else {}),
          **msr},
         headers={"Cache-Control": "no-store"})
+
+
+@router.post("/api/field/moisture-zones")
+async def field_moisture(request: Request):
+    parsed, err = parse_plot(await json_object(request))
+    if err:
+        return err
+    geom = parsed[-1]
+    return {"status": "no_detail"} if geom is None else await moisture_zones(geom)
+
+
+@router.post("/api/field/crop")
+async def field_crop(request: Request):
+    """Crop detected per campaign (INTA MNC); no user input needed."""
+    parsed, err = parse_plot(await json_object(request))
+    if err:
+        return err
+    geom = parsed[-1]
+    if geom is None:   # a bare point: a ~1 ha square around it
+        lat, lon = parsed[0]
+        geom = Polygon([(lon - .0005, lat - .0005), (lon + .0005, lat - .0005),
+                        (lon + .0005, lat + .0005), (lon - .0005, lat + .0005)])
+    return await detect_crop(geom)
+
+
+@router.post("/api/field/current-crop")
+async def field_current_crop(request: Request):
+    """What is on each part of the field now (this season's Sentinel-2)."""
+    parsed, err = parse_plot(await json_object(request))
+    if err:
+        return err
+    geom = parsed[-1]
+    if geom is None:
+        return {"status": "no_detail", "zones": []}
+    return await now_crop.current_crop(geom)
+
+
+@router.post("/api/field/crop-zones")
+async def field_crop_zones(request: Request):
+    """The field split into one zone per detected crop (INTA MNC)."""
+    parsed, err = parse_plot(await json_object(request))
+    if err:
+        return err
+    geom = parsed[-1]
+    if geom is None:
+        return {"status": "no_detail", "zones": []}
+    return await crop_zones(geom)
 
 
 # ----------------------------------------------------- rotations / explain -
@@ -1346,20 +1443,26 @@ def field_catalog():
 @router.post("/api/field/rotations")
 async def rotations(request: Request):
     from ..services.rotations import run, PRIORITY_MAP
-    body, err = await _json_body(request)
-    if err:
-        return err
+    body = await json_object(request)
+    if body is None:
+        return _err("invalid_input", "expected a JSON object")[1]
     diag = body.get("diagnosis")
     if not isinstance(diag, dict) or not isinstance(diag.get("cards"), list):
         return JSONResponse(
             status_code=400,
             content={"error": "invalid_input",
                      "detail": "diagnosis must be the full diagnose response"})
+    if any(not isinstance(card, dict) or not isinstance(card.get("id"), str)
+           or "value" not in card for card in diag["cards"]):
+        return _err("invalid_input", "invalid diagnosis cards")[1]
+    coverage = diag.get("coverage")
+    if isinstance(coverage, dict) and coverage.get("comparable") is False:
+        return _err("insufficient_data", "insufficient agricultural evidence")[1]
     zone = body.get("zone")
     if zone is None:
         dz = diag.get("zone")
-        zone = dz if dz in ROTATIONS_ZONES else None
-    elif zone not in ROTATIONS_ZONES:
+        zone = dz if isinstance(dz, str) and dz in ROTATIONS_ZONES else None
+    elif not isinstance(zone, str) or zone not in ROTATIONS_ZONES:
         return JSONResponse(status_code=400, content={
             "error": "invalid_input",
             "detail": f"zone must be one of {sorted(ROTATIONS_ZONES)}"})
@@ -1376,21 +1479,27 @@ async def rotations(request: Request):
         return JSONResponse(status_code=400, content={
             "error": "invalid_input",
             "detail": "constraints must be an object"})
+    if "markets" in constraints and (not isinstance(constraints["markets"], list)
+                                     or any(not isinstance(c, str) for c in constraints["markets"])):
+        return _err("invalid_input", "markets must be a list of crop ids")[1]
+    current = body.get("current")
+    if current is not None and not isinstance(current, dict):
+        return _err("invalid_input", "current must be an object")[1]
     analog = None
     r5s = diag.get("h3_r5") or []
     cent = diag.get("centroid") or []
-    r6s = diag.get("h3_r6") or ["x"]
-    if r5s and len(cent) == 2:
-        try:
-            r2a = h3.cell_to_parent(r5s[0], 2)
-            shard = await src.json_shard(
-                cent[0], cent[1], f"field/analogs/{r2a}.json",
-                r6s[0], "field_analogs")
-            analog = (shard or {}).get("cells", {}).get(r5s[0])
-        except Exception:
-            analog = None  # malformed h3 ids in a replayed diagnosis
+    if not isinstance(r5s, list) or any(
+            not isinstance(cell, str) or not h3.is_valid_cell(cell)
+            or h3.get_resolution(cell) != 5 for cell in r5s):
+        return _err("invalid_input", "invalid h3_r5 cells")[1]
+    if r5s and isinstance(cent, list) and len(cent) == 2:
+        async def analog_shard(parent, path):
+            return await src.json_shard(cent[0], cent[1], f"{path}/{parent}.json",
+                                        parent, path)
+        analogs = await field_shards(r5s, "field/analogs", analog_shard)
+        analog = next((analogs[cell] for cell in r5s if cell in analogs), None)
     try:
-        out = run(diag, body.get("current"), priorities, constraints,
+        out = run(diag, current, priorities, constraints,
                   zone, analog=analog)
         if diag.get("scenario"):
             base = diag.get("baseline") or {
@@ -1399,16 +1508,17 @@ async def rotations(request: Request):
                           if c.get("baseline_value") is not None
                           else dict(c) for c in diag["cards"]],
                 "calendar": diag.get("calendar", {"rows": []})}
-            bout = run(base, body.get("current"), priorities,
+            bout = run(base, current, priorities,
                        constraints, zone, analog=analog)
             out["baseline_order"] = [
                 s["id"] for s in sorted(
                     bout.get("strategies", []),
                     key=lambda s: -s.get("score", 0))]
-    except ValueError as exc:
+    except (ValueError, TypeError, KeyError, AttributeError) as exc:
         return JSONResponse(status_code=400, content={
             "error": "invalid_input", "detail": str(exc)})
-    if abs(diag.get("temp_adjust_c") or 0) >= 2:
+    adjust = diag.get("temp_adjust_c")
+    if isinstance(adjust, (int, float)) and abs(adjust) >= 2:
         out.setdefault("gaps", []).append(
             "La corrección por altura usa un gradiente fijo de 6,5 °C "
             "por km; confirmá las heladas con una estación cercana")
@@ -1419,10 +1529,9 @@ async def rotations(request: Request):
 async def explain(request: Request):
     from ..services.rotations import explain as explain_fn
     from ..services.ai_explain import ai_explain
-    body, err = await _json_body(request)
-    if err:
-        return err
-    if not isinstance(body.get("strategies"), list):
+    body = await json_object(request)
+    if not isinstance(body, dict) or not isinstance(
+            body.get("strategies"), list):
         return JSONResponse(status_code=400, content={
             "error": "invalid_input",
             "detail": "body must be the full rotations response"})

@@ -54,6 +54,7 @@ export type LiveBody = {
   cells?: RawCell[];
   sources_failed?: string[];
   updated_at?: string;
+  latest_observation?: string | null;
   /** ISO A2 of the bbox centre (Natural Earth), when resolved. */
   country?: string | null;
 };

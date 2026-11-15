@@ -9,7 +9,7 @@ import { parseLatLon } from "../../domain/selection";
 type Hit = { lat: number; lon: number; name: string };
 
 export function PlaceFinder({ onGo }: {
-  onGo: (lat: number, lon: number, precise?: boolean) => void;
+  onGo: (lat: number, lon: number, precise?: boolean, accuracy?: number) => void;
 }) {
   const { t } = useT();
   const [q, setQ] = useState("");
@@ -32,8 +32,12 @@ export function PlaceFinder({ onGo }: {
     if (!("geolocation" in navigator)) { setDenied(true); return; }
     setLocating(true);
     navigator.geolocation.getCurrentPosition(
-      (p) => { setLocating(false);
-               onGo(p.coords.latitude, p.coords.longitude, true); },
+      (p) => {
+        setLocating(false);
+        const { latitude, longitude, accuracy } = p.coords;
+        if (accuracy > 0) onGo(latitude, longitude, true, accuracy);
+        else onGo(latitude, longitude, true);
+      },
       () => { setLocating(false); setDenied(true); },
       { timeout: 8000 });
   };
@@ -64,6 +68,7 @@ export function PlaceFinder({ onGo }: {
   return (
     <div className="place-finder">
       <span className="place-title">{t("place.title")}</span>
+      <p className="muted place-note">{t("place.hint")}</p>
       <div className="place-row">
         <button type="button" onClick={useMyLocation} disabled={locating}>
           {locating ? t("place.locating") : t("place.myLocation")}</button>

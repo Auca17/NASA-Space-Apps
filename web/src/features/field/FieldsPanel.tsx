@@ -7,6 +7,26 @@ import {
 } from "../../domain/fields";
 import type { Multi } from "../../domain/selection";
 import { useAreaLabel } from "./areaLabel";
+import { DetectedCrop } from "./DetectedCrop";
+import { CurrentCropPanel } from "./CurrentCrop";
+import { cropZonesFor, type NewZone } from "./autoCropSplit";
+type SplitState = null | "loading" | "none" | "unavailable" | "done";
+
+/** Text for the automatic split by crop; kept here, next to its only use. */
+const SPLIT_TXT = {
+  es: { go: "Volver a dividir por cultivo",
+        loading: "Buscando los cultivos del campo en las imágenes de esta campaña (puede tardar un minuto)…",
+        none: "El mapa del INTA no encontró cultivos en este campo. Podés dibujar las zonas a mano.",
+        unavailable: "No pudimos consultar el mapa del INTA ahora. Probá de nuevo en un rato.",
+        done: "Listo: el campo quedó dividido según lo que hay hoy en cada parte.",
+        hint: "Crea una zona por cada cultivo que ve el satélite, sin cargar nada." },
+  en: { go: "Split by crop again",
+        loading: "Looking up the field's crops in this season's images (may take a minute)…",
+        none: "INTA's map found no crops in this field. You can draw the zones by hand.",
+        unavailable: "We couldn't reach INTA's map right now. Try again shortly.",
+        done: "Done: the field is split by what is on each part today.",
+        hint: "Creates one zone per crop seen from space, no typing needed." },
+} as const;
 
 const CROPS = ["maíz", "soja", "trigo", "girasol", "cebada", "sorgo",
                "pastura", "barbecho"];
@@ -81,7 +101,8 @@ export function FieldsList({ fields, onOpen, onZones, onAnalyze, onRename,
 
 export function FieldDetail({ field, pending, choice, onChoose, onAnalyze,
                               onDrawZone, onSaveZone, onDiscardZone,
-                              onUpdateZone, onRemoveZone, onBack }: {
+                              onUpdateZone, onRemoveZone, onBack,
+                              onAddZones, onSetCrop, onCropSplit }: {
   field: Field;
   /** zone drawn and clipped to the field, not saved yet */
   pending: { geom: Multi; ha: number } | null;
@@ -95,8 +116,29 @@ export function FieldDetail({ field, pending, choice, onChoose, onAnalyze,
   onUpdateZone: (id: string, patch: { name?: string; crop?: string }) => void;
   onRemoveZone: (id: string) => void;
   onBack: () => void;
+  /** save the zones of the field split by crop */
+  onAddZones?: (zones: NewZone[]) => void;
+  /** the user typed the field's crop (map has none) */
+  onSetCrop?: (crop: string) => void;
+  /** remember the automatic split ran, so it is not repeated */
+  onCropSplit?: (result: "done" | "none") => void;
 }) {
-  const { t } = useT();
+  const { t, lang } = useT();
+  const st = SPLIT_TXT[lang];
+  const [split, setSplit] = useState<SplitState>(null);
+  const splitByCrop = async () => {
+    setSplit("loading");
+    const r = await cropZonesFor(field.geom, lang);
+    if (!r) return setSplit("unavailable");
+    if (r.zones.length) onAddZones?.(r.zones);
+    onCropSplit?.(r.result);
+    setSplit(r.result);
+  };
+  // The first split runs on its own from the fields list (useAutoCropSplit);
+  // here we only say what happened and offer to redo it.
+  const auto = field.zones.length ? null
+    : !field.cropSplit ? "loading" : field.cropSplit === "none" ? "none" : null;
+  const status = split ?? auto;
   const ha = useHa();
   const areaLabel = useAreaLabel();
   const [name, setName] = useState("");
@@ -115,6 +157,9 @@ export function FieldDetail({ field, pending, choice, onChoose, onAnalyze,
         <strong>{field.name}</strong>
         <button onClick={onBack}>{t("fields.back")}</button>
       </div>
+      <CurrentCropPanel geom={field.geom} />
+      <DetectedCrop geom={field.geom} declared={field.crop ?? ""}
+                    onDeclare={onSetCrop} />
 
       <fieldset className="analyze-set">
         <legend>{t("analyze.title")}</legend>
@@ -133,6 +178,15 @@ export function FieldDetail({ field, pending, choice, onChoose, onAnalyze,
       <p className="muted">
         {t("zones.summary", { ha: ha(total), z: ha(zoned),
                               free: ha(Math.max(0, total - zoned)) })}</p>
+      {onAddZones && field.zones.length === 0 && split !== "loading" &&
+        (field.cropSplit || split === "unavailable") && (
+
+        <div className="crop-split">
+          <button onClick={splitByCrop}>{st.go}</button>
+          <span className="muted">{st.hint}</span>
+        </div>)}
+      {status && (
+        <p role="status" className="muted">{st[status]}</p>)}
       {field.zones.length > 0 && (
         <ul className="zone-list">
           {field.zones.map((z, i) => (
@@ -149,6 +203,7 @@ export function FieldDetail({ field, pending, choice, onChoose, onAnalyze,
               <button className="link-btn danger"
                       onClick={() => onRemoveZone(z.id)}>
                 {t("zones.remove")}</button>
+              <DetectedCrop geom={z.geom} />
             </li>))}
         </ul>)}
       {pending ? (

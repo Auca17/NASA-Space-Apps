@@ -21,13 +21,14 @@ export async function fetchJson<T>(url: string): Promise<T | null> {
   }
 }
 
-export async function postJson<T>(path: string, body: unknown):
+export async function postJson<T>(path: string, body: unknown, signal?: AbortSignal):
     Promise<T | null> {
   try {
     const r = await fetch(apiUrl(path), {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(body),
+      signal,
     });
     if (!r.ok) return null;
     return (await r.json()) as T;

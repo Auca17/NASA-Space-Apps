@@ -5,19 +5,37 @@ import type {
   MetaJson, GlobeShard, CalShard, DailyShard, RiskShard,
   LiveResponse, DiagnoseResponse, RotationsResponse,
   ExplainResponse, RotationEntry, CropEntry, CaseEntry, RiskCell,
-  OrinValidation, OrinLots,
+  OrinValidation, OrinLots, MoistureResult, CropDetection, CropZones,
+  CurrentCrop,
 } from "./types";
 
-export const meta = () => fetchJson<MetaJson>(dataUrl("meta.json"));
+function cachedByKey<T>(load: (key: string) => Promise<T | null>, max: number) {
+  const cache = new Map<string, { expires: number; value: Promise<T | null> }>();
+  return (key: string) => {
+    const entry = cache.get(key);
+    if (entry && entry.expires > Date.now()) return entry.value;
+    cache.delete(key);
+    const value = load(key).then((data) => {
+      if (!data && cache.get(key)?.value === value) cache.delete(key);
+      return data;
+    });
+    cache.set(key, { expires: Date.now() + 10 * 60_000, value });
+    if (cache.size > max) cache.delete(cache.keys().next().value!);
+    return value;
+  };
+}
 
-export const globeMonth = (yyyyMm: string) =>
-  fetchJson<GlobeShard>(dataUrl(`globe/${yyyyMm}.json`));
+const loadMeta = cachedByKey(() => fetchJson<MetaJson>(dataUrl("meta.json")), 1);
+export const meta = () => loadMeta("meta");
 
-export const fireCal = (r2: string) =>
-  fetchJson<CalShard>(dataUrl(`fire/cal/${r2}.json`));
+export const globeMonth = cachedByKey((yyyyMm) =>
+  fetchJson<GlobeShard>(dataUrl(`globe/${yyyyMm}.json`)), 8);
 
-export const fireDaily = (r2: string) =>
-  fetchJson<DailyShard>(dataUrl(`fire/daily/${r2}.json`));
+export const fireCal = cachedByKey((r2) =>
+  fetchJson<CalShard>(dataUrl(`fire/cal/${r2}.json`)), 8);
+
+export const fireDaily = cachedByKey((r2) =>
+  fetchJson<DailyShard>(dataUrl(`fire/daily/${r2}.json`)), 4);
 
 export const riskShard = (r2: string) =>
   fetchJson<RiskShard>(dataUrl(`risk/${r2}.json`));
@@ -26,9 +44,9 @@ export const analogsShard = (r2: string) =>
   fetchJson<{ cells: Record<string, unknown> }>(
     dataUrl(`field/analogs/${r2}.json`));
 
-export const gridShard = (r2: string) =>
+export const gridShard = cachedByKey((r2) =>
   fetchJson<{ cells: Record<string, unknown> }>(
-    dataUrl(`field/grid/${r2}.json`));
+    dataUrl(`field/grid/${r2}.json`)), 24);
 
 export const apiFieldCatalog = () =>
   fetchJson<{ rotations: RotationEntry[]; crops: CropEntry[] }>(
@@ -91,8 +109,62 @@ export async function apiLiveResult(window: string,
   }
 }
 
-export function apiDiagnose(body: unknown) {
-  return postJson<DiagnoseResponse>("/api/field/diagnose", body);
+export async function apiDiagnose(body: unknown, signal?: AbortSignal):
+  Promise<{ diagnosis: DiagnoseResponse | null; problem?: string }> {
+  try {
+    const response = await fetch(apiUrl("/api/field/diagnose"), {
+      method: "POST", body: JSON.stringify(body), signal,
+      headers: { "Content-Type": "application/json" },
+    });
+    if (response.ok) return { diagnosis: await response.json() as DiagnoseResponse };
+    if (response.status === 400) {
+      const error = await response.json() as { error?: string; detail?: string };
+      return { diagnosis: null, problem: error.detail?.includes("area must") ? "area"
+        : error.error === "invalid_polygon" ? "polygon" : "invalid" };
+    }
+  } catch {
+    // The session may have been cancelled or the connection unavailable.
+  }
+  return { diagnosis: null };
+}
+
+export function apiMoisture(body: unknown, signal: AbortSignal) {
+  return postJson<MoistureResult>("/api/field/moisture-zones", body, signal);
+}
+
+const cropCache = new Map<string, Promise<CropDetection | null>>();
+/** Crop detected automatically for a parcel; cached per geometry so every
+ * panel that shows the same parcel shares one request. Failures are not
+ * cached, so a later render retries. */
+export function apiCrop(body: unknown): Promise<CropDetection | null> {
+  const key = JSON.stringify(body);
+  let hit = cropCache.get(key);
+  if (!hit) {
+    hit = postJson<CropDetection>("/api/field/crop", body);
+    cropCache.set(key, hit);
+    hit.then((r) => { if (!r) cropCache.delete(key); });
+    if (cropCache.size > 200) cropCache.delete(cropCache.keys().next().value!);
+  }
+  return hit;
+}
+
+const currentCache = new Map<string, Promise<CurrentCrop | null>>();
+/** What is on the field now (slow: reads several Sentinel-2 dates), shared
+ * by the automatic split and the panel; failures are retried later. */
+export function apiCurrentCrop(body: unknown): Promise<CurrentCrop | null> {
+  const key = JSON.stringify(body);
+  let hit = currentCache.get(key);
+  if (!hit) {
+    hit = postJson<CurrentCrop>("/api/field/current-crop", body);
+    currentCache.set(key, hit);
+    hit.then((r) => { if (!r || r.status === "unavailable") currentCache.delete(key); });
+    if (currentCache.size > 100) currentCache.delete(currentCache.keys().next().value!);
+  }
+  return hit;
+}
+
+export function apiCropZones(body: unknown) {
+  return postJson<CropZones>("/api/field/crop-zones", body);
 }
 
 export function apiRotations(body: unknown) {

@@ -16,6 +16,7 @@ from datetime import date, timedelta
 
 import h3
 import httpx
+from shapely.geometry import LinearRing
 from fastapi import APIRouter, Request
 from fastapi.responses import JSONResponse
 
@@ -32,7 +33,7 @@ from ..services.infiltration import (infiltration_class,
 from ..services.et0 import (METHOD_LABEL, et0_series,
                             series_is_masked)
 from ..services.knowledge import KNOWLEDGE
-from .field import (_json_body, _err, _self_intersects, parse_plot,
+from .field import (json_object, _err, parse_plot,
                     days_per_year, frost_free_window,
                     rain_monthly_mm, monthly_sum_clim,
                     temp_adjust_for, DEGRADED_REASON, EVLAND_MIN)
@@ -101,7 +102,7 @@ def _rings_ok(geom: dict, code: str = "invalid_polygon"):
                    for i in range(n)):
                 return None, _err(
                     code, "polygon crosses the antimeridian")[1]
-            if _self_intersects(ring):
+            if not LinearRing(ring).is_simple:
                 return None, _err(code, "polygon self-intersects")[1]
             rings.append(ring)
     if not rings:
@@ -841,9 +842,9 @@ def template_summary(parcels: list[dict], nearby_res: dict,
 
 @router.post("/api/field/parcels")
 async def parcels(request: Request):
-    body, err = await _json_body(request)
-    if err:
-        return err
+    body = await json_object(request)
+    if body is None:
+        return _err("invalid_input", "body must be a JSON object")[1]
     lang = "en" if body.get("lang") == "en" else "es"
 
     boundary = body.get("boundary")
@@ -853,10 +854,14 @@ async def parcels(request: Request):
     parsed, err = parse_plot({"polygon": boundary})
     if err:
         return err
-    (clat, clon), b_area, r5s, r6s, bbox = parsed
+    (clat, clon), b_area, r5s, r6s, _bgeom = parsed
     bgeom = geo.to_polygon(boundary)
     if bgeom is None or bgeom.is_empty:
         return _err("invalid_boundary", "boundary polygon invalid")[1]
+    bbox = bgeom.bounds  # (west, south, east, north)
+    # r5s/r6s are {cell: weight} dicts (cell_weights): the first key is
+    # the largest covered cell — the fallback covers sub-cell plots.
+    r6_rep = next(iter(r6s), h3_r6(clat, clon))
 
     plist = body.get("parcels")
     if not isinstance(plist, list) or not 1 <= len(plist) <= MAX_PARCELS:
@@ -951,13 +956,13 @@ async def parcels(request: Request):
                 for p in items], return_exceptions=True),
             "grids": asyncio.gather(*[
                 src.json_shard(clat, clon, f"field/grid/{r2}.json",
-                               r6s[0], f"grid_{r2}")
+                               r6_rep, f"grid_{r2}")
                 for r2 in r2s], return_exceptions=True),
             "risks": asyncio.gather(*[
                 risk_shard(r2) for r2 in r2s], return_exceptions=True),
             "analogs": asyncio.gather(*[
                 src.json_shard(clat, clon, f"field/analogs/{r2}.json",
-                               r6s[0], f"analogs_{r2}")
+                               r6_rep, f"analogs_{r2}")
                 for r2 in r2s], return_exceptions=True),
             "firms": (firms.fetch_all(map_key, fbox, "72h")
                       if map_key else asyncio.sleep(0, result=None)),

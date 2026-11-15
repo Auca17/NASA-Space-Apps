@@ -18,7 +18,7 @@ class TTLCache:
     entries are purged and the oldest evicted past MAX_ENTRIES instead
     of growing without limit."""
 
-    MAX_ENTRIES = 4096
+    MAX_ENTRIES = 384
 
     def __init__(self) -> None:
         self._store: dict = {}

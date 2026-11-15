@@ -18,6 +18,7 @@ import {
 import { groupByShard } from "../../domain/h3area";
 import {
   presentRisk, emergencyText, riskReasonText, type RiskView,
+  type RiskCell,
 } from "../../domain/risk";
 import { EmergencyBlock } from "../emergency/EmergencyBlock";
 import { viridis, css } from "../../domain/colors";
@@ -65,6 +66,7 @@ export function AreaPanel({ lat, lon, cells, open, onClose, country,
 }) {
   const { t, lang } = useT();
   const [meta, setMeta] = useState<MetaJson | null>(null);
+  const selection = `${lat},${lon}`;
   /** B1: a fetch failure is not "no data" — keep the states apart. */
   const [riskStatus, setRiskStatus] =
     useState<"loading" | "error" | "empty" | "data">("loading");
@@ -73,10 +75,17 @@ export function AreaPanel({ lat, lon, cells, open, onClose, country,
   const [riskTick, setRiskTick] = useState(0);
   /** ISO A2 from /api/risk — preferred over the app's geolocated guess. */
   const [riskCountry, setRiskCountry] = useState<string | null>(null);
-  const [cal, setCal] = useState<{ months: string[]; values: number[] } | null>(null);
-  const [sem, setSem] = useState<SemaphoreResult | null>(null);
-  /** Day the semaphore window ends on (today when it was computed). */
-  const [semEnd, setSemEnd] = useState<string | null>(null);
+  const [riskData, setRiskData] = useState<{ selection: string; value: RiskCell | null } | null>(null);
+  const riskCell = riskData?.selection === selection ? riskData.value : null;
+  const [calendarData, setCalendarData] = useState<{
+    selection: string; value: { months: string[]; values: number[] } | null;
+  } | null>(null);
+  const [semaphoreData, setSemaphoreData] = useState<{
+    selection: string; value: SemaphoreResult | null; end: string;
+  } | null>(null);
+  const cal = calendarData?.selection === selection ? calendarData.value : null;
+  const sem = semaphoreData?.selection === selection ? semaphoreData.value : null;
+  const semEnd = semaphoreData?.selection === selection ? semaphoreData.end : null;
   const [season, setSeason] = useState(false);
   const [anomalies, setAnomalies] = useState(false);
   const [picked, setPicked] = useState<string | null>(null);
@@ -95,8 +104,10 @@ export function AreaPanel({ lat, lon, cells, open, onClose, country,
       if (!r.ok) {
         // never leave the previous point's risk on screen after a failure
         setRisk(null); setRiskCountry(null); setRiskStatus("error");
+        setRiskData({ selection, value: null });
         return;
       }
+      setRiskData({ selection, value: r.data });
       if (r.data) {
         setRisk(presentRisk(r.data));
         setRiskCountry(r.data.country ?? null);
@@ -107,34 +118,42 @@ export function AreaPanel({ lat, lon, cells, open, onClose, country,
         setRiskStatus("empty");
       }
     });
-    (async () => {
-      // cal first (small): renders the calendar without waiting on the
-      // multi-MB daily shards; everything fetched in parallel.
-      const cals = (await Promise.all(shards.map(fireCal)))
-        .filter((c): c is CalShard => c !== null);
-      if (dead) return;
-      if (!cals.length) { setCal(null); } else {
-        setCal(aggregateMonthly(cals, cellSet));
-      }
-      if (!meta) return;
-      const dailies = (await Promise.all(shards.map(fireDaily)))
-        .filter((d): d is DailyShard => d !== null);
-      if (dead || !dailies.length) return;
-      const end = new Date().toISOString().slice(0, 10);
-      const s = await runSemaphore({
-        shards: dailies, cells, endDate: end,
-        cfg: {
-          windowDays: meta.semaphore.window_days,
-          categories: meta.semaphore.categories,
-          ratioMinMedian: meta.semaphore.ratio_min_median,
-          baselineStart: `${meta.baseline.start}-01`,
-          baselineEnd: `${meta.baseline.end}-28`,
-        },
-      });
-      if (!dead) { setSem(s); setSemEnd(end); }
-    })();
     return () => { dead = true; };
-  }, [open, lat, lon, cells, cellSet, shards, meta, riskTick]);
+  }, [open, lat, lon, selection, riskTick]);
+
+  useEffect(() => {
+    if (!open) return;
+    let active = true;
+    Promise.all(shards.map(fireCal)).then((rows) => {
+      if (!active) return;
+      const cals = rows.filter((c): c is CalShard => c !== null);
+      setCalendarData({ selection, value: cals.length ? aggregateMonthly(cals, cellSet) : null });
+    });
+    return () => { active = false; };
+  }, [open, selection, cellSet, shards]);
+
+  useEffect(() => {
+    if (!open || !meta) return;
+    let active = true;
+    const end = new Date().toISOString().slice(0, 10);
+    const cfg = {
+      windowDays: meta.semaphore.window_days,
+      categories: meta.semaphore.categories,
+      ratioMinMedian: meta.semaphore.ratio_min_median,
+      baselineStart: `${meta.baseline.start}-01`,
+      baselineEnd: `${meta.baseline.end}-28`,
+    };
+    Promise.all(shards.map(fireDaily)).then(async (rows) => {
+      if (!active) return;
+      const dailies = rows.filter((d): d is DailyShard => d !== null);
+      const value = dailies.length && dailies.length === shards.length
+        ? await runSemaphore({ shards: dailies, cells, endDate: end, cfg }) : null;
+      if (active) setSemaphoreData({ selection, value, end });
+    }).catch(() => {
+      if (active) setSemaphoreData({ selection, value: null, end });
+    });
+    return () => { active = false; };
+  }, [open, selection, cells, shards, meta]);
 
   const calMatrix = useMemo(() => {
     if (!cal) return null;
@@ -143,7 +162,8 @@ export function AreaPanel({ lat, lon, cells, open, onClose, country,
   }, [cal, season]);
 
   useEffect(() => {
-    if (!barsRef.current || !calMatrix) return;
+    if (!barsRef.current) return;
+    if (!calMatrix) { barsRef.current.replaceChildren(); return; }
     const totals = [...rowTotals(calMatrix).entries()]
       .map(([year, n]) => ({ year, n }));
     barsRef.current.replaceChildren(Plot.plot({
@@ -175,7 +195,7 @@ export function AreaPanel({ lat, lon, cells, open, onClose, country,
             ? t("sem.noBaseline")
             : t("sem.percentile", { p: sem.percentile })))
     : "";
-  const effCountry = riskCountry ?? country;
+  const effCountry = riskCell?.country ?? riskCountry ?? country;
   const riskHigh = risk ? ["alto", "muy_alto"].includes(risk.cat) : false;
 
   return (
@@ -227,10 +247,18 @@ export function AreaPanel({ lat, lon, cells, open, onClose, country,
                   <li key={r}>{riskReasonText(r, t)}</li>)}</ul>
               </div>)}
           </>)}
+        {riskCell?.generated_at && riskCell.valid_until && <p className="muted">
+          {t("risk.period", { start: new Date(riskCell.generated_at).toLocaleDateString(lang),
+            end: new Date(riskCell.valid_until).toLocaleDateString(lang) })}
+        </p>}
         <p className="notice">{t("panel.disclaimer")}<br />
           {emergencyText(effCountry, t)}</p>
       </Card>
 
+      {semaphoreData?.selection === selection && !sem && <Card
+        title={t("panel.semaphore", { d: windowDays })}>
+        <p className="muted">{t("panel.noData")}</p>
+      </Card>}
       {(riskHigh || sem?.category === "extremo") && (
         <EmergencyBlock country={effCountry}
                         mapCenter={{ lat, lon }}
@@ -315,7 +343,7 @@ export function AreaPanel({ lat, lon, cells, open, onClose, country,
               `fuegos_${lat.toFixed(2)}_${lon.toFixed(2)}.csv`,
               toCsv(cal))}>
             {t("csv.download")}</button>
-          {shards.length === 1 && country === "AR" && (
+          {shards.length === 1 && effCountry === "AR" && (
             <p><a href={pointsCsvUrl(shards[0],
                 new Date().getFullYear())} download>
               {t("csv.rawPoints")}</a></p>)}

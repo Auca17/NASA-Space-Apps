@@ -109,6 +109,8 @@ export function LiveControls({ globe, country }: {
 
   const time = (d: Date) => d.toLocaleTimeString(lang === "en" ? "en" : "es",
     { hour: "2-digit", minute: "2-digit" });
+  const stamp = (d: string) => new Date(d).toLocaleString(lang,
+    { dateStyle: "short", timeStyle: "short" });
 
   // Task 26: a point detection within NEAR_KM of the reference (map
   // centre / reticle) opens the emergency block with distance, compass
@@ -152,6 +154,10 @@ export function LiveControls({ globe, country }: {
       </div>
       <p className={`live-status${state.kind === "error" ? " err" : ""}`}
          role="status" aria-live="polite">{msg}</p>
+      {done?.body.updated_at && <p className="muted">
+        {t("live.sourceUpdated", { at: stamp(done.body.updated_at) })}
+        {done.body.latest_observation && <> · {t("live.lastObservation", { at: stamp(done.body.latest_observation) })}</>}
+      </p>}
       {state.kind === "error" && (
         <button onClick={() => load()}>{t("live.retry")}</button>)}
       {state.kind === "done" && state.sum.failed.length > 0 && (

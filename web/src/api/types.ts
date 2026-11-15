@@ -57,6 +57,8 @@ export interface Card {
   /** Scenario present: unmodified baseline value + numeric delta. */
   baseline_value?: number | string | null;
   delta?: number;
+  generated_at?: string;
+  valid_until?: string;
   /** fire_weather card: single INTA stop conditions met (last 3 days). */
   stop_conditions?: string[];
   stop_detail?: Record<string, string>;
@@ -97,7 +99,10 @@ export interface DiagnoseResponse {
   h3_r5: string[];
   h3_r6: string[];
   cards: Card[];
+  coverage?: { available_cards: number; total_cards: number; comparable: boolean };
+  terrain_coverage?: number | null;
   calendar: { months: string[]; rows: CalendarRow[] };
+  baseline?: Pick<DiagnoseResponse, "cards" | "calendar">;
   measures?: Measure[];
   measures_gaps?: string[];
   /** Climate scenario applied to the daily series (echoed). */
@@ -112,6 +117,19 @@ export interface DiagnoseResponse {
   degraded?: boolean;
   degraded_reason?: string;
 }
+
+export type MoistureKind = "dry" | "middle" | "wet" | "missing";
+type Coordinate = [number, number];
+export interface MoistureZone {
+  kind: MoistureKind;
+  ha: number;
+  geometry: { type: "Polygon"; coordinates: Coordinate[][] } |
+            { type: "MultiPolygon"; coordinates: Coordinate[][][] };
+}
+export type MoistureResult = { status: "no_detail" | "unavailable" } | {
+  status: "available"; coverage: number; date: string; resolution_m: number;
+  zones: MoistureZone[];
+};
 
 export interface Strategy {
   id: string;
@@ -225,3 +243,40 @@ export interface OrinLots {
     properties: OrinLotProps;
   }[];
 }
+
+/** POST /api/field/crop — crop detected per campaign (INTA MNC). */
+export type CropSeason = {
+  season: "summer" | "winter";
+  campaign: string;
+  status: "crop" | "fallow" | "non_agricultural" | "no_coverage" | "unavailable";
+  crop: { id: string; es: string; en: string } | null;
+  /** share of the classified pixels that voted for this class */
+  share: number | null;
+  /** share of the parcel with a known class */
+  coverage: number | null;
+};
+export type CropDetection = {
+  source: string; source_url: string; resolution_m: number;
+  seasons: CropSeason[];
+};
+
+/** POST /api/field/crop-zones — the field split into one zone per crop. */
+export type CropZones = {
+  status: "available" | "no_coverage" | "unavailable" | "no_detail";
+  season: "summer" | "winter"; campaign: string;
+  source: string; source_url: string; resolution_m: number;
+  zones: { crop: { id: string; es: string; en: string }; ha: number;
+           geometry: { type: "Polygon" | "MultiPolygon"; coordinates: unknown } }[];
+};
+
+/** POST /api/field/current-crop — what is on the field now (Sentinel-2). */
+export type CurrentCropZone = {
+  class: { id: string; es: string; en: string; short_es: string; short_en: string };
+  kind: "crop" | "fallow" | "perennial"; ha: number; share: number;
+  geometry: { type: "Polygon" | "MultiPolygon"; coordinates: unknown };
+};
+export type CurrentCrop = {
+  status: "available" | "no_detail" | "no_coverage" | "unavailable";
+  source: string; resolution_m: number; season: string;
+  as_of: string | null; zones: CurrentCropZone[];
+};

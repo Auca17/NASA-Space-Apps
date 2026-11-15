@@ -341,7 +341,8 @@ def crop_viable(crop: Crop, diag: dict, constraints: dict,
     if constraints.get("livestock") is False and crop.forage:
         reasons.append("cultivo exclusivamente forrajero")
     markets = constraints.get("markets") or []
-    if markets and crop.market_ar == "low" and crop.id not in markets:
+    if crop.market_ar == "low" and (constraints.get("limited_market") is True
+                                    or (markets and crop.id not in markets)):
         reasons.append("sin mercado local definido")
     return reasons
 
@@ -878,7 +879,8 @@ def explain(rotations_response: dict) -> dict:
             b = s.get("benefits", {})
             deltas = [f"{INDICATOR_LABEL.get(k, k)} {v:+g}"
                       for k, v in b.items()
-                      if isinstance(v, (int, float)) and v]
+                      if isinstance(v, (int, float)) and v
+                      and k not in {"water_balance", "carbon", "burns_avoided"}]
             why = s.get("why", "")
             risk = (s.get("risks") or [""])[0]
             text = (f"{name}: {why} "

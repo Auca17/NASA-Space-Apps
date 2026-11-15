@@ -16,7 +16,7 @@ export function FieldPicker({ draw, points, onPick, onDemo, onFinish,
                               fieldsCount = 0, context, freeError = false,
                               zoomLow = false, onZoomIn = () => {},
                               demoLots = [], movingMap = false, onToggleMove,
-                              onPointCoords }: {
+                              mapUnavailable = false, onPointCoords }: {
   draw: DrawMode;
   points: number;
   onPick: (m: "draw" | "point" | "free") => void;
@@ -28,7 +28,7 @@ export function FieldPicker({ draw, points, onPick, onDemo, onFinish,
   onUndo: () => void;
   onCancel: () => void;
   /** Center the map on a place (current location or search hit). */
-  onGo: (lat: number, lon: number, precise?: boolean) => void;
+  onGo: (lat: number, lon: number, precise?: boolean, accuracy?: number) => void;
   onFields?: () => void;
   fieldsCount?: number;
   /** Shown on top while drawing something else than a field (a zone). */
@@ -40,6 +40,7 @@ export function FieldPicker({ draw, points, onPick, onDemo, onFinish,
   onZoomIn?: () => void;
   movingMap?: boolean;
   onToggleMove?: () => void;
+  mapUnavailable?: boolean;
 }) {
   const { t } = useT();
   const [expanded, setExpanded] = useState(true);
@@ -156,8 +157,8 @@ export function FieldPicker({ draw, points, onPick, onDemo, onFinish,
         <button type="button" onClick={onFields}>{t("fields.open", { n: fieldsCount })}</button>
       </div>
       <div id="field-chooser-options" hidden={!expanded}>
-        {zoomLow ? <PlaceFinder onGo={onGo} /> : finder}
-        <div className="row">
+        {zoomLow || mapUnavailable ? <PlaceFinder onGo={onGo} /> : finder}
+        {!mapUnavailable && <><div className="row">
           <button className="primary" onClick={() => onPick("draw")}>{t("field.draw")}</button>
           {zoomDetail}
         </div>
@@ -175,7 +176,8 @@ export function FieldPicker({ draw, points, onPick, onDemo, onFinish,
             </li>
           </ul>
           {onPointCoords && <CoordForm onSubmit={onPointCoords} t={t} />}
-        </details>
+        </details></>}
+        {mapUnavailable && onPointCoords && <CoordForm onSubmit={onPointCoords} t={t} />}
         <details className="field-examples">
           <summary>{t("field.examples")}</summary>
           <div className="row">

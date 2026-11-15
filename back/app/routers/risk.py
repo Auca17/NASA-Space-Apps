@@ -3,8 +3,11 @@
 from fastapi import APIRouter, Query
 from fastapi.responses import JSONResponse
 
-from ..h3util import h3_r2, h3_r5
+import h3
+
+from ..h3util import h3_r5
 from ..services.data import risk_shard
+from ..services.risk_validity import risk_dates
 
 router = APIRouter()
 
@@ -26,18 +29,19 @@ async def risk(lat: float = Query(...), lon: float = Query(...)):
             status_code=400,
             content={"error": "invalid_point",
                      "detail": "lat -90..90, lon -180..180"})
-    r5, r2 = h3_r5(lat, lon), h3_r2(lat, lon)
+    r5 = h3_r5(lat, lon)
+    r2 = h3.cell_to_parent(r5, 2)
     shard = await risk_shard(r2)
     if shard is None:
         return _not_found(r5)
     cell = shard.get("cells", {}).get(r5)
     if cell is None:
         return _not_found(r5)
+    dates = risk_dates(shard)
     from ..services.measures import evaluate
-    from ..services.georef import country_at
-    msr = evaluate({"risk_cat": cell.get("cat")})
+    msr = evaluate({"risk_cat": cell.get("cat")}) if dates["current"] else {}
+    from ..services.georef import zone_at
     return JSONResponse(
-        {**cell, "h3_r5": r5, "generated_at": shard.get("generated_at"),
-         "country": (country_at(lat, lon) or {}).get("iso2"),
+        {**cell, "h3_r5": r5, **dates, "country": zone_at(lat, lon)["country"],
          **msr},
         headers={"Cache-Control": CACHE_CONTROL})
