@@ -119,4 +119,10 @@ export const LIMITATIONS: { es: string; en: string }[] = [
         + "histórica, no pronósticos.",
     en: "Climate scenarios are simple scalings of the historical "
         + "series, not forecasts." },
+  { es: "Una detección satelital no es un incendio confirmado y llega "
+        + "con horas de demora: ante fuego o humo, llamá a emergencias "
+        + "sin esperar a la app.",
+    en: "A satellite detection is not a confirmed fire and arrives "
+        + "hours late: if you see fire or smoke, call emergency "
+        + "services without waiting for the app." },
 ];

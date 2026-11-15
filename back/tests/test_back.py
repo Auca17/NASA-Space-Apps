@@ -67,6 +67,22 @@ async def test_live_merges_filters_and_reports_failure(monkeypatch):
 
 
 @respx.mock
+async def test_live_country_of_bbox_center(monkeypatch):
+    """Task 26: `country` is the iso2 of the *unexpanded* bbox centre so
+    the front can pick emergency numbers; None when it is not resolvable."""
+    monkeypatch.setenv("FIRMS_MAP_KEY", "K")
+    for s in ["VIIRS_NOAA20_NRT", "VIIRS_NOAA21_NRT", "VIIRS_SNPP_NRT",
+              "MODIS_NRT"]:
+        respx.get(url__regex=rf"{FIRMS}/K/{s}/.*").respond(
+            200, text=EMPTY_CSV)
+
+    # centre (-59.15, -28.55) = Corrientes, Argentina
+    r = await client().get("/api/live?bbox=-61.2,-29.8,-57.1,-27.3")
+    assert r.status_code == 200
+    assert r.json()["country"] == "AR"
+
+
+@respx.mock
 async def test_live_world_returns_cells(monkeypatch):
     monkeypatch.setenv("FIRMS_MAP_KEY", "K")
     respx.get(url__regex=rf"{FIRMS}/K/VIIRS_NOAA20_NRT/.*").respond(
@@ -172,6 +188,8 @@ async def test_risk_hit_and_404(monkeypatch):
     assert body["h3_r5"] == "85a963c3fffffff"
     assert body["p"] == 0.31
     assert body["generated_at"] == "2026-11-15T06:00:00Z"
+    # task 26: the offline Natural Earth lookup tags the point's country
+    assert body["country"] == "AR"
     assert r.headers["Cache-Control"] == "public, s-maxage=3600"
 
     # Same shard, but a res-5 cell the shard does not publish -> 404

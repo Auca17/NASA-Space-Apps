@@ -31,22 +31,42 @@ function VarRow({ v, t, fmt }: { v: OrinVariable; t: T;
           <i className="cdot" aria-hidden="true" />
           {t(`orin.q.${v.quality}`)}
         </span>
+        {v.n < 5 && (
+          <span className="badge q-poor">{t("orin.few")}</span>)}
         <span className="qbar" aria-hidden="true">
           <i style={{ width: `${qualityRatio(v.quality) * 100}%` }} />
         </span>
       </div>
       <p>
         {v.satellite.dataset} · {v.satellite.resolution} —{" "}
-        {t("orin.sites", { n: v.field.n_sites, m: v.n })}
+        {v.reference_kind === "finer_satellite"
+          ? t("orin.finerRef", { ref: v.field.source })
+          : t("orin.sites", { n: v.field.n_sites, m: v.n })}
       </p>
-      <p>{t("orin.rmse", { v: fmt.format(v.rmse), u: v.unit })}
-        {bias && <>; {t(bias.key, bias.vars)}</>}</p>
-      {v.rmse_adjusted != null && (
-        <p>{t("orin.rmseAdj", {
-          v: fmt.format(v.rmse_adjusted), u: v.unit,
-          raw: fmt.format(v.rmse) })}</p>)}
-      {v.adjustment && (
-        <p className="muted">{v.adjustment}. {t("orin.adjNote")}</p>)}
+      {v.reference_kind === "finer_satellite" ? (
+        <>
+          <p>{t("orin.finerLead", {
+            ref: v.field.source,
+            ds: v.satellite.dataset, res: v.satellite.resolution,
+            v: fmt.format(v.rmse), u: v.unit })}
+            {bias && <> {t(bias.key, bias.vars)}</>}</p>
+          <p className="muted">{t("orin.finerLesson",
+            { res: v.satellite.resolution })}</p>
+        </>
+      ) : (
+        <>
+          <p>{t("orin.rmse", { v: fmt.format(v.rmse), u: v.unit })}
+            {bias && <>; {t(bias.key, bias.vars)}</>}</p>
+          {v.rmse_adjusted != null && (
+            <p>{t("orin.elevFix", {
+              raw: fmt.format(v.rmse), adj: fmt.format(v.rmse_adjusted),
+              u: v.unit })}
+              {v.bias_adjusted != null && <> {t("orin.elevBias", {
+                raw: fmt.format(v.bias), adj: fmt.format(v.bias_adjusted),
+                u: v.unit })}</>}</p>)}
+          {v.adjustment && (
+            <p className="muted">{v.adjustment}. {t("orin.adjNote")}</p>)}
+        </>)}
       <details className="orin-details">
         <summary>{t("orin.details")}</summary>
         <ul className="muted">

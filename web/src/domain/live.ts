@@ -4,13 +4,16 @@ import { latLngToCell } from "h3-js";
 
 type RawCell = [string, number, number?] | { h3: string; n: number };
 /** [lat, lon, frp, satellite, time] from the backend, or an object. */
-type RawPoint = [number, number, ...unknown[]] | { lat: number; lon: number };
+type RawPoint = [number, number, ...unknown[]] |
+  { lat: number; lon: number; acq_datetime?: string };
 export type LiveBody = {
   mode?: "points" | "cells";
   points?: RawPoint[];
   cells?: RawCell[];
   sources_failed?: string[];
   updated_at?: string;
+  /** ISO A2 of the bbox centre (Natural Earth), when resolved. */
+  country?: string | null;
 };
 
 export type LiveSummary = {
