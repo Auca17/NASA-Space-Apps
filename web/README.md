@@ -98,3 +98,14 @@ src/
 
 `APP_NAME` lives in `src/config.ts` and is deliberately undecided
 ("Nombre a definir") — do not hardcode a project name anywhere else.
+
+## Task 17/18/19 notes
+
+- "Datos y métodos" drawer: top-bar link (short label under 600 px),
+  content lives in `src/content/datasets.ts`.
+- Climate scenarios: diagnosis cards get `baseline_value`/`delta`;
+  rotations responses carry `baseline_order`; the layer selector in
+  fire mode ("Capas") draws Argentina res-5 metrics from
+  `field/grid` shards at zoom >= 5.
+- `/api/field/explain` returns `mode`; "ai" shows the AI label with a
+  link to Datos y métodos.

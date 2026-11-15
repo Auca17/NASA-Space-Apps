@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from "react";
+import { useRef, useState, type ReactNode } from "react";
 import { useT } from "../i18n";
 
 export function Card({ title, children, className = "" }:
@@ -11,14 +11,30 @@ export function Card({ title, children, className = "" }:
   );
 }
 
-/** Bottom sheet on mobile, side panel on desktop (CSS does the split). */
+/** Bottom sheet on mobile, side panel on desktop (CSS does the split).
+ *  Grab handle: tap or Enter/Space toggles, drag down collapses. */
 export function BottomSheet({ children, open }: {
     children: ReactNode; open: boolean }) {
   const { t } = useT();
+  const [collapsed, setCollapsed] = useState(false);
+  const drag = useRef<number | null>(null);
   if (!open) return null;
   return (
-    <aside className="panel" aria-label={t("ui.panel")}>
-      <span className="grab" aria-hidden="true" />
+    <aside className={`panel${collapsed ? " collapsed" : ""}`}
+           aria-label={t("ui.panel")}>
+      <button type="button" className="grab"
+              aria-expanded={!collapsed}
+              aria-label={t(collapsed ? "panel.expand"
+                                       : "panel.collapse")}
+              onClick={() => setCollapsed(!collapsed)}
+              onPointerDown={(e) => { drag.current = e.clientY; }}
+              onPointerMove={(e) => {
+                if (drag.current != null &&
+                    e.clientY - drag.current > 60) {
+                  setCollapsed(true); drag.current = null;
+                }
+              }}
+              onPointerUp={() => { drag.current = null; }} />
       <div className="panel-inner">{children}</div>
     </aside>
   );

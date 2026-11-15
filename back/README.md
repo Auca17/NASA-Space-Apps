@@ -228,3 +228,51 @@ engine uses the same `uncovered_burn_months` rule.
   days stay as dated context in `stop_detail`
   (`hay ... el 14 de noviembre` / `hubo ... hace 2 días`). Humidity
   keeps the "umbral por confirmar con INTA" note.
+
+## Climate scenarios (task 17A)
+
+`POST /api/field/diagnose` accepts an optional `scenario`:
+`{"rain_pct": -40..40, "temp_delta_c": -2..4}` (400 outside). The daily
+POWER series is scaled in memory before every derivation (rain x
+1+pct/100; T2M_MAX/MIN + delta). The POWER fetch itself stays cached as
+before. Each recomputed card gets `baseline_value` and a numeric
+`delta`; the response echoes `scenario`. `/api/field/rotations` adds
+`baseline_order` (ids ranked with the unmodified diagnosis) when the
+diagnosis carries a scenario, so the front can compare rankings.
+
+## Optional AI explanation (task 19)
+
+`POST /api/field/explain` keeps the template paragraphs and adds
+`mode`: `"ai"` or `"template"`. Provider is pluggable via env:
+
+| var | default | notes |
+|---|---|---|
+| `AI_PROVIDER` | `gemini` | `gemini` or `anthropic` |
+| `AI_MODEL` | `gemini-2.5-flash` | model id for the active provider |
+| `GEMINI_API_KEY` | — | Google AI Studio → "Get API key" (https://aistudio.google.com) |
+| `ANTHROPIC_API_KEY` | — | optional, only used when `AI_PROVIDER=anthropic` |
+
+Gemini calls `POST /v1beta/models/{model}:generateContent` with the key
+in the `x-goog-api-key` header (never in the URL),
+`generationConfig` `{temperature: 0, maxOutputTokens: 900,
+responseMimeType: "application/json"}`. On the first request it lists
+`/v1beta/models` once; if `AI_MODEL` is unavailable it picks the newest
+`flash` model supporting `generateContent` and logs the choice. Anthropic
+uses the Messages API (`x-api-key`, `max_tokens` 900, temperature 0).
+Both: 6 s timeout, 6 h in-process cache by input hash, any failure →
+template. Keys are never logged or sent to the browser.
+
+Privacy: the prompt only carries computed indicators, units, sources and
+generic crop/rotation ids — coordinates, polygons, province/place names,
+plot ids and Orin validation data are stripped before the request.
+
+Validation before showing anything (any failure -> template):
+- strict JSON `{"strategies":[{"id","text","cites"}]}`; every id must
+  exist in the request
+- every number in a paragraph must match an input value (rounding and
+  %/mm/days/h/kg/t-ha conversions tolerated)
+- every `cites` entry must exist in the input
+- blocklist: "garantiza", "seguro que", "siempre", "sin riesgo"
+
+Enable in Vercel: set `GEMINI_API_KEY` (and optionally `AI_PROVIDER` /
+`AI_MODEL`) in the project env vars.

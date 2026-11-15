@@ -4,7 +4,7 @@ import type { LiveBody } from "../domain/live";
 import type {
   MetaJson, GlobeShard, CalShard, DailyShard, RiskShard,
   LiveResponse, DiagnoseResponse, RotationsResponse,
-  ExplainResponse, RotationEntry, CropEntry, RiskCell,
+  ExplainResponse, RotationEntry, CropEntry, CaseEntry, RiskCell,
   OrinValidation, OrinLots,
 } from "./types";
 
@@ -33,6 +33,9 @@ export const gridShard = (r2: string) =>
 export const apiFieldCatalog = () =>
   fetchJson<{ rotations: RotationEntry[]; crops: CropEntry[] }>(
     apiUrl("/api/field/catalog"));
+
+export const knowledgeCases = () =>
+  fetchJson<{ cases: CaseEntry[] }>(dataUrl("knowledge/cases.json"));
 
 export const orinValidation = () =>
   fetchJson<OrinValidation>(dataUrl("orin/validation.json"));
@@ -77,6 +80,20 @@ export function apiDiagnose(body: unknown) {
 export function apiRotations(body: unknown) {
   return postJson<RotationsResponse>("/api/field/rotations", body);
 }
+
+export interface EcostressDemo {
+  note: string;
+  sites: Record<string, {
+    crop: string; bbox: [number, number, number, number];
+    n_scenes: number;
+    bias_c: number | null; rmse_c: number | null;
+    scenes: { date: string; lst_c: number; n_px: number;
+              power_t2m_max_c?: number }[];
+  }>;
+}
+
+export const ecostressDemo = () =>
+  fetchJson<EcostressDemo>(dataUrl("ecostress_demo.json"));
 
 export function apiExplain(body: unknown) {
   return postJson<ExplainResponse>("/api/field/explain", body);

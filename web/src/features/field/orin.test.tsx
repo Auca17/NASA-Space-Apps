@@ -59,6 +59,20 @@ describe("OrinCard", () => {
     expect(screen.getByText(/67 estaciones y 742 mediciones/))
       .toBeInTheDocument();
   });
+  it("shows raw and elevation-corrected metrics with the producer note", () => {
+    const real = data(false);
+    Object.assign(real.variables[0], {
+      rmse: 5.05, rmse_adjusted: 2.86, bias_adjusted: -0.72,
+      r_adjusted: 0.675,
+      adjustment: "Corrección por altura de 6,5 °C/km" });
+    render(<OrinCard data={real} t={t} fmt={fmt} />);
+    expect(screen.getByText(/se equivoca en promedio 5,1 °C/))
+      .toBeInTheDocument();
+    expect(screen.getByText(/Corregido por altura: 2,9 °C \(antes 5,1\)/))
+      .toBeInTheDocument();
+    expect(screen.getByText(/valles de montaña confirmá las heladas/))
+      .toBeInTheDocument();
+  });
   it("hides entirely when the file is missing", () => {
     const { container } = render(
       <OrinCard data={null} t={t} fmt={fmt} />);

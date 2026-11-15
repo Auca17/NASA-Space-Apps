@@ -43,11 +43,14 @@
       "water_mm_cycle": 575,
       "root_depth_cm": 95,
       "n_fixation": true,
-      "residue_t_ha": 3.4,
+      "residue_t_ha": 3.3,
+      "residue_note": "t de materia seca/ha por cosecha; ensayos CEI Barrow — valor por cosecha de ensayos con sus propios rindes",
       "forage": false,
       "market_ar": "high",
       "sources": [
         "FAO-33, Doorenbos & Kassam (1979), Yield response to water: requerimiento hídrico del ciclo (se usa el punto medio del rango): soja 450–700 mm",
+        "Ensayos CEI Barrow: rastrojo soja 3,30 t MS/ha por cosecha — fuente bibliográfica, pendiente de validación local (REVIEW.md)",
+        "gdd: depende del grupo de madurez y del fotoperíodo — sin valor local",
         "FAO-56, Allen et al. (1998), Crop evapotranspiration, tabla 22: profundidad radicular máxima (se usa el punto medio del rango): soja 0,6–1,3 m",
         "FAO ECOCROP (base de datos de requerimientos ecológicos de cultivos): tolerancias cualitativas",
         "MAGyP, Estimaciones Agrícolas (área, rinde y avance de siembra/cosecha por delegación)",
@@ -84,7 +87,7 @@
       "harvest": {
         "pampa_humeda": [
           "02-20",
-          "06-15"
+          "07-31"
         ],
         "nea": [
           "02-01",
@@ -99,18 +102,34 @@
           "05-31"
         ]
       },
+      "cycle_end": {
+        "pampa_humeda": "04-30"
+      },
       "gdd_base10": null,
+      "gdd_base_c": 8,
+      "gdd_flowering_to_maturity": [
+        600,
+        900
+      ],
       "frost_tolerance": "low",
       "drought_tolerance": "low",
       "heat_tolerance": "medium",
       "water_mm_cycle": 650,
+      "water_mm_observed": 487,
+      "water_observed_note": "el semiárido pampeano (INTA–FAUBA, 138 ensayos de secano)",
       "root_depth_cm": 135,
       "n_fixation": false,
-      "residue_t_ha": 7.5,
+      "residue_t_ha": 9.52,
+      "residue_note": "t de materia seca/ha por cosecha; ensayos CEI Barrow — valor por cosecha de ensayos con sus propios rindes",
       "forage": false,
       "market_ar": "high",
       "sources": [
         "FAO-33, Doorenbos & Kassam (1979), Yield response to water: requerimiento hídrico del ciclo (se usa el punto medio del rango): maíz 500–800 mm",
+        "INTA–FAUBA, 138 ensayos de secano en el semiárido pampeano: consumo observado maíz 487 mm (water_mm_observed; la referencia FAO sigue en water_mm_cycle)",
+        "Ensayos CEI Barrow: rastrojo maíz 9,52 t MS/ha por cosecha — fuente bibliográfica, pendiente de validación local (REVIEW.md)",
+        "INTA: grados-día base 8 °C (gdd_base_c); 600–900 grados-día de floración a madurez fisiológica (gdd_flowering_to_maturity) — fuente bibliográfica, pendiente de validación local",
+        "INTA Balcarce: cosecha tardía de maíz documentada junio–agosto (el grano seca lento tras madurez fisiológica); harvest pampa_humeda extendido a 07-31",
+        "cycle_end pampa_humeda 04-30: madurez fisiológica estimada desde siembras septiembre–diciembre y el rango 600–900 grados-día floración→madurez — estimado, validar",
         "FAO-56, Allen et al. (1998), Crop evapotranspiration, tabla 22: profundidad radicular máxima (se usa el punto medio del rango): maíz 1,0–1,7 m",
         "FAO ECOCROP (base de datos de requerimientos ecológicos de cultivos): tolerancias cualitativas",
         "MAGyP, Estimaciones Agrícolas (área, rinde y avance de siembra/cosecha por delegación)",
@@ -160,13 +179,18 @@
       "drought_tolerance": "medium",
       "heat_tolerance": "low",
       "water_mm_cycle": 550,
+      "water_mm_observed": 319,
+      "water_observed_note": "el semiárido pampeano (INTA–FAUBA, 138 ensayos de secano)",
       "root_depth_cm": 125,
       "n_fixation": false,
-      "residue_t_ha": 4.5,
+      "residue_t_ha": 4.62,
+      "residue_note": "t de materia seca/ha por cosecha; ensayos CEI Barrow — valor por cosecha de ensayos con sus propios rindes",
       "forage": false,
       "market_ar": "high",
       "sources": [
         "FAO-33, Doorenbos & Kassam (1979), Yield response to water: requerimiento hídrico del ciclo (se usa el punto medio del rango): trigo 450–650 mm",
+        "INTA–FAUBA, 138 ensayos de secano en el semiárido pampeano: consumo observado trigo 319 mm (water_mm_observed; la referencia FAO sigue en water_mm_cycle)",
+        "Ensayos CEI Barrow: rastrojo trigo 4,62 t MS/ha por cosecha — fuente bibliográfica, pendiente de validación local (REVIEW.md)",
         "FAO-56, Allen et al. (1998), Crop evapotranspiration, tabla 22: profundidad radicular máxima (se usa el punto medio del rango): trigo de primavera 1,0–1,5 m",
         "FAO ECOCROP (base de datos de requerimientos ecológicos de cultivos): tolerancias cualitativas",
         "MAGyP, Estimaciones Agrícolas (área, rinde y avance de siembra/cosecha por delegación)",
@@ -207,13 +231,18 @@
       "drought_tolerance": "high",
       "heat_tolerance": "medium",
       "water_mm_cycle": 800,
+      "water_mm_observed": 443,
+      "water_observed_note": "el semiárido pampeano (INTA–FAUBA, 138 ensayos de secano)",
       "root_depth_cm": 115,
       "n_fixation": false,
-      "residue_t_ha": 3.7,
+      "residue_t_ha": 3.74,
+      "residue_note": "t de materia seca/ha por cosecha; ensayos CEI Barrow — valor por cosecha de ensayos con sus propios rindes",
       "forage": false,
       "market_ar": "medium",
       "sources": [
         "FAO-33, Doorenbos & Kassam (1979), Yield response to water: requerimiento hídrico del ciclo (se usa el punto medio del rango): girasol 600–1000 mm",
+        "INTA–FAUBA, 138 ensayos de secano en el semiárido pampeano: consumo observado girasol 443 mm (water_mm_observed; la referencia FAO sigue en water_mm_cycle)",
+        "Ensayos CEI Barrow: rastrojo girasol 3,74 t MS/ha por cosecha — fuente bibliográfica, pendiente de validación local (REVIEW.md)",
         "FAO-56, Allen et al. (1998), Crop evapotranspiration, tabla 22: profundidad radicular máxima (se usa el punto medio del rango): girasol 0,8–1,5 m",
         "FAO ECOCROP (base de datos de requerimientos ecológicos de cultivos): tolerancias cualitativas",
         "MAGyP, Estimaciones Agrícolas (área, rinde y avance de siembra/cosecha por delegación)",
@@ -245,7 +274,7 @@
       "harvest": {
         "pampa_humeda": [
           "03-15",
-          "06-15"
+          "07-15"
         ],
         "nea": [
           "02-15",
@@ -256,6 +285,9 @@
           "07-15"
         ]
       },
+      "cycle_end": {
+        "pampa_humeda": "05-15"
+      },
       "gdd_base10": null,
       "frost_tolerance": "low",
       "drought_tolerance": "high",
@@ -263,11 +295,14 @@
       "water_mm_cycle": 550,
       "root_depth_cm": 150,
       "n_fixation": false,
-      "residue_t_ha": 6.1,
+      "residue_t_ha": 11.23,
+      "residue_note": "t de materia seca/ha por cosecha; ensayos CEI Barrow e INTA Manual de sorgo tabla 1 — valor por cosecha de ensayos con sus propios rindes",
       "forage": false,
       "market_ar": "medium",
       "sources": [
         "FAO-33, Doorenbos & Kassam (1979), Yield response to water: requerimiento hídrico del ciclo (se usa el punto medio del rango): sorgo 450–650 mm",
+        "INTA, Manual de sorgo, tabla 1: rastrojo sorgo 11,23 t MS/ha por cosecha — fuente bibliográfica, pendiente de validación local (REVIEW.md)",
+        "harvest pampa_humeda extendido a 07-15 (cosecha tardía tras madurez fisiológica); cycle_end pampa_humeda 05-15 — estimado, validar",
         "FAO-56, Allen et al. (1998), Crop evapotranspiration, tabla 22: profundidad radicular máxima (se usa el punto medio del rango): sorgo 1,0–2,0 m",
         "FAO ECOCROP (base de datos de requerimientos ecológicos de cultivos): tolerancias cualitativas",
         "MAGyP, Estimaciones Agrícolas (área, rinde y avance de siembra/cosecha por delegación)",
@@ -306,6 +341,7 @@
       "market_ar": "medium",
       "sources": [
         "Alberta Agriculture, Agri-Facts 'Crop water use and requirements' (2011): cebada 380–420 mm, colza 400–480 mm",
+        "INTA EEA Anguil: uso consuntivo de cebada 380–400 mm (julio–noviembre, valor compartido con trigo) — fuente bibliográfica, pendiente de validación local",
         "FAO-56, Allen et al. (1998), Crop evapotranspiration, tabla 22: profundidad radicular máxima (se usa el punto medio del rango): cebada 1,0–1,5 m",
         "FAO ECOCROP (base de datos de requerimientos ecológicos de cultivos): tolerancias cualitativas",
         "MAGyP, Estimaciones Agrícolas (área, rinde y avance de siembra/cosecha por delegación)",
@@ -389,6 +425,7 @@
       "market_ar": "medium",
       "sources": [
         "FAO-33, Doorenbos & Kassam (1979), Yield response to water: requerimiento hídrico del ciclo (se usa el punto medio del rango): algodón 700–1300 mm",
+        "water_mm_cycle 1000: sin valor local (la respuesta de revisión fue \"no sé\") — pendiente de validación local",
         "FAO-56, Allen et al. (1998), Crop evapotranspiration, tabla 22: profundidad radicular máxima (se usa el punto medio del rango): algodón 1,0–1,7 m",
         "FAO ECOCROP (base de datos de requerimientos ecológicos de cultivos): tolerancias cualitativas",
         "MAGyP, Estimaciones Agrícolas (área, rinde y avance de siembra/cosecha por delegación)",
@@ -454,6 +491,7 @@
       "root_depth_cm": 150,
       "n_fixation": true,
       "residue_t_ha": 0.0,
+      "root_carbon_note": "aporte de carbono por raíz y corona: sin valor, depende del manejo y de la duración de la pastura",
       "forage": true,
       "market_ar": "medium",
       "sources": [
@@ -461,7 +499,8 @@
         "FAO-56, Allen et al. (1998), Crop evapotranspiration, tabla 22: profundidad radicular máxima (se usa el punto medio del rango): alfalfa 1,0–2,0 m",
         "FAO ECOCROP (base de datos de requerimientos ecológicos de cultivos): tolerancias cualitativas",
         "MAGyP, Estimaciones Agrícolas (área, rinde y avance de siembra/cosecha por delegación)",
-        "residue_t_ha = 0,0: la biomasa aérea se retira por corte o pastoreo (ventana de 'cosecha' = período de cortes) — validar"
+        "residue_t_ha = 0,0: la biomasa aérea se retira por corte o pastoreo (ventana de 'cosecha' = período de cortes) — validar",
+        "root_carbon_note: el aporte de carbono por raíz y corona no tiene valor (depende del manejo y de la duración de la pastura) — sigue pendiente de validación local"
       ]
     },
     {
@@ -613,6 +652,7 @@
       "market_ar": "low",
       "sources": [
         "Alberta Agriculture, Agri-Facts 'Crop water use and requirements' (2011): cebada 380–420 mm, colza 400–480 mm",
+        "water_mm_cycle 440: sin valor local (la respuesta de revisión fue \"no sé\") — pendiente de validación local",
         "FAO-56, Allen et al. (1998), Crop evapotranspiration, tabla 22: profundidad radicular máxima (se usa el punto medio del rango): colza 1,0–1,5 m",
         "FAO ECOCROP (base de datos de requerimientos ecológicos de cultivos): tolerancias cualitativas",
         "MAGyP, Estimaciones Agrícolas (área, rinde y avance de siembra/cosecha por delegación)",
@@ -650,7 +690,9 @@
       "frost_tolerance": "medium",
       "drought_tolerance": "high",
       "heat_tolerance": "medium",
-      "water_mm_cycle": 268,
+      "water_mm_cycle": 300,
+      "water_mm_observed": 328,
+      "water_observed_note": "Córdoba (simulación CROPWAT-FAO)",
       "root_depth_cm": 80,
       "n_fixation": true,
       "residue_t_ha": 1.5,
@@ -658,6 +700,8 @@
       "market_ar": "medium",
       "sources": [
         "Zhang, Pala, Oweis & Harris (2000), Water use and water-use efficiency of chickpea and lentil in a Mediterranean environment, Aust. J. Agric. Res. 51: ET estacional media 268 mm",
+        "EEAOC (NOA): water_mm_cycle 268 → 300 mm — fuente bibliográfica, pendiente de validación local",
+        "CROPWAT-FAO, Córdoba: uso consuntivo simulado 328 mm (water_mm_observed) — fuente bibliográfica, pendiente de validación local",
         "FAO-56, Allen et al. (1998), Crop evapotranspiration, tabla 22: profundidad radicular máxima (se usa el punto medio del rango): garbanzo 0,6–1,0 m",
         "FAO ECOCROP (base de datos de requerimientos ecológicos de cultivos): tolerancias cualitativas",
         "MAGyP, Estimaciones Agrícolas (área, rinde y avance de siembra/cosecha por delegación)",

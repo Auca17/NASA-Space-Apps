@@ -4,7 +4,7 @@ import type { StyleSpecification, VectorSourceSpecification }
   from "maplibre-gl";
 
 const GIBS = "https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/" +
-  "BlueMarble_NextGeneration/default//GoogleMapsCompatible_Level8" +
+  "BlueMarble_NextGeneration/default/2004-08/GoogleMapsCompatible_Level8" +
   "/{z}/{y}/{x}.jpeg";
 
 /** OpenStreetMap street tiles: Blue Marble stops at zoom 8, so close up

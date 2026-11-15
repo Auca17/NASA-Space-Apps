@@ -2,6 +2,7 @@ import { Suspense, lazy, useRef, useState, useCallback, useEffect } from "react"
 import { useT } from "./i18n";
 import { APP_NAME, DEFAULT_VIEW, DEMO_PLOT, WORLD_VIEW } from "./config";
 import { Welcome } from "./features/welcome/Welcome";
+import { MethodsDrawer } from "./features/methods/MethodsDrawer";
 import { useGlobe, type GlobeHandle, type Shape } from "./features/globe/GlobeView";
 import { HistoricControls } from "./features/fire/HistoricControls";
 import { cellsInCircle } from "./domain/h3area";
@@ -95,6 +96,9 @@ export default function App() {
   const [fieldOpen, setFieldOpen] = useState(false);
   const [lots, setLots] = useState<OrinLots["features"]>([]);
   const [playingMonth, setPlayingMonth] = useState<string | null>(null);
+  const [methodsOpen, setMethodsOpen] = useState(false);
+  const [view, setView] = useState<{ lat: number; lon: number; zoom: number;
+    bbox: [number, number, number, number] } | null>(null);
   const country = useRef<string | null>(null);
   const globeRef = useRef<GlobeHandle | null>(null);
   const mapDiv = useRef<HTMLDivElement>(null);
@@ -106,8 +110,9 @@ export default function App() {
   const onGlobeReady = useCallback((h: GlobeHandle) => {
     globeRef.current = h;
     setGlobe(h);
-    h.onMove((lat, lon, z) => {
-      setZoom(z);
+    h.onMove((lat, lon, zoom, bbox) => {
+      setZoom(zoom);
+      setView({ lat, lon, zoom, bbox });
       if (modeRef.current === "fire") fireArea(lat, lon);
     });
     h.onClick((lat, lon) => {
@@ -503,6 +508,10 @@ export default function App() {
                   onClick={() => setMode("live")}>{t("nav.live")}</button>
         </nav>
         <div className="spacer" />
+        <button className="meth-link"
+                onClick={() => setMethodsOpen(true)}>
+          <span className="ml-long">{t("meth.link")}</span>
+          <span className="ml-short">{t("meth.short")}</span></button>
         <button className="lang-btn"
                 onClick={() => setLang(lang === "es" ? "en" : "es")}
                 aria-label="language">{t("nav.lang")}</button>
@@ -563,7 +572,8 @@ export default function App() {
           </div>)}
 
         {mode === "fire" &&
-          <HistoricControls globe={globe} onMonth={setPlayingMonth} />}
+          <HistoricControls globe={globe} onMonth={setPlayingMonth}
+                            view={view} />}
 
         {mode === "live" && (
           <Suspense fallback={null}>
@@ -646,8 +656,11 @@ export default function App() {
       {mode === "field" && (
         <Suspense fallback={null}>
           <FieldPanel target={target} open={fieldOpen}
+                      onMethods={() => setMethodsOpen(true)}
                       onClose={changePlot} onChangePlot={changePlot} />
         </Suspense>)}
+      <MethodsDrawer open={methodsOpen}
+                     onClose={() => setMethodsOpen(false)} />
     </div>
   );
 }

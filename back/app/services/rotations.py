@@ -57,6 +57,12 @@ CAUTIONS = json.loads((Path(__file__).with_name("cautions.json"))
 
 DISCLAIMER = ("Herramienta de apoyo: no reemplaza tu experiencia ni la de "
               "un agrónomo local.")
+# Shown when the "no sé" default rotation is used in NEA/NOA: the
+# typical-rotation evidence there is mixed (INTA, EEAOC), not validated
+# per subzone.
+TYPICAL_UNVALIDATED_GAP = (
+    "La rotación típica de esta zona no está validada con datos por "
+    "subzona; elegí la tuya si la conocés (fuentes: INTA, EEAOC)")
 PRIORITY_LABEL = {"water": "cuidar el agua", "soil": "mejorar el suelo",
                   "erosion": "reducir la erosión", "income": "el ingreso",
                   "forage": "producir forraje", "nitrogen": "el nitrógeno",
@@ -192,11 +198,17 @@ def _daily_rain_mm(diag: dict) -> list[float] | None:
 
 
 def _crop_rain(diag: dict, crop: Crop, zone: str | None) -> float | None:
-    """mm available during the crop cycle (standalone estimate)."""
+    """mm available during the crop cycle (standalone estimate).
+
+    The window ends at `cycle_end` (physiological maturity) when the
+    knowledge file has one — grain drying past maturity does not drink
+    water; `harvest` stays the real harvest date for bare soil etc.
+    """
     win = crop.window(zone)
     if not win:
         return None
-    return _window_rain(diag, _cycle_doys(win[0], win[2]))
+    end = crop.cycle_end_for(zone) or win[2]
+    return _window_rain(diag, _cycle_doys(win[0], end))
 
 
 def _window_rain(diag: dict, doys: set[int]) -> float | None:
@@ -236,7 +248,8 @@ def _abs_windows(rot: Rotation) -> list[tuple[int, int]]:
     return out
 
 
-def _seq_rain(diag: dict, rot: Rotation) -> \
+def _seq_rain(diag: dict, rot: Rotation,
+              zone: str | None = None) -> \
         tuple[list[float] | None, list[float] | None]:
     """(allocated rain mm per item, demand mm per item); None if no rain.
 
@@ -245,6 +258,9 @@ def _seq_rain(diag: dict, rot: Rotation) -> \
     demand (water_mm_cycle / cycle days). Perennial items (cycles of
     >=PERENNIAL_MIN_DAYS days, e.g. alfalfa years) stay out of the
     split and get the full annual rain against their annual demand.
+    Items of crops with a zone `cycle_end` drink only until
+    physiological maturity, not until the (possibly much later)
+    harvest date.
     """
     daily = _daily_rain_mm(diag)
     if daily is None:
@@ -253,6 +269,11 @@ def _seq_rain(diag: dict, rot: Rotation) -> \
     deflate = 0.9 if isinstance(sm, (int, float)) and sm < 0 else 1.0
     wins = _abs_windows(rot)
     seq = rot.sequence
+    for i, s in enumerate(seq):
+        ce = KNOWLEDGE.crops[s.crop].cycle_end_for(zone)
+        if ce:
+            a, b = wins[i]
+            wins[i] = (a, min(b, a + (_doy(ce) - _doy(s.start)) % 365))
     demands = [KNOWLEDGE.crops[s.crop].water_mm_cycle for s in seq]
     peren = [b - a + 1 >= PERENNIAL_MIN_DAYS for a, b in wins]
     per_day = [demands[i] / (wins[i][1] - wins[i][0] + 1)
@@ -291,8 +312,9 @@ def crop_viable(crop: Crop, diag: dict, constraints: dict,
     win = crop.window(zone)
     if not win:
         return [f"sin ventana de siembra para la zona {zone or 'desconocida'}"]
-    cyc = _cycle_doys(item.start, item.end) if item is not None \
-        else _cycle_doys(win[0], win[2])
+    ce = crop.cycle_end_for(zone)
+    cyc = _cycle_doys(item.start, ce or item.end) if item is not None \
+        else _cycle_doys(win[0], ce or win[2])
     if ff is not None and crop.frost_tolerance != "high":
         outside = cyc - ff
         if len(outside) > FROST_GRACE_DAYS:
@@ -324,7 +346,7 @@ def crop_viable(crop: Crop, diag: dict, constraints: dict,
 
 
 def rotation_viable(rot: Rotation, diag, constraints, zone, ff):
-    avails, _ = _seq_rain(diag, rot)
+    avails, _ = _seq_rain(diag, rot, zone)
     bad = {}
     for i, s in enumerate(rot.sequence):
         r = crop_viable(KNOWLEDGE.crops[s.crop], diag, constraints,
@@ -342,7 +364,7 @@ def indicators(rot: Rotation, diag: dict, zone: str | None,
     crops = [KNOWLEDGE.crops[s.crop] for s in rot.sequence]
     years = max(rot.years, 1)
 
-    avails, demands = _seq_rain(diag, rot)
+    avails, demands = _seq_rain(diag, rot, zone)
     need_mm = None
     if avails is not None and \
             (constraints or {}).get("irrigation") is True:
@@ -574,16 +596,42 @@ def _sections(rot: Rotation, ind: dict, cur_ind: dict,
     ev_analog = _analog_evidence(rot, analog)
     if ev_analog:
         evidence = evidence[:3] + [ev_analog]
+    # observed consumptive use (semiarid Pampa trials etc.) rides as
+    # evidence under the water_balance indicator when the crop appears
+    water_ev = []
+    for c in crops_unique(rot):
+        if c.water_mm_observed is not None:
+            water_ev.append({
+                "text": f"{c.id}: consumo observado en "
+                        f"{c.water_observed_note or 'ensayos locales'}: "
+                        f"{c.water_mm_observed:g} mm (referencia FAO: "
+                        f"{c.water_mm_cycle} mm)",
+                "indicator": "water_balance",
+                "source": c.water_observed_note or c.sources[0]})
+    # root/crown carbon of pastures is a declared knowledge gap
+    root_gaps = [f"{c.id}: {c.root_carbon_note}"
+                 for c in crops_unique(rot) if c.root_carbon_note]
     return {
         "why": _why(rot, is_current, priorities, diag, constraints or {}),
-        "evidence": evidence[:4],
+        "evidence": evidence[:4] + water_ev,
         "benefits": benefits,
-        "gaps": _gaps(diag, analog is None, extra_gaps)
+        "gaps": _gaps(diag, analog is None,
+                      (extra_gaps or []) + root_gaps)
         or ["Sin vacíos relevantes en el diagnóstico"],
         "risks": _risks(rot, viable, reasons),
         "sequence": [{"crop": s.crop, "start": s.start, "end": s.end,
                       "cover": s.cover} for s in rot.sequence],
     }
+
+
+def crops_unique(rot: Rotation) -> list[Crop]:
+    """The rotation's crops, deduped in sequence order."""
+    seen, out = set(), []
+    for s in rot.sequence:
+        if s.crop not in seen:
+            seen.add(s.crop)
+            out.append(KNOWLEDGE.crops[s.crop])
+    return out
 
 
 # ---------------------------------------------------------------- engine ---
@@ -688,6 +736,12 @@ def run(diagnosis: dict, current: dict | None, priorities: dict,
     cur_notes = []
     if cur_rot is not None:
         cur_rot, cur_notes = _shift_for_zone(cur_rot, zone)
+        # a "no sé" default in NEA/NOA rides on mixed evidence: flag it
+        defaulted = not (current and
+                         (current.get("rotation_id") or
+                          current.get("sequence")))
+        if defaulted and zone in ("nea", "noa"):
+            cur_notes.append(TYPICAL_UNVALIDATED_GAP)
         cur_ind = indicators(cur_rot, diagnosis, zone, constraints)
         cur_bad = rotation_viable(cur_rot, diagnosis, constraints,
                                   zone, ff)
@@ -760,6 +814,12 @@ def run(diagnosis: dict, current: dict | None, priorities: dict,
     if zone_gaps or not strategies:
         out["gaps"] = zone_gaps or \
             ["sin rotaciones validadas para esta zona"]
+    refs = [r.model_dump() for r in KNOWLEDGE.zone_references
+            if r.zone == zone]
+    if refs:
+        # documented references for zones without a computed rotation;
+        # shown in the front empty state, nothing is computed
+        out["zone_references"] = refs
     return out
 
 

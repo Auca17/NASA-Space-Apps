@@ -464,3 +464,99 @@ def test_parse_plot_rejects_open_hole_and_bad_multi():
     _, err = parse_plot({"polygon": {"type": "MultiPolygon",
                                      "coordinates": [outer]}})
     assert err is not None and err.status_code == 400
+
+# ------------------------------------------------------------- task 21 ----
+
+def test_stop_conditions_regional_nea_noa():
+    """NEA/NOA follow the INTA Chaco guide: wind >35 km/h, T>30 °C,
+    RH<30 % — looser than Balcarce, so a moderate day stops there and
+    not in the pampa."""
+    from app.routers.field import _stop_conditions
+    end = date(2025, 1, 10)
+    day = {"RH2M": {end: 50}, "WS2M": {end: 10.0},   # 36 km/h
+           "T2M_MAX": {end: 32.0}}
+    conds, det = _stop_conditions(day, end, zone="nea")
+    assert sorted(conds) == ["temp_gt_35", "wind_gt_40kmh"]
+    assert "Chaco" in det["wind_gt_40kmh"]
+    assert "35 km/h" in det["wind_gt_40kmh"]
+    assert det["wind_gt_40kmh"].endswith(
+        "confirmá con Bomberos locales si corresponde suspender")
+    conds2, _ = _stop_conditions(day, end, zone="noa")
+    assert sorted(conds2) == ["temp_gt_35", "wind_gt_40kmh"]
+    # the same day stays under the Balcarce thresholds in the pampa
+    conds3, _ = _stop_conditions(day, end, zone="pampa_humeda")
+    assert conds3 == []
+
+
+def test_stop_conditions_regional_other_zones():
+    """cuyo/patagonia/default use Balcarce + Bomberos Tandil and keep
+    the unconfirmed-humidity note; the Chaco guide does not."""
+    from app.routers.field import _stop_conditions
+    end = date(2025, 1, 10)
+    for z in ("cuyo", "patagonia", "otra"):
+        conds, det = _stop_conditions({"T2M_MAX": {end: 36.0}}, end,
+                                      zone=z)
+        assert conds == ["temp_gt_35"], z
+        assert "Balcarce" in det["temp_gt_35"]
+        assert det["temp_gt_35"].endswith(
+            "confirmá con Bomberos locales si corresponde suspender")
+    _, det = _stop_conditions({"RH2M": {end: 20.0}}, end, zone="noa")
+    assert "umbral por confirmar" not in det["rh_lt_30"]
+    _, det = _stop_conditions({"RH2M": {end: 20.0}}, end, zone="cuyo")
+    assert "umbral por confirmar" in det["rh_lt_30"]
+
+
+# --------------------------------------------------------------- scenario --
+
+def _series(base_temp=25.0, rain=2.0, tmin=10.0, days=365):
+    from datetime import date, timedelta
+    d0 = date(2019, 1, 1)
+    return {"PRECTOTCORR": {d0 + timedelta(i): rain
+                            for i in range(days)},
+            "T2M_MAX": {d0 + timedelta(i): base_temp
+                        for i in range(days)},
+            "T2M_MIN": {d0 + timedelta(i): tmin
+                        for i in range(days)}}
+
+
+def test_parse_scenario_ok_and_bounds():
+    from back.app.routers.field import parse_scenario
+    sc, err = parse_scenario(
+        {"scenario": {"rain_pct": -20, "temp_delta_c": 1.5}})
+    assert err is None and sc == {"rain_pct": -20.0,
+                                  "temp_delta_c": 1.5}
+    assert parse_scenario({}) == (None, None)
+    for bad in ({"rain_pct": -41}, {"rain_pct": 41},
+                {"temp_delta_c": -2.1}, {"temp_delta_c": 4.1},
+                {"rain_pct": "x"}):
+        _, err = parse_scenario({"scenario": bad})
+        assert err is not None and err.status_code == 400
+
+    _, err = parse_scenario({"scenario": "x"})
+    assert err is not None and err.status_code == 400
+
+
+def test_apply_scenario_scales_rain_and_shifts_temp():
+    from back.app.routers.field import apply_scenario
+    s = _series()
+    out = apply_scenario(
+        s, {"rain_pct": -20, "temp_delta_c": 2})
+    v = list(out["PRECTOTCORR"].values())
+    assert abs(v[0] - 1.6) < 1e-9
+    assert abs(list(out["T2M_MAX"].values())[0] - 27.0) < 1e-9
+    assert abs(list(out["T2M_MIN"].values())[0] - 12.0) < 1e-9
+    # baseline untouched
+    assert list(s["PRECTOTCORR"].values())[0] == 2.0
+    # pct 0 keeps series equal
+    out0 = apply_scenario(s, {"rain_pct": 0, "temp_delta_c": 0})
+    assert out0["PRECTOTCORR"] == s["PRECTOTCORR"]
+
+
+def test_scenario_recomputes_cards():
+    from back.app.routers.field import (apply_scenario, build_cards,
+                                        rain_stats)
+    s = _series(rain=4.0, days=365 * 6)
+    base = rain_stats(s["PRECTOTCORR"])[0]
+    dry = rain_stats(apply_scenario(
+        s, {"rain_pct": -20, "temp_delta_c": 0})["PRECTOTCORR"])[0]
+    assert abs(dry - base * 0.8) < 1.5  # ~ -20 % of annual rain

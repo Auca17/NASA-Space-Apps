@@ -41,7 +41,7 @@ Productor: pipeline de fuego. Consumidor: front, Devin, README. Se carga siempre
 | `baseline.start`, `baseline.end` | mes | Línea base (D10). |
 | `h3.globe`, `h3.panel`, `h3.shard`, `h3.cache` | int | Resoluciones H3 en uso (3, 5, 2, 6). |
 | `harmonization` | objeto | `unit`, `method`, `overlap`, `holdout`, `validation.{r2, bias_pct, r2_cells_day}`. Va al README y al video. |
-| `low_confidence_periods` | lista de `[mes, mes]` | Tramos de menor confianza (2000-11 → 2011-12). |
+| `low_confidence_periods` | lista de `[mes, mes]` | Tramos de menor confianza (2000-11 → 2012-01, D30). |
 | `sp_until` | objeto | Último día con datos Standard Processing por sensor; de ahí en adelante es NRT. |
 | `semaphore` | objeto | `window_days` (30), `categories` con rangos de percentil, `ratio_min_median` (5). Parámetros de D9 para que el front no los tenga hardcodeados. |
 
@@ -220,6 +220,8 @@ Productor: Devin con los datos de Orin que entrega Ezequiel (B3). Consumidor: fr
 | `variables[].field` | objeto | `source`, `n_sites` |
 | `variables[].n` | entero | Pares comparados |
 | `variables[].rmse`, `bias`, `r` | decimales | Error cuadrático medio, sesgo (satélite menos campo) y correlación |
+| `variables[].rmse_adjusted`, `bias_adjusted`, `r_adjusted` | decimales | Opcional. Mismas métricas tras la corrección por altura |
+| `variables[].adjustment` | string | Opcional. Texto corto (ej. "Corrección por altura de 6,5 °C/km") |
 | `variables[].unit` | string | Unidad de `rmse` y `bias` |
 | `variables[].quality` | `good` \| `fair` \| `poor` | Juicio simple para el texto |
 
@@ -241,10 +243,17 @@ Ruta: `back/knowledge/`. Productor: responsable de la lente Campo. Consumidor: m
 | `sowing[zona]`, `harvest[zona]` | `[MM-DD, MM-DD]` | Ventanas por zona (`pampa_humeda`, `nea`, `noa`, `cuyo`, `patagonia`). |
 | `gdd_base10` | entero | Grados-día base 10 °C del ciclo. |
 | `frost_tolerance`, `drought_tolerance`, `heat_tolerance` | `low` \| `medium` \| `high` | |
-| `water_mm_cycle` | entero | Uso de agua del ciclo. |
+| `water_mm_cycle` | entero | Uso de agua del ciclo (referencia FAO; el motor la usa para viabilidad). |
+| `water_mm_observed` | decimal | Opcional. Consumo observado en ensayos locales (p. ej. INTA–FAUBA, semiárido pampeano); se muestra como evidencia, no reemplaza `water_mm_cycle`. |
+| `water_observed_note` | string | Opcional. Región y fuente del consumo observado. |
+| `cycle_end` | `{zona: "MM-DD"}` | Opcional. Fin fisiológico del ciclo por zona (madurez); heladas y agua de ciclo la usan; `harvest` sigue siendo la ventana real de cosecha. |
+| `gdd_base_c` | entero \| null | Opcional. Base de grados-día; null = sin valor local. |
+| `gdd_flowering_to_maturity` | lista de enteros \| null | Opcional. Rango GDD floración→madurez; null = sin valor local. |
 | `root_depth_cm` | entero | |
 | `n_fixation` | bool | |
-| `residue_t_ha` | decimal | Aporte de rastrojo. |
+| `residue_t_ha` | decimal | Aporte de rastrojo por cosecha (t MS/ha). |
+| `residue_note` | string | Opcional. Nota metodológica del rastrojo (ensayos con sus propios rindes). |
+| `root_carbon_note` | string | Opcional. Incertidumbre de carbono de raíz/corona (pasturas); se muestra como vacío de información. |
 | `forage` | bool | |
 | `market_ar` | `low` \| `medium` \| `high` | Cualitativo. |
 | `sources` | lista de strings | Obligatorio. |
@@ -260,6 +269,7 @@ Ruta: `back/knowledge/`. Productor: responsable de la lente Campo. Consumidor: m
 | `zones` | lista de ids de zona | Opcional. Zonas donde la rotación es agronómicamente válida; ausente o vacía = válida en todas. |
 | `typical_for` | lista de ids de zona | Opcional. Zonas donde es la rotación actual por defecto cuando el productor responde "no sé". |
 | `sources` | lista | Obligatorio. |
+| `zone_references` (nivel raíz) | lista de `{zone, text, source}` | Opcional. Referencias documentadas para zonas sin rotación calculada (p. ej. Patagonia); el motor las devuelve verbatim y nunca las computa. |
 
 Ejemplos: `fixtures/knowledge/crops.json`, `fixtures/knowledge/rotations.json`.
 
@@ -267,7 +277,13 @@ Ejemplos: `fixtures/knowledge/crops.json`, `fixtures/knowledge/rotations.json`.
 
 ### 3.3 `measures.json` (D26)
 
-Medidas de prevención de incendios. Productor del contenido: Augustus (fuente INTA). Por medida: `id`; `name.es`, `name.en`; `factor` (`machine_ignition` | `spread_boundary` | `residue_burning` | `initial_attack` | otro documentado); `addresses` (qué problema atiende, una frase); `benefit` (beneficio esperado, una frase); `requires` = `{people, machinery, downtime_h, cost: low|medium|high}`; `triggers` (lista de ids de regla: `harvest_in_dry_season`, `fire_weather_high`, `risk_high`, `bare_soil_in_burn_season`, `burn_season_now`); `sources` (obligatorio).
+Medidas de prevención de incendios. Productor del contenido: Augustus (fuente INTA). Por medida: `id`; `name.es`, `name.en`; `factor` (`machine_ignition` | `spread_boundary` | `residue_burning` | `initial_attack` | otro documentado); `addresses` (qué problema atiende, una frase); `benefit` (beneficio esperado, una frase); `requires` = `{people, machinery, downtime_h, cost: low|medium|high, reference_width_m?, reference_width_note?}`; `checks` (opcional, lista de verificaciones de máquina, p. ej. matachispas); `triggers` (lista de ids de regla: `harvest_in_dry_season`, `fire_weather_high`, `risk_high`, `bare_soil_in_burn_season`, `burn_season_now`); `sources` (obligatorio).
+
+`stop_thresholds` (nivel raíz, opcional): umbrales regionales de parada de cosecha por zona (`nea`, `noa`, `pampa_humeda`, `cuyo`, `patagonia`, `default`) con `{wind_gt_kmh, temp_gt_c, rh_lt_pct, guide, rh_unconfirmed?, source}` — NEA/NOA usan la guía INTA del Chaco, el resto Balcarce/Bomberos Tandil. El router de campo los aplica en `stop_conditions` de la tarjeta `fire_weather`.
+
+### 3.4 `cases.json`
+
+Casos reales documentados que se muestran junto a las medidas de prevención. Por caso: `id`, `place`, `date`, `summary`, `unknown` (dato que falta), `source` (`{title, url}`), `lessons` (lista), `kind` (`"news_report"` = reporte periodístico, no testimonio de trabajadores).
 
 ## 4. Back a demanda (FastAPI en Vercel Hobby, D18)
 
@@ -307,6 +323,9 @@ Salida (`fixtures/api/diagnose.response.json`):
 | `calendar.rows[]` | `id`, `label`, `levels` (12 enteros 0–3). Filas previstas: `bare_soil`, `frost`, `water_stress`, `heat`, `burn_season`, `current_rotation`. |
 | `calendar.scale` | Significado de 0–3. |
 | `zone` | Zona agronómica del centroide (`pampa_humeda`, `nea`, `noa`, `cuyo`, `patagonia`; `other` fuera de Argentina). Adición compatible 2026-11-14; `/rotations` la lee del diagnóstico cuando el request no trae `zone`. |
+| `elevation_m` | Elevación media del lote (Terrarium/SRTM); `null` si no resuelve. Adición compatible 2026-11-20. |
+| `power_cell_elevation_m` | Elevación de la celda POWER (tercera coordenada de la geometría). Adición compatible 2026-11-20. |
+| `temp_adjust_c` | Ajuste aplicado a `T2M_MAX`/`T2M_MIN` (−6,5 °C/km × diferencia de altura); 0 si la diferencia es < 100 m o falta alguna elevación. Adición compatible 2026-11-20. |
 | `province` | Provincia argentina del centroide (IGN `ign:provincia`); `null` fuera de Argentina. Adición compatible 2026-11-14. |
 | `country` | ISO A2 del país del centroide (Natural Earth admin-0); `null` si no resuelve. Adición compatible 2026-11-14. |
 
@@ -319,6 +338,8 @@ Cambio 2026-11-14 (D23): se manda el diagnóstico completo y no solo `diagnosis_
 Claves de `priorities`: `water`, `soil`, `erosion`, `income`, `forage`, `nitrogen`, `pests`, `avoid_burning`.
 
 Salida (`fixtures/api/rotations.response.json`): `strategies[]` con exactamente 4 elementos (la actual con `is_current: true` y 3 alternativas), cada uno con las cinco secciones del brief: `why`, `evidence[]` (`text`, `indicator`, `source`), `benefits` (indicadores comparados con la actual), `gaps[]`, `risks[]`; más `sequence`, `score` y `disclaimer` global.
+
+Adición compatible 2026-05 (task 21): `zone_references[]` opcional — referencias documentadas `{zone, text, source}` para zonas sin rotación calculada (ver 3.2).
 
 ### 4.4 `GET /api/risk?lat&lon`
 

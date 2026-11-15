@@ -3,7 +3,8 @@ import type { Strategy } from "../api/types";
 import {
   groupVariants, indicatorLabelKey, irrigationNeedMm,
   prioWeights, groupedCards, cardValueText, verdictDelta,
-  compareDeltas, seqSegments,
+  compareDeltas, seqSegments, strategyOrder, orderNote, rankNote,
+  deltaText,
 } from "./rotations";
 
 function strat(id: string, crops: string[], extra = {}): Strategy {
@@ -161,5 +162,49 @@ describe("benefitRows", () => {
   });
   it("hides the mm twin of the water indicator", () => {
     expect(indicatorLabelKey("water_balance_mm")).toBeNull();
+  });
+});
+
+
+/* ---------------------------------------------------- task 17 scenario --- */
+
+describe("scenario helpers", () => {
+  const rots = {
+    strategies: [
+      { id: "a", name: "A", score: 0.7 },
+      { id: "b", name: "B", score: 0.5 },
+    ],
+    baseline_order: ["b", "a"],
+  };
+
+  it("strategyOrder sorts by score desc", () => {
+    expect(strategyOrder(rots)).toEqual(["a", "b"]);
+  });
+
+  it("orderNote same order", () => {
+    expect(orderNote({
+      strategies: rots.strategies,
+      baseline_order: ["a", "b"],
+    })?.key).toBe("scen.order.same");
+  });
+
+  it("orderNote change names both strategies", () => {
+    const n = orderNote(rots);
+    expect(n?.key).toBe("scen.order.change");
+    expect(n?.vars).toEqual({ a: "B", b: "A" });
+  });
+
+  it("rankNote up/down/new", () => {
+    expect(rankNote("a", rots)).toEqual({ key: "scen.rank.up", n: 1 });
+    expect(rankNote("b", rots)).toEqual({ key: "scen.rank.down", n: 2 });
+    expect(rankNote("z", rots)).toEqual({ key: "scen.rank.new" });
+  });
+
+  it("deltaText formats sign and unit", () => {
+    const fmt = new Intl.NumberFormat("es");
+    expect(deltaText({ delta: -196, unit: "mm/año" }, fmt))
+      .toBe("−196 mm/año");
+    expect(deltaText({ delta: 14, unit: "días" }, fmt)).toBe("+14 días");
+    expect(deltaText({ delta: 0 }, fmt)).toBeNull();
   });
 });

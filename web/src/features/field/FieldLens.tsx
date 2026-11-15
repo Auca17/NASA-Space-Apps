@@ -4,18 +4,19 @@ import { useT } from "../../i18n";
 import { Card, BottomSheet, Tooltip } from "../../components/ui";
 import { Glossary } from "../../components/Glossary";
 import {
-  apiDiagnose, apiRotations, apiExplain, apiFieldCatalog, orinValidation,
+  apiDiagnose, apiRotations, apiExplain, apiFieldCatalog, ecostressDemo, knowledgeCases, orinValidation,
 } from "../../api";
 import type {
-  Card as DiagCard, CropEntry, DiagnoseResponse, OrinValidation,
+  Card as DiagCard, CaseEntry, CropEntry, DiagnoseResponse, Measure, OrinValidation,
   RotationEntry, RotationsResponse, Strategy,
 } from "../../api/types";
+import type { EcostressDemo } from "../../api";
 import { OrinCard, SyntheticBanner } from "./OrinCard";
 import {
-  benefitValue, benefitRows, cardValueText, compareDeltas, groupVariants,
+  benefitValue, benefitRows, cardValueText, compareDeltas, deltaText, groupVariants,
   groupedCards, indicatorLabelKey, irrigationNeedMm, measureReqPairs,
-  prioWeights,
-  seqSegments, verdictDelta, PRIORITY_IDS,
+  orderNote, prioWeights, rankNote,
+  seqSegments, verdictDelta, PRIORITY_IDS, type Scenario,
 } from "../../domain/rotations";
 import { plainSummary, referenceText, localizeDiag } from "../../domain/clarity";
 import {
@@ -131,6 +132,10 @@ function DiagTile({ c, t, fmt }: {
       </div>
       <div className="dtile-value">
         {val ?? <span className="muted">{t("field.noData")}</span>}
+        {deltaText(c, fmt) && (
+          <span className={`dtile-delta${c.delta! > 0 ? " up" : " down"}`}>
+            {" "}{c.delta! > 0 ? "↑" : "↓"} {deltaText(c, fmt)}
+          </span>)}
       </div>
       {c.text && <p className="muted">{c.text}</p>}
       {c.id === "rain" && <RainChart card={c} t={t} />}
@@ -201,6 +206,70 @@ function SeqBar({ s, t }: {
     </div>);
 }
 
+/** Requirements/cost/checks/source block shared by the two measure
+ * lists (diagnosis card and strategy section). */
+function MeasureMeta({ m, t }: {
+    m: Measure;
+    t: (k: string, v?: Record<string, string | number>) => string }) {
+  const note = m.requires?.reference_width_note;
+  return (
+    <>
+      {m.requires && <div className="muted">
+        {measureReqPairs(m.requires).map((p) =>
+          `${t(p.key)}: ${p.value.startsWith("field.")
+            ? t(p.value) : p.value}`).join(" · ")}</div>}
+      {typeof note === "string" && <div className="muted">{note}</div>}
+      {m.cost && <div className="muted">
+        {t("measure.req.cost")}: {t(benefitValue(m.cost))}</div>}
+      {m.checks && m.checks.length > 0 && (
+        <div className="muted">{t("measure.checks")}: {m.checks.join("; ")}</div>)}
+      {m.source && <div className="muted">{m.source}</div>}
+    </>);
+}
+
+/** Measures that bring the "Un caso real" card into the prevention
+ * block (harvester checks / harvest stop). */
+const CASE_MEASURE_IDS = new Set(["clean_harvester", "harvest_timing"]);
+
+/** A documented incident (kind news_report) shown next to the
+ * prevention measures — report, never a worker testimony. */
+export function CaseBlock({ c, t }: {
+    c: CaseEntry;
+    t: (k: string, v?: Record<string, string | number>) => string }) {
+  return (
+    <div className="case-block notice" role="note">
+      <strong>{t("case.title")}</strong> — {c.place}, {c.date}
+      <p>{c.summary}</p>
+      <p className="muted">{t("case.disclaimer")}</p>
+      {c.lessons && c.lessons.length > 0 && (
+        <p className="muted">{t("case.lessons")}: {c.lessons.join("; ")}</p>)}
+      {c.unknown && <p className="muted">{t("case.unknown")}: {c.unknown}</p>}
+      {c.source?.url && (
+        <p className="muted">{t("case.source")}:{" "}
+          <a href={c.source.url} target="_blank" rel="noreferrer">
+            {c.source.title ?? c.source.url}</a></p>)}
+    </div>);
+}
+
+/** "Qué hacer" prevention-measures card + real case (exported for
+ * tests). */
+export function MeasuresCard({ measures, cases, t }: {
+    measures: Measure[];
+    cases?: CaseEntry[];
+    t: (k: string, v?: Record<string, string | number>) => string }) {
+  if (!measures.length) return null;
+  const showCase = measures.some((m) => CASE_MEASURE_IDS.has(m.id));
+  return (
+    <Card title={t("measures.title")}>
+      <ul>{measures.map((m) => (
+        <li key={m.id}><strong>{m.name}</strong> — {m.why}
+          <MeasureMeta m={m} t={t} />
+        </li>))}</ul>
+      {showCase && (cases ?? []).map((c) => (
+        <CaseBlock key={c.id} c={c} t={t} />))}
+    </Card>);
+}
+
 function Section({ title, count, open = false, children }: {
     title: string; count?: number; open?: boolean;
     children: React.ReactNode }) {
@@ -223,13 +292,14 @@ const REF_VERDICT: Record<string, string> = {
 };
 
 function StrategyCard({ s, t, current, variants, explain,
-                        reference = false }: {
+                        reference = false, rank }: {
     s: Strategy;
     t: (k: string, v?: Record<string, string | number>) => string;
     current?: Strategy | null;
     variants?: Strategy[];
     explain?: string;
-    reference?: boolean }) {
+    reference?: boolean;
+    rank?: { key: string; n?: number } | null }) {
   const irr = irrigationNeedMm(s);
   const vd = verdictDelta(s, current);
   const vkey = reference ? REF_VERDICT[vd.key] ?? vd.key : vd.key;
@@ -252,6 +322,7 @@ function StrategyCard({ s, t, current, variants, explain,
             {" "}{t("rot.variante")}: {v.name}</span>))}
       </h3>
       <p className="verdict">{verdict}</p>
+      {rank && <p className="rank-note">{t(rank.key, { n: rank.n ?? "" })}</p>}
       <Afinity score={s.score} t={t} />
       <Section title={t("rot.why")} open>
         <p>{why}</p>
@@ -287,14 +358,7 @@ function StrategyCard({ s, t, current, variants, explain,
         <ul>{(s.measures ?? []).map((m) => (
           <li key={m.id}><strong>{m.name}</strong>
             {m.why && <> — {m.why}</>}
-            {m.requires && <div className="muted">
-              {measureReqPairs(m.requires).map((p) =>
-                `${t(p.key)}: ${p.value.startsWith("field.")
-                  ? t(p.value) : p.value}`).join(" · ")}</div>}
-            {m.cost && <div className="muted">
-              {t("measure.req.cost")}: {
-                t(benefitValue(m.cost))}</div>}
-            {m.source && <div className="muted">{m.source}</div>}
+            <MeasureMeta m={m} t={t} />
           </li>))}</ul>
       </Section>
     </article>
@@ -345,16 +409,19 @@ function CmpTable({ strategies, t, reference = false }: {
 
 /** Rotations results block — exported for tests (Patagonia zero-state). */
 export function RotationResults({ rots, diag, explain, t,
-                                 reference = false }: {
+                                 reference = false, explainMode, onMethods }: {
     rots: RotationsResponse;
     diag: DiagnoseResponse | null;
     explain: Record<string, string>;
     /** true when the user answered "No sé": the baseline is the zone's
      * typical rotation, shown as a reference scenario. */
     reference?: boolean;
+    explainMode?: string;
+    onMethods?: () => void;
     t: (k: string, v?: Record<string, string | number>) => string }) {
   const current = rots.strategies.find((s) => s.is_current) ?? null;
   const groups = groupVariants(rots.strategies);
+  const on = orderNote(rots);
   const trackRef = useRef<HTMLDivElement>(null);
   const [carIdx, setCarIdx] = useState(0);
   const onScroll = () => {
@@ -371,6 +438,15 @@ export function RotationResults({ rots, diag, explain, t,
           <strong>{t("rot.zone", { z: t(`zone.${diag.zone}`) })}</strong>
           {diag.province && <span className="muted"> · {diag.province}</span>}
         </p>)}
+      {on && <p className="scen-order" role="status">
+        {t(on.key, on.vars)}</p>}
+      {explainMode === "ai" && (
+        <p className="explain-ai muted">
+          {t("explain.aiLabel")}
+          {onMethods && <>{" · "}
+            <button className="linklike" onClick={onMethods}>
+              {t("meth.link")}</button></>}
+        </p>)}
       {rots.confidence === "low" && (
         <p className="notice" role="status">
           {t("rot.lowConfidence",
@@ -379,6 +455,11 @@ export function RotationResults({ rots, diag, explain, t,
       {rots.strategies.length === 0 ? (
         <div className="notice" role="status">
           <p>{t("rot.noStrategies")}</p>
+          {(rots.zone_references ?? []).map((r, i) => (
+            <p key={i} className="muted">
+              <strong>{t("rot.zoneRef")}</strong>: {r.text}{" "}
+              <span className="muted">— {r.source}</span>
+            </p>))}
           <p className="muted">{t("rot.askAgronomist")}</p>
         </div>
       ) : (
@@ -396,7 +477,7 @@ export function RotationResults({ rots, diag, explain, t,
               <StrategyCard key={g.primary.id} s={g.primary} t={t}
                             current={current} variants={g.variants}
                             explain={explain[g.primary.id]}
-                            reference={reference} />))}
+                            reference={reference} rank={rankNote(g.primary.id, rots)} />))}
           </div>
           {groups.length > 1 && (
             <div className="carousel-dots">
@@ -428,20 +509,25 @@ export interface DemoLot {
   synthetic?: boolean;
 }
 
-export function FieldPanel({ target, open, onClose, onChangePlot }: {
+export function FieldPanel({ target, open, onClose, onChangePlot, onMethods }: {
   target: AnalysisTarget | null; open: boolean; onClose: () => void;
   onChangePlot: () => void;
+  onMethods?: () => void;
 }) {
   const lot = target?.demoLot;
   const { t, lang } = useT();
   const [diag, setDiag] = useState<DiagnoseResponse | null>(null);
   const [orin, setOrin] = useState<OrinValidation | null>(null);
+  const [cases, setCases] = useState<CaseEntry[]>([]);
   const [rots, setRots] = useState<RotationsResponse | null>(null);
   const [explain, setExplain] = useState<Record<string, string>>({});
   const [catalog, setCatalog] =
     useState<{ rotations: RotationEntry[]; crops: CropEntry[] } | null>(null);
   const [catalogFailed, setCatalogFailed] = useState(false);
   const [catalogRetry, setCatalogRetry] = useState(0);
+  const [explainMode, setExplainMode] = useState<string | null>(null);
+  const [sc, setSc] = useState<Scenario | null>(null);
+  const [eco, setEco] = useState<EcostressDemo | null>(null);
   const [current, setCurrent] = useState("unknown");
   const [prioSel, setPrioSel] = useState<string[]>([]);
   const [cons, setCons] = useState<Record<string, boolean>>({});
@@ -450,6 +536,7 @@ export function FieldPanel({ target, open, onClose, onChangePlot }: {
   const [retry, setRetry] = useState(0);
   const [comparing, setComparing] = useState(false);
   const [compareFailed, setCompareFailed] = useState(false);
+  const lastDiagnosisBody = useRef<PlotBody | null>(null);
   const comparisonRequests = useRef({ latest: 0 });
   /** Whether the shown results used the regional reference rotation. */
   const [refRun, setRefRun] = useState(false);
@@ -479,10 +566,15 @@ export function FieldPanel({ target, open, onClose, onChangePlot }: {
     if (!open || !body) return;
     let active = true;
     const requests = comparisonRequests.current;
-    setReading(true); setDiag(null); setRots(null); setExplain({});
+    if (lastDiagnosisBody.current !== body) {
+      lastDiagnosisBody.current = body;
+      setDiag(null);
+      setStep(1);
+    }
+    setReading(true); setRots(null); setExplain({});
     setComparing(false); setCompareFailed(false);
-    setStep(1);
-    apiDiagnose(body).then((d) => {
+    setExplainMode(null);
+    apiDiagnose(sc ? { ...body, scenario: sc } : body).then((d) => {
       if (!active) return;
       setDiag(d); setReading(false);
       if (d) savePlot(lot?.name ?? "lote", body);
@@ -491,11 +583,31 @@ export function FieldPanel({ target, open, onClose, onChangePlot }: {
       active = false;
       requests.latest++;
     };
-  }, [open, body, lot, retry]);
+  }, [open, body, lot, retry, sc]);
 
   useEffect(() => {
-    if (open) orinValidation().then(setOrin);
+    if (open) { orinValidation().then(setOrin);
+                ecostressDemo().then(setEco); }
   }, [open]);
+
+  useEffect(() => {
+    if (open) {
+      knowledgeCases().then((k) => setCases(k?.cases ?? []));
+    }
+  }, [open]);
+
+  // ECOSTRESS demo tile: only for the two demo plots (task 18.3)
+  const ecoSite = (() => {
+    if (!diag || !eco) return null;
+    const [clat, clon] = diag.centroid;
+    for (const [name, s] of Object.entries(eco.sites)) {
+      const [w, so, e, n] = s.bbox;
+      if (clat >= so && clat <= n && clon >= w && clon <= e) {
+        return { name, ...s };
+      }
+    }
+    return null;
+  })();
 
   const togglePrio = (p: string) => setPrioSel((sel) => {
     if (sel.includes(p)) return sel.filter((x) => x !== p);
@@ -503,7 +615,7 @@ export function FieldPanel({ target, open, onClose, onChangePlot }: {
   });
 
   const runRotations = async () => {
-    if (!diag || comparing) return;
+    if (!diag || reading || comparing) return;
     const requests = comparisonRequests.current;
     const version = ++requests.latest;
     setComparing(true);
@@ -529,6 +641,7 @@ export function FieldPanel({ target, open, onClose, onChangePlot }: {
     if (r) {
       const e = await apiExplain(r); // explain takes the rotations response
       if (e && version === requests.latest) {
+        setExplainMode(e.mode ?? null);
         setExplain(Object.fromEntries(
           e.strategies.map((s) => [s.id, s.text])));
       }
@@ -615,21 +728,67 @@ export function FieldPanel({ target, open, onClose, onChangePlot }: {
             <button onClick={onChangePlot}>{t("field.changePlot")}</button>
           </div>
 
+          <Card title={t("scen.title")} className="scen">
+            <p className="muted">{t("scen.honest")}</p>
+            <div className="scen-presets">
+              <button onClick={() => setSc({ rain_pct: -20,
+                                            temp_delta_c: 1 })}>
+                {t("scen.preset.dry")}</button>
+              <button onClick={() => setSc({ rain_pct: 0,
+                                            temp_delta_c: 2 })}>
+                {t("scen.preset.warm")}</button>
+              <button onClick={() => setSc({ rain_pct: 20,
+                                            temp_delta_c: 0 })}>
+                {t("scen.preset.wet")}</button>
+              <button onClick={() => setSc(null)}
+                      disabled={!sc}>
+                {t("scen.reset")}</button>
+            </div>
+            <label className="scen-slider">
+              {t("scen.rain")}: {sc ? `${sc.rain_pct}%` : "0%"}
+              <input type="range" min={-40} max={40} step={5}
+                     value={sc?.rain_pct ?? 0}
+                     aria-label={t("scen.rain")}
+                     onChange={(e) => setSc({
+                       rain_pct: Number(e.target.value),
+                       temp_delta_c: sc?.temp_delta_c ?? 0 })} />
+            </label>
+            <label className="scen-slider">
+              {t("scen.temp")}: {sc
+                ? `${sc.temp_delta_c > 0 ? "+" : ""}${sc.temp_delta_c} °C`
+                : "0 °C"}
+              <input type="range" min={-2} max={4} step={0.5}
+                     value={sc?.temp_delta_c ?? 0}
+                     aria-label={t("scen.temp")}
+                     onChange={(e) => setSc({
+                       rain_pct: sc?.rain_pct ?? 0,
+                       temp_delta_c: Number(e.target.value) })} />
+            </label>
+          </Card>
+
           <OrinCard data={orin} t={t} fmt={fmt} />
 
-          {view?.measures && view.measures.length > 0 && (
-            <Card title={t("measures.title")}>
-              <ul>{view.measures.map((m) => (
-                <li key={m.id}><strong>{m.name}</strong> — {m.why}
-                  <div className="muted">
-                    {m.requires && measureReqPairs(m.requires)
-                      .map((p) => `${t(p.key)}: ${p.value.startsWith("field.")
-                        ? t(p.value) : p.value}`).join(" · ")}
-                    {m.cost && ` · ${t("measure.req.cost")}: ${
-                      t(benefitValue(m.cost))}`}
-                    {m.source && ` · ${m.source}`}</div>
-                </li>))}</ul>
+          {ecoSite && ecoSite.n_scenes > 0 && (
+            <Card title={t("eco.title")} className="eco">
+              <p className="muted">{t("eco.demo")}</p>
+              <p><strong>
+                {fmt.format(ecoSite.scenes[0]?.lst_c ?? 0)} °C
+              </strong>{" "}
+                {t("eco.last", { n: ecoSite.n_scenes })}
+              </p>
+              {ecoSite.bias_c != null && (
+                <p className="muted">
+                  {t("eco.bias", { v: `${ecoSite.bias_c > 0 ? "+" : ""}${
+                    fmt.format(ecoSite.bias_c)}` })}
+                </p>)}
+              <details className="dtile-src">
+                <summary>{t("field.source")}</summary>
+                <p className="muted">ECOSTRESS ECO_L2T_LSTE · 70 m</p>
+              </details>
             </Card>)}
+
+          {view?.measures && view.measures.length > 0 && (
+            <MeasuresCard measures={view.measures} cases={cases} t={t} />)}
 
           <details className="sec more">
             <summary>{t("field.details")}</summary>
@@ -736,7 +895,7 @@ export function FieldPanel({ target, open, onClose, onChangePlot }: {
               {comparing && <p role="status">{t("field.form.comparing")}</p>}
               {compareFailed && <p role="status">{t("field.form.failed")}</p>}
               <button className="primary" onClick={runRotations}
-                      disabled={comparing}>
+                      disabled={reading || comparing}>
                 {t("field.form.run")}</button>
             </Card>
             </div>)}
@@ -745,7 +904,9 @@ export function FieldPanel({ target, open, onClose, onChangePlot }: {
 
       {rotsView && <RotationResults rots={rotsView} diag={diag}
                                 explain={explain} t={t}
-                                reference={refRun} />}
+                                reference={refRun}
+                                explainMode={explainMode ?? undefined}
+                                onMethods={onMethods} />}
       {!rots && diag && <p className="notice">{t("rot.disclaimer")}</p>}
     </BottomSheet>
   );

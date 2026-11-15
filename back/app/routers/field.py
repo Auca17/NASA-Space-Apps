@@ -377,8 +377,29 @@ def _texture_en(tex: str | None) -> str | None:
     return TEXTURE_EN.get(tex, tex) if tex else tex
 
 
+LAPSE_C_PER_M = 0.0065  # 6.5 °C per km
+MIN_ELEV_DIFF_M = 100
+
+
+def temp_adjust_for(plot_elev_m, cell_elev_m) -> float:
+    """Lapse-rate correction added to POWER temps (task 20)."""
+    if plot_elev_m is None or cell_elev_m is None:
+        return 0.0
+    if abs(plot_elev_m - cell_elev_m) < MIN_ELEV_DIFF_M:
+        return 0.0
+    return round(-LAPSE_C_PER_M * (plot_elev_m - cell_elev_m), 1)
+
+
+def _fmt_es(v, dec=1):
+    """Locale-ish number: 1150 -> '1.150', 8.7 -> '8,7'."""
+    if v is None:
+        return "?"
+    s = f"{v:,.{dec}f}" if dec else f"{v:,}"
+    return s.replace(",", "X").replace(".", ",").replace("X", ".")
+
+
 def build_cards(power, soilg, slope, ndvi, grid_cell, fire_cal,
-                risk_cell, r5):
+                risk_cell, r5, adj=None, zone=None):
     P = (power or {}).get
     cards = []
 
@@ -430,13 +451,27 @@ def build_cards(power, soilg, slope, ndvi, grid_cell, fire_cal,
               f"{hot:g} days/yr above 35 °C")
         if hot is not None else _null_card("heat", "NASA POWER", POWER_RES))
 
+    # elevation transparency (task 20): note on temp cards + confidence cap
+    if adj and adj.get("temp_adjust_c"):
+        sign = "+" if adj["temp_adjust_c"] > 0 else ""
+        note = (f"Temperatura corregida por altura: lote a "
+                f"{_fmt_es(adj['elevation_m'], 0)} m, celda de NASA POWER a "
+                f"{_fmt_es(adj['power_cell_elevation_m'], 0)} m, ajuste "
+                f"{sign}{_fmt_es(adj['temp_adjust_c'], 1)} °C")
+        for c in cards:
+            if c["id"] in ("frost", "heat"):
+                c["source"] = f"{c['source']} · {note}"
+                if abs(adj["temp_adjust_c"]) >= 3:
+                    c["confidence"] = "medium"
+
     # soil_moisture: SMAP grid first (9 km), GWETROOT fallback (D25)
     sm = (grid_cell or {}).get("sm_anom_pct")
     if sm is not None:
+        sm_days = (grid_cell or {}).get("sm_valid_days") or 0
         cards.append(_card("soil_moisture", sm, "%",
                            f"Hoy {abs(sm)} % "
                            f"{'bajo' if sm < 0 else 'sobre'} lo normal",
-                           "SMAP L3", "9 km", "medium",
+                           "SMAP L3", "9 km", "high" if sm_days >= 20 else "low",
                            f"Today {abs(sm)} % "
                            f"{'below' if sm < 0 else 'above'} normal"))
     else:
@@ -546,7 +581,7 @@ def build_cards(power, soilg, slope, ndvi, grid_cell, fire_cal,
                                 "H3 res 5 (~250 km²)"))
 
     cards.append(fire_weather_card(power, _last_valid_day(
-        P("PRECTOTCORR") or {})))
+        P("PRECTOTCORR") or {}), zone=zone))
 
     rw = recent_weather(P("PRECTOTCORR") or {})
     if rw:
@@ -654,32 +689,47 @@ def build_calendar(power, ndvi, monthly_burn):
                       "2": "media", "3": "alta"}}
 
 
-def _stop_conditions(power, end: date, n_days: int = 3):
+def _stop_conditions(power, end: date, n_days: int = 3,
+                     zone: str | None = None):
     """Spanish (conds, detail); see `_stop_conditions_full`."""
-    conds, detail, _ = _stop_conditions_full(power, end, n_days)
+    conds, detail, _ = _stop_conditions_full(power, end, n_days, zone=zone)
     return conds, detail
 
 
-def _stop_conditions_full(power, end: date, n_days: int = 3):
-    """INTA single-condition harvest stop rules over the last n days.
+def _stop_conditions_full(power, end: date, n_days: int = 3,
+                     zone: str | None = None):
+    """Regional single-condition harvest stop rules over the last n days.
 
-    Any one condition alone stops work: wind > 40 km/h (WS2M > 11.1 m/s),
-    T > 35 °C, RH < 30 % (humidity threshold pending INTA confirmation).
+    Thresholds come from `stop_thresholds` in knowledge/measures.json,
+    keyed by the plot zone — the guides disagree by region: NEA/NOA use
+    the INTA Chaco guide (T > 30 °C, RH < 30 %, mean wind > 35 km/h);
+    the other zones and the default use INTA Balcarce + Bomberos de
+    Tandil (wind > 40 km/h, T > 35 °C, RH < 30 %, humidity threshold
+    still unconfirmed there). Any one condition alone stops work.
     """
+    from ..services.knowledge import stop_thresholds_for
+    th = stop_thresholds_for(zone)
+    wind_kmh = th.wind_gt_kmh if th else 40.0
+    temp_c = th.temp_gt_c if th else 35.0
+    rh_pct = th.rh_lt_pct if th else 30.0
+    guide = th.guide if th else "INTA / UIB Balcarce + Bomberos de Tandil"
+    rh_note = (", umbral por confirmar con INTA"
+               if th is None or th.rh_unconfirmed else "")
+    confirm = "confirmá con Bomberos locales si corresponde suspender"
     P = (power or {}).get
     rh, ws, tx = P("RH2M") or {}, P("WS2M") or {}, P("T2M_MAX") or {}
     checks = (
-        ("wind_gt_40kmh", ws, lambda v: v > 11.1,
-         lambda v: f"viento {v:.1f} m/s (>40 km/h)",
-         lambda v: f"wind {v:.1f} m/s (>40 km/h)"),
-        ("temp_gt_35", tx, lambda v: v > 35,
-         lambda v: f"{v:.0f} °C (>35 °C)",
-         lambda v: f"{v:.0f} °C (>35 °C)"),
-        ("rh_lt_30", rh, lambda v: v < 30,
-         lambda v: f"humedad {v:.0f} % (<30 %, umbral "
-                   "por confirmar con INTA)",
-         lambda v: f"humidity {v:.0f} % (<30 %, threshold "
-                   "pending INTA confirmation)"),
+        ("wind_gt_40kmh", ws, lambda v: v > wind_kmh / 3.6,
+         lambda v: f"viento {v:.1f} m/s (>{wind_kmh:g} km/h, {guide})",
+         lambda v: f"wind {v:.1f} m/s (>{wind_kmh:g} km/h, {guide})"),
+        ("temp_gt_35", tx, lambda v: v > temp_c,
+         lambda v: f"{v:.0f} °C (>{temp_c:g} °C, {guide})",
+         lambda v: f"{v:.0f} °C (>{temp_c:g} °C, {guide})"),
+        ("rh_lt_30", rh, lambda v: v < rh_pct,
+         lambda v: f"humedad {v:.0f} % (<{rh_pct:g} %{rh_note}, {guide})",
+         lambda v: f"humidity {v:.0f} % (<{rh_pct:g} %"
+                   + (", threshold pending INTA confirmation" if rh_note else "")
+                   + f", {guide})"),
     )
     conds, detail = [], {}
     detail_en = {}
@@ -693,8 +743,9 @@ def _stop_conditions_full(power, end: date, n_days: int = 3):
             if v is None or not pred(v):
                 continue
             day = f"{d.day} de {MONTH_FULL_ES[d.month - 1]}"
-            detail[name] = (f"hay {fmt(v)} el {day}" if i == 0 else
-                            f"hubo {fmt(v)} el {day} (hace {i} días)")
+            detail[name] = ((f"hay {fmt(v)} el {day}" if i == 0 else
+                             f"hubo {fmt(v)} el {day} (hace {i} días)")
+                            + f"; {confirm}")
             day_en = f"{MONTH_FULL_EN[d.month - 1]} {d.day}"
             detail_en[name] = (
                 f"{fmt_en(v)} on {day_en}" if i == 0 else
@@ -705,13 +756,15 @@ def _stop_conditions_full(power, end: date, n_days: int = 3):
     return sorted(conds), detail, detail_en
 
 
-def fire_weather_card(power, end: date | None):
+def fire_weather_card(power, end: date | None,
+                      zone: str | None = None):
     """Last 7 valid days: mean RH2M, max WS2M, max T2M_MAX + dry days.
 
     Level score (INTA harvest guidance: stop work at wind>40 km/h,
     T>35 °C, RH<30 %): +1 each for mean RH<30 %, max wind>11 m/s,
     max T>35 °C, >10 days since rain. 3+ alto, 2 moderado, else bajo.
-    `stop_conditions` lists each single condition met in the last 3 days.
+    `stop_conditions` lists each single condition met in the last 3
+    days, evaluated against the thresholds of the plot zone.
     """
     P = (power or {}).get
     rh, ws, tx = P("RH2M") or {}, P("WS2M") or {}, P("T2M_MAX") or {}
@@ -739,7 +792,7 @@ def fire_weather_card(power, end: date | None):
                 f"max wind {wsm:.1f} m/s" if wsm is not None else None,
                 f"max T {txm:.0f} °C" if txm is not None else None,
                 f"{since} days without rain" if since is not None else None]
-    conds, detail, detail_en = _stop_conditions_full(power, end)
+    conds, detail, detail_en = _stop_conditions_full(power, end, zone=zone)
     if conds:
         parts.append("parar la cosecha: " + "; ".join(detail[c]
                                                      for c in conds))
@@ -760,11 +813,59 @@ def fire_weather_card(power, end: date | None):
     return card
 
 
+# ------------------------------------------------------------ scenarios ----
+
+def parse_scenario(body: dict):
+    """Optional climate scenario {rain_pct -40..40, temp_delta_c -2..4}
+    -> dict or a 400 response."""
+    sc = body.get("scenario")
+    if sc is None:
+        return None, None
+    def bad(detail):
+        return JSONResponse(
+            status_code=400,
+            content={"error": "invalid_scenario", "detail": detail})
+
+    if not isinstance(sc, dict):
+        return None, bad("scenario must be an object")
+    try:
+        rp = float(sc.get("rain_pct", 0))
+        td = float(sc.get("temp_delta_c", 0))
+    except (TypeError, ValueError):
+        return None, bad("rain_pct and temp_delta_c must be numbers")
+    if not -40 <= rp <= 40:
+        return None, bad("rain_pct must be -40..40")
+    if not -2 <= td <= 4:
+        return None, bad("temp_delta_c must be -2..4")
+    return {"rain_pct": rp, "temp_delta_c": td}, None
+
+
+def apply_scenario(power: dict | None, sc: dict) -> dict:
+    """In-memory scenario on the daily POWER series: rain scaled by
+    1+pct/100, T2M_MAX/MIN shifted by temp_delta_c."""
+    out = dict(power or {})
+    k = 1 + sc["rain_pct"] / 100
+    if sc["rain_pct"] and out.get("PRECTOTCORR"):
+        out["PRECTOTCORR"] = {
+            d: (v * k if v is not None else None)
+            for d, v in out["PRECTOTCORR"].items()}
+    if sc["temp_delta_c"]:
+        for key in ("T2M_MAX", "T2M_MIN"):
+            if out.get(key):
+                out[key] = {
+                    d: (v + sc["temp_delta_c"] if v is not None else None)
+                    for d, v in out[key].items()}
+    return out
+
+
 # -------------------------------------------------------------- endpoint ----
 
 @router.post("/api/field/diagnose")
 async def diagnose(request: Request):
     body = await request.json()
+    scenario, err = parse_scenario(body)
+    if err:
+        return err
     parsed, err = parse_plot(body)
     if err:
         return err
@@ -774,10 +875,10 @@ async def diagnose(request: Request):
     r5c = r5s[0]
 
     async with httpx.AsyncClient(timeout=TIMEOUT) as client:
-        power, soilg, slope, ndvi, fire_cal, grid = await asyncio.gather(
+        power, soilg, terr, ndvi, fire_cal, grid = await asyncio.gather(
             src.power_daily(client, clat, clon, r6c),
             src.soilgrids(client, clat, clon, r6c),
-            src.terrain_slope(client, clat, clon, r6c, bbox),
+            src.terrain_stats(client, clat, clon, r6c, bbox),
             src.ornl_modis(client, "MOD13Q1", "250m_16_days_NDVI",
                            clat, clon, r6c, scale=1e-4),
             src.json_shard(clat, clon, f"fire/cal/{r2}.json",
@@ -788,8 +889,20 @@ async def diagnose(request: Request):
 
     def ok(v):
         return None if isinstance(v, Exception) else v
-    power, soilg, slope, ndvi, fire_cal, grid = \
-        map(ok, (power, soilg, slope, ndvi, fire_cal, grid))
+    power, soilg, terr, ndvi, fire_cal, grid = \
+        map(ok, (power, soilg, terr, ndvi, fire_cal, grid))
+
+    slope = (terr or {}).get("slope")
+    elevation_m = (terr or {}).get("elevation_m")
+    cell_elev_m = (power or {}).get("_elev_m")
+    temp_adjust = temp_adjust_for(elevation_m, cell_elev_m)
+    if temp_adjust and power:  # copy: never mutate the cached dict
+        power = dict(power)
+        for key in ("T2M_MAX", "T2M_MIN"):
+            if power.get(key):
+                power[key] = {
+                    d: (v + temp_adjust if v is not None else None)
+                    for d, v in power[key].items()}
 
     grid_cell = (grid or {}).get("cells", {}).get(r5c)
     try:
@@ -798,9 +911,33 @@ async def diagnose(request: Request):
         risk = None
     risk_cell = (risk or {}).get("cells", {}).get(r5c)
 
+    from ..services.georef import zone_at
+    geo = zone_at(clat, clon)
+    adj = {"temp_adjust_c": temp_adjust, "elevation_m": elevation_m,
+           "power_cell_elevation_m": cell_elev_m}
+
     cards, monthly_burn = build_cards(power, soilg, slope, ndvi, grid_cell,
-                                      fire_cal, risk_cell, r5c)
-    calendar = build_calendar(power, ndvi, monthly_burn)
+                                      fire_cal, risk_cell, r5c, adj=adj,
+                                      zone=geo["zone"])
+    baseline = None
+    if scenario:
+        baseline = {"cards": cards,
+                  "calendar": build_calendar(power, ndvi, monthly_burn)}
+        spower = apply_scenario(power, scenario)
+        base_map = {c["id"]: c["value"] for c in cards}
+        cards, monthly_burn = build_cards(
+            spower, soilg, slope, ndvi, grid_cell, fire_cal, risk_cell,
+            r5c, adj=adj, zone=geo["zone"])
+        calendar = build_calendar(spower, ndvi, monthly_burn)
+        for c in cards:
+            bv = base_map.get(c["id"])
+            if bv is not None and c["value"] != bv:
+                c["baseline_value"] = bv
+                if isinstance(bv, (int, float)) and \
+                        isinstance(c["value"], (int, float)):
+                    c["delta"] = round(c["value"] - bv, 1)
+    else:
+        calendar = build_calendar(power, ndvi, monthly_burn)
     dx = hashlib.sha256(
         (";".join(sorted(r6s)) + "|" + utc_today()).encode()).hexdigest()[:8]
 
@@ -810,15 +947,17 @@ async def diagnose(request: Request):
                     "calendar": calendar["rows"],
                     "risk_cat": (risk_cell or {}).get("cat")})
 
-    from ..services.georef import zone_at
-    geo = zone_at(clat, clon)
-
     return JSONResponse(
         {"diagnosis_id": f"dx_{dx}", "area_ha": round(area_ha, 1),
          "centroid": [round(clat, 4), round(clon, 4)],
          "zone": geo["zone"], "province": geo["province"],
          "country": geo["country"],
+         "elevation_m": elevation_m,
+         "power_cell_elevation_m": cell_elev_m,
+         "temp_adjust_c": temp_adjust,
          "h3_r5": r5s, "h3_r6": r6s, "cards": cards, "calendar": calendar,
+         **({"scenario": scenario} if scenario else {}),
+         **({"baseline": baseline} if baseline else {}),
          **msr},
         headers={"Cache-Control": "no-store"})
 
@@ -884,20 +1023,43 @@ async def rotations(request: Request):
     try:
         out = run(diag, body.get("current"), priorities, constraints,
                   zone, analog=analog)
+        if diag.get("scenario"):
+            base = diag.get("baseline") or {
+                "cards": [dict(c, value=c.get("baseline_value",
+                                              c["value"]))
+                          if c.get("baseline_value") is not None
+                          else dict(c) for c in diag["cards"]],
+                "calendar": diag.get("calendar", {"rows": []})}
+            bout = run(base, body.get("current"), priorities,
+                       constraints, zone, analog=analog)
+            out["baseline_order"] = [
+                s["id"] for s in sorted(
+                    bout.get("strategies", []),
+                    key=lambda s: -s.get("score", 0))]
     except ValueError as exc:
         return JSONResponse(status_code=400, content={
             "error": "invalid_input", "detail": str(exc)})
+    if abs(diag.get("temp_adjust_c") or 0) >= 2:
+        out.setdefault("gaps", []).append(
+            "La corrección por altura usa un gradiente fijo de 6,5 °C "
+            "por km; confirmá las heladas con una estación cercana")
     return JSONResponse(out, headers={"Cache-Control": "no-store"})
 
 
 @router.post("/api/field/explain")
 async def explain(request: Request):
     from ..services.rotations import explain as explain_fn
+    from ..services.ai_explain import ai_explain
     body = await request.json()
     if not isinstance(body, dict) or not isinstance(
             body.get("strategies"), list):
         return JSONResponse(status_code=400, content={
             "error": "invalid_input",
             "detail": "body must be the full rotations response"})
-    return JSONResponse(explain_fn(body),
-                        headers={"Cache-Control": "no-store"})
+    ai = await ai_explain(body)
+    if ai:
+        ai["mode"] = "ai"
+        return JSONResponse(ai, headers={"Cache-Control": "no-store"})
+    out = explain_fn(body)
+    out["mode"] = "template"
+    return JSONResponse(out, headers={"Cache-Control": "no-store"})

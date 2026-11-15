@@ -1,5 +1,12 @@
 {
   "version": "0.2",
+  "zone_references": [
+    {
+      "zone": "patagonia",
+      "text": "Referencia de INTA para el Valle Inferior del Río Negro bajo riego: 4 a 5 ciclos de pastura de alfalfa, 2 de cebolla y 2 de maíz. No la calculamos todavía.",
+      "source": "INTA — referencia de rotación para el Valle Inferior del Río Negro bajo riego — fuente bibliográfica, pendiente de validación local"
+    }
+  ],
   "rotations": [
     {
       "id": "soja-soja",
@@ -61,6 +68,7 @@
         "MAGyP, Estimaciones Agrícolas (área, rinde y avance de siembra/cosecha por delegación)",
         "Bolsa de Cereales de Buenos Aires, Panorama Agrícola Semanal (avance de siembra y cosecha por región)",
         "INTA / AAPRESID, Red de Brechas de Carbono, informe 2023–2024: rotaciones con más gramíneas tienen balance de C positivo",
+        "INTA RIA, ensayo 2018: soja de segunda sembrada el 2 de diciembre tras cebada y el 16 de diciembre tras trigo — fuente bibliográfica, pendiente de validación local",
         "bare_soil_days = (años × 365 − días con cultivo vivo) / años, calculado sobre la secuencia; el rastrojo en pie no se descuenta — validar"
       ],
       "zones": [
@@ -302,6 +310,7 @@
       "bare_soil_days": 120,
       "sources": [
         "MAGyP, Estimaciones Agrícolas (área, rinde y avance de siembra/cosecha por delegación)",
+        "INTA RIA, ensayo 2018: soja de segunda sembrada el 2 de diciembre tras cebada y el 16 de diciembre tras trigo — fuente bibliográfica, pendiente de validación local",
         "Bolsa de Cereales de Buenos Aires, Panorama Agrícola Semanal (avance de siembra y cosecha por región)",
         "bare_soil_days = (años × 365 − días con cultivo vivo) / años, calculado sobre la secuencia; el rastrojo en pie no se descuenta — validar"
       ],
@@ -381,6 +390,7 @@
       "sources": [
         "MAGyP, Estimaciones Agrícolas (área, rinde y avance de siembra/cosecha por delegación)",
         "Zhang, Pala, Oweis & Harris (2000), Water use and water-use efficiency of chickpea and lentil in a Mediterranean environment, Aust. J. Agric. Res. 51: ET estacional media 268 mm",
+        "EEAOC: el maíz fue el principal sucesor de verano del garbanzo en 2017 y 2018; cosecha de garbanzo de fines de octubre a mediados de noviembre — fuente bibliográfica, pendiente de validación local",
         "bare_soil_days = (años × 365 − días con cultivo vivo) / años, calculado sobre la secuencia; el rastrojo en pie no se descuenta — validar"
       ],
       "zones": [

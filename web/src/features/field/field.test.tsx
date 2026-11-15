@@ -1,9 +1,9 @@
 import { describe, it, expect } from "vitest";
 import { render, screen } from "@testing-library/react";
-import { RotationResults } from "./FieldLens";
+import { MeasuresCard, RotationResults } from "./FieldLens";
 import es from "../../i18n/es.json";
-import type { DiagnoseResponse, RotationsResponse,
-              Strategy } from "../../api/types";
+import type { CaseEntry, DiagnoseResponse, Measure,
+              RotationsResponse, Strategy } from "../../api/types";
 
 const t = (k: string, v?: Record<string, string | number>) => {
   let s = (es as Record<string, string>)[k] ?? k;
@@ -40,6 +40,28 @@ describe("RotationResults (task 15.1 regression)", () => {
     expect(screen.getByText(/agrónomo\/a/i)).toBeInTheDocument();
     expect(document.querySelectorAll(".strategy")).toHaveLength(0);
     expect(screen.getByText(/Zona: Patagonia/)).toBeInTheDocument();
+  });
+
+  it("shows the zone's documented reference when the API sends one", () => {
+    const rots: RotationsResponse = {
+      strategies: [], disclaimer: "", confidence: "low",
+      gaps: ["sin rotaciones validadas para esta zona"],
+      zone_references: [{
+        zone: "patagonia",
+        text: "Referencia de INTA para el Valle Inferior del Río Negro "
+          + "bajo riego: 4 a 5 ciclos de pastura de alfalfa, 2 de "
+          + "cebolla y 2 de maíz. No la calculamos todavía.",
+        source: "INTA Valle Inferior del Río Negro",
+      }],
+    };
+    render(<RotationResults rots={rots} diag={patagonia}
+                            explain={{}} t={t} />);
+    expect(screen.getAllByText(/Valle Inferior del Río Negro/).length)
+      .toBeGreaterThanOrEqual(1);
+    expect(screen.getByText(/No la calculamos todavía/))
+      .toBeInTheDocument();
+    // still no computed rotation
+    expect(document.querySelectorAll(".strategy")).toHaveLength(0);
   });
 });
 
@@ -136,5 +158,94 @@ describe("diagnosis tile values", () => {
     const vals = [...document.querySelectorAll(".dtile-value")]
       .map((e) => e.textContent);
     expect(vals).toEqual(["estable", "muy alto"]);
+  });
+});
+
+const sanGenaro: CaseEntry = {
+  id: "san-genaro-2026-05-04",
+  place: "San Genaro, Santa Fe",
+  date: "2026-05-04",
+  summary: "Una cosechadora se prendió fuego y el incendio se propagó "
+    + "al lote de soja.",
+  source: {
+    title: "Reporte del incendio (MDR)",
+    url: "https://mdr.ar/contenido/51738/x",
+  },
+  lessons: ["Ubicación exacta y acceso al lote"],
+  kind: "news_report",
+};
+
+const meas = (id: string, extra = {}): Measure => ({
+  id, name: id, why: "porque", ...extra,
+} as Measure);
+
+describe("MeasuresCard + real case (task 21.5)", () => {
+  it("shows 'Un caso real' when clean_harvester is in the list", () => {
+    render(<MeasuresCard measures={[meas("clean_harvester")]}
+                         cases={[sanGenaro]} t={t} />);
+    expect(screen.getByText(/Un caso real/)).toBeInTheDocument();
+    expect(screen.getByText(/San Genaro, Santa Fe/)).toBeInTheDocument();
+    expect(screen.getByText(/cosechadora se prendió fuego/))
+      .toBeInTheDocument();
+    expect(screen.getByText(/Reporte periodístico/)).toBeInTheDocument();
+    const link = screen.getByRole("link", { name: /Reporte del incendio/ });
+    expect(link).toHaveAttribute("href", sanGenaro.source.url);
+    expect(screen.getByText(/Ubicación exacta/)).toBeInTheDocument();
+  });
+
+  it("shows the case for harvest_timing too, but not for other "
+     + "measures", () => {
+    const first = render(<MeasuresCard measures={[meas("harvest_timing")]}
+                                       cases={[sanGenaro]} t={t} />);
+    expect(screen.getByText(/Un caso real/)).toBeInTheDocument();
+    first.unmount();
+    render(<MeasuresCard measures={[meas("maintain_firebreak")]}
+                         cases={[sanGenaro]} t={t} />);
+    expect(screen.queryByText(/Un caso real/)).not.toBeInTheDocument();
+  });
+
+  it("renders the checks and the firebreak reference width", () => {
+    const m = meas("maintain_firebreak", {
+      requires: { people: 2, reference_width_m: 30,
+                  reference_width_note: "referencia prudente" },
+      checks: ["revisar el matachispas del escape"],
+    });
+    render(<MeasuresCard measures={[m]} cases={[]} t={t} />);
+    expect(screen.getByText(/ancho de referencia: 30/))
+      .toBeInTheDocument();
+    expect(screen.getByText(/referencia prudente/)).toBeInTheDocument();
+    expect(screen.getByText(/matachispas/)).toBeInTheDocument();
+  });
+});
+
+describe("scenario + AI label (tasks 17A/19)", () => {
+  const rots: RotationsResponse = {
+    disclaimer: "", confidence: "high",
+    baseline_order: ["b", "a"],
+    strategies: [
+      strat("a", { score: 0.7, name: "Alfa" }),
+      strat("b", { score: 0.5, name: "Beta" }),
+    ],
+  };
+  it("shows the order-change sentence from baseline_order", () => {
+    render(<RotationResults rots={rots} diag={patagonia}
+                            explain={{}} t={t} />);
+    expect(screen.getByText(/pasa de Beta a Alfa/)).toBeInTheDocument();
+  });
+  it("same order renders the no-change sentence", () => {
+    render(<RotationResults
+      rots={{ ...rots, baseline_order: ["a", "b"] }}
+      diag={patagonia} explain={{}} t={t} />);
+    expect(screen.getByText(/el orden de las rotaciones no cambia/))
+      .toBeInTheDocument();
+  });
+  it("mode ai shows the AI label; template does not", () => {
+    const { rerender } = render(
+      <RotationResults rots={rots} diag={patagonia} explain={{}}
+                       explainMode="ai" t={t} />);
+    expect(screen.getByText(/generada con IA/)).toBeInTheDocument();
+    rerender(<RotationResults rots={rots} diag={patagonia} explain={{}}
+                             explainMode="template" t={t} />);
+    expect(screen.queryByText(/generada con IA/)).toBeNull();
   });
 });

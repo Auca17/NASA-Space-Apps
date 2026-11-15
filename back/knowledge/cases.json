@@ -1,0 +1,22 @@
+{
+  "version": "0.1",
+  "cases": [
+    {
+      "id": "san-genaro-2026-05-04",
+      "place": "San Genaro, Santa Fe",
+      "date": "2026-05-04",
+      "summary": "Una cosechadora se prendió fuego y el incendio se propagó al lote de soja. Bomberos voluntarios lo sofocaron y enfriaron el terreno alrededor.",
+      "unknown": "No se sabe qué equipamiento ni qué cortafuegos había en el lote antes del incidente.",
+      "source": {
+        "title": "Reporte del incendio (MDR)",
+        "url": "https://mdr.ar/contenido/51738/san-genaro-bomberos-sofocaron-el-incendio-de-una-cosechadora-en-plena-zona-rural"
+      },
+      "lessons": [
+        "Ubicación exacta y acceso al lote",
+        "Viento al momento de la alerta",
+        "Los chequeos de la cosechadora"
+      ],
+      "kind": "news_report"
+    }
+  ]
+}
