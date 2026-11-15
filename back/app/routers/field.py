@@ -19,6 +19,7 @@ from ..services import field_sources as src
 from ..services.geodesy import ring_area_ha
 from ..services.field_geometry import cell_weights, sample_locations, weather_locations
 from ..services.field_moisture import moisture_zones
+from ..services.crop_map import crop_zones, detect_crop
 from ..services.risk_validity import risk_dates
 from ..services.data import risk_shard
 
@@ -1261,6 +1262,32 @@ async def field_moisture(request: Request):
         return err
     geom = parsed[-1]
     return {"status": "no_detail"} if geom is None else await moisture_zones(geom)
+
+
+@router.post("/api/field/crop")
+async def field_crop(request: Request):
+    """Crop detected per campaign (INTA MNC); no user input needed."""
+    parsed, err = parse_plot(await json_object(request))
+    if err:
+        return err
+    geom = parsed[-1]
+    if geom is None:   # a bare point: a ~1 ha square around it
+        lat, lon = parsed[0]
+        geom = Polygon([(lon - .0005, lat - .0005), (lon + .0005, lat - .0005),
+                        (lon + .0005, lat + .0005), (lon - .0005, lat + .0005)])
+    return await detect_crop(geom)
+
+
+@router.post("/api/field/crop-zones")
+async def field_crop_zones(request: Request):
+    """The field split into one zone per detected crop (INTA MNC)."""
+    parsed, err = parse_plot(await json_object(request))
+    if err:
+        return err
+    geom = parsed[-1]
+    if geom is None:
+        return {"status": "no_detail", "zones": []}
+    return await crop_zones(geom)
 
 
 # ----------------------------------------------------- rotations / explain -

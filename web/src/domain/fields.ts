@@ -7,7 +7,11 @@ import { multiHa, type LatLon, type Multi } from "./selection";
 
 export type Zone = { id: string; name: string; crop: string; geom: Multi };
 export type Field = { id: string; name: string; geom: Multi;
-                      zones: Zone[]; createdAt: string };
+                      zones: Zone[]; createdAt: string;
+                      /** crop typed by the user when the map has none */
+                      crop?: string;
+                      /** the automatic split by crop already ran */
+                      cropSplit?: "done" | "none" };
 
 const KEY = "fs_fields_v1";
 
@@ -25,6 +29,9 @@ function upgrade(r: Stored): Field | null {
   if (!r.id || !geom?.length) return null;
   return {
     id: r.id, name: r.name ?? "", createdAt: r.createdAt ?? "", geom,
+    ...(typeof r.crop === "string" && r.crop ? { crop: r.crop } : {}),
+    ...(r.cropSplit === "done" || r.cropSplit === "none"
+      ? { cropSplit: r.cropSplit } : {}),
     zones: (r.zones ?? []).flatMap((z) => {
       const g: Multi | undefined = Array.isArray(z.geom) ? z.geom
         : Array.isArray(z.ring) ? [[z.ring]] : undefined;
@@ -111,4 +118,34 @@ export function analysisOptions(f: Field): AreaOption[] {
   f.zones.forEach((z, i) => out.push({ id: `z:${z.id}`, kind: "zone",
     label: z.name || `${i + 1}`, crop: z.crop, geom: z.geom, ha: zoneHa(z) }));
   return out;
+}
+
+/** Several zones in one write (the field split by crop). */
+export function addZones(fieldId: string,
+                         zs: { name: string; crop: string; geom: Multi }[]) {
+  const zones: Zone[] = zs.map((z) => ({ id: uid(), name: z.name.trim(),
+    crop: z.crop.trim(), geom: z.geom }));
+  update(fieldId, (f) => ({ ...f, zones: [...f.zones, ...zones] }));
+  return zones;
+}
+
+export function setFieldCrop(id: string, crop: string) {
+  update(id, (f) => ({ ...f, crop: crop.trim() }));
+}
+
+/** GeoJSON Polygon/MultiPolygon ([lon, lat], closed rings) -> Multi. */
+export function geoJsonToMulti(g: { type: string; coordinates: unknown }): Multi {
+  const ring = (r: number[][]) => {
+    const pts = r.map(([lo, la]) => [la, lo] as LatLon);
+    const [a, b] = [pts[0], pts[pts.length - 1]];
+    return pts.length > 1 && a[0] === b[0] && a[1] === b[1] ? pts.slice(0, -1) : pts;
+  };
+  const poly = (p: number[][][]) => p.map(ring);
+  return g.type === "MultiPolygon"
+    ? (g.coordinates as number[][][][]).map(poly)
+    : [poly(g.coordinates as number[][][])];
+}
+
+export function markCropSplit(id: string, result: "done" | "none") {
+  update(id, (f) => ({ ...f, cropSplit: result }));
 }

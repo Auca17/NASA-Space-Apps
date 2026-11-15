@@ -243,3 +243,28 @@ export interface OrinLots {
     properties: OrinLotProps;
   }[];
 }
+
+/** POST /api/field/crop — crop detected per campaign (INTA MNC). */
+export type CropSeason = {
+  season: "summer" | "winter";
+  campaign: string;
+  status: "crop" | "fallow" | "non_agricultural" | "no_coverage" | "unavailable";
+  crop: { id: string; es: string; en: string } | null;
+  /** share of the classified pixels that voted for this class */
+  share: number | null;
+  /** share of the parcel with a known class */
+  coverage: number | null;
+};
+export type CropDetection = {
+  source: string; source_url: string; resolution_m: number;
+  seasons: CropSeason[];
+};
+
+/** POST /api/field/crop-zones — the field split into one zone per crop. */
+export type CropZones = {
+  status: "available" | "no_coverage" | "unavailable" | "no_detail";
+  season: "summer" | "winter"; campaign: string;
+  source: string; source_url: string; resolution_m: number;
+  zones: { crop: { id: string; es: string; en: string }; ha: number;
+           geometry: { type: "Polygon" | "MultiPolygon"; coordinates: unknown } }[];
+};

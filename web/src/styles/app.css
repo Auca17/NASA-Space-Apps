@@ -570,3 +570,11 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
   .emerg-link { color: var(--logo-ember-hot); }
 }
 .diag-degraded { border-left: 4px solid #b3401e; }
+
+/* Crop detected automatically (INTA Mapa Nacional de Cultivos) */
+.detected-crop { font-size: .85rem; margin: .25rem 0 .5rem; }
+.detected-crop ul { list-style: none; margin: .15rem 0; padding: 0; }
+.zone-list li > .detected-crop { grid-column: 2 / -1; margin: 0; }
+.zone-list .detected-crop li { display: block; }
+.crop-split { display: grid; gap: .25rem; margin: .5rem 0; }
+.declare-crop input { width: 100%; margin-top: .35rem; }

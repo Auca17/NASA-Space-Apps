@@ -5,7 +5,7 @@ import type {
   MetaJson, GlobeShard, CalShard, DailyShard, RiskShard,
   LiveResponse, DiagnoseResponse, RotationsResponse,
   ExplainResponse, RotationEntry, CropEntry, CaseEntry, RiskCell,
-  OrinValidation, OrinLots, MoistureResult,
+  OrinValidation, OrinLots, MoistureResult, CropDetection, CropZones,
 } from "./types";
 
 function cachedByKey<T>(load: (key: string) => Promise<T | null>, max: number) {
@@ -111,6 +111,26 @@ export async function apiDiagnose(body: unknown, signal?: AbortSignal):
 
 export function apiMoisture(body: unknown, signal: AbortSignal) {
   return postJson<MoistureResult>("/api/field/moisture-zones", body, signal);
+}
+
+const cropCache = new Map<string, Promise<CropDetection | null>>();
+/** Crop detected automatically for a parcel; cached per geometry so every
+ * panel that shows the same parcel shares one request. Failures are not
+ * cached, so a later render retries. */
+export function apiCrop(body: unknown): Promise<CropDetection | null> {
+  const key = JSON.stringify(body);
+  let hit = cropCache.get(key);
+  if (!hit) {
+    hit = postJson<CropDetection>("/api/field/crop", body);
+    cropCache.set(key, hit);
+    hit.then((r) => { if (!r) cropCache.delete(key); });
+    if (cropCache.size > 200) cropCache.delete(cropCache.keys().next().value!);
+  }
+  return hit;
+}
+
+export function apiCropZones(body: unknown) {
+  return postJson<CropZones>("/api/field/crop-zones", body);
 }
 
 export function apiRotations(body: unknown) {

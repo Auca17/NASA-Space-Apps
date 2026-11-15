@@ -25,6 +25,7 @@ import {
 import { splitSelection, clipZone, ROAD_HALF_WIDTH } from "./domain/split";
 import {
   loadFields, saveField, renameField, deleteField, addZone, updateZone,
+  addZones, setFieldCrop, markCropSplit,
   removeZone, fieldHa, analysisOptions, ZONE_COLORS, type Field,
   type AreaOption,
 } from "./domain/fields";
@@ -710,6 +711,9 @@ export default function App() {
             onDiscardZone={() => setPendingZone(null)}
             onUpdateZone={(id, p) => { storeChange(() => updateZone(openField.id, id, p)); }}
             onRemoveZone={(id) => { storeChange(() => removeZone(openField.id, id)); }}
+            onAddZones={(zs) => { storeChange(() => addZones(openField.id, zs)); }}
+            onSetCrop={(c) => { storeChange(() => setFieldCrop(openField.id, c)); }}
+            onCropSplit={(v) => { storeChange(() => markCropSplit(openField.id, v)); }}
             onBack={() => { setPendingZone(null); setAreaChoice("all");
                             setFieldsView("list"); }} />)}
         {mode === "field" && !fieldOpen && !selection &&
