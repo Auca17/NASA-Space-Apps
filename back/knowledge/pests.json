@@ -1,0 +1,102 @@
+{
+  "pests": [
+    {
+      "id": "roya_soja",
+      "name_es": "Roya de la soja (Phakopsora pachyrhizi)",
+      "hosts": ["soja"],
+      "survival": "puente: plantas voluntarias y cultivos tardíos",
+      "sources": ["INTA, manejo de roya de la soja (publicación técnica) — pendiente de validación local"]
+    },
+    {
+      "id": "roya_trigo",
+      "name_es": "Roya del trigo (Puccinia spp.)",
+      "hosts": ["trigo", "cebada", "avena", "centeno"],
+      "survival": "puente: voluntarias de cereales de invierno",
+      "sources": ["INTA, guía de enfermedades del trigo — pendiente de validación local"]
+    },
+    {
+      "id": "fusarium",
+      "name_es": "Fusarium / espigadura (Fusarium graminearum)",
+      "hosts": ["trigo", "cebada", "maiz", "avena", "sorgo"],
+      "survival": "rastrojo en la superficie del suelo",
+      "sources": ["INTA, fusariosis de la espiga en trigo y maíz — pendiente de validación local"]
+    },
+    {
+      "id": "chicharrita_spiroplasma",
+      "name_es": "Chicharrita del maíz / Spiroplasma (Dalbulus maidis)",
+      "hosts": ["maiz"],
+      "survival": "maíz guacho y maíces tardíos como puente del vector",
+      "sources": ["INTA EEA Paraná, manejo del maíz guacho — pendiente de validación local"]
+    },
+    {
+      "id": "diaporthe",
+      "name_es": "Diaporthe / Phomopsis (cancro de tallo y pudrición de semilla)",
+      "hosts": ["soja", "girasol"],
+      "survival": "rastrojo y semilla",
+      "sources": ["Aapresid / INTA, sanidad de soja y girasol — pendiente de validación local"]
+    },
+    {
+      "id": "sclerotinia",
+      "name_es": "Sclerotinia (Sclerotinia sclerotiorum, podredumbre blanca)",
+      "hosts": ["soja", "girasol", "mani", "colza", "garbanzo"],
+      "survival": "esclerocios en el suelo (años)",
+      "sources": ["INTA, sclerotiniosis en soja y girasol — pendiente de validación local"]
+    },
+    {
+      "id": "nematodos",
+      "name_es": "Nematodos (Heterodera glycines, Pratylenchus spp.)",
+      "hosts": ["soja", "maiz", "trigo", "sorgo"],
+      "survival": "suelo",
+      "sources": ["INTA, nematodo quiste de la soja — pendiente de validación local"]
+    },
+    {
+      "id": "roya_girasol",
+      "name_es": "Roya del girasol (Puccinia helianthi)",
+      "hosts": ["girasol"],
+      "survival": "voluntarias de girasol y rastrojo",
+      "sources": ["INTA, enfermedades del girasol — pendiente de validación local"]
+    },
+    {
+      "id": "roya_mani",
+      "name_es": "Roya del maní (Puccinia arachidis)",
+      "hosts": ["mani"],
+      "survival": "voluntarias de maní",
+      "sources": ["INTA EEA Manfredi, manejo de enfermedades del maní — pendiente de validación local"]
+    },
+    {
+      "id": "pudriciones_maiz",
+      "name_es": "Pudriciones de mazorca (Fusarium verticillioides, Diplodia)",
+      "hosts": ["maiz"],
+      "survival": "rastrojo de maíz",
+      "sources": ["INTA, pudriciones de mazorca en maíz — pendiente de validación local"]
+    },
+    {
+      "id": "mancha_mani",
+      "name_es": "Mancha de maní (Cercospora spp.)",
+      "hosts": ["mani"],
+      "survival": "rastrojo",
+      "sources": ["INTA EEA Manfredi — pendiente de validación local"]
+    },
+    {
+      "id": "ascochyta_garbanzo",
+      "name_es": "Ascochyta / rabia del garbanzo (Ascochyta rabiei)",
+      "hosts": ["garbanzo"],
+      "survival": "semilla y rastrojo",
+      "sources": ["INTA, guía de manejo del garbanzo — pendiente de validación local"]
+    },
+    {
+      "id": "mildiu_vid",
+      "name_es": "Mildiu de la vid (Plasmopara viticola)",
+      "hosts": ["vid"],
+      "survival": "oósporas en suelo y restos foliares",
+      "sources": ["INTA EEA Mendoza, sanidad de la vid — pendiente de validación local"]
+    },
+    {
+      "id": "repilo_olivo",
+      "name_es": "Repilo del olivo (Cycloconium oleaginum)",
+      "hosts": ["olivo"],
+      "survival": "hojas infectadas que quedan en la planta",
+      "sources": ["INTA, sanidad del olivo — pendiente de validación local"]
+    }
+  ]
+}

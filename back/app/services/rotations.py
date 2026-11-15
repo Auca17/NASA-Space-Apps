@@ -81,7 +81,8 @@ INDICATOR_LABEL = {
     "bare_soil_days": "días sin cultivo vivo",
     "erosion_risk": "riesgo de erosión",
     "infiltration": "infiltración estimada (relativa)",
-    "pest_break": "familias en el ciclo",
+    "pest_break": "pares consecutivos que comparten plaga",
+    "families": "familias en el ciclo",
     "income": "ingreso",
     "forage": "forraje",
     "burns_avoided": "quemas evitadas",
@@ -359,6 +360,22 @@ def rotation_viable(rot: Rotation, diag, constraints, zone, ff):
     return bad
 
 
+def host_sharing_pairs(rot: Rotation) -> list[tuple]:
+    """Consecutive pairs (incl. wrap-around last→first, the cycle
+    repeats) whose two crops share at least one cataloged
+    pest/disease host (pests.json). Each entry is
+    (crop_a, crop_b, [Pest...])."""
+    seq = [s.crop for s in rot.sequence]
+    pairs = []
+    for i in range(len(seq)):
+        a, b = seq[i], seq[(i + 1) % len(seq)]
+        shared = [p for p in KNOWLEDGE.pests
+                  if a in p.hosts and b in p.hosts]
+        if shared:
+            pairs.append((a, b, shared))
+    return pairs
+
+
 def hazard_viability(rot: Rotation, diag, zone: str | None,
                      hazards: set | None,
                      ff: set[int] | None) -> tuple[float, list[str]]:
@@ -450,6 +467,11 @@ def indicators(rot: Rotation, diag: dict, zone: str | None,
     out = {
         "water_balance": wb,
         "water_balance_mm": wb_mm,
+        # consecutive crop pairs that share a pest/disease host
+        # (pests.json); fewer = better, inverted in score()
+        "pest_break": len(host_sharing_pairs(rot)),
+        # botanical diversity kept as the secondary, coarser note
+        "families": len({c.family for c in crops}),
         "residue_t_ha_yr":
             round(sum(c.residue_t_ha for c in crops) / years, 1),
         "nitrogen": sum(1 for c in crops if c.n_fixation),
@@ -460,7 +482,6 @@ def indicators(rot: Rotation, diag: dict, zone: str | None,
         # residue). Texture, OM and slope do not change.
         "infiltration": _infiltration_alt(
             bare, sum(c.residue_t_ha for c in crops) / years),
-        "pest_break": len({c.family for c in crops}),
         "income": {1: "low", 2: "medium", 3: "high"}[round(income_lvl)],
         "forage": any(c.forage for c in crops),
         "burns_avoided": burns,
@@ -515,7 +536,8 @@ def score(alt: dict, cur: dict, priorities: dict) -> float:
         key = PRIORITY_MAP[p]
         a = _metric_value(alt, key)
         b = _metric_value(cur, key)
-        invert = key in ("water_balance_mm", "erosion_risk")
+        invert = key in ("water_balance_mm", "erosion_risk",
+                         "pest_break")
         num += w * _numeric_delta(a, b, invert)
     return round(0.5 + num / (2 * sum(used.values())), 3)
 
@@ -567,6 +589,7 @@ _CARD_TITLES = {
     "soil_moisture": "Humedad del suelo",
     "frost": "Período sin heladas",
     "heat": "Días de calor extremo",
+    "gdd_year": "Grados-día anuales",
     "crop_water": "Agua que pide el cultivo",
     "vigor_bare_soil": "Cobertura del suelo",
     "slope": "Pendiente",
@@ -607,6 +630,14 @@ def _gaps(diag: dict, analog_missing: bool = False,
 def _risks(rot: Rotation, viable: bool, reasons: list[str]) -> list[str]:
     per = CAUTIONS.get("per_crop", {})
     risks = [r for s in rot.sequence for r in per.get(s.crop, [])]
+    # host-sharing consecutive pairs get a specific warning, e.g.
+    # "maíz sobre maíz mantiene Fusarium y chicharrita"
+    for a, b, pests in host_sharing_pairs(rot):
+        names = ", ".join(p.name_es.split(" (")[0] for p in pests[:3])
+        how = pests[0].survival.split(":")[0]
+        risks.append(
+            f"{a} seguido de {b} mantiene {names} "
+            f"(inóculo: {how}).")
     risks += CAUTIONS.get("generic", [])
     if not viable:
         risks += [f"No viable: {r}" for r in reasons]
@@ -693,12 +724,31 @@ def _sections(rot: Rotation, ind: dict, cur_ind: dict,
                         f"{c.water_mm_cycle} mm)",
                 "indicator": "water_balance",
                 "source": c.water_observed_note or c.sources[0]})
+    # thermal-time check (task 44): "este lote acumula X °C·día por
+    # año; el maíz necesita Y" — viability visible per crop
+    gdd_ev = []
+    gdd_cell = (_card(diag, "gdd_year") or {}).get("value")
+    if isinstance(gdd_cell, (int, float)):
+        for c in crops_unique(rot):
+            if c.gdd_base10 is None:
+                continue
+            name = c.name.get("es", c.id)
+            short = ("" if gdd_cell >= c.gdd_base10
+                     else " — no alcanza en años típicos")
+            gdd_ev.append({
+                "text": f"{name}: este lote acumula "
+                        f"~{gdd_cell:g} °C·día por año; necesita "
+                        f"~{c.gdd_base10} para completar el ciclo "
+                        f"(base 10 °C){short}",
+                "indicator": "gdd_year",
+                "source": "gdd_base10 del catálogo (FAO/INTA, "
+                          "pendiente de validación local)"})
     # root/crown carbon of pastures is a declared knowledge gap
     root_gaps = [f"{c.id}: {c.root_carbon_note}"
                  for c in crops_unique(rot) if c.root_carbon_note]
     return {
         "why": _why(rot, is_current, priorities, diag, constraints or {}),
-        "evidence": evidence[:4] + water_ev,
+        "evidence": evidence[:4] + water_ev + gdd_ev,
         "benefits": benefits,
         "gaps": _gaps(diag, analog is None,
                       (extra_gaps or []) + root_gaps)

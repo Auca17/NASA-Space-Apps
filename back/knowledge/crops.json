@@ -36,7 +36,7 @@
           "06-30"
         ]
       },
-      "gdd_base10": null,
+      "gdd_base10": 2000,
       "frost_tolerance": "low",
       "drought_tolerance": "medium",
       "heat_tolerance": "medium",
@@ -57,7 +57,8 @@
         "Bolsa de Cereales de Buenos Aires, Panorama Agrícola Semanal (avance de siembra y cosecha por región)",
         "USDA FAS IPAD, Argentina crop calendar (Commodity Intelligence Report, 2024-11)",
         "Rastrojo estimado = rinde medio × (1 − IC) / IC; rinde MAGyP Estimaciones Agrícolas, índice de cosecha (IC) de bibliografía — borrador a validar (REVIEW.md)",
-        "FAO-56, Allen et al. (1998), tabla 12: Kc media estación = 1.15 — pendiente de validación local (REVIEW.md)"
+        "FAO-56, Allen et al. (1998), tabla 12: Kc media estación = 1.15 — pendiente de validación local (REVIEW.md)",
+        "FAO-56/INTA: grados-día base 10 °C del ciclo siembra→madurez ≈ 2000 °C·d — pendiente de validación local (REVIEW.md)"
       ],
       "kc_mid": 1.15
     },
@@ -107,7 +108,7 @@
       "cycle_end": {
         "pampa_humeda": "04-30"
       },
-      "gdd_base10": null,
+      "gdd_base10": 1700,
       "gdd_base_c": 8,
       "gdd_flowering_to_maturity": [
         600,
@@ -139,7 +140,8 @@
         "USDA FAS IPAD, Argentina crop calendar (Commodity Intelligence Report, 2024-11)",
         "INTA (2024), zonificación de fechas de siembra de maíz frente a la chicharrita (Dalbulus maidis), cuatro zonas",
         "Rastrojo estimado = rinde medio × (1 − IC) / IC; rinde MAGyP Estimaciones Agrícolas, índice de cosecha (IC) de bibliografía — borrador a validar (REVIEW.md)",
-        "FAO-56, Allen et al. (1998), tabla 12: Kc media estación = 1.2 — pendiente de validación local (REVIEW.md)"
+        "FAO-56, Allen et al. (1998), tabla 12: Kc media estación = 1.2 — pendiente de validación local (REVIEW.md)",
+        "FAO-56/INTA: grados-día base 10 °C del ciclo siembra→madurez ≈ 1700 °C·d — pendiente de validación local (REVIEW.md)"
       ],
       "kc_mid": 1.2
     },
@@ -178,7 +180,7 @@
           "11-30"
         ]
       },
-      "gdd_base10": null,
+      "gdd_base10": 1500,
       "frost_tolerance": "high",
       "drought_tolerance": "medium",
       "heat_tolerance": "low",
@@ -201,7 +203,8 @@
         "Bolsa de Cereales de Buenos Aires, Panorama Agrícola Semanal (avance de siembra y cosecha por región)",
         "USDA FAS IPAD, Argentina crop calendar (Commodity Intelligence Report, 2024-11): siembra mayo–julio, cosecha noviembre–enero",
         "Rastrojo estimado = rinde medio × (1 − IC) / IC; rinde MAGyP Estimaciones Agrícolas, índice de cosecha (IC) de bibliografía — borrador a validar (REVIEW.md)",
-        "FAO-56, Allen et al. (1998), tabla 12: Kc media estación = 1.15 — pendiente de validación local (REVIEW.md)"
+        "FAO-56, Allen et al. (1998), tabla 12: Kc media estación = 1.15 — pendiente de validación local (REVIEW.md)",
+        "FAO-56/INTA: grados-día base 10 °C del ciclo siembra→madurez ≈ 1500 °C·d — pendiente de validación local (REVIEW.md)"
       ],
       "kc_mid": 1.15
     },
@@ -232,7 +235,7 @@
           "01-31"
         ]
       },
-      "gdd_base10": null,
+      "gdd_base10": 1600,
       "frost_tolerance": "medium",
       "drought_tolerance": "high",
       "heat_tolerance": "medium",
@@ -254,7 +257,8 @@
         "MAGyP, Estimaciones Agrícolas (área, rinde y avance de siembra/cosecha por delegación)",
         "Bolsa de Cereales de Buenos Aires, Panorama Agrícola Semanal (avance de siembra y cosecha por región)",
         "Rastrojo estimado = rinde medio × (1 − IC) / IC; rinde MAGyP Estimaciones Agrícolas, índice de cosecha (IC) de bibliografía — borrador a validar (REVIEW.md)",
-        "FAO-56, Allen et al. (1998), tabla 12: Kc media estación = 1.15 — pendiente de validación local (REVIEW.md)"
+        "FAO-56, Allen et al. (1998), tabla 12: Kc media estación = 1.15 — pendiente de validación local (REVIEW.md)",
+        "FAO-56/INTA: grados-día base 10 °C del ciclo siembra→madurez ≈ 1600 °C·d — pendiente de validación local (REVIEW.md)"
       ],
       "kc_mid": 1.15
     },
@@ -296,7 +300,7 @@
       "cycle_end": {
         "pampa_humeda": "05-15"
       },
-      "gdd_base10": null,
+      "gdd_base10": 1800,
       "frost_tolerance": "low",
       "drought_tolerance": "high",
       "heat_tolerance": "high",
@@ -316,7 +320,8 @@
         "MAGyP, Estimaciones Agrícolas (área, rinde y avance de siembra/cosecha por delegación)",
         "Bolsa de Cereales de Buenos Aires, Panorama Agrícola Semanal (avance de siembra y cosecha por región)",
         "Rastrojo estimado = rinde medio × (1 − IC) / IC; rinde MAGyP Estimaciones Agrícolas, índice de cosecha (IC) de bibliografía — borrador a validar (REVIEW.md)",
-        "FAO-56, Allen et al. (1998), tabla 12: Kc media estación = 1.1 — pendiente de validación local (REVIEW.md)"
+        "FAO-56, Allen et al. (1998), tabla 12: Kc media estación = 1.1 — pendiente de validación local (REVIEW.md)",
+        "FAO-56/INTA: grados-día base 10 °C del ciclo siembra→madurez ≈ 1800 °C·d — pendiente de validación local (REVIEW.md)"
       ],
       "kc_mid": 1.1
     },
@@ -339,7 +344,7 @@
           "12-31"
         ]
       },
-      "gdd_base10": null,
+      "gdd_base10": 1400,
       "frost_tolerance": "high",
       "drought_tolerance": "medium",
       "heat_tolerance": "low",
@@ -357,7 +362,8 @@
         "MAGyP, Estimaciones Agrícolas (área, rinde y avance de siembra/cosecha por delegación)",
         "Bolsa de Cereales de Buenos Aires, Panorama Agrícola Semanal (avance de siembra y cosecha por región)",
         "Rastrojo estimado = rinde medio × (1 − IC) / IC; rinde MAGyP Estimaciones Agrícolas, índice de cosecha (IC) de bibliografía — borrador a validar (REVIEW.md)",
-        "FAO-56, Allen et al. (1998), tabla 12: Kc media estación = 1.15 — pendiente de validación local (REVIEW.md)"
+        "FAO-56, Allen et al. (1998), tabla 12: Kc media estación = 1.15 — pendiente de validación local (REVIEW.md)",
+        "FAO-56/INTA: grados-día base 10 °C del ciclo siembra→madurez ≈ 1400 °C·d — pendiente de validación local (REVIEW.md)"
       ],
       "kc_mid": 1.15
     },
@@ -380,7 +386,7 @@
           "05-31"
         ]
       },
-      "gdd_base10": null,
+      "gdd_base10": 1900,
       "frost_tolerance": "low",
       "drought_tolerance": "medium",
       "heat_tolerance": "high",
@@ -396,7 +402,8 @@
         "FAO ECOCROP (base de datos de requerimientos ecológicos de cultivos): tolerancias cualitativas",
         "MAGyP, Estimaciones Agrícolas (área, rinde y avance de siembra/cosecha por delegación)",
         "Rastrojo estimado = rinde medio × (1 − IC) / IC; rinde MAGyP Estimaciones Agrícolas, índice de cosecha (IC) de bibliografía — borrador a validar (REVIEW.md)",
-        "FAO-56, Allen et al. (1998), tabla 12: Kc media estación = 1.15 — pendiente de validación local (REVIEW.md)"
+        "FAO-56, Allen et al. (1998), tabla 12: Kc media estación = 1.15 — pendiente de validación local (REVIEW.md)",
+        "FAO-56/INTA: grados-día base 10 °C del ciclo siembra→madurez ≈ 1900 °C·d — pendiente de validación local (REVIEW.md)"
       ],
       "kc_mid": 1.15
     },
@@ -427,7 +434,7 @@
           "07-15"
         ]
       },
-      "gdd_base10": null,
+      "gdd_base10": 2100,
       "frost_tolerance": "low",
       "drought_tolerance": "high",
       "heat_tolerance": "high",
@@ -444,7 +451,8 @@
         "FAO ECOCROP (base de datos de requerimientos ecológicos de cultivos): tolerancias cualitativas",
         "MAGyP, Estimaciones Agrícolas (área, rinde y avance de siembra/cosecha por delegación)",
         "Rastrojo estimado = rinde medio × (1 − IC) / IC; rinde MAGyP Estimaciones Agrícolas, índice de cosecha (IC) de bibliografía — borrador a validar (REVIEW.md)",
-        "FAO-56, Allen et al. (1998), tabla 12: Kc media estación = 1.15 — pendiente de validación local (REVIEW.md)"
+        "FAO-56, Allen et al. (1998), tabla 12: Kc media estación = 1.15 — pendiente de validación local (REVIEW.md)",
+        "FAO-56/INTA: grados-día base 10 °C del ciclo siembra→madurez ≈ 2100 °C·d — pendiente de validación local (REVIEW.md)"
       ],
       "kc_mid": 1.15
     },
@@ -517,7 +525,8 @@
         "MAGyP, Estimaciones Agrícolas (área, rinde y avance de siembra/cosecha por delegación)",
         "residue_t_ha = 0,0: la biomasa aérea se retira por corte o pastoreo (ventana de 'cosecha' = período de cortes) — validar",
         "root_carbon_note: el aporte de carbono por raíz y corona no tiene valor (depende del manejo y de la duración de la pastura) — sigue pendiente de validación local",
-        "FAO-56, Allen et al. (1998), tabla 12: Kc media estación = 1.1 — pendiente de validación local (REVIEW.md)"
+        "FAO-56, Allen et al. (1998), tabla 12: Kc media estación = 1.1 — pendiente de validación local (REVIEW.md)",
+        "gdd_base10 null: perenne de cortes sucesivos, no aplica un ciclo único siembra→madurez (REVIEW.md)"
       ],
       "kc_mid": 1.1
     },
@@ -540,7 +549,7 @@
           "12-31"
         ]
       },
-      "gdd_base10": null,
+      "gdd_base10": 1300,
       "frost_tolerance": "medium",
       "drought_tolerance": "low",
       "heat_tolerance": "low",
@@ -556,7 +565,8 @@
         "FAO ECOCROP (base de datos de requerimientos ecológicos de cultivos): tolerancias cualitativas",
         "MAGyP, Estimaciones Agrícolas (área, rinde y avance de siembra/cosecha por delegación)",
         "Rastrojo estimado = rinde medio × (1 − IC) / IC; rinde MAGyP Estimaciones Agrícolas, índice de cosecha (IC) de bibliografía — borrador a validar (REVIEW.md)",
-        "FAO-56, Allen et al. (1998), tabla 12: Kc media estación = 1.15 — pendiente de validación local (REVIEW.md)"
+        "FAO-56, Allen et al. (1998), tabla 12: Kc media estación = 1.15 — pendiente de validación local (REVIEW.md)",
+        "FAO-56/INTA: grados-día base 10 °C del ciclo siembra→madurez ≈ 1300 °C·d — pendiente de validación local (REVIEW.md)"
       ],
       "kc_mid": 1.15
     },
@@ -579,7 +589,7 @@
           "12-15"
         ]
       },
-      "gdd_base10": null,
+      "gdd_base10": 1200,
       "frost_tolerance": "high",
       "drought_tolerance": "high",
       "heat_tolerance": "low",
@@ -595,7 +605,8 @@
         "FAO ECOCROP (base de datos de requerimientos ecológicos de cultivos): tolerancias cualitativas",
         "root_depth_cm: null, FAO-56 tabla 22 no lista centeno",
         "residue_t_ha: biomasa de cobertura al secado, INTA EEA General Villegas, ensayos de cultivos de cobertura vicia y centeno: uso consuntivo 110–241 mm según momento de secado — validar",
-        "FAO-56, Allen et al. (1998), tabla 12: Kc media estación = 1.15 — pendiente de validación local (REVIEW.md)"
+        "FAO-56, Allen et al. (1998), tabla 12: Kc media estación = 1.15 — pendiente de validación local (REVIEW.md)",
+        "FAO-56/INTA: grados-día base 10 °C del ciclo siembra→madurez ≈ 1200 °C·d — pendiente de validación local (REVIEW.md)"
       ],
       "kc_mid": 1.15
     },
@@ -626,7 +637,7 @@
           "10-31"
         ]
       },
-      "gdd_base10": null,
+      "gdd_base10": 1300,
       "frost_tolerance": "high",
       "drought_tolerance": "medium",
       "heat_tolerance": "low",
@@ -641,7 +652,8 @@
         "FAO ECOCROP (base de datos de requerimientos ecológicos de cultivos): tolerancias cualitativas",
         "root_depth_cm: null, FAO-56 tabla 22 no lista vicia",
         "residue_t_ha: biomasa de cobertura al secado — validar",
-        "FAO-56, Allen et al. (1998), tabla 12: Kc media estación = 1.1 — pendiente de validación local (REVIEW.md)"
+        "FAO-56, Allen et al. (1998), tabla 12: Kc media estación = 1.1 — pendiente de validación local (REVIEW.md)",
+        "FAO-56/INTA: grados-día base 10 °C del ciclo siembra→madurez ≈ 1300 °C·d — pendiente de validación local (REVIEW.md)"
       ],
       "kc_mid": 1.1
     },
@@ -664,7 +676,7 @@
           "12-15"
         ]
       },
-      "gdd_base10": null,
+      "gdd_base10": 1500,
       "frost_tolerance": "medium",
       "drought_tolerance": "low",
       "heat_tolerance": "low",
@@ -681,7 +693,8 @@
         "FAO ECOCROP (base de datos de requerimientos ecológicos de cultivos): tolerancias cualitativas",
         "MAGyP, Estimaciones Agrícolas (área, rinde y avance de siembra/cosecha por delegación)",
         "Rastrojo estimado = rinde medio × (1 − IC) / IC; rinde MAGyP Estimaciones Agrícolas, índice de cosecha (IC) de bibliografía — borrador a validar (REVIEW.md)",
-        "FAO-56, Allen et al. (1998), tabla 12: Kc media estación = 1.1 — pendiente de validación local (REVIEW.md)"
+        "FAO-56, Allen et al. (1998), tabla 12: Kc media estación = 1.1 — pendiente de validación local (REVIEW.md)",
+        "FAO-56/INTA: grados-día base 10 °C del ciclo siembra→madurez ≈ 1500 °C·d — pendiente de validación local (REVIEW.md)"
       ],
       "kc_mid": 1.1
     },
@@ -712,7 +725,7 @@
           "11-30"
         ]
       },
-      "gdd_base10": null,
+      "gdd_base10": 1400,
       "frost_tolerance": "medium",
       "drought_tolerance": "high",
       "heat_tolerance": "medium",
@@ -732,7 +745,8 @@
         "FAO ECOCROP (base de datos de requerimientos ecológicos de cultivos): tolerancias cualitativas",
         "MAGyP, Estimaciones Agrícolas (área, rinde y avance de siembra/cosecha por delegación)",
         "Rastrojo estimado = rinde medio × (1 − IC) / IC; rinde MAGyP Estimaciones Agrícolas, índice de cosecha (IC) de bibliografía — borrador a validar (REVIEW.md)",
-        "FAO-56, Allen et al. (1998), tabla 12: Kc media estación = 1.1 — pendiente de validación local (REVIEW.md)"
+        "FAO-56, Allen et al. (1998), tabla 12: Kc media estación = 1.1 — pendiente de validación local (REVIEW.md)",
+        "FAO-56/INTA: grados-día base 10 °C del ciclo siembra→madurez ≈ 1400 °C·d — pendiente de validación local (REVIEW.md)"
       ],
       "kc_mid": 1.1
     },
@@ -755,7 +769,7 @@
           "12-15"
         ]
       },
-      "gdd_base10": null,
+      "gdd_base10": 1200,
       "frost_tolerance": "medium",
       "drought_tolerance": "low",
       "heat_tolerance": "low",
@@ -771,7 +785,8 @@
         "FAO ECOCROP (base de datos de requerimientos ecológicos de cultivos): tolerancias cualitativas",
         "MAGyP, Estimaciones Agrícolas (área, rinde y avance de siembra/cosecha por delegación)",
         "Rastrojo estimado = rinde medio × (1 − IC) / IC; rinde MAGyP Estimaciones Agrícolas, índice de cosecha (IC) de bibliografía — borrador a validar (REVIEW.md)",
-        "FAO-56, Allen et al. (1998), tabla 12: Kc media estación = 1.15 — pendiente de validación local (REVIEW.md)"
+        "FAO-56, Allen et al. (1998), tabla 12: Kc media estación = 1.15 — pendiente de validación local (REVIEW.md)",
+        "FAO-56/INTA: grados-día base 10 °C del ciclo siembra→madurez ≈ 1200 °C·d — pendiente de validación local (REVIEW.md)"
       ],
       "kc_mid": 1.15
     },
@@ -801,7 +816,7 @@
           "11-15"
         ]
       },
-      "gdd_base10": null,
+      "gdd_base10": 1300,
       "frost_tolerance": "low",
       "drought_tolerance": "high",
       "heat_tolerance": "high",
@@ -816,7 +831,8 @@
         "FAO-56, Allen et al. (1998), Crop evapotranspiration, tabla 12 (Kc vid 0,30 ini / 0,70 mid / 0,45 end) — ETc estacional Mendoza ~450–700 mm (punto medio 550) — pendiente de validación local (REVIEW.md)",
         "FAO-56, tabla 22: profundidad radicular vid 1,0–2,0 m (punto medio con riego 1,1 m)",
         "INTA EEA Mendoza/Junín: ventana de brotación–cuajado sep–nov, sensible a heladas tardías — pendiente de validación local (REVIEW.md)",
-        "FAO ECOCROP: tolerancias cualitativas"
+        "FAO ECOCROP: tolerancias cualitativas",
+        "FAO-56/INTA: grados-día base 10 °C del ciclo siembra→madurez ≈ 1300 °C·d (ciclo anual brotación→cosecha) — pendiente de validación local (REVIEW.md)"
       ],
       "kc_mid": 0.7
     },
@@ -846,7 +862,7 @@
           "11-30"
         ]
       },
-      "gdd_base10": null,
+      "gdd_base10": 2000,
       "frost_tolerance": "medium",
       "drought_tolerance": "high",
       "heat_tolerance": "high",
@@ -860,7 +876,8 @@
       "sources": [
         "FAO-56, Allen et al. (1998), Crop evapotranspiration, tabla 12 (Kc olivo ~0,65 todo el año): ETc anual ~600–900 mm (punto medio 700) — pendiente de validación local (REVIEW.md)",
         "FAO-56, tabla 22: profundidad radicular olivo 1,0–1,7 m",
-        "FAO ECOCROP: tolerancias cualitativas; floración oct–nov sensible a helada — pendiente de validación local (REVIEW.md)"
+        "FAO ECOCROP: tolerancias cualitativas; floración oct–nov sensible a helada — pendiente de validación local (REVIEW.md)",
+        "FAO-56/INTA: grados-día base 10 °C del ciclo siembra→madurez ≈ 2000 °C·d (ciclo anual brotación→cosecha) — pendiente de validación local (REVIEW.md)"
       ],
       "kc_mid": 0.65
     },
@@ -890,7 +907,7 @@
         "cuyo": "11-30"
       },
       "frost_window": {},
-      "gdd_base10": null,
+      "gdd_base10": 1400,
       "frost_tolerance": "high",
       "drought_tolerance": "low",
       "heat_tolerance": "medium",
@@ -905,7 +922,8 @@
         "FAO-56, Allen et al. (1998), Crop evapotranspiration: ETc ajo ~350–500 mm ciclo (punto medio 450) — pendiente de validación local (REVIEW.md)",
         "FAO-56, tabla 22: profundidad radicular ajo 0,3–0,5 m",
         "INTA EEA Mendoza (cuenca sur): calendario ajo siembra otoño, cosecha nov–dic — pendiente de validación local (REVIEW.md)",
-        "FAO-56, Allen et al. (1998), tabla 12: Kc media estación = 1 — pendiente de validación local (REVIEW.md)"
+        "FAO-56, Allen et al. (1998), tabla 12: Kc media estación = 1 — pendiente de validación local (REVIEW.md)",
+        "FAO-56/INTA: grados-día base 10 °C del ciclo siembra→madurez ≈ 1400 °C·d — pendiente de validación local (REVIEW.md)"
       ],
       "kc_mid": 1.0
     },
@@ -935,7 +953,7 @@
           "10-31"
         ]
       },
-      "gdd_base10": null,
+      "gdd_base10": 1400,
       "frost_tolerance": "low",
       "drought_tolerance": "medium",
       "heat_tolerance": "high",
@@ -949,7 +967,8 @@
       "sources": [
         "FAO-56, Allen et al. (1998), Crop evapotranspiration, tabla 12 (Kc frutales de hoja caduca ~0,45 ini / 0,90 mid): ETc estacional ~700–900 mm (punto medio 800) — pendiente de validación local (REVIEW.md)",
         "FAO-56, tabla 22: profundidad radicular frutales de carozo 1,0–2,0 m",
-        "Floración ago–sep muy sensible a heladas tardías (conocimiento agronómico general) — pendiente de validación local (REVIEW.md)"
+        "Floración ago–sep muy sensible a heladas tardías (conocimiento agronómico general) — pendiente de validación local (REVIEW.md)",
+        "FAO-56/INTA: grados-día base 10 °C del ciclo siembra→madurez ≈ 1400 °C·d (ciclo anual brotación→cosecha) — pendiente de validación local (REVIEW.md)"
       ],
       "kc_mid": 0.9
     },
@@ -981,7 +1000,8 @@
       "sources": [
         "Uso hídrico del monte (Prosopis/Chilean mesquite) ~300–400 mm anuales bajo secano — orden de magnitud bibliográfico, pendiente de validación local (REVIEW.md)",
         "FAO ECOCROP: tolerancias cualitativas; especies nativas fijadoras de N (Prosopis)",
-        "FAO-56, Allen et al. (1998), tabla 12: Kc media estación = 0.6 — pendiente de validación local (REVIEW.md)"
+        "FAO-56, Allen et al. (1998), tabla 12: Kc media estación = 0.6 — pendiente de validación local (REVIEW.md)",
+        "gdd_base10 null: monte nativo sin ciclo agrícola definido (REVIEW.md)"
       ],
       "kc_mid": 0.6
     }

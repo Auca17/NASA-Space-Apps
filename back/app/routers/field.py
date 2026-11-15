@@ -232,6 +232,21 @@ def days_per_year(series: dict, cond, years=None):
         sum(1 for v in vs if cond(v)) for vs in by.values()), 1)
 
 
+def gdd_per_year(tmax: dict, tmin: dict):
+    """Mean annual growing degree days, base 10 °C capped at 30 °C
+    (FAO/Ecocrop convention): per day
+    max(0, (min(Tmax,30)+max(Tmin,10))/2 - 10). Years need >=300 days."""
+    by_year: dict[int, list[float]] = {}
+    for d, tx in (tmax or {}).items():
+        tn = (tmin or {}).get(d)
+        if tx is None or tn is None:
+            continue
+        by_year.setdefault(d.year, []).append(
+            max(0.0, (min(tx, 30.0) + max(tn, 10.0)) / 2 - 10.0))
+    full = [sum(vs) for vs in by_year.values() if len(vs) >= 300]
+    return round(statistics.fmean(full)) if full else None
+
+
 def frost_free_window(series: dict):
     """Frost-free window, hemisphere-agnostic.
 
@@ -507,6 +522,19 @@ def build_cards(power, soilg, slope, ndvi, grid_cell, fire_cal,
               "NASA POWER", POWER_RES, "high",
               f"{hot:g} days/yr above 35 °C")
         if hot is not None else _null_card("heat", "NASA POWER", POWER_RES))
+
+    # gdd_year: thermal time accumulated per year, base 10 °C capped
+    # at 30 °C (FAO/Ecocrop convention), from POWER T2M_MAX/T2M_MIN.
+    gdd = gdd_per_year(P("T2M_MAX") or {}, P("T2M_MIN") or {})
+    cards.append(
+        _card("gdd_year", gdd, "°C·día/año",
+              f"Este lote acumula {_fmt_es(gdd, 0)} °C·día por año "
+              "(base 10 °C)",
+              "NASA POWER (T2M, base 10 °C, tope 30 °C)",
+              POWER_RES, "medium",
+              f"This plot accumulates ~{gdd} GDD/year (base 10 °C)")
+        if gdd is not None else _null_card(
+            "gdd_year", "NASA POWER", POWER_RES))
 
     # elevation transparency (task 20): note on temp cards + confidence cap
     if adj and adj.get("temp_adjust_c"):
@@ -825,6 +853,9 @@ def degraded_cards(grid_cell, terr, soilg, fire_cal, risk_cell, r5):
               f"{hot:g} días/año por encima de 35 °C",
               DEGRADED_SRC, POWER_RES, "medium")
         if hot is not None else _unavailable("heat"))
+
+    # no POWER series -> no daily temperatures -> GDD unavailable
+    cards.append(_unavailable("gdd_year"))
 
     sm = gc.get("sm_anom_pct")
     if sm is not None:
