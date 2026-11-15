@@ -158,13 +158,16 @@ export function ParcelsWizard({ geom, globe, onDone, onCancel }: {
       {/* the draw layer must sit directly on .map-wrap to cover the
           whole map — inside the panel it would only cover the picker */}
       {tool === "points" ? (
+        // vertices show while the path is still open so they can be
+        // dragged into place; midpoint handles grow the ring
         <DrawLayer unproject={(x, y) => globe.unproject(x, y)}
                    session={session ?? undefined}
-                   onSync={(r, c) => globe.setDraft(r, c)} />
+                   onSync={(r) => globe.setDraft(r, true)} />
       ) : (
         <DrawLayer unproject={(x, y) => globe.unproject(x, y)}
                    session={session ?? undefined}
-                   onSync={(r) => globe.setDraft(r, false)} />
+                   midpoints={false}
+                   onSync={(r) => globe.setDraft(r, true, false)} />
       )}
       <div className="controls picker parcels-wizard" role="region"
            aria-label={t("parcels.title")}>

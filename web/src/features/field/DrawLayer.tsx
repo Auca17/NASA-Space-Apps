@@ -2,13 +2,16 @@
  * pointer gestures into outline edits on a DrawSession.
  * - open path: each click appends a vertex; the path stays open and
  *   follows the clicks until the first vertex is tapped (closed)
+ * - every placed vertex drags live, open or closed; a small midpoint
+ *   handle on each edge inserts a vertex and drags it in one gesture
  * - closed outline: click on a vertex selects it, click on an edge
- *   inserts a vertex there, drag moves vertices, right-click or a long
- *   press removes a vertex
+ *   inserts a vertex there, right-click or a long press removes it
+ * - a move that would self-cross is refused with a notice; every drag
+ *   is one undo step
  * The map is panned with the "mover mapa" toggle, like freehand mode. */
 import { useEffect, useRef, useState } from "react";
 import type { LatLon } from "../../domain/selection";
-import { nearestVertex } from "../../domain/parcelsGeo";
+import { nearestMidpoint, nearestVertex } from "../../domain/parcelsGeo";
 import {
   DrawSession, activateDrawSession, deactivateDrawSession,
 } from "./drawEdit";
@@ -25,10 +28,14 @@ type Props = {
   session?: DrawSession;
   initialRing?: LatLon[];
   initialClosed?: boolean;
+  /** midpoint handles on every edge (default true; the split tool
+   * draws a plain line and turns them off). */
+  midpoints?: boolean;
 };
 
 export function DrawLayer({ unproject, onSync, session: given,
-                            initialRing, initialClosed }: Props) {
+                            initialRing, initialClosed,
+                            midpoints = true }: Props) {
   const ref = useRef<HTMLDivElement>(null);
   const [session] = useState(() =>
     given ?? new DrawSession(initialRing ?? [], initialClosed ?? false));
@@ -75,17 +82,27 @@ export function DrawLayer({ unproject, onSync, session: given,
     const p = ll(e);
     st.current = { ...st.current, downAt: [e.clientX, e.clientY],
                      downLL: p, moved: false };
-    if (session.state.closed) {
-      const i = nearestVertex(session.state.ring, p, tolM());
-      if (i >= 0 && session.startDrag(i)) {
-        st.current.dragging = true;
-        session.select(i);
+    const t = tolM();
+    const i = nearestVertex(session.state.ring, p, t);
+    if (i >= 0 && session.startDrag(i)) {
+      st.current.dragging = true;
+      session.select(i);
+      if (session.state.closed) {
         st.current.longPress = window.setTimeout(() => {
           session.cancelDrag();
           session.removeAt(i);
           st.current.dragging = false;
           st.current.longPress = undefined;
         }, LONG_PRESS_MS);
+      }
+      return;
+    }
+    if (midpoints) {
+      const m = nearestMidpoint(session.state.ring,
+        session.state.closed, p, t);
+      if (m && session.startMidDrag(m.index)) {
+        st.current.dragging = true;
+        session.select(m.index);
       }
     }
   };
@@ -107,8 +124,10 @@ export function DrawLayer({ unproject, onSync, session: given,
     const travel = Math.hypot(e.clientX - x0, e.clientY - y0);
     if (st.current.dragging) {
       st.current.dragging = false;
-      if (st.current.moved) session.endDrag();
-      return;
+      if (st.current.moved) { session.endDrag(); return; }
+      // a tap that never moved is still a click (close the outline,
+      // select a vertex, insert on an edge)
+      session.cancelDrag();
     }
     if (travel <= CLICK_PX && st.current.downLL) {
       session.click(st.current.downLL, tolM());

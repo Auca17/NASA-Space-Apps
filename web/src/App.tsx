@@ -26,6 +26,7 @@ import {
   classifyUrban, multiPoints, type LatLon, type Multi,
 } from "./domain/selection";
 import { splitSelection, clipZone, ROAD_HALF_WIDTH } from "./domain/split";
+import { nearestMidpoint, nearestVertex } from "./domain/parcelsGeo";
 import {
   loadFields, saveField, renameField, deleteField, addZone, updateZone,
   removeZone, fieldHa, analysisOptions, ZONE_COLORS, type Field,
@@ -125,6 +126,13 @@ export default function App() {
   const country = useRef<string | null>(null);
   const globeRef = useRef<GlobeHandle | null>(null);
   const mapDiv = useRef<HTMLDivElement>(null);
+  /** vertex-drag gesture on the open field outline (see the effect
+   * below `onGlobeReady`); a real drag swallows the trailing click. */
+  const dragRef = useRef({ dragging: false, moved: false,
+                         panWasOff: false,
+                         downAt: [0, 0] as [number, number],
+                         downLL: null as LatLon | null });
+  const swallowClick = useRef(false);
   const frameArgentinaOnOpen = useRef(false);
 
   const fireArea = (lat: number, lon: number) =>
@@ -142,6 +150,9 @@ export default function App() {
       if (modeRef.current !== "field" || movingMapRef.current) return;
       const d = drawRef.current;
       if (d === "draw") {
+        // a vertex/midpoint drag ends with a map click at the drop
+        // point: swallow it so it doesn't add a stray vertex
+        if (swallowClick.current) { swallowClick.current = false; return; }
         // same DrawSession as the parcel wizard: the tap lands where
         // the ring stays simple (never a bow tie)
         fieldSession.click([lat, lon], draftTolM());
@@ -193,6 +204,79 @@ export default function App() {
     activateDrawSession(fieldSession);
     return () => deactivateDrawSession(fieldSession);
   }, [draw, fieldSession]);
+
+  // Point-by-point drawing lets every placed vertex be dragged into
+  // place, open or closed — mouse and touch alike. Pointer down on a
+  // vertex (or a midpoint handle, which inserts and drags in one
+  // gesture) turns map panning off until the gesture ends; a move that
+  // would cross the outline is refused by the session. The map click
+  // right after a real drag is swallowed so the drop doesn't add a
+  // stray vertex.
+  useEffect(() => {
+    const el = mapDiv.current;
+    if (!el || mode !== "field" || draw !== "draw" || movingMap) return;
+    const st = dragRef.current;
+    const ll = (e: PointerEvent): LatLon => {
+      const r = el.getBoundingClientRect();
+      return globeRef.current?.unproject(e.clientX - r.left,
+        e.clientY - r.top) ?? [0, 0];
+    };
+    const stopPan = (off: boolean) => {
+      globeRef.current?.setPanEnabled(!off);
+      st.panWasOff = off;
+    };
+    const onDown = (e: PointerEvent) => {
+      if (e.pointerType === "mouse" && e.button !== 0) return;
+      const p = ll(e);
+      const t = draftTolM();
+      const ring = fieldSession.state.ring;
+      const i = nearestVertex(ring, p, t);
+      const m = i < 0 ? nearestMidpoint(ring,
+        fieldSession.state.closed, p, t) : null;
+      const started = i >= 0 ? fieldSession.startDrag(i)
+        : m ? fieldSession.startMidDrag(m.index) : false;
+      if (!started) return;
+      st.dragging = true; st.moved = false;
+      st.downAt = [e.clientX, e.clientY]; st.downLL = p;
+      stopPan(true);
+      e.preventDefault();
+      e.stopPropagation();
+    };
+    const onMove = (e: PointerEvent) => {
+      if (!st.dragging) return;
+      if (!st.moved) {
+        if (Math.hypot(e.clientX - st.downAt[0],
+                       e.clientY - st.downAt[1]) <= 4) return;
+        st.moved = true;
+      }
+      fieldSession.dragTo(ll(e));
+    };
+    const onUp = () => {
+      if (!st.dragging) return;
+      st.dragging = false;
+      stopPan(false);
+      if (st.moved) { fieldSession.endDrag(); swallowClick.current = true; }
+      else {
+        // a tap that never moved is still a click on the handle's spot
+        // (pointerdown was stopped, so the map never saw the gesture)
+        fieldSession.cancelDrag();
+        if (st.downLL) fieldSession.click(st.downLL, draftTolM());
+      }
+      st.downLL = null;
+    };
+    el.addEventListener("pointerdown", onDown, true);
+    window.addEventListener("pointermove", onMove);
+    window.addEventListener("pointerup", onUp);
+    window.addEventListener("pointercancel", onUp);
+    return () => {
+      el.removeEventListener("pointerdown", onDown, true);
+      window.removeEventListener("pointermove", onMove);
+      window.removeEventListener("pointerup", onUp);
+      window.removeEventListener("pointercancel", onUp);
+      if (st.dragging) { st.dragging = false; fieldSession.cancelDrag(); }
+      if (st.panWasOff) stopPan(false);
+    };
+  }, [mode, draw, movingMap, fieldSession]);
 
   useEffect(() => {
     globe?.setFieldBasemap(mode === "field", satellite, !fieldOpen && fieldGuide);
