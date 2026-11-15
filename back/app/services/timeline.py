@@ -118,13 +118,16 @@ def _headline(lang: str, lat: float, months: list,
         head = None
     if t_c is not None and abs(t_c) >= 1:
         season = _season(lat, months[-1][1], lang)
+        fem = season == "primavera"
+        adj = (("cálida" if fem else "cálido") if t_c > 0
+               else ("fría" if fem else "frío"))
         t_clause = (
-            (f"el {season} viene {abs(t_c):g} °C más "
-             f"{'cálido' if t_c > 0 else 'frío'} que lo normal") if not en else
+            (f"{'la' if fem else 'el'} {season} viene {abs(t_c):g} °C "
+             f"más {adj} que lo normal") if not en else
             (f"the {season} is running {abs(t_c):g} °C "
              f"{'warmer' if t_c > 0 else 'cooler'} than normal"))
         if head:
-            return head + ", " + ("con " if not en else "with ") + t_clause + "."
+            return head + ", " + ("y " if not en else "and ") + t_clause + "."
         return ("Este año " + t_clause + "." if not en else
                 "This year " + t_clause + ".")
     if head:

@@ -105,6 +105,19 @@ def test_timeline_none_without_power():
     assert build_timeline({}, -33) is None
 
 
+def test_headline_feminine_season_agreement():
+    # 2026 much colder than normal -> "la primavera ... más fría", not "el primavera ... frío"
+    p = power_stub(tmax_fn=lambda d: 20.0 if d.year == 2026 else 25.0)
+    t = build_timeline(p, -33, "es")
+    assert "la primavera" in t["headline"]
+    assert "fría" in t["headline"]
+    assert "el primavera" not in t["headline"]
+    p = power_stub(tmax_fn=lambda d: 30.0 if d.year == 2026 else 25.0)
+    t = build_timeline(p, -33, "es")
+    assert "la primavera" in t["headline"]
+    assert "cálida" in t["headline"]
+
+
 # ------------------------------------------------------------ bare soil S2
 
 class FakeRaster:
@@ -215,3 +228,4 @@ def test_month_bucketing_reasons():
     r = {"reason": "too_few_months", "months_with_data": 2,
          "ndvi_monthly": [None] * 10 + [0.5, 0.4]}
     assert "bare_soil_days" not in r
+
