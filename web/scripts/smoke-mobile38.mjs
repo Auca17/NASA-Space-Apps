@@ -33,7 +33,7 @@ for (const { name, conf } of PROFILES) {
 
   await page.goto(BASE + "/app/", { waitUntil: "networkidle" });
   await page.waitForTimeout(1400);
-  await shot("welcome");
+  await shot("boot");
 
   // "Más" sheet open
   if (await page.locator(".menu-btn").isVisible()) {
@@ -44,8 +44,12 @@ for (const { name, conf } of PROFILES) {
     await page.waitForTimeout(250);
   }
 
-  // field mode: chooser peek (default) then expand via handle
-  await page.locator(".welcome button.primary").click();
+  // field chooser: boot list → "Agregar campo" → "Buscar", then the
+  // peek handle expands it on compact widths
+  await page.locator("summary", { hasText: /Agregar campo|Add field/i })
+    .first().click().catch(() => {});
+  await page.getByRole("button", { name: /^Buscar$|^Search$/i })
+    .first().click().catch(() => {});
   await page.waitForTimeout(1600);
   await shot("field-peek");
   await tap(".field-chooser .picker-head button:first-child");

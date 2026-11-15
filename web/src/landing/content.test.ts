@@ -80,7 +80,7 @@ describe("landing content", () => {
 
   it("image assets referenced by content exist in public/", () => {
     for (const l of [CONTENT.en, CONTENT.es]) {
-      for (const img of [l.proof.img, l.trust.orinImg]) {
+      for (const img of [l.hero.shot, l.trust.orinImg]) {
         expect(existsSync(resolve(PUBLIC, img.src.slice(1)))).toBe(true);
         expect(img.width).toBeGreaterThan(0);
         expect(img.height).toBeGreaterThan(0);

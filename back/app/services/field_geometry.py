@@ -68,3 +68,49 @@ def weather_locations(shape):
     ranked = sorted(grids.items(), key=lambda item: -item[1][1])[:12]
     return [(point.y, point.x, weight, f"power:{row}/{col}")
             for (row, col), (point, weight) in ranked]
+
+
+# ------------------------------------------------ large fields ------------
+
+def area_ha(shape) -> float:
+    """Spherical area (ha) of a (Multi)Polygon, holes subtracted."""
+    from .geodesy import ring_area_ha
+    return sum(ring_area_ha(list(p.exterior.coords)[:-1]) -
+               sum(ring_area_ha(list(h.coords)[:-1]) for h in p.interiors)
+               for p in pieces(shape))
+
+
+def split_blocks(shape, max_ha: float):
+    """Technical blocks of at most ~`max_ha` covering `shape` exactly
+    (grid squares intersected with it). They spread the sampling of a
+    large field; they are never shown as plots."""
+    from math import ceil, cos, radians, sqrt
+    if area_ha(shape) <= max_ha:
+        return [shape]
+    west, south, east, north = shape.bounds
+    lat = radians((south + north) / 2)
+    side_deg = sqrt(max_ha * 10_000) / 111_194.9 * .97
+    rows = max(1, ceil((north - south) / side_deg))
+    cols = max(1, ceil((east - west) / (side_deg / max(cos(lat), .1))))
+    h, w = (north - south) / rows, (east - west) / cols
+    blocks = []
+    for r in range(rows):
+        for c in range(cols):
+            cell = box(west + c * w, south + r * h,
+                       west + (c + 1) * w, south + (r + 1) * h)
+            part = shape.intersection(cell)
+            if not part.is_empty and part.area > 0 and \
+                    part.geom_type in ("Polygon", "MultiPolygon"):
+                blocks.append(part)
+    return blocks
+
+
+def block_samples(blocks, total: int = 8):
+    """Sample points spread over every block: at least two per block and
+    the rest in proportion to its area. Weights add up to the area."""
+    whole = sum(b.area for b in blocks) or 1
+    out = []
+    for b in blocks:
+        limit = max(2, round(total * b.area / whole))
+        out.extend(sample_locations(b, limit=limit))
+    return out

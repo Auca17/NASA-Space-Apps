@@ -4,14 +4,26 @@
  * zones alike. Records saved by the first version ({ parts: ring[] } and
  * zones with { ring }) are upgraded when read; the key stays the same. */
 import { multiHa, type LatLon, type Multi } from "./selection";
+import type { ParcelSource } from "./split";
 
-export type Zone = { id: string; name: string; crop: string; geom: Multi };
+/** A plot (parcela) of the field. `source` says what delimited it:
+ * "ftw" Fields of The World boundaries, "osm" OpenStreetMap roads,
+ * "manual" drawn or corrected by the producer (also every zone saved
+ * before plots were detected). `crop` is what the producer declared. */
+export type Zone = { id: string; name: string; crop: string; geom: Multi;
+                     source?: ParcelSource; cropDeclared?: boolean };
+/** Where the accepted plots came from and how much land they cover. */
+export type DetectionMeta = { at: string; sources: string[];
+                              parcelHa: number; reviewHa: number };
+/** `review`: land inside the outline no source delimited («Límite por
+ * revisar»). Both it and `detection` are absent in older records. */
 export type Field = { id: string; name: string; geom: Multi;
                       zones: Zone[]; createdAt: string;
                       /** crop typed by the user when the map has none */
                       crop?: string;
                       /** the automatic split by crop already ran */
-                      cropSplit?: "done" | "none" };
+                      cropSplit?: "done" | "none";
+                      review?: Multi; detection?: DetectionMeta };
 
 const KEY = "fs_fields_v1";
 
@@ -36,8 +48,12 @@ function upgrade(r: Stored): Field | null {
       const g: Multi | undefined = Array.isArray(z.geom) ? z.geom
         : Array.isArray(z.ring) ? [[z.ring]] : undefined;
       return z.id && g ? [{ id: z.id, name: z.name ?? "",
-                            crop: z.crop ?? "", geom: g }] : [];
+                            crop: z.crop ?? "", geom: g,
+                            ...(z.source ? { source: z.source } : {}),
+                            ...(z.cropDeclared === true ? { cropDeclared: true } : {}) }] : [];
     }),
+    ...(Array.isArray(r.review) ? { review: r.review } : {}),
+    ...(r.detection ? { detection: r.detection } : {}),
   };
 }
 
@@ -86,11 +102,45 @@ export function addZone(fieldId: string,
 export function updateZone(fieldId: string, zoneId: string,
                            patch: Partial<Pick<Zone, "name" | "crop">>) {
   update(fieldId, (f) => ({ ...f, zones: f.zones.map((z) =>
-    z.id === zoneId ? { ...z, ...patch } : z) }));
+    z.id === zoneId ? { ...z, ...patch,
+      ...(patch.crop !== undefined ? { cropDeclared: true } : {}) } : z) }));
 }
 
 export function removeZone(fieldId: string, zoneId: string) {
   update(fieldId, (f) => ({ ...f, zones: f.zones.filter((z) => z.id !== zoneId) }));
+}
+
+/** Accept detected plots: they replace earlier detected ones; plots the
+ * producer drew or corrected are kept. */
+export function acceptDetection(fieldId: string,
+    parcels: { name: string; geom: Multi; source: ParcelSource }[],
+    review: Multi, meta: DetectionMeta) {
+  update(fieldId, (f) => ({
+    ...f, review, detection: meta,
+    zones: [...f.zones.filter((z) => (z.source ?? "manual") === "manual"),
+            ...parcels.map((p) => ({ id: uid(), name: p.name.trim(),
+                                     crop: "", geom: p.geom, source: p.source }))],
+  }));
+}
+
+/** Drop a plot: its land goes back to «Límite por revisar». */
+export function discardParcel(fieldId: string, zoneId: string) {
+  update(fieldId, (f) => {
+    const z = f.zones.find((x) => x.id === zoneId);
+    return z ? { ...f, zones: f.zones.filter((x) => x.id !== zoneId),
+                 review: [...(f.review ?? []), ...z.geom] } : f;
+  });
+}
+
+/** Corrected borders: the plot becomes manual; land it no longer covers
+ * (`leftover`) is added to «Límite por revisar». */
+export function replaceParcel(fieldId: string, zoneId: string, geom: Multi,
+                              leftover: Multi) {
+  update(fieldId, (f) => ({
+    ...f, review: [...(f.review ?? []), ...leftover],
+    zones: f.zones.map((z) => (z.id === zoneId
+      ? { ...z, geom, source: "manual" as const } : z)),
+  }));
 }
 
 export const fieldHa = (f: Pick<Field, "geom">) => multiHa(f.geom);
@@ -122,9 +172,10 @@ export function analysisOptions(f: Field): AreaOption[] {
 
 /** Several zones in one write (the field split by crop). */
 export function addZones(fieldId: string,
-                         zs: { name: string; crop: string; geom: Multi }[]) {
+                         zs: { name: string; crop: string; geom: Multi }[],
+                         source?: ParcelSource) {
   const zones: Zone[] = zs.map((z) => ({ id: uid(), name: z.name.trim(),
-    crop: z.crop.trim(), geom: z.geom }));
+    crop: z.crop.trim(), geom: z.geom, ...(source ? { source } : {}) }));
   update(fieldId, (f) => ({ ...f, zones: [...f.zones, ...zones] }));
   return zones;
 }

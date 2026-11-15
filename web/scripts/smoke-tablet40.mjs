@@ -81,8 +81,11 @@ for (const { w, h } of [...WIDTHS, ...LANDSCAPE]) {
     () => !document.querySelector(".topbar nav"));
   check(`${w}x${h} no mode tabs`, noTabs);
 
-  // field mode: chooser + frame control (welcome's main button)
-  await page.locator(".welcome button.primary").click();
+  // field chooser: boot fields list → "Agregar campo" → "Buscar"
+  await page.locator("summary", { hasText: /Agregar campo|Add field/i })
+    .first().click().catch(() => {});
+  await page.getByRole("button", { name: /^Buscar$|^Search$/i })
+    .first().click().catch(() => {});
   await page.waitForTimeout(800);
   await page.waitForSelector(".field-chooser", { timeout: 8000 })
     .catch(() => {});

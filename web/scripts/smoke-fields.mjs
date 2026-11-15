@@ -21,16 +21,12 @@ for (const w of [390, 1280]) {
     if (await b.count()) { await b.click().catch(() => {}); return true; }
     return false;
   };
+  // the app boots into the fields list already
   await page.goto(BASE, { waitUntil: "domcontentloaded" });
   await page.waitForTimeout(2000);
-  await click(/^Analizar mi campo$/i);
-  await page.waitForTimeout(1500);
-  // fields panel straight from the picker header
-  await click(/Mis campos/i);
-  await page.waitForTimeout(1200);
   await snap("fields-panel2");
   // zones inside a field detail — open a field if listed
-  await page.locator(".fields-list button, .field-item button").first()
+  await page.locator(".field-list button, .field-item button").first()
     .click().catch(() => {});
   await page.waitForTimeout(800);
   await click(/Zonas de cultivo/i);

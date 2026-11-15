@@ -53,7 +53,7 @@ function InlineInput({ value, onCommit, label, list, placeholder }: {
 }
 
 export function FieldsList({ fields, onOpen, onZones, onAnalyze, onRename,
-                             onDelete, onClose }: {
+                             onDelete, onClose, actions }: {
   fields: Field[];
   onOpen: (f: Field) => void;
   onZones: (f: Field) => void;
@@ -62,6 +62,7 @@ export function FieldsList({ fields, onOpen, onZones, onAnalyze, onRename,
   onRename: (f: Field, name: string) => void;
   onDelete: (f: Field) => void;
   onClose: () => void;
+  actions?: React.ReactNode;
 }) {
   const { t } = useT();
   const ha = useHa();
@@ -72,6 +73,7 @@ export function FieldsList({ fields, onOpen, onZones, onAnalyze, onRename,
         <strong>{t("fields.title")}</strong>
         <button onClick={onClose}>{t("fields.back")}</button>
       </div>
+      {actions}
       {fields.length === 0 ? (
         <p className="muted">{t("fields.empty")}</p>
       ) : (

@@ -512,6 +512,7 @@
       "drought_tolerance": "high",
       "heat_tolerance": "medium",
       "water_mm_cycle": 1200,
+      "water_period": "year",
       "root_depth_cm": 150,
       "n_fixation": true,
       "residue_t_ha": 0.0,

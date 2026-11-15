@@ -28,7 +28,7 @@ describe("FieldsList", () => {
       expect.objectContaining({ id: "Campo A" }), "Los Álamos");
     fireEvent.click(screen.getAllByRole("button", { name: /ver en el mapa/i })[1]);
     expect(fns.onOpen).toHaveBeenCalledWith(expect.objectContaining({ id: "Campo B" }));
-    expect(screen.getAllByText(/100 ha · 1 pieza\(s\) · 0 zona\(s\)/)).toHaveLength(2);
+    expect(screen.getAllByText(/100 ha · 1 pieza\(s\) · 0 parcela\(s\)/)).toHaveLength(2);
   });
   it("explains the empty state", () => {
     wrap(<FieldsList fields={[]} onOpen={vi.fn()} onZones={vi.fn()}

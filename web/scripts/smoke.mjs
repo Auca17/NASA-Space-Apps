@@ -72,40 +72,47 @@ for (const s of SIZES) {
     if (await h.count()) await h.click().catch(() => {});
     await page.waitForTimeout(400);
   };
+  /* the app boots into the fields list; the chooser opens through
+   * "Agregar campo" → "Buscar". */
+  const openChooser = async () => {
+    await page.locator("summary",
+      { hasText: /Agregar campo|Add field/i }).first()
+      .click().catch(() => {});
+    await page.getByRole("button", { name: /^Buscar$|^Search$/i })
+      .first().click().catch(() => {});
+    await page.waitForTimeout(600);
+    await expandChooser();
+  };
 
-  /* 1 ---------------------------------------------------- welcome ---- */
+  /* 1 ---------------------------------- boot: fields list + map ---- */
   await page.goto(BASE, { waitUntil: "domcontentloaded" });
   await page.waitForTimeout(2500);
-  const wShot = await snap("welcome", 800);
+  const wShot = await snap("boot-fields", 800);
   if (await page.locator(".map").count() === 0)
-    note("welcome", "high", "no .map element on welcome", wShot);
-  flushErrs("welcome", wShot);
+    note("boot", "high", "no .map element on boot", wShot);
+  if (await page.locator(".controls.fields").count() === 0)
+    note("boot", "high", "fields list not shown on boot", wShot);
+  flushErrs("boot", wShot);
 
-  /* 2 ----------------- #lat,lon deep link opens the field flow ------ */
+  /* 2 ------------- #lat,lon deep link stays in the field flow ------ */
   await page.goto(`${BASE}#-27.95,-56.95`,
     { waitUntil: "domcontentloaded" });
   await page.waitForTimeout(5000);
   const cShot = await snap("corrientes");
-  if (await page.locator(".field-chooser").count() === 0)
-    note("deeplink", "high", "#lat,lon did not open the field flow",
-         cShot);
+  if (await page.locator(".map").count() === 0)
+    note("deeplink", "high", "#lat,lon lost the map", cShot);
   flushErrs("deeplink", cShot);
 
-  /* 5 --------------------------------- field lens: example farm ----- */
-  await click(/^Analizar mi campo$/i);
-  await page.waitForTimeout(1500);
-  // expand the examples disclosure, then open the example farm
-  await expandChooser();
-  await openDetails(/Probar con un ejemplo/);
-  await page.waitForTimeout(400);
-  const demoClicked = await click(/Abrir el ejemplo: finca en Mendoza/i);
+  /* 5 ------------------------------ field lens: #demo example ----- */
+  await page.goto(`${BASE}#demo`, { waitUntil: "domcontentloaded" });
+  await page.waitForSelector(".parcel-badge, [role='tab']",
+    { timeout: 60000 }).catch(() => {});
+  // the detailed diagnosis loads lazily inside "Más información"
+  await page.locator("#tab-mas").first().click().catch(() => {});
   await page.waitForSelector(".dtile, .diag-grid, .strategy",
     { timeout: 120000 }).catch(() => {});
   await page.waitForTimeout(2500);
   const dShot = await snap("field-diagnosis");
-  if (!demoClicked)
-    note("field", "high", "demo button not clickable (chooser state?)",
-         dShot);
   if (!await page.locator(".dtile, .card").first().count())
     note("field", "high", "diagnosis rendered no cards", dShot);
   flushErrs("field-diagnosis", dShot);
@@ -171,9 +178,8 @@ for (const s of SIZES) {
   /* 6 ----------------------------- Chucky field selection ------------ */
   await page.goto(BASE, { waitUntil: "domcontentloaded" });
   await page.waitForTimeout(2000);
-  await click(/^Analizar mi campo$/i);
-  await page.waitForTimeout(1500);
-  await expandChooser();
+  await openChooser();
+  await page.waitForTimeout(1000);
   await snap("field-chooser");
 
   // place finder
@@ -231,12 +237,12 @@ for (const s of SIZES) {
   const rvShot = await snap("selection-review");
   flushErrs("review", rvShot);
 
-  // fields panel
-  await click(/^Analizar mi campo$/i);
-  await page.waitForTimeout(800);
-  await click(/Mis campos/i);
-  await page.waitForTimeout(1200);
+  // fields list (the boot sheet)
+  await page.goto(BASE, { waitUntil: "domcontentloaded" });
+  await page.waitForTimeout(1500);
   const fpShot = await snap("fields-panel");
+  if (await page.locator(".controls.fields").count() === 0)
+    note("fields-panel", "medium", "fields list not visible", fpShot);
   flushErrs("fields-panel", fpShot);
 
   // zones (split)

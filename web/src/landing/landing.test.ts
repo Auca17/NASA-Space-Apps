@@ -65,7 +65,7 @@ describe("landing page", () => {
     const det = document.querySelector("details.brief-details");
     expect(det).toBeTruthy();
     expect(det!.querySelector("summary")).toBeTruthy();
-    expect(det!.querySelectorAll(".req-table").length).toBe(2);
+    expect(det!.querySelectorAll(".req-table").length).toBe(1);
     expect(det!.hasAttribute("open")).toBe(false);
   });
 

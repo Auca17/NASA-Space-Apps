@@ -12,9 +12,9 @@ persona — se marca donde aplica).
 | # | Ítem | Dueño | Estado | Evidencia |
 |---|---|---|---|---|
 | 1 | **Demo online** (celular y desktop) que el jurado pueda abrir | Ezequiel (deploy) + integrador | en curso | `docs/DEPLOY.md` documenta el deploy en Vercel y la URL de R2; falta la URL pública → `[PENDIENTE: URL de la demo]` en `README.md` |
-| 2 | **Video de 2–3 min** con el arco problema → armonización → globo → mi zona → mi campo → validación de campo | Alex | en curso | Guión y storyboard listos en `docs/submission/video-script-es.md` (175 s + versión de 60 s); falta grabar y subir → `[PENDIENTE: URL del video]` |
+| 2 | **Video de 2–3 min** con el arco productor → ejemplo de un toque → parcelas (fuego/agua) + alerta → prioridades → calendario → rotaciones → validación | Alex | en curso | Guión y storyboard listos en `docs/submission/video-script-es.md` (~140 s + versión de 60 s, solo Field Shift tras D34); falta grabar y subir → `[PENDIENTE: URL del video]` |
 | 3 | **Repo público con README**: problema, datos, método, validación, limitaciones, origen de los datos de Orin, cómo correrlo | Ariel (unificar) | en curso | `README.md` y `README.es.md` escritos según brief 22; falta confirmar que el repo `github.com/Auca17/NASA-Space-Apps` sea público |
-| 4 | **Dataset armonizado descargable** | Ezequiel | en curso | `pipeline/08_release.py` genera Parquet + CSV + metadatos + `CITATION.cff` + `SHA256SUMS` (`pipeline/README.md` tabla Pasos); falta publicar (GitHub Release / Zenodo) → `[PENDIENTE: URL de descarga]` |
+| 4 | **Dataset armonizado descargable** (fuera de la entrega tras D34 — solo si se publica como material de repo) | Ezequiel | pendiente | `pipeline/08_release.py` genera Parquet + CSV + metadatos + `CITATION.cff` + `SHA256SUMS` (`pipeline/README.md` tabla Pasos); falta publicar (GitHub Release / Zenodo) → `[PENDIENTE: URL de descarga]` |
 | 5 | **Categorías a elegir (1–3)**: Best Use of Data, Local Impact, Galactic Impact | Alex (decisión del equipo) | pendiente | `docs/PRD.md` §15 lista las 3 candidatas; ninguna decisión registrada en `docs/decisions.md` |
 | 6 | **Página del equipo** (nombres, roles, foto si aplica) | Alex | pendiente | Sin archivo en el repo; team listado en `README.md` (Ariel · Augustus · Ezequiel · Alex) |
 | 7 | **Confirmación: sin menores de 18 en pantalla** | Alex | en curso | Regla en `docs/PRD.md` §15 e `idea-general.md` §Entrega; checklist de producción agregado en `video-script-es.md`; falta verificación sobre el material grabado |
@@ -25,13 +25,13 @@ persona — se marca donde aplica).
 
 | # | Ítem | Dueño | Estado | Evidencia |
 |---|---|---|---|---|
-| 10 | Serie de fuego sin salto en 2012 ni en 2018 | Ezequiel | hecho | `docs/validation/series_global.png`; `docs/metodo-fuego.md` §Validación |
-| 11 | Panel de la zona en < 5 s con 4G, en cualquier país | Alex (medir) | pendiente | Criterio en `docs/PRD.md` §15; no hay medición registrada en el repo |
+| 10 | ~~Serie de fuego sin salto en 2012 ni en 2018~~ (fuera de la entrega, D34 — el pipeline queda en el repo) | Ezequiel | hecho (repo) | `docs/validation/series_global.png`; `docs/metodo-fuego.md` §Validación |
+| 11 | ~~Panel de la zona en < 5 s con 4G, en cualquier país~~ (criterio del modo Fuego retirado, D34) | Alex | fuera de la entrega | Criterio en `docs/PRD.md` §15 |
 | 12 | Lote → diagnóstico + calendario en < 10 s | integrador (medir) | pendiente | Criterio en `docs/PRD.md` §15; timeouts diseñados (3 s / 5 s POWER) en `back/README.md`; sin medición end-to-end registrada |
 | 13 | Actual + 3 estrategias, cada una con las 5 secciones | Augustus | hecho | Contrato §4.3 (`docs/data-contract.md`); `back/README.md` §rotations; `docs/PRD.md` §7.4 |
 | 14 | Cada número del diagnóstico con fuente y resolución | Augustus | hecho | `docs/data-contract.md` §4.2 (`source`, `resolution` por tarjeta); `docs/PRD.md` §7.2 |
-| 15 | Semáforo contra mediana 2003–2022 | Ezequiel | hecho | `docs/decisions.md` D9 y D10; `pipeline/README.md` §Agregados |
-| 16 | El CSV coincide con el calendario | integrador (verificar) | pendiente | Criterio en `docs/PRD.md` §15; el CSV agregado se genera en el navegador desde `fire/cal` (`docs/data-contract.md` §2.3); sin verificación registrada |
+| 15 | ~~Semáforo contra mediana 2003–2022~~ (modo retirado, D34; el trabajo queda en repo) | Ezequiel | fuera de la entrega | `docs/decisions.md` D9 y D10; `pipeline/README.md` §Agregados |
+| 16 | ~~El CSV coincide con el calendario~~ (exportación retirada, D34) | integrador | fuera de la entrega | `docs/PRD.md` §15; `docs/data-contract.md` §2.3 |
 | 17 | Validación satélite vs. campo con datos reales (no sintéticos) | Augustus | hecho | `docs/validation/orin/validation.json` (`synthetic: false`); `docs/validation/orin/README.md`; guard de build en `web/README.md` §Orin |
 
 ## Pendientes de decisión abiertos (`docs/decisions.md` §Pendientes)
@@ -49,8 +49,8 @@ persona — se marca donde aplica).
 | 26 | Puntos Frente A E4 por discutir (`type` inferido en NRT; S-NPP 2026 no descargado; persistencia solo en la celda vs. "celda o vecinas" de D29) | Ezequiel | en curso | `docs/decisions.md` §Pendientes (E4); `pipeline/README.md` §2026 |
 | 27 | Contrato 3.2 sin `zones` por rotación y 3.3 sin `applies_when`: agregar si el front lo necesita | Augustus + Alex | pendiente | `docs/decisions.md` §Pendientes (Frente B) |
 | 28 | Nombre del proyecto | equipo / Alex | hecho | **Ashfield** (actualización del equipo); assets en `web/public/brand/ashfield-*` y `tools/brand/`; ojo: `web/src/config.ts` y `docs/decisions.md` D20 aún figuran "a definir" |
-| 29 | Challenge(s) de inscripción confirmado con la sede | Ezequiel | hecho | `docs/decisions.md` D1: inscripto en Field Shift, se construyen ambas lentes |
-| 30 | Licencia del código | equipo | pendiente | No hay `LICENSE` en el repo → `[PENDIENTE: licencia del código]` en `README.md` |
+| 29 | Challenge(s) de inscripción confirmado con la sede | Ezequiel | hecho | `docs/decisions.md` D1 (inscripto en Field Shift) + D34 (modos Fuego/Live retirados del producto; la entrega es solo Field Shift) |
+| 30 | Licencia del código | equipo | hecho | `LICENSE` (MIT, 2026 Ashfield team) en el repo — falta solo la confirmación final del equipo |
 
 ## Regla de seguridad para la entrega
 

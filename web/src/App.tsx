@@ -17,8 +17,12 @@ import { drawStatus } from "./domain/clarity";
 import { FieldPicker, type DrawMode } from "./features/field/FieldPicker";
 import { SelectionReview, AdjustPanel, type LandCheck, type Adjust }
   from "./features/field/SelectionReview";
-import { FieldsList, FieldDetail } from "./features/field/FieldsPanel";
-import { useAutoCropSplit } from "./features/field/autoCropSplit";
+import { FieldsList } from "./features/field/FieldsPanel";
+import { useAutoCropSplit, cropZonesFor } from "./features/field/autoCropSplit";
+import { ParcelPanel, type Proposal } from "./features/field/ParcelPanel";
+import { FieldSummary } from "./features/field/FieldSummary";
+import { summaryUnits, type SummaryUnit } from "./domain/summary";
+import { readFtw } from "./domain/ftw";
 import { useAreaLabel } from "./features/field/areaLabel";
 import { FreehandLayer } from "./features/field/FreehandLayer";
 import type { AnalysisTarget } from "./features/field/FieldLens";
@@ -26,7 +30,7 @@ import type { ParcelInput, ParcelsResponse } from "./domain/parcels";
 import {
   classifyUrban, multiPoints, pointInMulti, type LatLon, type Multi,
 } from "./domain/selection";
-import { splitSelection, clipZone, ROAD_HALF_WIDTH } from "./domain/split";
+import { splitSelection, clipZone, detectParcels, ROAD_HALF_WIDTH } from "./domain/split";
 import { nearestMidpoint, nearestVertex } from "./domain/parcelsGeo";
 import {
   isDemoHash, MENDOZA_BOUNDARY, MENDOZA_CACHED, MENDOZA_ECON,
@@ -37,8 +41,8 @@ import { tourSeen } from "./features/demo/demoTour";
 import {
   loadFields, saveField, renameField, deleteField, addZone, updateZone,
   addZones, setFieldCrop, markCropSplit,
-  removeZone, fieldHa, analysisOptions, ZONE_COLORS, type Field,
-  type AreaOption,
+  fieldHa, acceptDetection, discardParcel, replaceParcel, zoneHa,
+  type Field, type Zone,
 } from "./domain/fields";
 
 /** Field marked on the map, waiting for the user's confirmation.
@@ -46,15 +50,22 @@ import {
 type Selection = { geom: Multi; approx: boolean; original: LatLon[];
                    checked?: boolean };
 /** What a finished drawing is for: the field itself or a crop zone. */
-type Target = { kind: "selection" } | { kind: "zone"; fieldId: string };
+type Target = { kind: "selection" } | { kind: "zone"; fieldId: string }
+  | { kind: "fix"; fieldId: string; zoneId: string };
 type FieldsView = null | "list" | { id: string };
 
 /** Zoom from which single plots can be told apart on the street map. */
 const DRAW_ZOOM = 14;
 const ARGENTINA_FRAME: LatLon[] = [[-55.2, -73.7], [-21.7, -53.5]];
 
+function UnavailableMap({ onUnavailable }: { onUnavailable: () => void }) {
+  useEffect(onUnavailable, [onUnavailable]);
+  return null;
+}
+
 const MapLoader = lazy(() => import("./features/globe/GlobeView")
-  .then((m) => ({ default: m.MapLoader })));
+  .then((m) => ({ default: m.MapLoader }))
+  .catch(() => ({ default: UnavailableMap })));
 const FieldPanel = lazy(() =>
   import("./features/field/FieldLens").then((m) => ({ default: m.FieldPanel })));
 const ParcelsWizard = lazy(() =>
@@ -66,18 +77,42 @@ const ParcelsMapLayer = lazy(() =>
 
 type Mode = "welcome" | "field";
 
+function analysisMask(geom: Multi): Shape[] {
+  const oriented = (ring: LatLon[], positive: boolean) => {
+    const sign = ring.reduce((area, [lat, lon], index) => {
+      const [y, x] = ring[(index + 1) % ring.length];
+      return area + lon * y - x * lat;
+    }, 0);
+    return (sign > 0) === positive ? ring : [...ring].reverse();
+  };
+  const world: LatLon[] = [[-85, -179.99], [-85, 179.99],
+    [85, 179.99], [85, -179.99]];
+  return [
+    { kind: "analysis-mask", geom: [world, ...geom.map((p) => oriented(p[0], false))] },
+    ...geom.flatMap((p) => p.slice(1).map((hole): Shape =>
+      ({ kind: "analysis-mask", geom: [oriented(hole, true)] }))),
+  ];
+}
+
 export default function App() {
   const { t, lang, setLang } = useT();
   const areaLabel = useAreaLabel();
-  const [mode, setModeState] = useState<Mode>("welcome");
+  const [mode, setModeState] = useState<Mode>("field");
   // the map callbacks are registered once: they read the mode from a ref
-  const modeRef = useRef<Mode>("welcome");
-  const [mapRequested, setMapRequested] = useState(false);
+  const modeRef = useRef<Mode>("field");
   const [mapUnavailable, setMapUnavailable] = useState(false);
+  const onMapUnavailable = useCallback(() => setMapUnavailable(true), []);
   const [locationAccuracy, setLocationAccuracy] = useState<{
     lat: number; lon: number; metres: number;
   } | null>(null);
   const [storageError, setStorageError] = useState(false);
+  const [locationState, setLocationState] = useState<"idle" | "loading" | "denied">("idle");
+  const locationRequest = useRef(0);
+  const pendingFieldLocation = useRef<{ lat: number; lon: number } | null>(null);
+  const [recommendationArea, setRecommendationArea] = useState<Multi | null>(null);
+  const [nearbyLandUse, setNearbyLandUse] = useState<{
+    geom: Multi; status: "urban" | "checked" | "unavailable";
+  } | null>(null);
   const [moistureZones, setMoistureZones] = useState<MoistureZone[]>([]);
   const [selectedMoisture, selectMoisture] = useState<number | null>(null);
   const zoneClick = useRef<(point: LatLon) => void>(() => {});
@@ -86,9 +121,12 @@ export default function App() {
     selectMoisture(null);
   }, []);
   const setMode = (m: Mode) => {
+    if (modeRef.current !== m) {
+      locationRequest.current++;
+      setLocationState("idle");
+    }
     modeRef.current = m;
     setModeState(m);
-    if (m !== "welcome") setMapRequested(true);
     setStorageError(false);
   };
   const [globe, setGlobe] = useState<GlobeHandle | null>(null);
@@ -125,9 +163,13 @@ export default function App() {
   const [landCheck, setLandCheck] = useState<LandCheck>("checking");
   const [adjust, setAdjust] = useState<Adjust | null>(null);
   const [fields, setFields] = useState<Field[]>(() => loadFields());
-  const [fieldsView, setFieldsView] = useState<FieldsView>(null);
+  const [fieldsView, setFieldsView] = useState<FieldsView>("list");
   const [shownField, setShownField] = useState<string | null>(null);
-  const [areaChoice, setAreaChoice] = useState("all");
+  /** plot highlighted on the map: a confirmed plot id or "p<i>" for a
+   * proposed one */
+  const [selectedParcel, setSelectedParcel] = useState<string | null>(null);
+  const [proposal, setProposal] = useState<Proposal | null>(null);
+  const [summaryFor, setSummaryFor] = useState<string | null>(null);
   const [pendingZone, setPendingZone] =
     useState<{ geom: Multi; ha: number } | null>(null);
   const [freeError, setFreeError] = useState(false);
@@ -170,11 +212,17 @@ export default function App() {
                          downAt: [0, 0] as [number, number],
                          downLL: null as LatLon | null });
   const swallowClick = useRef(false);
-  const frameArgentinaOnOpen = useRef(false);
+  const frameArgentinaOnOpen = useRef(true);
 
   const onGlobeReady = useCallback((h: GlobeHandle) => {
     globeRef.current = h;
     setGlobe(h);
+    const fieldLoc = pendingFieldLocation.current;
+    if (fieldLoc) {
+      pendingFieldLocation.current = null;
+      h.flyTo(fieldLoc.lat, fieldLoc.lon, DRAW_ZOOM + 1);
+      h.setMarker([fieldLoc.lat, fieldLoc.lon]);
+    }
     if (initialLocation.current) {
       const [lat, lon] = initialLocation.current;
       h.flyTo(lat, lon, 7);
@@ -226,16 +274,50 @@ export default function App() {
   };
 
   zoneClick.current = (point) => {
+    if (!fieldOpen && fieldsView && fieldsView !== "list" && openField) {
+      if (proposal?.status === "ready") {
+        const i = proposal.detection.parcels.findIndex((p) => pointInMulti(point, [p.geom]));
+        if (i !== -1) setSelectedParcel(`p${i}`);
+        return;
+      }
+      const z = openField.zones.find((x) => pointInMulti(point, x.geom));
+      setSelectedParcel(z ? z.id : null);
+      return;
+    }
     if (!fieldOpen) return;
     const hit = moistureZones.findIndex((z) => pointInMulti(point, moistureGeometry(z.geometry)));
     if (hit !== -1) selectMoisture(hit);
   };
 
+  const analysisScreen = mode === "field" && fieldOpen && target !== null;
+  const nearbyGeometry = target?.nearby ? recommendationArea ?? target.geom : null;
   useEffect(() => {
-    if (globe && target) globe.fitRing(multiPoints(target.geom), coveredBottom());
-    // Only the first map initialization may race with the analysis target.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [globe]);
+    if (!globe || !analysisScreen || !target) return;
+    let frame = 0;
+    const fit = () => {
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(() => globe.fitRing(multiPoints(target.geom)));
+    };
+    const observer = new ResizeObserver(fit);
+    if (mapDiv.current) observer.observe(mapDiv.current);
+    fit();
+    return () => { observer.disconnect(); cancelAnimationFrame(frame); };
+  }, [globe, analysisScreen, target]);
+
+  useEffect(() => {
+    if (!analysisScreen || !nearbyGeometry || !globe || !view || view.zoom < 12) return;
+    const [w, s, e, n] = view.bbox;
+    if (!multiPoints(nearbyGeometry).every(([y, x]) => x >= w && x <= e && y >= s && y <= n))
+      return;
+    let active = true;
+    globe.readLandUse(8000, 12).then((data) => {
+      if (!active) return;
+      const status = !data ? "unavailable" : nearbyGeometry.some((p) =>
+        classifyUrban(p, data.landuse, data.buildings).urban) ? "urban" : "checked";
+      setNearbyLandUse({ geom: nearbyGeometry, status });
+    });
+    return () => { active = false; };
+  }, [analysisScreen, nearbyGeometry, globe, view]);
 
   // The session is the single source of truth for the outline: React
   // state and the map preview both render its ring.
@@ -343,6 +425,22 @@ export default function App() {
     const g = globeRef.current;
     setDraw("none"); setDraft([]); g?.setDraft(null);
     const tg = targetRef.current;
+    if (tg.kind === "fix") {
+      targetRef.current = { kind: "selection" };
+      const f = fields.find((x) => x.id === tg.fieldId);
+      const old = f?.zones.find((z) => z.id === tg.zoneId);
+      if (!f || !old) return;
+      const others = f.zones.filter((z) => z.id !== old.id).map((z) => z.geom);
+      const fixed = clipZone([[r]], f.geom, others);
+      if (fixed) {
+        // land the plot no longer covers goes to «Límite por revisar»
+        const leftover = clipZone(old.geom, old.geom, [fixed.geom])?.geom ?? [];
+        storeChange(() => replaceParcel(f.id, old.id, fixed.geom, leftover));
+      }
+      setSelectedParcel(old.id);
+      setFieldsView({ id: f.id });
+      return;
+    }
     if (tg.kind === "zone") {
       const f = fields.find((x) => x.id === tg.fieldId);
       if (!f) return;
@@ -369,7 +467,7 @@ export default function App() {
     storeChange(() => {
       const now = loadFields().find((f) => f.id === id);
       if (!now || now.zones.length || now.cropSplit) return;  // user got there first
-      if (zones.length) addZones(id, zones);
+      if (zones.length) addZones(id, zones, "crop");
       markCropSplit(id, result);
     });
   });
@@ -388,7 +486,9 @@ export default function App() {
   useEffect(() => {
     if (!globe || mode !== "field" || !frameArgentinaOnOpen.current) return;
     frameArgentinaOnOpen.current = false;
-    globe.fitRing(ARGENTINA_FRAME, coveredBottom());
+    // keep the zoom and place the producer chose; only the world view
+    // is framed on Argentina
+    if (globe.center().zoom < 4) globe.fitRing(ARGENTINA_FRAME, coveredBottom());
   }, [globe, mode]);
 
   // #demo fired before the map was ready: frame the farm once it is.
@@ -435,6 +535,9 @@ export default function App() {
         sh.push({ kind: "field", geom: [circleRing(lat, lon, metres / 1_000)] });
       }
       if (fieldOpen && target) {
+        const outline = analysisMask(target.geom);
+        sh.push(...outline);
+        recommendationArea?.forEach((geom) => sh.push({ geom, kind: "parcel-selected" }));
         moistureZones.forEach((zone, i) => moistureGeometry(zone.geometry)
           .forEach((geom) => sh.push({ geom, color: MOISTURE_COLORS[zone.kind],
             kind: zone.kind === "missing" ? "moisture-missing" :
@@ -448,16 +551,24 @@ export default function App() {
       } else if (selection) {
         selection.geom.forEach((p) => sh.push({ geom: p, kind: "field" }));
       } else if (openField) {
-        openField.geom.forEach((p) => sh.push({ geom: p, kind: "field" }));
-        openField.zones.forEach((z, i) => z.geom.forEach((p) => sh.push({
-          geom: p, kind: "zone", color: ZONE_COLORS[i % ZONE_COLORS.length] })));
-        if (pendingZone) {
-          pendingZone.geom.forEach((p) => sh.push({ geom: p, kind: "piece-on" }));
-        } else if (fieldsView && fieldsView !== "list" && areaChoice !== "all") {
-          // highlight the area chosen for the analysis
-          analysisOptions(openField).find((o) => o.id === areaChoice)
-            ?.geom.forEach((p) => sh.push({ geom: p, kind: "piece-on" }));
+        // overall outline, then plots (proposed or confirmed) and the land
+        // still to review, each as its own layer
+        openField.geom.forEach((p) => sh.push({ geom: p, kind: "contour" }));
+        if (proposal?.status === "ready") {
+          const d = proposal.detection;
+          d.excluded.forEach((p) => sh.push({ geom: p, kind: "excluded" }));
+          d.review.forEach((p) => sh.push({ geom: p.geom, kind: "review" }));
+          d.parcels.forEach((p, i) => sh.push({ geom: p.geom,
+            label: proposal.names[i],
+            kind: !proposal.keep[i] ? "parcel-off"
+              : selectedParcel === `p${i}` ? "parcel-selected" : "parcel" }));
+        } else {
+          (openField.review ?? []).forEach((p) => sh.push({ geom: p, kind: "review" }));
+          openField.zones.forEach((z, i) => z.geom.forEach((p) => sh.push({
+            geom: p, label: z.name || t("parcel.defaultName", { n: i + 1 }),
+            kind: selectedParcel === z.id ? "parcel-selected" : "parcel" })));
         }
+        pendingZone?.geom.forEach((p) => sh.push({ geom: p, kind: "piece-on" }));
       }
     }
     if (!parcelsWizard && !parcelRes) g.setShapes(sh);
@@ -468,8 +579,9 @@ export default function App() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selection, adjust, fields, fieldsView, shownField, pendingZone,
-      fieldOpen, target, mode, areaChoice, parcelsWizard, parcelRes,
-      globe, moistureZones, selectedMoisture, locationAccuracy]);
+      fieldOpen, target, mode, selectedParcel, proposal, parcelsWizard, parcelRes, globe, moistureZones,
+      selectedMoisture,
+      locationAccuracy, recommendationArea]);
 
   // deep-link: #lat,lon opens the field flow centred there (dev +
   // sharing), #demo opens the guided Mendoza example
@@ -550,7 +662,7 @@ export default function App() {
     setParcelRes(null); setParcelsWizard(false);
     setSelection(null); setAdjust(null); setFieldsView(null);
     globeRef.current?.setDraft(null);
-    globeRef.current?.fitRing(multiPoints(tg.geom), coveredBottom());
+    setRecommendationArea(null);
   };
 
   const confirmSelection = () => {
@@ -559,9 +671,97 @@ export default function App() {
       ? "analyze.selectionApprox" : "analyze.selection") });
   };
 
-  const analyzeOption = (f: Field, o: AreaOption) =>
-    analyze({ geom: o.geom, areaLabel: areaLabel(o), fieldName: f.name,
-              fieldHa: fieldHa(f) });
+  const analyzeParcel = (f: Field, z: Zone, i: number) =>
+    analyze({ geom: z.geom, areaLabel: z.name || t("parcel.defaultName", { n: i + 1 }),
+              fieldName: f.name, fieldHa: fieldHa(f),
+              declaredCrop: z.cropDeclared || z.source !== "crop" ? z.crop : undefined,
+              parcel: { crop: z.crop || null, source: z.source ?? "manual" } });
+
+  const analysisSections = (zones: Zone[]) => zones.map((z, i) => ({
+    name: z.name || t("parcel.defaultName", { n: i + 1 }),
+    geom: z.geom, crop: z.cropDeclared || z.source !== "crop" ? z.crop : undefined,
+  }));
+
+  const analyzeSavedField = (field: Field) => analyze({
+    geom: field.geom, fieldName: field.name, declaredCrop: field.crop,
+    areaLabel: areaLabel({ kind: "all", label: "" }),
+    sections: analysisSections(field.zones),
+  });
+
+  const analyzeUnit = (f: Field, u: SummaryUnit) => {
+    setSummaryFor(null);
+    const i = f.zones.findIndex((z) => z.id === u.id);
+    if (i !== -1) analyzeParcel(f, f.zones[i], i);
+    else analyze({ geom: u.geom,
+                   areaLabel: u.kind === "group" ? u.name
+                     : areaLabel({ kind: "all", label: "" }),
+                   fieldName: f.name, fieldHa: fieldHa(f), declaredCrop: f.crop,
+                   sections: analysisSections(f.zones.filter((z) =>
+                     u.kind === "field" || u.members?.includes(z.id))) });
+  };
+
+  /** «Detectar parcelas»: frame the outline, read Fields of The World
+   * boundaries and OpenStreetMap roads/built-up land, and propose plots
+   * inside the outline. Nothing is saved until the producer accepts. */
+  const detect = async (f: Field) => {
+    const g = globeRef.current;
+    setSelectedParcel(null);
+    setProposal({ status: "loading" });
+    g?.fitRing(multiPoints(f.geom), coveredBottom());
+    const pts = multiPoints(f.geom);
+    const bbox: [number, number, number, number] = [
+      Math.min(...pts.map((q) => q[1])), Math.min(...pts.map((q) => q[0])),
+      Math.max(...pts.map((q) => q[1])), Math.max(...pts.map((q) => q[0]))];
+    // boundaries come straight from the archive for the whole outline;
+    // roads and built-up land from what the map loaded
+    const [ftw, osm] = await Promise.all([
+      readFtw(bbox).catch(() => null),
+      g ? g.readLandUse(8000, 11) : Promise.resolve(null)]);
+    const notes: string[] = [];
+    if (!ftw || (ftw.failed && !ftw.fields.length)) notes.push("parcel.cov.ftwFail");
+    else if (ftw.failed) notes.push("parcel.cov.ftwSomeFailed");
+    else if (!ftw.fields.length) notes.push("parcel.cov.ftwNone");
+    if (!osm) notes.push("parcel.cov.osmFail");
+    else if (osm.zoom < DRAW_ZOOM) notes.push("parcel.cov.tracks");
+    const view = osm?.bounds;
+    if (view && multiPoints(f.geom).some(([la, lo]) =>
+        la < view[1] || la > view[3] || lo < view[0] || lo > view[2])) {
+      notes.push("parcel.cov.outside");
+    }
+    const taken = f.zones.filter((z) => (z.source ?? "manual") === "manual")
+      .map((z) => z.geom);
+    const detection = detectParcels(f.geom, {
+      fields: ftw && !(ftw.failed && !ftw.fields.length) ? ftw.fields : [],
+      roads: (osm?.roads ?? []).filter((r) => ROAD_HALF_WIDTH[r.cls]),
+      landuse: osm?.landuse ?? [], taken },
+      // slivers (< 1 ha) along a hand-drawn outline are not plots: they
+      // stay to review
+      1);
+    if (detection.parcels.length && detection.reviewHa >= 0.5 &&
+        !notes.includes("parcel.cov.ftwNone")) notes.push("parcel.cov.ftwPartial");
+    notes.push("parcel.cov.image");
+    const start = taken.length;
+    setProposal({ status: "ready", detection, notes,
+      keep: detection.parcels.map(() => true),
+      names: detection.parcels.map((_, i) =>
+        t("parcel.defaultName", { n: start + i + 1 })) });
+  };
+
+  const acceptProposal = (f: Field) => {
+    if (proposal?.status !== "ready") return;
+    const d = proposal.detection;
+    const kept = d.parcels.flatMap((p, i) => proposal.keep[i]
+      ? [{ name: proposal.names[i], geom: [p.geom], source: p.source }] : []);
+    // dropped proposals join the land to review
+    const review = [...d.review.map((p) => p.geom),
+                    ...d.parcels.filter((_, i) => !proposal.keep[i]).map((p) => p.geom)];
+    if (storeChange(() => acceptDetection(f.id, kept, review, {
+      at: new Date().toISOString(), sources: ["ftw", "osm"],
+      parcelHa: kept.reduce((a, p) => a + zoneHa(p), 0),
+      reviewHa: d.reviewHa }))) {
+      setProposal(null); setSelectedParcel(null);
+    }
+  };
 
   const saveSelection = (name: string) => {
     if (!selection) return;
@@ -621,8 +821,13 @@ export default function App() {
     globeRef.current?.fitRing(multiPoints(f.geom), coveredBottom());
   };
   const openDetail = (f: Field) => {
-    showField(f); setPendingZone(null); setAreaChoice("all");
-    setFieldsView({ id: f.id });
+    showField(f); setPendingZone(null); setSelectedParcel(null);
+    setProposal(null); setFieldsView({ id: f.id });
+  };
+  const fixParcel = (f: Field, z: Zone) => {
+    targetRef.current = { kind: "fix", fieldId: f.id, zoneId: z.id };
+    setSelectedParcel(z.id); setFreeError(false);
+    setDraft([]); setDraw("free");
   };
   const drawZone = (fieldId: string, m: "free" | "draw") => {
     targetRef.current = { kind: "zone", fieldId };
@@ -640,6 +845,36 @@ export default function App() {
     globeRef.current?.flyTo(lat, lon, precise ? DRAW_ZOOM + 1 : DRAW_ZOOM,
                           coveredBottom());
     globeRef.current?.setMarker([lat, lon]);
+  };
+
+  const analyzeNearby = (lat: number, lon: number) => {
+    const ring = circleApprox(lat, lon);
+    analyze({ geom: [[ring]], areaLabel: t("fields.nearby"), nearby: true });
+  };
+
+  const requestLocationFor = (action: "add" | "nearby") => {
+    const revision = ++locationRequest.current;
+    setLocationState("loading");
+    const denied = () => {
+      if (revision !== locationRequest.current) return;
+      setLocationState("denied");
+      if (action === "add") setFieldsView(null);
+    };
+    if (!navigator.geolocation) { denied(); return; }
+    navigator.geolocation.getCurrentPosition(({ coords }) => {
+      if (revision !== locationRequest.current) return;
+      setLocationState("idle");
+      if (action === "nearby") {
+        analyzeNearby(coords.latitude, coords.longitude);
+        return;
+      }
+      setFieldsView(null);
+      if (mapUnavailable) { onShape(circleApprox(coords.latitude, coords.longitude), true); return; }
+      if (!globeRef.current) pendingFieldLocation.current = {
+        lat: coords.latitude, lon: coords.longitude,
+      };
+      goTo(coords.latitude, coords.longitude, true, coords.accuracy);
+    }, denied, { timeout: 8000 });
   };
 
   /** Jump straight to field detail, keeping the visible part centred. */
@@ -675,7 +910,7 @@ export default function App() {
   const cancelDraw = () => {
     setDraw("none"); setDraft([]);
     globeRef.current?.setDraft(null);
-    if (targetRef.current.kind === "zone") {
+    if (targetRef.current.kind !== "selection") {
       setFieldsView({ id: targetRef.current.fieldId });
       targetRef.current = { kind: "selection" };
     }
@@ -685,6 +920,7 @@ export default function App() {
   const changePlot = () => {
     setFieldOpen(false); setTarget(null); setSelection(null); setAdjust(null);
     startField("none");
+    setFieldsView("list");
   };
 
   /** One-tap guided demo (task 40): a fictional Mendoza farm on a real
@@ -744,7 +980,7 @@ export default function App() {
   const sidePanel = (mode === "field" && fieldOpen) || emergOpen;
 
   return (
-    <div className={`app${sidePanel ? " has-side-panel" : ""}`}>
+    <div className={`app${analysisScreen ? " analysis-screen" : ""}${sidePanel ? " has-side-panel" : ""}`}>
       <header className="topbar">
         <h1>
           <button type="button" className="topbar-home"
@@ -757,6 +993,8 @@ export default function App() {
             <span className="topbar-name">{APP_NAME}</span>
           </button>
         </h1>
+
+
         <div className="spacer" />
         <button className="emerg-link" aria-label={t("emerg.nav")}
                 onClick={() => setEmergOpen(true)}>
@@ -808,14 +1046,16 @@ export default function App() {
             }} />)}
         <div ref={mapDiv} className="map" role="application"
              aria-label={t("map.label")} />
-        {mapRequested && <Suspense fallback={null}>
+        <Suspense fallback={null}>
           <MapLoader container={mapDiv} onReady={onGlobeReady}
-                     onUnavailable={() => setMapUnavailable(true)} />
-        </Suspense>}
+                     onUnavailable={onMapUnavailable} />
+        </Suspense>
         {mapUnavailable && mode !== "welcome" && <p className="map-warning" role="status">
           {t("field.map.unavailable")}
         </p>}
         {storageError && <p className="storage-warning" role="alert">{t("fields.storageFailure")}</p>}
+        {mode === "field" && fieldsView !== "list" && !fieldOpen && locationState === "denied" &&
+          <p className="map-warning" role="status">{t("fields.locationDenied")}</p>}
         {mode === "field" && !fieldOpen && (
           <>
             {draw === "none" && !selection && !fieldsView && (
@@ -896,33 +1136,82 @@ export default function App() {
           </Suspense>)}
         {mode === "field" && !fieldOpen && !selection && draw === "none" &&
           fieldsView === "list" && (
-          <FieldsList fields={fields}
+          <FieldsList fields={fields} actions={<div className="field-entry-actions">
+            <details onToggle={(event) => {
+              if (event.currentTarget.open) requestLocationFor("add");
+            }}>
+              <summary>{t("fields.addNew")}</summary>
+              <button type="button" onClick={() => {
+                locationRequest.current++;
+                setLocationState("idle");
+                setFieldsView(null);
+              }}>{t("place.search")}</button>
+            </details>
+            <button type="button" disabled={locationState === "loading"}
+                    onClick={() => requestLocationFor("nearby")}>{t("fields.nearby")}</button>
+            {locationState === "loading" && <p role="status">{t("place.locating")}</p>}
+            {locationState === "denied" && <p role="status">{t("fields.locationDenied")}{" "}
+              {globe && <button onClick={() => {
+                const p = globe.center();
+                setLocationState("idle");
+                analyzeNearby(p.lat, p.lon);
+              }}>{t("fields.analyzeVisible")}</button>}
+            </p>}
+          </div>}
             onOpen={showField}
             onZones={openDetail}
-            onAnalyze={openDetail}
+            onAnalyze={analyzeSavedField}
             onRename={(f, n) => { storeChange(() => renameField(f.id, n)); }}
             onDelete={(f) => { if (storeChange(() => deleteField(f.id)) && shownField === f.id)
                                setShownField(null); }}
             onClose={() => { setFieldsView(null); setShownField(null); }} />)}
         {mode === "field" && !fieldOpen && !selection && draw === "none" &&
           fieldsView && fieldsView !== "list" && openField && (
-          <FieldDetail key={openField.id} field={openField} pending={pendingZone}
-            choice={areaChoice} onChoose={setAreaChoice}
-            onAnalyze={(o) => analyzeOption(openField, o)}
-            onDrawZone={(m) => drawZone(openField.id, m)}
-            onSaveZone={(name, crop) => {
+          <ParcelPanel key={openField.id} field={openField}
+            selected={selectedParcel} onSelect={(id) => {
+              setSelectedParcel(id);
+              const z = openField.zones.find((x) => x.id === id);
+              const p = proposal?.status === "ready" && id?.startsWith("p")
+                ? proposal.detection.parcels[Number(id.slice(1))] : null;
+              const geom = z?.geom ?? (p ? [p.geom] : null);
+              if (geom) globeRef.current?.fitRing(multiPoints(geom), coveredBottom());
+            }}
+            proposal={proposal}
+            onDetect={() => detect(openField)}
+            onProposalToggle={(i) => proposal?.status === "ready" && setProposal({
+              ...proposal, keep: proposal.keep.map((v, k) => (k === i ? !v : v)) })}
+            onProposalName={(i, n) => proposal?.status === "ready" && setProposal({
+              ...proposal, names: proposal.names.map((v, k) => (k === i ? n : v)) })}
+            onAccept={() => acceptProposal(openField)}
+            onReject={() => { setProposal(null); setSelectedParcel(null); }}
+            onRename={(z, n) => { storeChange(() => updateZone(openField.id, z.id, { name: n.trim() })); }}
+            onCrop={(z, c) => { storeChange(() => updateZone(openField.id, z.id, { crop: c.trim() })); }}
+            onDiscard={(z) => { storeChange(() => discardParcel(openField.id, z.id));
+                                setSelectedParcel(null); }}
+            onFix={(z) => fixParcel(openField, z)}
+            onAnalyze={(z) => analyzeParcel(openField, z,
+              openField.zones.findIndex((x) => x.id === z.id))}
+            onSummary={() => setSummaryFor(openField.id)}
+            pending={pendingZone}
+            onDrawParcel={(m) => drawZone(openField.id, m)}
+            onSavePending={(name) => {
               if (pendingZone && storeChange(() =>
-                addZone(openField.id, { name, crop, geom: pendingZone.geom })))
+                addZone(openField.id, { name, crop: "", geom: pendingZone.geom })))
                 setPendingZone(null);
             }}
-            onDiscardZone={() => setPendingZone(null)}
-            onUpdateZone={(id, p) => { storeChange(() => updateZone(openField.id, id, p)); }}
-            onRemoveZone={(id) => { storeChange(() => removeZone(openField.id, id)); }}
-            onAddZones={(zs) => { storeChange(() => addZones(openField.id, zs)); }}
-            onSetCrop={(c) => { storeChange(() => setFieldCrop(openField.id, c)); }}
-            onCropSplit={(v) => { storeChange(() => markCropSplit(openField.id, v)); }}
-            onBack={() => { setPendingZone(null); setAreaChoice("all");
-                            setFieldsView("list"); }} />)}
+            onDiscardPending={() => setPendingZone(null)}
+            onSetFieldCrop={(c) => { storeChange(() => setFieldCrop(openField.id, c)); }}
+            onSplitByCrop={async () => {
+              const r = await cropZonesFor(openField.geom, lang);
+              if (!r) return "unavailable";
+              storeChange(() => {
+                if (r.zones.length) addZones(openField.id, r.zones, "crop");
+                markCropSplit(openField.id, r.result);
+              });
+              return r.result;
+            }}
+            onBack={() => { setPendingZone(null); setProposal(null);
+                            setSelectedParcel(null); setFieldsView("list"); }} />)}
         {mode === "field" && parcelRes && globe && (
           <Suspense fallback={null}>
             <ParcelsMapLayer globe={globe} parcels={parcelRes.parcels}
@@ -970,8 +1259,23 @@ export default function App() {
                       }}
                       onEmergency={() => setEmergOpen(true)}
                       moistureSelection={selectedMoisture} onMoistureZones={showMoisture}
-                      onMoistureSelect={focusMoisture} />
+                      onMoistureSelect={focusMoisture}
+                      nearbyUse={nearbyLandUse?.geom === nearbyGeometry ? nearbyLandUse.status
+                        : mapUnavailable ? "unavailable" : undefined}
+                      onRecommendationArea={setRecommendationArea} />
         </Suspense>)}
+      {mode === "field" && !fieldOpen && (() => {
+        const f = fields.find((x) => x.id === summaryFor);
+        return (
+          <BottomSheet open={!!f}>
+            {f && <FieldSummary fieldName={f.name}
+              units={summaryUnits(f.zones.map((z, i) => ({ id: z.id,
+                name: z.name || t("parcel.defaultName", { n: i + 1 }), geom: z.geom })),
+                f.review ?? [], f.geom)}
+              onAnalyze={(u) => analyzeUnit(f, u)}
+              onClose={() => setSummaryFor(null)} />}
+          </BottomSheet>);
+      })()}
       <MethodsDrawer open={methodsOpen}
                      onClose={() => setMethodsOpen(false)} />
       <BottomSheet open={emergOpen}>

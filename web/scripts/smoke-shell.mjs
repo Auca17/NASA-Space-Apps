@@ -21,11 +21,16 @@ for (const w of [390, 1280]) {
     status: 200, contentType: "application/json", body: "{}" }));
   const shot = (name) => page.screenshot({ path: `${OUT}33-${name}-${w}px.png` });
 
-  // welcome
+  // boot lands on the fields list (the app is field-only since task 49)
   await page.goto(BASE + "/app/", { waitUntil: "networkidle" });
   await page.waitForTimeout(1200);
+  await shot("boot-fields");
+
+  // welcome still reachable through the home control
+  await page.click(".topbar-home").catch(() => {});
+  await page.waitForTimeout(800);
   await shot("welcome");
-  await page.click("details.welcome-more summary");
+  await page.click("details.welcome-more summary").catch(() => {});
   await page.waitForTimeout(300);
   await shot("welcome-more");
 

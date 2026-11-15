@@ -56,20 +56,27 @@ for (const s of SIZES) {
   };
 
   /* the chooser is a peekable sheet on compact widths — expand before
-   * touching the option details it hides. */
+   * touching the option details it hides. It opens through the boot
+   * fields list: "Agregar campo" → "Buscar". */
   const expandChooser = async () => {
     const h = page.locator(
       ".picker-head button[aria-expanded='false']").first();
     if (await h.count()) await h.click().catch(() => {});
     await page.waitForTimeout(400);
   };
+  const openChooser = async () => {
+    await page.locator("summary",
+      { hasText: /Agregar campo|Add field/i }).first()
+      .click().catch(() => {});
+    await page.getByRole("button", { name: /^Buscar$|^Search$/i })
+      .first().click().catch(() => {});
+    await page.waitForTimeout(600);
+    await expandChooser();
+  };
 
-  /* -- 1. real base map (mounts on entering the field flow) ------- */
+  /* -- 1. real base map (mounts at boot — field-only app) --------- */
   await page.goto(`${BASE}/app/`, { waitUntil: "domcontentloaded" });
-  await page.waitForTimeout(2500);
-  await page.getByRole("button", { name: /Analizar mi campo/i }).first()
-    .click().catch(() => {});
-  await page.waitForTimeout(6000);
+  await page.waitForTimeout(8000);
   await snap("map-base", 500);
   const px = await page.evaluate(() => {
     const c = document.querySelector(".map canvas");
@@ -90,10 +97,9 @@ for (const s of SIZES) {
   await page.route("**/api/field/parcels", (r) => r.fulfill({
     status: 200, contentType: "application/json",
     body: JSON.stringify(DEGRADED) }));
-  await page.goto(`${BASE}/app/`, { waitUntil: "domcontentloaded" });
+  await page.goto(`${BASE}/app/#demo`,
+    { waitUntil: "domcontentloaded" });
   await page.waitForTimeout(2500);
-  await page.getByRole("button", { name: /ejemplo: finca en Mendoza/i })
-    .first().click().catch(() => {});
   await page.waitForSelector(".diag-degraded, [role='alert']",
     { timeout: 30000 }).catch(() => {});
   await page.waitForTimeout(1500);
@@ -105,10 +111,7 @@ for (const s of SIZES) {
   /* -- 4. real field flow: Orin demo lot → "Más información" ------ */
   await page.goto(`${BASE}/app/`, { waitUntil: "domcontentloaded" });
   await page.waitForTimeout(2500);
-  await page.getByRole("button", { name: /Analizar mi campo/i }).first()
-    .click().catch(() => {});
-  await page.waitForTimeout(1500);
-  await expandChooser();
+  await openChooser();
   await page.locator("summary", { hasText: /ejemplo/i }).first()
     .click().catch(() => {});
   await page.waitForTimeout(400);

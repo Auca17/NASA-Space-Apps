@@ -9,8 +9,12 @@ import type { SplitResult } from "../../domain/split";
 
 export type LandCheck = "checking" | "urban" | "ok" | "unknown";
 
-/** Area limits of the diagnosis API (ha). */
-export const MIN_HA = 0.5, MAX_HA = 5_000;
+/** Area limits (ha): a field of any size above MIN_HA can be saved; one
+ * diagnosis covers up to MAX_HA, processed in internal blocks of BLOCK_HA
+ * by the backend. Larger fields are analyzed plot by plot. */
+export const MIN_HA = 0.5, MAX_HA = 50_000, BLOCK_HA = 5_000;
+/** Beyond this the outline is a mis-drawn region, not a farm. */
+export const MAX_SAVE_HA = 500_000;
 
 /** Suggested pieces waiting for the user's choice. */
 export type Adjust = {
@@ -47,8 +51,12 @@ export function SelectionReview({ geom, approx, check, onEdit, onCancel,
   const [naming, setNaming] = useState(false);
   const [name, setName] = useState("");
   const total = multiHa(geom);
-  const outOfRange = total < MIN_HA || total > MAX_HA;
-  const blocked = check === "checking" || check === "urban" || outOfRange;
+  const tooSmall = total < MIN_HA;
+  const tooBigToAnalyze = total > MAX_HA;
+  const tooBigToSave = total > MAX_SAVE_HA;
+  const saveBlocked = check === "checking" || check === "urban" || tooSmall ||
+    tooBigToSave;
+  const blocked = saveBlocked || tooBigToAnalyze;
   return (
     <div className="controls picker review" role="region"
          aria-label={t("review.title")}>
@@ -63,10 +71,17 @@ export function SelectionReview({ geom, approx, check, onEdit, onCancel,
         {t(approx ? "review.howApprox" : "review.how")}</p>
       {geom.length > 1 && (
         <p className="muted">{t("review.multiNote")}</p>)}
-      {outOfRange && (
+      {tooSmall && (
         <p className="notice urban-warning" role="alert">
-          {t(total > MAX_HA ? "review.tooBig" : "review.tooSmall",
-             { max: ha(MAX_HA), min: ha(MIN_HA) })}</p>)}
+          {t("review.tooSmall", { min: ha(MIN_HA) })}</p>)}
+      {tooBigToSave && (
+        <p className="notice urban-warning" role="alert">
+          {t("review.tooBig", { max: ha(MAX_SAVE_HA) })}</p>)}
+      {tooBigToAnalyze && !tooBigToSave && (
+        <p className="notice" role="status">
+          {t("review.tooBigToAnalyze", { max: ha(MAX_HA) })}</p>)}
+      {!tooBigToAnalyze && total > BLOCK_HA && (
+        <p className="muted">{t("review.blocks", { b: ha(BLOCK_HA) })}</p>)}
       {check === "checking" && (
         <p className="muted" role="status">{t("review.checking")}</p>)}
       {check === "urban" && (
@@ -94,7 +109,7 @@ export function SelectionReview({ geom, approx, check, onEdit, onCancel,
           {onParcels && (
             <button onClick={onParcels} disabled={blocked}>
               {t("parcels.open")}</button>)}
-          <button onClick={() => setNaming(true)} disabled={blocked}>
+          <button onClick={() => setNaming(true)} disabled={saveBlocked}>
             {t("fields.saveAs")}</button>
           <button onClick={onAdjust}>{t("adjust.open")}</button>
           <button onClick={onEdit}>{t("review.edit")}</button>

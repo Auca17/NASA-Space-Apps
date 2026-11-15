@@ -21,12 +21,20 @@ const LS_KEY = "fs_lang";
 
 export function I18nProvider({ children }: { children: ReactNode }) {
   const [lang, setLangState] = useState<Lang>(() => {
-    const v = localStorage.getItem(LS_KEY);
-    return v === "en" || v === "es" ? v : "es";
+    try {
+      const saved = localStorage.getItem(LS_KEY);
+      return saved === "en" ? "en" : "es";
+    } catch {
+      return "es";
+    }
   });
   const setLang = (l: Lang) => {
-    localStorage.setItem(LS_KEY, l);
     setLangState(l);
+    try {
+      localStorage.setItem(LS_KEY, l);
+    } catch {
+      // The new language still applies for this session.
+    }
   };
   const t = (key: string, vars?: Record<string, string | number>) => {
     let s = DICTS[lang][key] ?? DICTS.es[key] ?? key;

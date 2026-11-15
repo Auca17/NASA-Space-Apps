@@ -1,6 +1,9 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
+import { createElement } from "react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import es from "./es.json";
 import en from "./en.json";
+import { I18nProvider, useT } from "./index";
 
 const CARD_IDS = [
   "rain", "heavy_rain", "soil_moisture", "frost", "heat",
@@ -55,4 +58,21 @@ describe("confidence labels", () => {
     expect(es["field.confidence.high"]).toBe("alta");
     expect(en["field.confidence.low"]).toBe("low");
   });
+});
+
+it("renders and changes language when browser storage is blocked", () => {
+  const blocked = vi.spyOn(window, "localStorage", "get").mockImplementation(() => {
+    throw new DOMException("Storage blocked", "SecurityError");
+  });
+  function LanguageToggle() {
+    const { lang, setLang } = useT();
+    return createElement("button", { onClick: () => setLang("en") }, lang);
+  }
+  try {
+    render(createElement(I18nProvider, { children: createElement(LanguageToggle) }));
+    fireEvent.click(screen.getByRole("button", { name: "es" }));
+    expect(screen.getByRole("button", { name: "en" })).toBeInTheDocument();
+  } finally {
+    blocked.mockRestore();
+  }
 });

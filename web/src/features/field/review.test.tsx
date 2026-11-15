@@ -113,16 +113,25 @@ describe("AdjustPanel", () => {
 });
 
 describe("SelectionReview area limits", () => {
-  it("blocks analyzing and saving a selection above 5.000 ha", () => {
-    render(<I18nProvider>
-      <SelectionReview geom={[[squareRing(-33.96, -60.69, 5000)]]} approx={false}
-        check="ok" onEdit={vi.fn()} onCancel={vi.fn()} onConfirm={vi.fn()}
-        onAdjust={vi.fn()} onSave={vi.fn()} />
-    </I18nProvider>);
-    expect(screen.getByRole("alert")).toHaveTextContent(/muy grande/i);
+  const review = (half: number) => render(<I18nProvider>
+    <SelectionReview geom={[[squareRing(-33.96, -60.69, half)]]} approx={false}
+      check="ok" onEdit={vi.fn()} onCancel={vi.fn()} onConfirm={vi.fn()}
+      onAdjust={vi.fn()} onSave={vi.fn()} />
+  </I18nProvider>);
+  const saveBtn = () => screen.getByRole("button", { name: /guardar en mis campos/i });
+
+  // fields above 5,000 ha used to be blocked from saving
+  it("saves and analyzes a 12,000 ha field (internal blocks, not plots)", () => {
+    review(5500);
+    expect(saveBtn()).toBeEnabled();
+    expect(confirmBtn()).toBeEnabled();
+    expect(screen.getByText(/bloques de hasta 5000 ha/i)).toBeInTheDocument();
+  });
+  it("still saves a field too big for one analysis", () => {
+    review(12_000);   // ~57,600 ha
+    expect(saveBtn()).toBeEnabled();
     expect(confirmBtn()).toBeDisabled();
-    expect(screen.getByRole("button", { name: /guardar en mis campos/i }))
-      .toBeDisabled();
+    expect(screen.getByText(/analizalo por parcelas/i)).toBeInTheDocument();
   });
 });
 
@@ -143,5 +152,17 @@ describe("AdjustPanel with nothing usable", () => {
     expect(screen.getByText(/zona urbana: 49,4 ha/i)).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: /volver a dibujar/i }));
     expect(onRedraw).toHaveBeenCalledOnce();
+  });
+});
+
+describe("SelectionReview: a mis-drawn region", () => {
+  it("does not save an outline the size of a province", () => {
+    render(<I18nProvider>
+      <SelectionReview geom={[[squareRing(-33.96, -60.69, 40_000)]]} approx={false}
+        check="ok" onEdit={vi.fn()} onCancel={vi.fn()} onConfirm={vi.fn()}
+        onAdjust={vi.fn()} onSave={vi.fn()} />
+    </I18nProvider>);
+    expect(screen.getByRole("button", { name: /guardar en mis campos/i })).toBeDisabled();
+    expect(screen.getByRole("alert")).toHaveTextContent(/muy grande/i);
   });
 });

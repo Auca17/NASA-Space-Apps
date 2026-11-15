@@ -12,57 +12,43 @@ const OUT = fileURLToPath(new URL("../screenshots/", import.meta.url));
 mkdirSync(OUT, { recursive: true });
 
 const SIZES = [{ w: 1280, h: 800 }, { w: 390, h: 844 }];
-const setMonth = (idx) => `(() => {
-  const s = document.querySelector(".controls input[type=range]");
-  if (!s) return;
-  const set = Object.getOwnPropertyDescriptor(
-    HTMLInputElement.prototype, "value").set;
-  set.call(s, "${idx}");
-  s.dispatchEvent(new Event("input", { bubbles: true }));
-  s.dispatchEvent(new Event("change", { bubbles: true }));
-})()`;
 
 for (const { w, h } of SIZES) {
   const browser = await chromium.launch();
-  const page = await browser.newPage({ viewport: { width: w, height: h } });
+  const ctx = await browser.newContext({ viewport: { width: w, height: h } });
+  await ctx.addInitScript(
+    "localStorage.setItem('ashfield.demoTour.v1','1')");
+  const page = await ctx.newPage();
   const snap = async (name, ms = 1200) => {
     await page.waitForTimeout(ms);
     await page.screenshot({ path: `${OUT}app-${name}-${w}px.png` });
     console.log("saved", name, w);
   };
 
-  // 1. globe with fire layer on a real month (2022-02, Corrientes peak)
+  // 1. boot: fields list over the satellite basemap
   await page.goto(BASE + "/app/", { waitUntil: "domcontentloaded" });
-  await page.getByRole("button", { name: /mapa de fuego/i })
-    .click().catch(() => {});
-  await page.waitForTimeout(1800);
-  await page.evaluate(setMonth(255));
-  await snap("globe-2022-02", 3200);
+  await snap("boot-fields", 3200);
 
-  // 2. area panel — Corrientes, the 2022 case study
-  await page.goto(BASE + "/app/?r=1#-27.95,-56.95",
-    { waitUntil: "domcontentloaded" });
-  await page.waitForSelector("table.cal", { timeout: 30000 }).catch(() => {});
-  await snap("area-panel", 1800);
-
-  // 3. field diagnosis (Mendoza demo farm — real data only)
-  await page.goto(BASE + "/app/", { waitUntil: "domcontentloaded" });
-  await page.getByRole("button",
-    { name: /ejemplo.*mendoza/i }).click().catch(() => {});
-  await page.waitForSelector(".card", { timeout: 60000 }).catch(() => {});
+  // 2. field diagnosis (Mendoza demo farm — real data only)
+  await page.goto(BASE + "/app/#demo", { waitUntil: "domcontentloaded" });
+  await page.waitForSelector(".parcel-badge, .card",
+    { timeout: 60000 }).catch(() => {});
   await snap("field-diagnosis", 2000);
 
-  // 4. validation card (scroll inside panel to the Orin card)
+  // 3. detail tab: lazy diagnosis + validation card
+  await page.locator("#tab-mas").first().click().catch(() => {});
+  await page.waitForSelector(".dtile, .card", { timeout: 120000 })
+    .catch(() => {});
   await page.getByText(/sat[eé]lite tu lote|estaciones/i).first()
     .scrollIntoViewIfNeeded().catch(() => {});
   await snap("validation-card", 1000);
 
-  // 5. scenario sliders (in the rotations form)
+  // 4. scenario sliders
   await page.getByText(/escenario|lluvia|temperatura/i).first()
     .scrollIntoViewIfNeeded().catch(() => {});
   await snap("scenarios", 800);
 
-  // 6. rotation cards with the five sections
+  // 5. rotation cards with the five sections
   await page.getByRole("button", { name: /comparar rotaciones/i })
     .click().catch(() => {});
   await page.waitForSelector(".strategy", { timeout: 40000 }).catch(() => {});

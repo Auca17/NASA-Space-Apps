@@ -50,6 +50,27 @@ UA = {"User-Agent": "verify-r2/1.0"}
 # local files present under orin/ that the orchestrator does NOT publish
 ORIN_NOT_PUBLISHED = {"ndvi_modis_vs_s2.json"}
 
+# v1/ prefixes retired by the Fire/Live removal (task 51): no local
+# source is expected to publish them any more, so they are neither
+# "missing" nor "remote-only"; remote objects still present under them
+# are reported as a warning instead (see tools/prune_r2.py).
+RETIRED = ("v1/globe/", "v1/fire/daily/", "v1/fire/points/")
+
+
+def is_retired(key: str) -> bool:
+    return any(key.startswith(p) for p in RETIRED)
+
+
+def group(key: str) -> str:
+    parts = key.split("/")
+    if len(parts) > 3 and parts[1] in ("field", "fire"):
+        return "/".join(parts[:3])
+    return "/".join(parts[:2])
+
+
+# what group() yields for keys under the retired prefixes
+RETIRED_GROUPS = {group(p + "x") for p in RETIRED}
+
 
 def local_sources(only_prefix: str = "v1/") -> dict[str, Path]:
     """Expected R2 key -> local file, first mapping wins.
@@ -69,12 +90,16 @@ def local_sources(only_prefix: str = "v1/") -> dict[str, Path]:
                 if not p.is_file():
                     continue
                 key = prefix + p.relative_to(local).as_posix()
+                if is_retired(key):
+                    continue
                 if (key.startswith("v1/orin/")
                         and p.name in ORIN_NOT_PUBLISHED):
                     continue
                 out.setdefault(key, p)
         else:
             key = prefix + local.name
+            if is_retired(key):
+                return
             if not (key.startswith("v1/orin/")
                     and local.name in ORIN_NOT_PUBLISHED):
                 out.setdefault(key, local)
@@ -114,13 +139,6 @@ def local_sources(only_prefix: str = "v1/") -> dict[str, Path]:
     return out
 
 
-def group(key: str) -> str:
-    parts = key.split("/")
-    if len(parts) > 3 and parts[1] in ("field", "fire"):
-        return "/".join(parts[:3])
-    return "/".join(parts[:2])
-
-
 def fetch_public(base: str, key: str) -> bytes:
     with urlopen(Request(base + key, headers=UA), timeout=30) as r:
         body = r.read()
@@ -150,7 +168,13 @@ def main() -> int:
     print(f"remote: {len(remote)} objects under s3://"
           f"{env['R2_BUCKET']}/{prefix}")
     for g, n in sorted(counts.items()):
-        print(f"  {g:<28} {n}")
+        tag = "  (retired)" if g in RETIRED_GROUPS else ""
+        print(f"  {g:<28} {n}{tag}")
+    retired_remote = sorted(k for k in remote if is_retired(k))
+    if retired_remote:
+        print(f"\nWARNING retired objects still present remotely: "
+              f"{len(retired_remote)} under "
+              f"{', '.join(RETIRED)} — run tools/prune_r2.py")
 
     # ---- local -> remote reconciliation ----------------------------------
     # prepare() gzips every .json to compare stored sizes; zlib releases

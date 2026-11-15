@@ -33,6 +33,7 @@ from ..services.infiltration import (infiltration_class,
 from ..services.et0 import (METHOD_LABEL, et0_series,
                             series_is_masked)
 from ..services.accuracy import accuracy_block
+from ..services.timeline import build_timeline
 from ..services.knowledge import KNOWLEDGE
 from .field import (json_object, _err, parse_plot,
                     days_per_year, frost_free_window,
@@ -1107,7 +1108,9 @@ async def parcels(request: Request):
         order, extra = compute_order(ind, alerts, profile)
         row = {"id": p["id"], "crop": p["crop"],
                "area_ha": round(p["_ha"], 1),
-               "indicators": ind, "alerts": alerts,
+               "indicators": ind,
+               "timeline": build_timeline(power, p["_cent"][0], lang),
+               "alerts": alerts,
                "order": order, "extra": extra,
                "accuracy": accuracy_block(p["_cent"][0], p["_cent"][1],
                                           adj),

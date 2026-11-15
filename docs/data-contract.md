@@ -49,6 +49,10 @@ Ejemplo: `fixtures/meta.json`.
 
 ### 2.2 `globe/{YYYY-MM}.json`
 
+> **Retirado (2026-11-15, task 51).** El modo histórico se eliminó del
+> front; nada lee este prefijo. Se conserva la sección como historial.
+> Ver `docs/ops/r2-layout.md`.
+
 Productor: pipeline de fuego. Consumidor: front (animación del globo). Un archivo por mes, ~300 archivos. Solo celdas con `n > 0`.
 
 ```json
@@ -88,6 +92,10 @@ Ejemplo: `fixtures/fire/cal/82a967fffffffff.json`.
 
 ### 2.4 `fire/daily/{h3_r2}.json`
 
+> **Retirado (2026-11-15, task 51).** El semáforo D9 se eliminó con los
+> modos Fuego/En vivo; nada lee este prefijo. Se conserva la sección
+> como historial. Ver `docs/ops/r2-layout.md`.
+
 Productor: pipeline de fuego. Consumidor: front (semáforo del mes, D9). Se carga solo cuando el usuario fija un área. Series diarias comprimidas: solo los días con fuego.
 
 ```json
@@ -105,6 +113,10 @@ Productor: pipeline de fuego. Consumidor: front (semáforo del mes, D9). Se carg
 Ejemplo: `fixtures/fire/daily/82a967fffffffff.json`.
 
 ### 2.5 `fire/points/{h3_r2}/{YYYY}.csv.gz`
+
+> **Retirado (2026-11-15, task 51).** La descarga de focos crudos se
+> eliminó con los modos Fuego/En vivo; nada lee este prefijo. Se
+> conserva la sección como historial. Ver `docs/ops/r2-layout.md`.
 
 Productor: pipeline de fuego. Consumidor: front (descarga de focos crudos). Solo shards de Argentina (D5). Una fila por detección, ya filtrada (`type = 0`, confianza según PRD 9.1).
 
@@ -332,6 +344,8 @@ Salida (`fixtures/api/diagnose.response.json`):
 | `zone` | Zona agronómica del centroide (`pampa_humeda`, `nea`, `noa`, `cuyo`, `patagonia`; `other` fuera de Argentina). Adición compatible 2026-11-14; `/rotations` la lee del diagnóstico cuando el request no trae `zone`. |
 | `accuracy` | Adición D44 (también por parcela en §4.7). `{temp_rmse_c, temp_rmse_adjusted_c, rain_bias_mm_month, rain_rmse_mm_month, rain_r, stations: {temperature, rain}, elevation_correction_c, note, sources}`. Se lee de los resúmenes de validación versionados en `back/knowledge/validation/` (Orin: 53 estaciones Mendoza, `rmse` crudo y `corregido_por_altura`; SIGA: 25 automáticas vs IMERG). Lluvia: si ≥3 estaciones SIGA caen dentro de 200 km del punto se usa el promedio regional ponderado por n, si no el global — `note` lo aclara. |
 | `cards[gdd_year]` | Adición D44. `value` = grados-día acumulados por año en °C·día, base 10 °C con tope de 30 °C (convención FAO/Ecocrop), media de años completos de POWER `T2M_MAX`/`T2M_MIN`. Las estrategias de `/rotations` agregan evidencia por cultivo `gdd_year` comparándolo con `gdd_base10` del catálogo. |
+| `timeline` | Adición D47 (también por parcela en §4.7). Evolución mensual de las variables del lote, construida solo con la serie POWER daily ya pedida: `{months: ["YYYY-MM", ...], partial_last: bool, series: {rain_mm: {values, normal, anomaly_pct}, tmax_c: {values, normal, anomaly_c}, root_moisture: {values, normal, anomaly_pct}, heat_days_35: {values}, frost_days: {values}}, normals_period: "2001-2020", basis, source: "NASA POWER daily", headline}`. `months` = los últimos 24 meses completos más el mes en curso parcial (`partial_last: true`); `normal` son 12 medias del mismo mes calendario 2001–2020 de la misma celda; valor `null` cuando el mes tiene <20 días válidos. `root_moisture` es la media mensual de `GWETROOT` (0–1); `heat_days_35` cuenta días con `T2M_MAX ≥ 35` y `frost_days` días con `T2M_MIN ≤ 0`. `headline` es una frase llana determinista (sin IA) en `es`/`en` según `lang`, generada de las anomalías recientes (p.ej. "En los últimos 3 meses llovió 35 % menos de lo normal y el suelo está más seco que lo normal"). `null` cuando falta la serie POWER. |
+| `cards[vigor_bare_soil]` | Cobertura ampliada D47. Dentro de Argentina sigue siendo el valor precalculado MODIS de la grilla de campo (o la serie NDVI MOD13Q1 cuando responde). Fuera de Argentina, cuando la grilla no tiene dato, se estima a pedido con **Sentinel-2 L2A** (AWS Earth Search STAC, sin credenciales): mediana mensual de NDVI de píxeles despejados (máscara SCL) de los últimos 12 meses a 20 m dentro del lote o un círculo de 300 m; meses con NDVI <0,2 cuentan como suelo desnudo. `value` = meses × 30,4 días; la tarjeta agrega `ndvi_monthly` (12 medianas) y `months_with_data`, con `source: "Sentinel-2 L2A (ESA), 12 months, on demand"` y `resolution: "20 m"`. Presupuesto duro <6 s y cache 24 h por ubicación redondeada; ante fallo o pocos meses despejados queda `value: null` con la razón en `text` (nunca 0). |
 | `cards[evaporation]` | Adición 2026-12. `value` = evaporación anual del suelo y las plantas en mm (NASA POWER `EVLAND`, mm/día); lleva además `monthly_mm` (12 medias mensuales en mm) y `balance_mm` (lluvia − evaporación por mes en mm, mismo helper `monthly_sum_clim` que la fila `water_stress`). `crop_water` sigue usando `EVPTRNS`, que el catálogo POWER define como **flujo de energía** en MJ/m²/día — se convierte a mm/día dividiendo por 2,45 (λ FAO-56). Cuando `EVPTRNS`/`EVLAND` faltan o vienen degradados (media anual < 1,0 MJ/m²/día o < 1,0 mm/día — celdas POWER con el campo enmascarado, p.ej. Valle de Uco), ambas tarjetas caen a una serie **ET0 FAO-56** calculada por día: Penman-Monteith donde la celda ofrece radiación (`ALLSKY_SFC_SW_DWN`), humedad (`RH2M`) y viento (`WS2M`); Hargreaves (solo T2M_MAX/T2M_MIN + radiación extraterrestre) en el resto. `source` declara el método usado y la tarjeta de evaporación aclara que es una estimación de referencia. |
 | `cards[infiltration]` | Adición 2026-12. `value` = puntaje 0–100 y clase `alta`/`media`/`baja` en el texto; entradas: textura SoilGrids (grupos hidrológicos USDA), carbono orgánico, pendiente y días de suelo desnudo. Fórmula documentada en `back/knowledge/README.md`. Heurística de ordenamiento, no una medición. |
 | `elevation_m` | Elevación media del lote (Terrarium/SRTM); `null` si no resuelve. Adición compatible 2026-11-20. |
@@ -415,6 +429,7 @@ Validación (HTTP 400 con `error` estable): `boundary` pasa las mismas reglas de
                       "balance_mm": {"1".."12": mm}, "basis"},
       "infiltration": {"class": "alta|media|baja", "score": "0-100",
                        "basis"}},
+    "timeline": "<mismo bloque que §4.2 (D47): meses, series con\n              normales 2001-2020 y anomalías, headline en es/en;\n              null sin serie POWER>",
     "alerts": [{"kind": "fire|dry|heat|frost", "severity": "high|medium", "text"}],
     "order": ["ids de peligro en orden de pantalla"],
     "extra": [{"id", "hidden": true}],

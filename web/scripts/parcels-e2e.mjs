@@ -20,17 +20,33 @@ const ok = (cond, label) => {
 };
 
 const browser = await chromium.launch();
-const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
+const ctx = await browser.newContext({
+  viewport: { width: 1280, height: 800 } });
+// dismiss the guided demo tour so it never blocks the panel
+await ctx.addInitScript(
+  "localStorage.setItem('ashfield.demoTour.v1','1')");
+const page = await ctx.newPage();
 const snap = (n) => page.screenshot({ path: `${OUT}${n}-1280px.png` });
 page.on("console", (m) => {
   if (m.type() === "error") console.log("console.error:", m.text().slice(0, 160));
 });
 
+/* the app boots into the fields list: the chooser opens through
+ * "Agregar campo" → "Buscar". */
+const openChooser = async () => {
+  await page.locator("summary", { hasText: /Agregar campo|Add field/i })
+    .first().click();
+  await page.getByRole("button", { name: /^Buscar$|^Search$/i })
+    .first().click();
+  await page.waitForTimeout(600);
+  const h = page.locator(
+    ".picker-head button[aria-expanded='false']").first();
+  if (await h.count()) await h.click().catch(() => {});
+};
+
 // ---- part 1: demo plot -> needs -> result + tabs ----------------------
-await page.goto(BASE + "/app/", { waitUntil: "networkidle" });
+await page.goto(BASE + "/app/#demo", { waitUntil: "networkidle" });
 await page.waitForTimeout(1500);
-await page.getByRole("button", { name: /ejemplo/i }).first()
-  .click();
 // the Mendoza demo carries its own needs: it goes straight to the
 // parcels analysis instead of asking first
 await page.waitForSelector(".parcel-badge, [role='tab']",
@@ -83,9 +99,8 @@ await snap("e2e-more");
 // ---- part 2: coords selection -> wizard -> parcel -> needs -> result --
 await page.goto(BASE + "/app/", { waitUntil: "networkidle" });
 await page.waitForTimeout(1500);
-await page.getByRole("button", { name: /analizar mi campo/i }).first()
-  .click();
-await page.waitForTimeout(1500);
+await openChooser();
+await page.waitForTimeout(1000);
 await page.locator("details.field-examples summary").first().click();
 await page.locator(".coord-form input").nth(0).fill("-33.80");
 await page.locator(".coord-form input").nth(1).fill("-60.50");
@@ -141,9 +156,8 @@ await snap("e2e-wizard-result");
 // ---- part 3: main field draw preview ----------------------------------
 await page.goto(BASE + "/app/", { waitUntil: "networkidle" });
 await page.waitForTimeout(1500);
-await page.getByRole("button", { name: /analizar mi campo/i }).first()
-  .click();
-await page.waitForTimeout(1500);
+await openChooser();
+await page.waitForTimeout(1000);
 // choose point-by-point ("Marcar esquinas") if offered
 await page.getByRole("button", { name: /esquinas|punto por punto|dibujar/i })
   .first().click().catch(() => {});

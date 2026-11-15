@@ -14,10 +14,9 @@ for (const s of [{ n: "390", w: 390, h: 844 }, { n: "1280", w: 1280, h: 800 }]) 
     .then(() => page.screenshot({ path: `${OUT}${name}-${s.w}px.png` }))
     .then(() => console.log("saved", name, s.n));
 
-  await page.goto(BASE + "/app/", { waitUntil: "networkidle" }).catch(() => {});
+  await page.goto(BASE + "/app/#demo", { waitUntil: "networkidle" })
+    .catch(() => {});
   await page.waitForTimeout(1200);
-  await page.getByRole("button", { name: /ejemplo/i }).first()
-    .click().catch((e) => console.log("demo:", e.message.slice(0, 80)));
   await snap("parcels-needs", 2500);
   await page.getByRole("button", { name: /omitir|saltar|continuar|analizar/i })
     .last().click().catch((e) => console.log("needs:", e.message.slice(0, 80)));
