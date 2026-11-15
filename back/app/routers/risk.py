@@ -14,7 +14,8 @@ CACHE_CONTROL = "public, s-maxage=3600"
 def _not_found(r5: str):
     return JSONResponse(
         status_code=404,
-        content={"error": "no_risk_for_cell", "h3_r5": r5},
+        content={"error": "no_risk_for_cell", "h3_r5": r5,
+                 "detail": "no model output for this cell"},
         headers={"Cache-Control": CACHE_CONTROL})
 
 

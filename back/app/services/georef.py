@@ -62,7 +62,7 @@ def _features(name: str) -> tuple:
 
 
 def _rings(geom: dict):
-    """Yield exterior rings of (lon, lat) pairs for Polygon/Multi."""
+    """Yield (exterior, holes) of (lon, lat) rings for Polygon/Multi."""
     if not geom:
         return
     coords = geom.get("coordinates") or []
@@ -72,7 +72,7 @@ def _rings(geom: dict):
         polys = coords
     for poly in polys:
         if poly:
-            yield poly[0]
+            yield poly[0], poly[1:]
 
 
 def _in_ring(x: float, y: float, ring) -> bool:
@@ -90,10 +90,64 @@ def _in_ring(x: float, y: float, ring) -> bool:
 
 def _feature_at(features, lat: float, lon: float):
     for feat in features:
-        for ring in _rings(feat.get("geometry")):
-            if _in_ring(lon, lat, ring):
+        for ext, holes in _rings(feat.get("geometry")):
+            if _in_ring(lon, lat, ext) and not any(
+                    _in_ring(lon, lat, h) for h in holes):
                 return feat
     return None
+
+
+# Enclave fix: without interior rings, Lesotho/San Marino/etc. report
+# the enclosing country. Coastal fix: the 110 m country map misses
+# points just offshore; snap to the nearest feature within tolerance.
+COUNTRY_SNAP_DEG = 0.3
+
+# Natural Earth 110m uses -99 for entities without an ISO A2 code.
+_ISO2_OVERRIDES = {
+    "República Turca del Norte de Chipre": "CY",
+    "Somalilandia": "SO",
+}
+
+
+def _seg_dist(px, py, ax, ay, bx, by) -> float:
+    dx, dy = bx - ax, by - ay
+    if dx == 0 and dy == 0:
+        return ((px - ax) ** 2 + (py - ay) ** 2) ** 0.5
+    t = max(0.0, min(1.0, ((px - ax) * dx + (py - ay) * dy)
+                     / (dx * dx + dy * dy)))
+    return ((px - ax - t * dx) ** 2 + (py - ay - t * dy) ** 2) ** 0.5
+
+
+def _ring_dist(x: float, y: float, ring) -> float:
+    best = float("inf")
+    j = len(ring) - 1
+    for i in range(len(ring)):
+        d = _seg_dist(x, y, ring[j][0], ring[j][1],
+                      ring[i][0], ring[i][1])
+        if d < best:
+            best = d
+        j = i
+    return best
+
+
+def _nearest_feature(features, lat: float, lon: float,
+                     tol: float = COUNTRY_SNAP_DEG):
+    """Closest feature whose border lies within `tol` degrees."""
+    best, best_d = None, tol
+    for feat in features:
+        pts = [q for ext, _ in _rings(feat.get("geometry"))
+               for q in ext]
+        if not pts:
+            continue
+        xs, ys = [q[0] for q in pts], [q[1] for q in pts]
+        if not (min(xs) - tol <= lon <= max(xs) + tol
+                and min(ys) - tol <= lat <= max(ys) + tol):
+            continue
+        for ext, _ in _rings(feat.get("geometry")):
+            d = _ring_dist(lon, lat, ext)
+            if d < best_d:
+                best, best_d = feat, d
+    return best
 
 
 def province_at(lat: float, lon: float) -> dict | None:
@@ -103,9 +157,19 @@ def province_at(lat: float, lon: float) -> dict | None:
 
 
 def country_at(lat: float, lon: float) -> dict | None:
-    """Country at the point: {iso2, name} or None."""
-    feat = _feature_at(_features("countries.geojson"), lat, lon)
-    return (feat or {}).get("properties")
+    """Country at the point: {iso2, name} or None.
+
+    Exact containment first (honoring enclave holes); then, because the
+    110 m coastline drops near-shore points, the nearest country within
+    COUNTRY_SNAP_DEG of its border.
+    """
+    feats = _features("countries.geojson")
+    feat = _feature_at(feats, lat, lon) or \
+        _nearest_feature(feats, lat, lon)
+    props = (feat or {}).get("properties")
+    if props and props.get("iso2") == "-99":
+        props = dict(props, iso2=_ISO2_OVERRIDES.get(props.get("name")))
+    return props
 
 
 def zone_at(lat: float, lon: float) -> dict:
@@ -113,13 +177,14 @@ def zone_at(lat: float, lon: float) -> dict:
 
     Argentina: zone from the province table, country "AR". Outside:
     zone "other", province None, country = ISO A2 when resolvable.
+    The ~1 km province map is authoritative near borders: do not let
+    the coarse 110 m country map disagree (Posadas read PY).
     """
     prov = province_at(lat, lon)
     if prov:
-        country = country_at(lat, lon) or {}
         return {"zone": _PROVINCE_ZONE.get(prov.get("in1"), "other"),
                 "province": prov.get("nam"),
-                "country": country.get("iso2") or "AR"}
+                "country": "AR"}
     country = country_at(lat, lon) or {}
     return {"zone": "other", "province": None,
             "country": country.get("iso2")}
