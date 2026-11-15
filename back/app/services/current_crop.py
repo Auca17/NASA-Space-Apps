@@ -106,7 +106,8 @@ def pick_scenes(scenes, today: date):
                 clearest(date(y, 9, 1), date(y, 9, 30))[:1] +
                 clearest(date(y, 10, 1), date(y, 10, 31))[:1]),
         "now": sorted([s for s in best if d(s) >= today - timedelta(days=30)],
-                      key=lambda s: (s["properties"]["eo:cloud_cover"],
+                      # newest image that is reasonably clear (<=10 % cloud)
+                      key=lambda s: (s["properties"]["eo:cloud_cover"] > 10,
                                      -d(s).toordinal()))[:2],
     }
 

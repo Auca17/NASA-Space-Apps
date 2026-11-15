@@ -56,3 +56,10 @@ async def test_endpoint_outside_argentina_is_no_coverage():
                                 json={"polygon": {"type": "Polygon",
                                                   "coordinates": [square]}})
     assert res.status_code == 200 and res.json()["status"] == "no_coverage"
+
+
+def test_now_is_the_most_recent_reasonably_clear_image():
+    scenes = [scene("2026-08-07"), scene("2026-11-02"), scene("2026-11-12", 8),
+              scene("2026-11-14", 28)]
+    p = cc.pick_scenes(scenes, date(2026, 11, 15))
+    assert p["now"][0]["properties"]["datetime"][:10] == "2026-11-12"
