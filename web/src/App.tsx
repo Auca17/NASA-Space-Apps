@@ -1,6 +1,7 @@
 import { Suspense, lazy, useRef, useState, useCallback, useEffect } from "react";
 import { useT } from "./i18n";
 import { APP_NAME, DEFAULT_VIEW, DEMO_PLOT, WORLD_VIEW } from "./config";
+import { WindLogo } from "./components/WindLogo";
 import { Welcome } from "./features/welcome/Welcome";
 import { MethodsDrawer } from "./features/methods/MethodsDrawer";
 import { useGlobe, type GlobeHandle, type Shape } from "./features/globe/GlobeView";
@@ -493,9 +494,8 @@ export default function App() {
                       if (modeRef.current === "field") changePlot();
                       setMode("welcome");
                     }}>
-          <img src={`${import.meta.env.BASE_URL}brand/ashfield-mark-light.svg`}
-               alt="" width={24} height={24} />
-          {APP_NAME}
+          <WindLogo size={30} title={APP_NAME} />
+          <span className="topbar-name">{APP_NAME}</span>
         </button></h1>
         <nav>
           <button aria-pressed={mode === "field"}
