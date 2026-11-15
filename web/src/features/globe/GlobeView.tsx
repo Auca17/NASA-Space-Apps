@@ -18,7 +18,7 @@ export type LandUseRead = { landuse: Landuse[]; buildings: LatLon[];
 
 /** Shapes drawn over the map during selection review and in Mis campos. */
 export type ShapeKind = "piece-on" | "piece-off" | "excluded" | "original"
-  | "field" | "zone";
+  | "field" | "zone" | "moisture" | "moisture-selected" | "moisture-missing";
 export type Shape = { geom: Poly; kind: ShapeKind; color?: string };
 
 export function hexGeoJSON(cells: Map<string, number>): GeoJSON.FeatureCollection {
@@ -71,7 +71,8 @@ export interface GlobeHandle {
 
 export function useGlobe(
     ref: React.RefObject<HTMLDivElement | null>,
-    onReady: (h: GlobeHandle) => void) {
+    onReady: (h: GlobeHandle) => void,
+    onUnavailable?: () => void) {
   const handleRef = useRef<GlobeHandle | null>(null);
   useEffect(() => {
     if (!ref.current || handleRef.current) return;
@@ -91,7 +92,8 @@ export function useGlobe(
         attributionControl: { compact: true },
       });
     } catch {
-      return; // WebGL unavailable
+      onUnavailable?.();
+      return;
     }
     map.touchZoomRotate.disableRotation();
     map.keyboard.disableRotation();
@@ -107,7 +109,7 @@ export function useGlobe(
         map.setLayoutProperty("field-overview", "visibility", fieldActive ? "visible" : "none");
       }
       const visibility = fieldActive && fieldSatellite ? "visible" : "none";
-      for (const layer of ["field-satellite", "field-roads"]) {
+      for (const layer of ["field-satellite", "field-roads", "field-road-labels"]) {
         if (map.getLayer(layer)) map.setLayoutProperty(layer, "visibility", visibility);
       }
       const showGuide = fieldActive && guideEnabled;
@@ -162,6 +164,13 @@ export function useGlobe(
             "minor", "service", "track"]]],
         paint: { "line-color": "#fff3d2", "line-opacity": 0.72,
           "line-width": ["interpolate", ["linear"], ["zoom"], 12, 0.7, 17, 1.8] } });
+      map.addLayer({ id: "field-road-labels", type: "symbol", source: "omt",
+        "source-layer": "transportation_name", minzoom: 13,
+        layout: { visibility: "none", "symbol-placement": "line",
+          "text-field": ["coalesce", ["get", "name"], ["get", "ref"], ""],
+          "text-font": ["Noto Sans Regular"], "text-size": 11 },
+        paint: { "text-color": "#fff7e8", "text-halo-color": "#222",
+          "text-halo-width": 1.5 } });
       map.addLayer({ id: "omt-building", type: "fill", source: "omt",
         "source-layer": "building", minzoom: 13,
         paint: { "fill-opacity": 0 } });
@@ -182,6 +191,16 @@ export function useGlobe(
       map.addLayer({ id: "shapes-fill", type: "fill", source: "shapes",
         paint: { "fill-color": ["get", "fill"],
                  "fill-opacity": ["get", "op"] } });
+      const stripes = new Uint8Array(8 * 8 * 4);
+      for (let y = 0; y < 8; y++) {
+        for (let x = 0; x < 8; x++) {
+          if ((x + y) % 8 < 2) stripes.set([235, 239, 242, 190], (y * 8 + x) * 4);
+        }
+      }
+      map.addImage("unobserved-hatch", { width: 8, height: 8, data: stripes });
+      map.addLayer({ id: "shapes-missing", type: "fill", source: "shapes",
+        filter: ["==", ["get", "kind"], "moisture-missing"],
+        paint: { "fill-pattern": "unobserved-hatch" } });
       map.addLayer({ id: "shapes-line", type: "line", source: "shapes",
         paint: { "line-color": ["get", "line"], "line-width": ["get", "w"] } });
       map.addSource("draft", { type: "geojson",
@@ -327,12 +346,15 @@ export function useGlobe(
           original: { fill: "#000000", op: 0, line: "#1a56db", w: 1.5 },
           field: { fill: "#1a56db", op: 0.12, line: "#1a56db", w: 2 },
           zone: { fill: "#f9a825", op: 0.35, line: "#e65100", w: 1.5 },
+          moisture: { fill: "#8eaa62", op: 0.55, line: "#faf4e8", w: 0.5 },
+          "moisture-selected": { fill: "#8eaa62", op: 0.75, line: "#fff", w: 2.5 },
+          "moisture-missing": { fill: "#8c9297", op: 0.25, line: "#e1e5e7", w: 0.6 },
         };
         const src = map.getSource("shapes") as maplibregl.GeoJSONSource | undefined;
         src?.setData({ type: "FeatureCollection", features: shapes
           .filter((sh) => sh.geom.length && sh.geom[0].length >= 3)
           .map((sh) => ({ type: "Feature",
-            properties: { ...st[sh.kind],
+            properties: { ...st[sh.kind], kind: sh.kind,
                           ...(sh.color ? { fill: sh.color } : {}) },
             // outer ring + holes, each closed, [lon, lat]
             geometry: { type: "Polygon", coordinates: sh.geom
@@ -382,3 +404,12 @@ export function useGlobe(
 }
 
 export { latLngToCell };
+
+export function MapLoader({ container, onReady, onUnavailable }: {
+  container: React.RefObject<HTMLDivElement | null>;
+  onReady: (map: GlobeHandle) => void;
+  onUnavailable: () => void;
+}) {
+  useGlobe(container, onReady, onUnavailable);
+  return null;
+}

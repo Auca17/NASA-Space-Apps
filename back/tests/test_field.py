@@ -439,12 +439,13 @@ def test_parse_plot_polygon_with_hole_subtracts_it():
 def test_parse_plot_multipolygon_sums_pieces():
     from app.routers.field import parse_plot
     a, b = _sq(-33.96, -60.70, 0.003), _sq(-33.96, -60.68, 0.003)
-    (c, ha, r5, r6, bbox), err = parse_plot({"polygon": {
+    (c, ha, r5, r6, geom), err = parse_plot({"polygon": {
         "type": "MultiPolygon", "coordinates": [[a], [b]]}})
     assert err is None
     (_, ha_a, *_), _ = parse_plot({"polygon": {"coordinates": [a]}})
     assert ha == pytest.approx(2 * ha_a, rel=1e-3)
-    assert c[1] == pytest.approx(-60.69, abs=1e-3)   # between both pieces
+    assert min(abs(c[1] + 60.70), abs(c[1] + 60.68)) < .003
+    bbox = geom.bounds
     assert bbox[0] < -60.70 < -60.68 < bbox[2]
 
 

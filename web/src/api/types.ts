@@ -55,6 +55,8 @@ export interface Card {
   /** Scenario present: unmodified baseline value + numeric delta. */
   baseline_value?: number | string | null;
   delta?: number;
+  generated_at?: string;
+  valid_until?: string;
   /** fire_weather card: single INTA stop conditions met (last 3 days). */
   stop_conditions?: string[];
   stop_detail?: Record<string, string>;
@@ -95,7 +97,10 @@ export interface DiagnoseResponse {
   h3_r5: string[];
   h3_r6: string[];
   cards: Card[];
+  coverage?: { available_cards: number; total_cards: number; comparable: boolean };
+  terrain_coverage?: number | null;
   calendar: { months: string[]; rows: CalendarRow[] };
+  baseline?: Pick<DiagnoseResponse, "cards" | "calendar">;
   measures?: Measure[];
   measures_gaps?: string[];
   /** Climate scenario applied to the daily series (echoed). */
@@ -106,6 +111,19 @@ export interface DiagnoseResponse {
   power_cell_elevation_m?: number | null;
   temp_adjust_c?: number;
 }
+
+export type MoistureKind = "dry" | "middle" | "wet" | "missing";
+type Coordinate = [number, number];
+export interface MoistureZone {
+  kind: MoistureKind;
+  ha: number;
+  geometry: { type: "Polygon"; coordinates: Coordinate[][] } |
+            { type: "MultiPolygon"; coordinates: Coordinate[][][] };
+}
+export type MoistureResult = { status: "no_detail" | "unavailable" } | {
+  status: "available"; coverage: number; date: string; resolution_m: number;
+  zones: MoistureZone[];
+};
 
 export interface Strategy {
   id: string;

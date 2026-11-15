@@ -6,6 +6,7 @@ Anything failing or slow returns None — the caller emits the card as
 value=null/confidence=low instead of failing the request.
 """
 
+import asyncio
 import io
 import logging
 import math
@@ -16,6 +17,7 @@ import httpx
 import numpy as np
 
 from ..cache import CACHE
+from ..config import MissingEnv
 from .data import fetch_json, data_url
 
 log = logging.getLogger("field")
@@ -114,9 +116,10 @@ async def soilgrids(client: httpx.AsyncClient, lat: float, lon: float,
             vals = [(lyr["depths"][i]["values"].get("mean"), w)
                     for i, (_, w) in enumerate(SOILGRIDS_DEPTHS)
                     if (lyr := layers.get(prop)) and i < len(lyr["depths"])]
-            num = sum(v["mean"] * w for v, w in vals
-                      if v and v["mean"] is not None)
-            den = sum(w for v, w in vals if v and v["mean"] is not None)
+            vals = [(v.get("mean") if isinstance(v, dict) else v, w)
+                    for v, w in vals]
+            num = sum(v * w for v, w in vals if v is not None)
+            den = sum(w for v, w in vals if v is not None)
             out[prop] = num / den if den else None
         if all(v is None for v in out.values()):
             return None
@@ -135,40 +138,76 @@ def _tile_xy(lat: float, lon: float, z: int) -> tuple[float, float]:
 
 
 async def terrain_stats(client: httpx.AsyncClient, lat: float, lon: float,
-                        h3_r6: str, bbox=None) -> dict | None:
-    """Mean slope % and mean elevation m over the plot (Terrarium, SRTM)."""
-    async def go():
-        from PIL import Image
-        x, y = _tile_xy(lat, lon, TERRAIN_Z)
-        r = await client.get(
-            TERRARIUM_URL.format(z=TERRAIN_Z, x=int(x), y=int(y)),
-            timeout=TIMEOUT)
-        r.raise_for_status()
-        elev = (np.asarray(Image.open(io.BytesIO(r.content)),
-                         dtype=np.float64))
-        elev = elev[..., 0] * 256 + elev[..., 1] + elev[..., 2] / 256 - 32768
-        m_px = 156543.03 * math.cos(math.radians(lat)) / 2 ** TERRAIN_Z
-        gy, gx = np.gradient(elev, m_px)
-        slope = np.hypot(gx, gy) * 100
-        px, py = x - int(x), y - int(y)  # fractional tile coords
-        if bbox:  # window covering the plot bbox inside the tile
-            x0, y0 = _tile_xy(bbox[1], bbox[0], TERRAIN_Z)
-            x1, y1 = _tile_xy(bbox[3], bbox[2], TERRAIN_Z)
-            tx, ty = int(x), int(y)
-            c0 = int(np.clip((min(x0, x1) - tx) * 256, 0, 255))
-            c1 = int(np.clip((max(x0, x1) - tx) * 256, 0, 255))
-            r0 = int(np.clip((min(y0, y1) - ty) * 256, 0, 255))
-            r1 = int(np.clip((max(y0, y1) - ty) * 256, 0, 255))
-        else:  # point: 9x9 window around the centroid pixel
-            c, rr = int(px * 256), int(py * 256)
-            r0, r1 = max(0, rr - 4), rr + 5
-            c0, c1 = max(0, c - 4), c + 5
-        ws, we = slope[r0:r1 + 1, c0:c1 + 1], elev[r0:r1 + 1, c0:c1 + 1]
-        if not ws.size:
+                        h3_r6: str, geom=None) -> dict | None:
+    """Decode cached tiles, then calculate slope within the selected geometry."""
+    from PIL import Image
+    from rasterio.features import geometry_mask
+    from rasterio.transform import from_origin
+    from shapely import transform
+    from .field_geometry import pieces
+
+    if abs(lat) >= 85:
+        return None
+    x, y = _tile_xy(lat, lon, TERRAIN_Z)
+    projected = None
+    pixel = 1 / 256
+    coordinates = {(int(x), int(y))}
+    if geom is not None:
+        if max(abs(geom.bounds[1]), abs(geom.bounds[3])) >= 85:
             return None
-        return {"slope": round(float(np.nanmean(ws)), 1),
-                "elevation_m": round(float(np.nanmean(we)))}
-    return await _cached(h3_r6, "terrain_stats", go)
+        projected = transform(
+            geom, lambda coords: np.array([_tile_xy(p[1], p[0], TERRAIN_Z)
+                                          for p in coords]))
+        coordinates = set()
+        for part in pieces(projected):
+            a, b, c, d = part.bounds
+            if (int(c) - int(a) + 1) * (int(d) - int(b) + 1) > 64:
+                return None
+            coordinates.update((i, j) for i in range(int(a), int(c) + 1)
+                               for j in range(int(b), int(d) + 1))
+        if len(coordinates) > 64:
+            return None
+
+    async def tile(i, j):
+        async def fetch():
+            response = await client.get(TERRARIUM_URL.format(z=TERRAIN_Z, x=i, y=j),
+                                        timeout=TIMEOUT)
+            response.raise_for_status()
+            rgb = np.asarray(Image.open(io.BytesIO(response.content)).convert("RGB"),
+                             dtype=np.float32)
+            return rgb[..., 0] * 256 + rgb[..., 1] + rgb[..., 2] / 256 - 32768
+        return await _cached(f"{TERRAIN_Z}/{i}/{j}", "terrain_tile", fetch)
+
+    count = inside_count = 0
+    elevation_sum = slope_sum = 0.0
+    batch = sorted(coordinates)
+    for start in range(0, len(batch), 12):
+        group = batch[start:start + 12]
+        tiles = await asyncio.gather(*(tile(i, j) for i, j in group))
+        for (i, j), elevation in zip(group, tiles):
+            if projected is None:
+                col, row = int((x - i) * 256), int((y - j) * 256)
+                mask = np.zeros((256, 256), dtype=bool)
+                mask[max(0, row - 4):row + 5, max(0, col - 4):col + 5] = True
+            else:
+                mask = geometry_mask([projected], out_shape=(256, 256),
+                                     transform=from_origin(i, j, pixel, -pixel),
+                                     invert=True, all_touched=True)
+            size = int(mask.sum())
+            inside_count += size
+            if elevation is None or not size:
+                continue
+            metres = 156543.03 * math.cos(math.radians(lat)) / 2 ** TERRAIN_Z
+            gy, gx = np.gradient(elevation, metres)
+            count += size
+            elevation_sum += float(elevation[mask].sum(dtype=np.float64))
+            slope_sum += float(np.hypot(gx, gy)[mask].sum(dtype=np.float64)) * 100
+    if not count:
+        return None
+    coverage = round(count / inside_count, 3)
+    return {"slope": round(slope_sum / count, 1) if coverage >= .7 else None,
+            "elevation_m": round(elevation_sum / count, 1) if coverage >= .7 else None,
+            "coverage": coverage}
 
 
 # ------------------------------------------------------------ ORNL MODIS ----
@@ -190,11 +229,13 @@ async def ornl_modis(client: httpx.AsyncClient, product: str, band: str,
         r.raise_for_status()
         out = []
         for s in r.json().get("subset", []):
-            d = s["calendar_date"]  # 'A2023049'
+            d = s["calendar_date"]
             v = s["data"][0] if s.get("data") else None
             if v is not None:
-                out.append((date(int(d[1:5]), 1, 1)
-                            + timedelta(days=int(d[5:]) - 1), float(v) * scale))
+                day = (date(int(d[1:5]), 1, 1) + timedelta(days=int(d[5:]) - 1)
+                       if d.startswith("A") else date.fromisoformat(d))
+                if -0.2 <= float(v) * scale <= 1:
+                    out.append((day, float(v) * scale))
         return out or None
     return await _cached(h3_r6, f"ornl_{product}_{band}", go)
 
@@ -204,9 +245,8 @@ async def ornl_modis(client: httpx.AsyncClient, product: str, band: str,
 async def json_shard(lat: float, lon: float, path: str, h3_r6: str,
                      name: str) -> dict | None:
     """DATA_BASE_URL + path, cached under the shared (r6, date, name) key."""
-    async def go():
-        try:
-            return await fetch_json(data_url(path))
-        except Exception:
-            return None
-    return await _cached(h3_r6, name, go)
+    try:
+        url = data_url(path)
+    except MissingEnv:
+        return None
+    return await _cached(h3_r6, f"{name}:{url}", lambda: fetch_json(url))

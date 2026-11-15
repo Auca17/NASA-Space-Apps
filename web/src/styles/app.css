@@ -57,7 +57,7 @@ input[type="range"] { min-height: var(--touch); }
 }
 
 .map-wrap { position: relative; flex: 1; min-height: 0; }
-.map { position: absolute; inset: 0; }
+.map-wrap > .map { position: absolute; inset: 0; }
 .home-button { border: 0; background: transparent; padding: 0;
   display: inline-flex; align-items: center; gap: 8px;
   font-weight: inherit; color: inherit; }
@@ -472,6 +472,20 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
 .scen-slider { display: block; margin: 10px 0; font-weight: 600; }
 .scen-slider input[type="range"] { width: 100%; min-height: 44px; }
 .scen-order { font-weight: 600; margin: 4px 0; }
+.moisture-legend { display: grid; gap: 0.3rem; padding: 0; list-style: none; }
+.moisture-legend li { display: flex; align-items: center; gap: 0.5rem; }
+.moisture-legend span { width: 1.1rem; height: 1.1rem; border-radius: 0.2rem; }
+.moisture-legend .missing {
+  background-image: repeating-linear-gradient(135deg, transparent 0 3px, #eee 3px 4px);
+}
+.moisture-card select, .cons-grid select { display: block; width: 100%; }
+.map-warning, .storage-warning {
+  position: absolute; top: 0.5rem; left: 50%; transform: translateX(-50%);
+  z-index: 12; max-width: min(29rem, 90%); width: max-content;
+  background: var(--panel); padding: 0.7rem; border: 1px solid var(--accent);
+  border-radius: 0.5rem;
+}
+.storage-warning { top: 3.3rem; }
 .rank-note { font-size: 0.78rem; color: var(--accent-fg); margin: 0 0 4px; }
 .explain-ai { font-size: 0.78rem; }
 .linklike { background: none; border: none; color: var(--accent-fg);

@@ -17,6 +17,7 @@ import {
 } from "../../domain/semaphore";
 import { groupByShard } from "../../domain/h3area";
 import { presentRisk, emergencyText } from "../../domain/risk";
+import type { RiskCell } from "../../domain/risk";
 import { viridis, css } from "../../domain/colors";
 import { semaphorePeriod } from "../../domain/clarity";
 import type { MetaJson } from "../../api/types";
@@ -65,11 +66,19 @@ export function AreaPanel({ lat, lon, cells, open, onClose, country,
 }) {
   const { t, lang } = useT();
   const [meta, setMeta] = useState<MetaJson | null>(null);
-  const [risk, setRisk] = useState<ReturnType<typeof presentRisk> | null>(null);
-  const [cal, setCal] = useState<{ months: string[]; values: number[] } | null>(null);
-  const [sem, setSem] = useState<SemaphoreResult | null>(null);
-  /** Day the semaphore window ends on (today when it was computed). */
-  const [semEnd, setSemEnd] = useState<string | null>(null);
+  const selection = `${lat},${lon}`;
+  const [riskData, setRiskData] = useState<{ selection: string; value: RiskCell | null } | null>(null);
+  const riskCell = riskData?.selection === selection ? riskData.value : null;
+  const risk = riskCell?.current ? presentRisk(riskCell) : null;
+  const [calendarData, setCalendarData] = useState<{
+    selection: string; value: { months: string[]; values: number[] } | null;
+  } | null>(null);
+  const [semaphoreData, setSemaphoreData] = useState<{
+    selection: string; value: SemaphoreResult | null; end: string;
+  } | null>(null);
+  const cal = calendarData?.selection === selection ? calendarData.value : null;
+  const sem = semaphoreData?.selection === selection ? semaphoreData.value : null;
+  const semEnd = semaphoreData?.selection === selection ? semaphoreData.end : null;
   const [season, setSeason] = useState(false);
   const [anomalies, setAnomalies] = useState(false);
   const [picked, setPicked] = useState<string | null>(null);
@@ -82,37 +91,45 @@ export function AreaPanel({ lat, lon, cells, open, onClose, country,
   useEffect(() => {
     if (!open) return;
     let dead = false;
-    apiRisk(lat, lon).then((r) => {
-      if (!dead) setRisk(r ? presentRisk(r) : null);
+    apiRisk(lat, lon).then((value) => {
+      if (!dead) setRiskData({ selection, value });
     });
-    (async () => {
-      // cal first (small): renders the calendar without waiting on the
-      // multi-MB daily shards; everything fetched in parallel.
-      const cals = (await Promise.all(shards.map(fireCal)))
-        .filter((c): c is CalShard => c !== null);
-      if (dead) return;
-      if (!cals.length) { setCal(null); } else {
-        setCal(aggregateMonthly(cals, cellSet));
-      }
-      if (!meta) return;
-      const dailies = (await Promise.all(shards.map(fireDaily)))
-        .filter((d): d is DailyShard => d !== null);
-      if (dead || !dailies.length) return;
-      const end = new Date().toISOString().slice(0, 10);
-      const s = await runSemaphore({
-        shards: dailies, cells, endDate: end,
-        cfg: {
-          windowDays: meta.semaphore.window_days,
-          categories: meta.semaphore.categories,
-          ratioMinMedian: meta.semaphore.ratio_min_median,
-          baselineStart: `${meta.baseline.start}-01`,
-          baselineEnd: `${meta.baseline.end}-28`,
-        },
-      });
-      if (!dead) { setSem(s); setSemEnd(end); }
-    })();
     return () => { dead = true; };
-  }, [open, lat, lon, cells, cellSet, shards, meta]);
+  }, [open, lat, lon, selection]);
+
+  useEffect(() => {
+    if (!open) return;
+    let active = true;
+    Promise.all(shards.map(fireCal)).then((rows) => {
+      if (!active) return;
+      const cals = rows.filter((c): c is CalShard => c !== null);
+      setCalendarData({ selection, value: cals.length ? aggregateMonthly(cals, cellSet) : null });
+    });
+    return () => { active = false; };
+  }, [open, selection, cellSet, shards]);
+
+  useEffect(() => {
+    if (!open || !meta) return;
+    let active = true;
+    const end = new Date().toISOString().slice(0, 10);
+    const cfg = {
+      windowDays: meta.semaphore.window_days,
+      categories: meta.semaphore.categories,
+      ratioMinMedian: meta.semaphore.ratio_min_median,
+      baselineStart: `${meta.baseline.start}-01`,
+      baselineEnd: `${meta.baseline.end}-28`,
+    };
+    Promise.all(shards.map(fireDaily)).then(async (rows) => {
+      if (!active) return;
+      const dailies = rows.filter((d): d is DailyShard => d !== null);
+      const value = dailies.length && dailies.length === shards.length
+        ? await runSemaphore({ shards: dailies, cells, endDate: end, cfg }) : null;
+      if (active) setSemaphoreData({ selection, value, end });
+    }).catch(() => {
+      if (active) setSemaphoreData({ selection, value: null, end });
+    });
+    return () => { active = false; };
+  }, [open, selection, cells, shards, meta]);
 
   const calMatrix = useMemo(() => {
     if (!cal) return null;
@@ -121,7 +138,8 @@ export function AreaPanel({ lat, lon, cells, open, onClose, country,
   }, [cal, season]);
 
   useEffect(() => {
-    if (!barsRef.current || !calMatrix) return;
+    if (!barsRef.current) return;
+    if (!calMatrix) { barsRef.current.replaceChildren(); return; }
     const totals = [...rowTotals(calMatrix).entries()]
       .map(([year, n]) => ({ year, n }));
     barsRef.current.replaceChildren(Plot.plot({
@@ -136,7 +154,7 @@ export function AreaPanel({ lat, lon, cells, open, onClose, country,
   const thisMonth = month ?? new Date().toISOString().slice(0, 7);
   const monthLabel = (m: string) =>
     `${MONTH_NAMES[Number(m.slice(5)) - 1]} ${m.slice(0, 4)}`;
-  const curValue = cal && sem ? sem.value : null;
+  const curValue = sem?.value;
   // The semaphore always sums the last `window_days` up to today; it
   // must not borrow the month picked on the historic map.
   const windowDays = meta?.semaphore.window_days ?? 30;
@@ -180,11 +198,20 @@ export function AreaPanel({ lat, lon, cells, open, onClose, country,
                 <ul>{risk.reasons.map((r) => <li key={r}>{r}</li>)}</ul>
               </div>)}
           </>
-        ) : <p className="muted">{t("panel.noData")}</p>}
+        ) : <p className="muted">{t(riskData?.selection !== selection
+          ? "historic.loading" : "risk.noCurrent")}</p>}
+        {riskCell?.generated_at && riskCell.valid_until && <p className="muted">
+          {t("risk.period", { start: new Date(riskCell.generated_at).toLocaleDateString(lang),
+            end: new Date(riskCell.valid_until).toLocaleDateString(lang) })}
+        </p>}
         <p className="notice">{t("panel.disclaimer")}<br />
-          {emergencyText(country, t)}</p>
+          {emergencyText(riskCell?.country ?? country, t)}</p>
       </Card>
 
+      {semaphoreData?.selection === selection && !sem && <Card
+        title={t("panel.semaphore", { d: windowDays })}>
+        <p className="muted">{t("panel.noData")}</p>
+      </Card>}
       {sem && (
         <Card title={t("panel.semaphore", { d: windowDays })}>
           <div className="big">

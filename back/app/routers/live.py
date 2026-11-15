@@ -96,8 +96,13 @@ async def live(window: str = Query("24h"), bbox: str | None = Query(None)):
                      "sources_failed": failed},
             headers={"Cache-Control": "no-store"})
     cache_control = ("public, s-maxage=600" if failed else CACHE_CONTROL)
+    from ..services.georef import zone_at
+    lon = (box[0] + box[2]) / 2
+    lat = (box[1] + box[3]) / 2
     body = {
         "updated_at": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+        "latest_observation": max((point[4] for point in points), default=None),
+        "country": zone_at(lat, lon)["country"] if area <= CELLS_AREA_THRESHOLD else None,
         "window_h": WINDOW_H[window],
         "sources": ok,
         "mode": "points",

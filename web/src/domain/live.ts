@@ -11,6 +11,8 @@ export type LiveBody = {
   cells?: RawCell[];
   sources_failed?: string[];
   updated_at?: string;
+  latest_observation?: string | null;
+  country?: string | null;
 };
 
 export type LiveSummary = {

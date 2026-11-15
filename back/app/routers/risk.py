@@ -5,6 +5,7 @@ from fastapi.responses import JSONResponse
 
 from ..h3util import h3_r2, h3_r5
 from ..services.data import risk_shard
+from ..services.risk_validity import risk_dates
 
 router = APIRouter()
 
@@ -32,9 +33,11 @@ async def risk(lat: float = Query(...), lon: float = Query(...)):
     cell = shard.get("cells", {}).get(r5)
     if cell is None:
         return _not_found(r5)
+    dates = risk_dates(shard)
     from ..services.measures import evaluate
-    msr = evaluate({"risk_cat": cell.get("cat")})
+    msr = evaluate({"risk_cat": cell.get("cat")}) if dates["current"] else {}
+    from ..services.georef import zone_at
     return JSONResponse(
-        {**cell, "h3_r5": r5, "generated_at": shard.get("generated_at"),
+        {**cell, "h3_r5": r5, **dates, "country": zone_at(lat, lon)["country"],
          **msr},
         headers={"Cache-Control": CACHE_CONTROL})

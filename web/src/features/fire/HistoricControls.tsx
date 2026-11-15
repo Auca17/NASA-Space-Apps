@@ -2,10 +2,11 @@
  * plus Argentina field layers from field/grid shards (task 18.4). */
 import { useEffect, useRef, useState } from "react";
 import { useT } from "../../i18n";
-import { globeMonth, gridShard } from "../../api";
+import { globeMonth, gridShard, meta } from "../../api";
 import { viridis, css } from "../../domain/colors";
 import { Legend } from "../../components/ui";
-import { polygonToCells, latLngToCell } from "h3-js";
+import { polygonToCellsExperimental, POLYGON_TO_CELLS_FLAGS,
+         latLngToCell } from "h3-js";
 import type { GlobeHandle } from "../globe/GlobeView";
 
 const START = "2000-11";
@@ -46,11 +47,13 @@ export function HistoricControls({ globe, onMonth, view }: {
   const { t } = useT();
   const now = new Date().toISOString().slice(0, 7);
   const months = useRef(monthSeq(START, now));
+  const [loadedRange, setLoadedRange] = useState(false);
   const [idx, setIdx] = useState(months.current.length - 1);
   const [playing, setPlaying] = useState(false);
   const [speed, setSpeed] = useState(4);
   const [maxN, setMaxN] = useState(0);
-  const cache = useRef(new Map<string, Map<string, number> | null>());
+  const [fireStatus, setFireStatus] = useState<"loading" | "missing" | "ready">("loading");
+  const [retry, setRetry] = useState(0);
   const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
 
   // field layers state
@@ -60,30 +63,42 @@ export function HistoricControls({ globe, onMonth, view }: {
   const [fmsg, setFmsg] = useState<string | null>(null);
   const [hasSm, setHasSm] = useState(false);
 
-  const show = async (i: number) => {
-    if (!globe) return;
-    const mo = months.current[i];
-    onMonth?.(mo);
-    let cells = cache.current.get(mo);
-    if (cells === undefined) {
-      const sh = await globeMonth(mo);
-      cells = sh ? new Map(sh.cells.map(([h, n]) => [h, n])) : null;
-      cache.current.set(mo, cells);
-    }
-    if (!cells) { globe.setCells(new Map(), null); setMaxN(0); return; }
-    const max = Math.max(1, ...cells.values());
-    setMaxN(max);
-    globe.setCells(cells, [
-      "interpolate", ["linear"],
-      ["sqrt", ["/", ["get", "n"], max]],
-      0, css(viridis(0.1)), 0.5, css(viridis(0.6)), 1, css(viridis(1)),
-    ]);
-  };
+  useEffect(() => {
+    let active = true;
+    meta().then((data) => {
+      if (!active) return;
+      const end = data?.range.end.slice(0, 7);
+      if (end && /^\d{4}-\d{2}$/.test(end) && START <= end && end <= now) {
+        months.current = monthSeq(START, end);
+        setIdx(months.current.length - 1);
+      }
+      setLoadedRange(true);
+    });
+    return () => { active = false; };
+  }, [now]);
 
   useEffect(() => {
-    if (layer !== "fire") return;
-    show(idx); // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [idx, globe, layer]);
+    if (!globe || !loadedRange || layer !== "fire") return;
+    let active = true;
+    const month = months.current[idx];
+    onMonth?.(month);
+    setFireStatus("loading");
+    globe.setCells(new Map(), null);
+    globeMonth(month).then((shard) => {
+      if (!active) return;
+      if (!shard) { setFireStatus("missing"); return; }
+      const cells = new Map(shard.cells);
+      let max = 1;
+      for (const value of cells.values()) max = Math.max(max, value);
+      setMaxN(max);
+      setFireStatus("ready");
+      globe.setCells(cells, [
+        "interpolate", ["linear"], ["sqrt", ["/", ["get", "n"], max]],
+        0, css(viridis(0.1)), 0.5, css(viridis(0.6)), 1, css(viridis(1)),
+      ]);
+    });
+    return () => { active = false; };
+  }, [idx, globe, layer, loadedRange, onMonth, retry]);
 
   // ---- field layers: load res-5 cells for the view bbox (zoom >= 5) --
   useEffect(() => {
@@ -101,7 +116,8 @@ export function HistoricControls({ globe, onMonth, view }: {
       }
       const ring: [number, number][] = [[s, w], [s, e], [n, e], [n, w]];
       let r2s: string[];
-      try { r2s = polygonToCells(ring, 2); }
+      try { r2s = polygonToCellsExperimental(ring, 2,
+        POLYGON_TO_CELLS_FLAGS.containmentOverlapping); }
       catch { setFmsg(t("layers.onlyAR")); return; }
       if (r2s.length > 20) {
         setFmsg(t("layers.zoomHint")); setFvals(null);
@@ -109,6 +125,8 @@ export function HistoricControls({ globe, onMonth, view }: {
       }
       const metric = FIELD_METRIC[layer];
       const vals = new Map<string, number>();
+      setFvals(null); setFmsg(t("historic.loading"));
+      globe.setCells(new Map(), null);
       const shards = await Promise.all(r2s.map((r) => gridShard(r)));
       if (cancelled) return;
       let smSeen = false;
@@ -142,7 +160,7 @@ export function HistoricControls({ globe, onMonth, view }: {
            1, css(viridis(1))];
       globe.setCells(vals, expr);
     };
-    run().catch(() => setFmsg(t("layers.noData")));
+    run().catch(() => { if (!cancelled) setFmsg(t("layers.noData")); });
     return () => { cancelled = true; };
   }, [globe, layer, view, t]);
 
@@ -169,21 +187,13 @@ export function HistoricControls({ globe, onMonth, view }: {
     return () => clearInterval(iv);
   }, [playing, speed]);
 
-  // space toggles play (keyboard, PRD 12.3)
-  useEffect(() => {
-    const key = (e: KeyboardEvent) => {
-      if (e.key !== " " || (e.target as HTMLElement).tagName === "INPUT") return;
-      e.preventDefault();
-      setPlaying((p) => !p);
-    };
-    window.addEventListener("keydown", key);
-    return () => window.removeEventListener("keydown", key);
-  }, []);
-
   return (
     <div className="controls">
       <div className="row">
-        <button onClick={() => setPlaying(!playing)}
+        <button disabled={!loadedRange || layer !== "fire"} onClick={() => {
+                  if (!playing && idx === months.current.length - 1) setIdx(0);
+                  setPlaying(!playing);
+                }}
                 aria-label={playing ? t("historic.pause") : t("historic.play")}
                 aria-pressed={playing}>
           {playing ? "⏸" : "▶"}
@@ -204,7 +214,13 @@ export function HistoricControls({ globe, onMonth, view }: {
              value={idx} aria-label={t("historic.month")}
              onChange={(e) => { setIdx(Number(e.target.value)); setPlaying(false); }}
              style={{ width: "100%" }} />
-      {layer === "fire" && maxN > 0 && (
+      {layer === "fire" && fireStatus === "loading" &&
+        <p role="status">{t("historic.loading")}</p>}
+      {layer === "fire" && fireStatus === "missing" &&
+        <p role="status">{t("historic.noMonth")}{" "}
+          <button onClick={() => setRetry((value) => value + 1)}>{t("field.diagnosis.retry")}</button>
+        </p>}
+      {layer === "fire" && fireStatus === "ready" && maxN > 0 && (
         <>
           <Legend from="0" to={String(maxN)}
             colors={[css(viridis(0.1)), css(viridis(0.55)),

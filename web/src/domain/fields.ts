@@ -44,8 +44,7 @@ export function loadFields(): Field[] {
 }
 
 function write(all: Field[]) {
-  try { localStorage.setItem(KEY, JSON.stringify(all)); }
-  catch { /* quota or private mode: the list stays in memory only */ }
+  localStorage.setItem(KEY, JSON.stringify(all));
 }
 
 function update(id: string, fn: (f: Field) => Field) {

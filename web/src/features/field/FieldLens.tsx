@@ -1,3 +1,5 @@
+import { MoisturePanel } from "./MoisturePanel";
+import type { MoistureZone } from "../../api/types";
 /** Field lens: draw/tap plot -> diagnose -> rotations -> explain. */
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useT } from "../../i18n";
@@ -37,7 +39,7 @@ export type AnalysisTarget = {
 
 const LS_PLOTS = "fs_plots";
 
-const CONSTRAINTS = ["irrigation", "livestock", "machinery", "markets"] as const;
+const CONSTRAINTS = ["irrigation", "livestock", "markets"] as const;
 
 function savePlot(name: string, body: PlotBody) {
   try {
@@ -322,6 +324,16 @@ function StrategyCard({ s, t, current, variants, explain,
             {" "}{t("rot.variante")}: {v.name}</span>))}
       </h3>
       <p className="verdict">{verdict}</p>
+      {!s.is_current && s.sequence.length > 0 && <dl className="plain-list">
+        <div className="plain-row">
+          <dt>{t("rot.work")}</dt>
+          <dd>{t("rot.workHint", { n: s.sequence.filter((step) => step.cover !== false).length })}</dd>
+        </div>
+        {s.risks[0] && <div className="plain-row">
+          <dt>{t("rot.checkFirst")}</dt>
+          <dd>{s.risks[0]}</dd>
+        </div>}
+      </dl>}
       {rank && <p className="rank-note">{t(rank.key, { n: rank.n ?? "" })}</p>}
       <Afinity score={s.score} t={t} />
       <Section title={t("rot.why")} open>
@@ -374,6 +386,7 @@ function CmpTable({ strategies, t, reference = false }: {
   const current = strategies.find((s) => s.is_current);
   const alts = strategies.filter((s) => !s.is_current);
   if (!current || alts.length === 0) return null;
+  const comparison = alts.map((alt) => compareDeltas(alt, current));
   const cells = (d: ReturnType<typeof compareDeltas>[number]) =>
     d.delta == null ? t("rot.cmp.same")
       : t(d.dir === "up" ? "rot.cmp.up" : "rot.cmp.down",
@@ -390,14 +403,14 @@ function CmpTable({ strategies, t, reference = false }: {
             {alts.map((a) => <th key={a.id} scope="col">{a.name}</th>)}
           </tr></thead>
           <tbody>
-            {compareDeltas(alts[0], current).map((_, ci) => (
+            {comparison[0].map((delta, ci) => (
               <tr key={ci}>
                 <th scope="row">
                   {t(indicatorLabelKey(
-                    compareDeltas(alts[0], current)[ci].id) ?? "")}
+                    delta.id) ?? "")}
                 </th>
-                {alts.map((a) => {
-                  const d = compareDeltas(a, current)[ci];
+                {alts.map((a, i) => {
+                  const d = comparison[i][ci];
                   return <td key={a.id}>{cells(d)}</td>;
                 })}
               </tr>))}
@@ -509,9 +522,12 @@ export interface DemoLot {
   synthetic?: boolean;
 }
 
-export function FieldPanel({ target, open, onClose, onChangePlot, onMethods }: {
+export function FieldPanel({ target, open, onClose, onChangePlot, onMethods, moistureSelection, onMoistureZones, onMoistureSelect }: {
   target: AnalysisTarget | null; open: boolean; onClose: () => void;
   onChangePlot: () => void;
+  moistureSelection?: number | null;
+  onMoistureZones?: (zones: MoistureZone[]) => void;
+  onMoistureSelect?: (index: number | null) => void;
   onMethods?: () => void;
 }) {
   const lot = target?.demoLot;
@@ -527,6 +543,7 @@ export function FieldPanel({ target, open, onClose, onChangePlot, onMethods }: {
   const [catalogRetry, setCatalogRetry] = useState(0);
   const [explainMode, setExplainMode] = useState<string | null>(null);
   const [sc, setSc] = useState<Scenario | null>(null);
+  const [scenario, applyScenario] = useState<Scenario | null>(null);
   const [eco, setEco] = useState<EcostressDemo | null>(null);
   const [current, setCurrent] = useState("unknown");
   const [prioSel, setPrioSel] = useState<string[]>([]);
@@ -534,6 +551,7 @@ export function FieldPanel({ target, open, onClose, onChangePlot, onMethods }: {
   const [step, setStep] = useState<1 | 2>(1);
   const [reading, setReading] = useState(false);
   const [retry, setRetry] = useState(0);
+  const [diagnosisProblem, setDiagnosisProblem] = useState<string>();
   const [comparing, setComparing] = useState(false);
   const [compareFailed, setCompareFailed] = useState(false);
   const lastDiagnosisBody = useRef<PlotBody | null>(null);
@@ -564,26 +582,31 @@ export function FieldPanel({ target, open, onClose, onChangePlot, onMethods }: {
 
   useEffect(() => {
     if (!open || !body) return;
-    let active = true;
+    const controller = new AbortController();
     const requests = comparisonRequests.current;
-    if (lastDiagnosisBody.current !== body) {
+    const changed = lastDiagnosisBody.current !== body;
+    if (changed) {
       lastDiagnosisBody.current = body;
       setDiag(null);
       setStep(1);
+      setSc(null);
+      if (scenario) { applyScenario(null); return; }
     }
-    setReading(true); setRots(null); setExplain({});
+    setReading(true); setRots(null); setExplain({}); setDiagnosisProblem(undefined);
     setComparing(false); setCompareFailed(false);
     setExplainMode(null);
-    apiDiagnose(sc ? { ...body, scenario: sc } : body).then((d) => {
-      if (!active) return;
-      setDiag(d); setReading(false);
+    apiDiagnose(scenario ? { ...body, scenario } : body, controller.signal)
+      .then(({ diagnosis: d, problem }) => {
+      if (controller.signal.aborted) return;
+      setDiag((old) => d ?? (scenario ? old : null)); setReading(false);
+      setDiagnosisProblem(problem ?? (d || !scenario ? undefined : "scenario"));
       if (d) savePlot(lot?.name ?? "lote", body);
     });
     return () => {
-      active = false;
+      controller.abort();
       requests.latest++;
     };
-  }, [open, body, lot, retry, sc]);
+  }, [open, body, lot, retry, scenario]);
 
   useEffect(() => {
     if (open) { orinValidation().then(setOrin);
@@ -615,7 +638,7 @@ export function FieldPanel({ target, open, onClose, onChangePlot, onMethods }: {
   });
 
   const runRotations = async () => {
-    if (!diag || reading || comparing) return;
+    if (!diag || diag.coverage?.comparable === false || reading || comparing) return;
     const requests = comparisonRequests.current;
     const version = ++requests.latest;
     setComparing(true);
@@ -627,10 +650,9 @@ export function FieldPanel({ target, open, onClose, onChangePlot, onMethods }: {
       current: current === "unknown" ? null : { rotation_id: current },
       priorities: prioWeights(prioSel),
       constraints: {
-        irrigation: Boolean(cons.irrigation),
-        livestock: Boolean(cons.livestock),
-        machinery: Boolean(cons.machinery),
-        markets: cons.markets ? catalog?.crops.map((c) => c.id) ?? [] : [],
+        irrigation: cons.irrigation,
+        livestock: cons.livestock,
+        limited_market: cons.markets === false,
       },
     });
     if (version !== requests.latest) return;
@@ -648,8 +670,14 @@ export function FieldPanel({ target, open, onClose, onChangePlot, onMethods }: {
     }
   };
 
-  const summary = diag ? plainSummary(diag, lang) : [];
-  const view = useMemo(() => diag && localizeDiag(diag, lang), [diag, lang]);
+  const base = useMemo(() => diag ? { ...diag, ...diag.baseline } : null, [diag]);
+  const summary = base ? plainSummary(base, lang) : [];
+  const view = useMemo(() => base && localizeDiag(base, lang), [base, lang]);
+  const simulated = diag?.scenario ? localizeDiag(diag, lang) : null;
+  const canCompare = diag?.coverage?.comparable !== false;
+  const riskDate = base?.cards.find((card) => card.id === "fire")?.generated_at;
+  const riskEnd = base?.cards.find((card) => card.id === "fire")?.valid_until;
+  const dateLabel = (value: string) => new Date(value).toLocaleDateString(lang);
   const rotsView = useMemo<RotationsResponse | null>(() =>
     rots && lang === "en" ? {
       ...rots,
@@ -690,12 +718,19 @@ export function FieldPanel({ target, open, onClose, onChangePlot, onMethods }: {
       {reading && <p role="status">{t("field.diagnosing")}</p>}
       {!diag && !reading && target && (
         <div className="card">
-          <p role="status">{t("field.diagnosis.failed")}</p>
-          <button type="button" onClick={() => setRetry((n) => n + 1)}>
+          <p role="status">{t(diagnosisProblem ? "field.diagnosis." + diagnosisProblem :
+            "field.diagnosis.failed")}</p>
+          {diagnosisProblem ? <button type="button" onClick={onChangePlot}>
+            {t("field.changePlot")}
+          </button> : <button type="button" onClick={() => setRetry((n) => n + 1)}>
             {t("field.diagnosis.retry")}
-          </button>
+          </button>}
         </div>)}
 
+      {open && body && onMoistureZones && onMoistureSelect &&
+        <MoisturePanel key={JSON.stringify(body)} body={body}
+          selected={moistureSelection ?? null}
+          onZones={onMoistureZones} onSelect={onMoistureSelect} />}
       {diag && (
         <>
           <section className="card plain-summary"
@@ -718,11 +753,21 @@ export function FieldPanel({ target, open, onClose, onChangePlot, onMethods }: {
                   </div>))}
               </dl>
             ) : <p className="muted">{t("field.noData")}</p>}
+            {diag.coverage && diag.coverage.available_cards < diag.coverage.total_cards &&
+              <p role="status">{t(diag.coverage.available_cards > 0 ? "field.coverage.partial" : "field.coverage.empty",
+                { n: diag.coverage.available_cards, total: diag.coverage.total_cards })}</p>}
+            {!canCompare && <p className="muted">{t("field.coverage.noCompare")}</p>}
+            {riskDate && riskEnd && <p className="muted">{t("risk.period", {
+              start: dateLabel(riskDate), end: dateLabel(riskEnd),
+            })}</p>}
+            {diag.terrain_coverage != null && diag.terrain_coverage < 0.95 &&
+              <p className="muted">{t("field.coverage.terrain",
+                { n: fmt.format(diag.terrain_coverage * 100) })}</p>}
             <p className="muted plain-scale">{t("field.plain.scale")}</p>
           </section>
 
           <div className="field-actions">
-            {step === 1 && !rots && !lot && (
+            {step === 1 && !rots && !lot && canCompare && (
               <button className="primary" onClick={openCompare}>
                 {t("field.form.open")}</button>)}
             <button onClick={onChangePlot}>{t("field.changePlot")}</button>
@@ -740,8 +785,8 @@ export function FieldPanel({ target, open, onClose, onChangePlot, onMethods }: {
               <button onClick={() => setSc({ rain_pct: 20,
                                             temp_delta_c: 0 })}>
                 {t("scen.preset.wet")}</button>
-              <button onClick={() => setSc(null)}
-                      disabled={!sc}>
+              <button onClick={() => { setSc(null); applyScenario(null); }}
+                      disabled={!sc && !scenario}>
                 {t("scen.reset")}</button>
             </div>
             <label className="scen-slider">
@@ -764,6 +809,20 @@ export function FieldPanel({ target, open, onClose, onChangePlot, onMethods }: {
                        rain_pct: sc?.rain_pct ?? 0,
                        temp_delta_c: Number(e.target.value) })} />
             </label>
+            <button type="button" onClick={() => applyScenario(sc)}
+                    disabled={!sc || (sc === scenario && !diagnosisProblem) || reading}>
+              {t("scen.apply")}
+            </button>
+            {diagnosisProblem === "scenario" && <p role="status">{t("field.diagnosis.scenario")}
+              {" "}<button onClick={() => setRetry((n) => n + 1)}>
+                {t("field.diagnosis.retry")}
+              </button>
+            </p>}
+            {simulated && <div className="scen-results">
+              <h4>{t("scen.results")}</h4>
+              {simulated.cards.filter((card) => card.delta != null).map((card) =>
+                <DiagTile key={card.id} c={card} t={t} fmt={fmt} />)}
+            </div>}
           </Card>
 
           <OrinCard data={orin} t={t} fmt={fmt} />
@@ -819,7 +878,7 @@ export function FieldPanel({ target, open, onClose, onChangePlot, onMethods }: {
                     <th key={m} scope="col">{m}</th>)}
                 </tr></thead>
                 <tbody>
-                  {diag.calendar.rows.map((row) => (
+                  {(base ?? diag).calendar.rows.map((row) => (
                     <tr key={row.id}>
                       <th scope="row">{t(`calendar.row.${row.id}`) !==
                         `calendar.row.${row.id}`
@@ -841,7 +900,7 @@ export function FieldPanel({ target, open, onClose, onChangePlot, onMethods }: {
               {t("orin.rot.none", { crop: lot.crop_label })}
             </p>)}
 
-          {step === 2 && !lot && (
+          {step === 2 && !lot && canCompare && (
             <div ref={formRef}>
             <Card title={t("field.form.run")}>
               <label>{t("field.form.current")}
@@ -884,11 +943,20 @@ export function FieldPanel({ target, open, onClose, onChangePlot, onMethods }: {
                 <div className="cons-grid">
                   {CONSTRAINTS.map((c) => (
                     <label key={c}>
-                      <input type="checkbox"
-                        checked={cons[c] ?? false}
-                        onChange={(e) =>
-                          setCons({ ...cons, [c]: e.target.checked })} />
                       {t(`field.form.${c}`)}
+                      <select value={String(cons[c] ?? "")} onChange={(e) => {
+                        const value = e.target.value;
+                        setCons((previous) => {
+                          const next = { ...previous };
+                          if (value === "") delete next[c];
+                          else next[c] = value === "true";
+                          return next;
+                        });
+                      }}>
+                        <option value="">{t("field.form.dontKnow")}</option>
+                        <option value="true">{t("field.form.yes")}</option>
+                        <option value="false">{t("field.form.no")}</option>
+                      </select>
                     </label>))}
                 </div>
               </fieldset>

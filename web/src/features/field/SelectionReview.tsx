@@ -112,6 +112,7 @@ export function AdjustPanel({ adjust, onToggle, onApply, onEditPiece,
   const ha = useHa();
   const r = adjust.result;
   const chosen = adjust.on.filter(Boolean).length;
+  const kept = r?.pieces.reduce((sum, piece, i) => sum + (adjust.on[i] ? piece.ha : 0), 0);
   return (
     <div className="controls picker review adjust" role="region"
          aria-label={t("adjust.title")}>
@@ -138,6 +139,13 @@ export function AdjustPanel({ adjust, onToggle, onApply, onEditPiece,
                   {t("adjust.editPiece")}</button>
               </li>))}
           </ul>
+          {r.pieces.length > 0 && <p className="picker-how">
+            {t("adjust.areaChange", {
+              before: ha(r.pieces.reduce((sum, piece) => sum + piece.ha, 0) +
+                r.roadHa + r.urbanHa + r.smallHa),
+              after: ha(kept ?? 0),
+            })}
+          </p>}
           <p className="excluded-line">
             <span className="excl-swatch" aria-hidden="true" />
             {t("adjust.excluded", { ha: ha(r.roadHa + r.urbanHa + r.smallHa) })}

@@ -10,6 +10,10 @@ export interface RiskCell {
   level: "historial" | "clima";
   model_version?: string;
   reasons?: string[];
+  generated_at?: string | null;
+  valid_until?: string | null;
+  current?: boolean;
+  country?: string | null;
 }
 
 export interface RiskView {

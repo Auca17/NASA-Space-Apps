@@ -14,7 +14,8 @@ const COLORS = ["interpolate", ["linear"], ["get", "n"],
 type State =
   | { kind: "loading" }
   | { kind: "error" }
-  | { kind: "done"; sum: LiveSummary; at: Date };
+  | { kind: "done"; sum: LiveSummary; at: Date; updated?: string;
+      latest?: string | null; country?: string | null };
 
 export function LiveControls({ globe, country }: {
   globe: GlobeHandle | null; country: string | null;
@@ -43,7 +44,8 @@ export function LiveControls({ globe, country }: {
     try { sum = summarizeLive(res.data, view); }
     catch { setState({ kind: "error" }); return; }
     globe.setCells(sum.cells, COLORS);
-    setState({ kind: "done", sum, at: new Date() });
+    setState({ kind: "done", sum, at: new Date(), updated: res.data.updated_at,
+      latest: res.data.latest_observation, country: res.data.country });
   }, [globe]);
 
   useEffect(() => { load(); }, [load, window_]);
@@ -53,6 +55,8 @@ export function LiveControls({ globe, country }: {
 
   const time = (d: Date) => d.toLocaleTimeString(lang === "en" ? "en" : "es",
     { hour: "2-digit", minute: "2-digit" });
+  const stamp = (d: string) => new Date(d).toLocaleString(lang,
+    { dateStyle: "short", timeStyle: "short" });
 
   let msg: React.ReactNode;
   if (state.kind === "loading") msg = t("live.loading");
@@ -81,13 +85,18 @@ export function LiveControls({ globe, country }: {
       </div>
       <p className={`live-status${state.kind === "error" ? " err" : ""}`}
          role="status" aria-live="polite">{msg}</p>
+      {state.kind === "done" && state.updated && <p className="muted">
+        {t("live.sourceUpdated", { at: stamp(state.updated) })}
+        {state.latest && <> · {t("live.lastObservation", { at: stamp(state.latest) })}</>}
+      </p>}
       {state.kind === "error" && (
         <button onClick={() => load()}>{t("live.retry")}</button>)}
       {state.kind === "done" && state.sum.failed.length > 0 && (
         <p className="notice" role="alert">
           {t("live.partial", { s: state.sum.failed.join(", ") })}</p>)}
       <p className="notice" style={{ margin: 0 }}>
-        {t("live.notice")}<br />{emergencyText(country, t)}
+        {t("live.notice")}<br />
+        {emergencyText(state.kind === "done" ? state.country ?? country : country, t)}
       </p>
     </div>
   );

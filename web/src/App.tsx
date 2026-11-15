@@ -3,11 +3,11 @@ import { useT } from "./i18n";
 import { APP_NAME, DEFAULT_VIEW, DEMO_PLOT, WORLD_VIEW } from "./config";
 import { Welcome } from "./features/welcome/Welcome";
 import { MethodsDrawer } from "./features/methods/MethodsDrawer";
-import { useGlobe, type GlobeHandle, type Shape } from "./features/globe/GlobeView";
-import { HistoricControls } from "./features/fire/HistoricControls";
-import { cellsInCircle } from "./domain/h3area";
+import type { GlobeHandle, Shape } from "./features/globe/GlobeView";
+import { moistureGeometry, MOISTURE_COLORS } from "./domain/moisture";
+import { cellsInCircle, circleRing } from "./domain/h3area";
 import { orinLots } from "./api";
-import type { OrinLots } from "./api/types";
+import type { OrinLots, MoistureZone } from "./api/types";
 import { drawStatus } from "./domain/clarity";
 import { FieldPicker, type DrawMode } from "./features/field/FieldPicker";
 import { SelectionReview, AdjustPanel, type LandCheck, type Adjust }
@@ -17,7 +17,7 @@ import { useAreaLabel } from "./features/field/areaLabel";
 import { FreehandLayer } from "./features/field/FreehandLayer";
 import type { AnalysisTarget } from "./features/field/FieldLens";
 import {
-  classifyUrban, multiPoints, type LatLon, type Multi,
+  classifyUrban, multiPoints, pointInMulti, type LatLon, type Multi,
 } from "./domain/selection";
 import { splitSelection, clipZone, ROAD_HALF_WIDTH } from "./domain/split";
 import {
@@ -38,6 +38,10 @@ type FieldsView = null | "list" | { id: string };
 const DRAW_ZOOM = 14;
 const ARGENTINA_FRAME: LatLon[] = [[-55.2, -73.7], [-21.7, -53.5]];
 
+const MapLoader = lazy(() => import("./features/globe/GlobeView")
+  .then((m) => ({ default: m.MapLoader })));
+const HistoricControls = lazy(() => import("./features/fire/HistoricControls")
+  .then((m) => ({ default: m.HistoricControls })));
 const AreaPanel = lazy(() =>
   import("./features/fire/AreaPanel").then((m) => ({ default: m.AreaPanel })));
 const LiveControls = lazy(() =>
@@ -53,7 +57,25 @@ export default function App() {
   const [mode, setModeState] = useState<Mode>("welcome");
   // the map callbacks are registered once: they read the mode from a ref
   const modeRef = useRef<Mode>("welcome");
-  const setMode = (m: Mode) => { modeRef.current = m; setModeState(m); };
+  const [mapRequested, setMapRequested] = useState(false);
+  const [mapUnavailable, setMapUnavailable] = useState(false);
+  const [locationAccuracy, setLocationAccuracy] = useState<{
+    lat: number; lon: number; metres: number;
+  } | null>(null);
+  const [storageError, setStorageError] = useState(false);
+  const [moistureZones, setMoistureZones] = useState<MoistureZone[]>([]);
+  const [selectedMoisture, selectMoisture] = useState<number | null>(null);
+  const zoneClick = useRef<(point: LatLon) => void>(() => {});
+  const showMoisture = useCallback((zones: MoistureZone[]) => {
+    setMoistureZones(zones);
+    selectMoisture(null);
+  }, []);
+  const setMode = (m: Mode) => {
+    modeRef.current = m;
+    setModeState(m);
+    if (m !== "welcome") setMapRequested(true);
+    setStorageError(false);
+  };
   const [globe, setGlobe] = useState<GlobeHandle | null>(null);
   const [area, setArea] = useState<{ lat: number; lon: number; cells: string[] } | null>(null);
   const [panelOpen, setPanelOpen] = useState(false);
@@ -99,7 +121,7 @@ export default function App() {
   const [methodsOpen, setMethodsOpen] = useState(false);
   const [view, setView] = useState<{ lat: number; lon: number; zoom: number;
     bbox: [number, number, number, number] } | null>(null);
-  const country = useRef<string | null>(null);
+  const initialLocation = useRef<LatLon | null>(null);
   const globeRef = useRef<GlobeHandle | null>(null);
   const mapDiv = useRef<HTMLDivElement>(null);
   const frameArgentinaOnOpen = useRef(false);
@@ -110,6 +132,11 @@ export default function App() {
   const onGlobeReady = useCallback((h: GlobeHandle) => {
     globeRef.current = h;
     setGlobe(h);
+    if (initialLocation.current && modeRef.current === "fire") {
+      const [lat, lon] = initialLocation.current;
+      h.flyTo(lat, lon, 7);
+      initialLocation.current = null;
+    }
     h.onMove((lat, lon, zoom, bbox) => {
       setZoom(zoom);
       setView({ lat, lon, zoom, bbox });
@@ -123,7 +150,7 @@ export default function App() {
         setDraft(n); h.setDraft(n);
       } else if (d === "point") {
         onShapeRef.current(circleApprox(lat, lon), true);
-      }
+      } else if (d === "none") zoneClick.current([lat, lon]);
     });
   }, []);
 
@@ -140,7 +167,17 @@ export default function App() {
     return pts;
   };
 
-  useGlobe(mapDiv, onGlobeReady);
+  zoneClick.current = (point) => {
+    if (!fieldOpen) return;
+    const hit = moistureZones.findIndex((z) => pointInMulti(point, moistureGeometry(z.geometry)));
+    if (hit !== -1) selectMoisture(hit);
+  };
+
+  useEffect(() => {
+    if (globe && target) globe.fitRing(multiPoints(target.geom), coveredBottom());
+    // Only the first map initialization may race with the analysis target.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [globe]);
 
   useEffect(() => {
     globe?.setFieldBasemap(mode === "field", satellite, !fieldOpen && fieldGuide);
@@ -166,6 +203,13 @@ export default function App() {
   onShapeRef.current = onShape;
 
   const refreshFields = () => setFields(loadFields());
+  const storeChange = (write: () => void) => {
+    try { write(); }
+    catch { setStorageError(true); return false; }
+    setStorageError(false);
+    refreshFields();
+    return true;
+  };
 
   /** Map height hidden by the bottom panel on narrow screens (0 when
    * the panel sits beside the map). */
@@ -214,8 +258,16 @@ export default function App() {
     if (!g) return;
     const sh: Shape[] = [];
     if (mode === "field") {
+      if (locationAccuracy && !fieldOpen) {
+        const { lat, lon, metres } = locationAccuracy;
+        sh.push({ kind: "field", geom: [circleRing(lat, lon, metres / 1_000)] });
+      }
       if (fieldOpen && target) {
-        target.geom.forEach((p) => sh.push({ geom: p, kind: "field" }));
+        moistureZones.forEach((zone, i) => moistureGeometry(zone.geometry)
+          .forEach((geom) => sh.push({ geom, color: MOISTURE_COLORS[zone.kind],
+            kind: zone.kind === "missing" ? "moisture-missing" :
+              selectedMoisture === i ? "moisture-selected" : "moisture" })));
+        target.geom.forEach((p) => sh.push({ geom: p, kind: "original" }));
       } else if (adjust?.status === "ready" && adjust.result && selection) {
         sh.push({ geom: [selection.original], kind: "original" });
         adjust.result.excluded.forEach((p) => sh.push({ geom: p, kind: "excluded" }));
@@ -240,7 +292,8 @@ export default function App() {
     if (mode !== "field") { g.setDraft(null); g.setMarker(null); }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selection, adjust, fields, fieldsView, shownField, pendingZone,
-      fieldOpen, target, mode, areaChoice]);
+      fieldOpen, target, mode, areaChoice, globe, moistureZones, selectedMoisture,
+      locationAccuracy]);
 
   // clear fire hexagons when leaving fire mode (else the layer lingers)
   useEffect(() => {
@@ -257,8 +310,7 @@ export default function App() {
   const locate = (lat: number, lon: number) => {
     setMode("fire");
     setPanelOpen(true);
-    country.current = lat > -55 && lat < -21 && lon > -74 && lon < -53
-      ? "AR" : null;
+    if (!globeRef.current) initialLocation.current = [lat, lon];
     setTimeout(() => {
       globeRef.current?.flyTo(lat, lon, 7);
       fireArea(lat, lon);
@@ -269,8 +321,8 @@ export default function App() {
    * follows the map from then on. */
   const openFire = () => {
     setMode("fire"); setPanelOpen(true);
-    const c = globeRef.current?.center();
-    if (c) fireArea(c.lat, c.lon);
+    const c = globeRef.current?.center() ?? DEFAULT_VIEW;
+    fireArea(c.lat, c.lon);
   };
 
   const startField = (dm: DrawMode) => {
@@ -337,10 +389,11 @@ export default function App() {
 
   const saveSelection = (name: string) => {
     if (!selection) return;
-    const f = saveField({ name, geom: selection.geom });
-    refreshFields();
-    setSelection(null); setAdjust(null);
-    setShownField(f.id); setFieldsView("list");
+    storeChange(() => {
+      const f = saveField({ name, geom: selection.geom });
+      setSelection(null); setAdjust(null);
+      setShownField(f.id); setFieldsView("list");
+    });
   };
 
   /** "Ajustar selección": read roads, tracks and built-up land from the
@@ -401,8 +454,14 @@ export default function App() {
     setDraft([]); setDraw(m);
   };
 
-  const goTo = (lat: number, lon: number, precise = false) => {
-    globeRef.current?.flyTo(lat, lon, precise ? DRAW_ZOOM + 1 : DRAW_ZOOM - 1,
+  const goTo = (lat: number, lon: number, precise = false, accuracy?: number) => {
+    if (mapUnavailable) {
+      const ring = circleApprox(lat, lon);
+      onShape(ring, true);
+      return;
+    }
+    setLocationAccuracy(accuracy ? { lat, lon, metres: accuracy } : null);
+    globeRef.current?.flyTo(lat, lon, precise ? DRAW_ZOOM + 1 : DRAW_ZOOM,
                           coveredBottom());
     globeRef.current?.setMarker([lat, lon]);
   };
@@ -414,12 +473,21 @@ export default function App() {
     if (delta > 0) globe.zoomBy(delta, coveredBottom());
   };
 
+  const focusMoisture = (index: number | null) => {
+    selectMoisture(index);
+    const zone = index == null ? null : moistureZones[index];
+    const geometry = zone ? moistureGeometry(zone.geometry) : target?.geom;
+    if (geometry) globeRef.current?.fitRing(multiPoints(geometry), coveredBottom());
+  };
+
   const showArgentina = () => {
+    setLocationAccuracy(null);
     globeRef.current?.setMarker(null);
     globeRef.current?.fitRing(ARGENTINA_FRAME, coveredBottom());
   };
 
   const showWorld = () => {
+    setLocationAccuracy(null);
     globeRef.current?.setMarker(null);
     globeRef.current?.flyTo(WORLD_VIEW.lat, WORLD_VIEW.lon, WORLD_VIEW.zoom, coveredBottom());
   };
@@ -452,7 +520,6 @@ export default function App() {
     setTarget({ geom: [[r]], areaLabel: t("analyze.demo") });
     setFieldOpen(true);
     globeRef.current?.flyTo(DEMO_PLOT.lat, DEMO_PLOT.lon, 11);
-    country.current = "AR";
   };
 
   const zoneField = targetRef.current.kind === "zone"
@@ -467,7 +534,6 @@ export default function App() {
     const { name, crop_label, synthetic } = feature.properties;
     setMode("field");
     setDraw("none");
-    country.current = "AR";
     analyze({
       geom,
       areaLabel: [name, crop_label].filter(Boolean).join(" · "),
@@ -518,7 +584,7 @@ export default function App() {
       </header>
 
       <div className={`map-wrap${mode === "field" && draw !== "none" && !movingMap ? " marking" : ""}`}>
-        {mode === "field" && draw === "free" && !movingMap && (
+        {mode === "field" && draw === "free" && !movingMap && !mapUnavailable && (
           <FreehandLayer
             unproject={(x, y) => globeRef.current?.unproject(x, y) ?? [0, 0]}
             onStroke={(pts) => globeRef.current?.setDraft(pts, false)}
@@ -527,7 +593,15 @@ export default function App() {
               else { setFreeError(true); globeRef.current?.setDraft(null); }
             }} />)}
         <div ref={mapDiv} className="map" role="application"
-             aria-label="mapa" />
+             aria-label={t("field.map.label")} />
+        {mapRequested && <Suspense fallback={null}>
+          <MapLoader container={mapDiv} onReady={onGlobeReady}
+                     onUnavailable={() => setMapUnavailable(true)} />
+        </Suspense>}
+        {mapUnavailable && mode !== "welcome" && <p className="map-warning" role="status">
+          {t(mode === "field" ? "field.map.unavailable" : "field.map.unavailableOther")}
+        </p>}
+        {storageError && <p className="storage-warning" role="alert">{t("fields.storageFailure")}</p>}
         {mode === "fire" && <div className="reticle" aria-hidden="true" />}
         {mode === "field" && !fieldOpen && (
           <>
@@ -571,13 +645,13 @@ export default function App() {
             </div>
           </div>)}
 
-        {mode === "fire" &&
-          <HistoricControls globe={globe} onMonth={setPlayingMonth}
-                            view={view} />}
+        {mode === "fire" && <Suspense fallback={null}>
+          <HistoricControls globe={globe} onMonth={setPlayingMonth} view={view} />
+        </Suspense>}
 
         {mode === "live" && (
           <Suspense fallback={null}>
-            <LiveControls globe={globe} country={country.current} />
+            <LiveControls globe={globe} country={null} />
           </Suspense>)}
 
         {mode === "field" && !fieldOpen && selection && adjust && (
@@ -604,9 +678,9 @@ export default function App() {
             onOpen={showField}
             onZones={openDetail}
             onAnalyze={openDetail}
-            onRename={(f, n) => { renameField(f.id, n); refreshFields(); }}
-            onDelete={(f) => { deleteField(f.id); refreshFields();
-                               if (shownField === f.id) setShownField(null); }}
+            onRename={(f, n) => { storeChange(() => renameField(f.id, n)); }}
+            onDelete={(f) => { if (storeChange(() => deleteField(f.id)) && shownField === f.id)
+                               setShownField(null); }}
             onClose={() => { setFieldsView(null); setShownField(null); }} />)}
         {mode === "field" && !fieldOpen && !selection && draw === "none" &&
           fieldsView && fieldsView !== "list" && openField && (
@@ -615,17 +689,18 @@ export default function App() {
             onAnalyze={(o) => analyzeOption(openField, o)}
             onDrawZone={(m) => drawZone(openField.id, m)}
             onSaveZone={(name, crop) => {
-              if (pendingZone) addZone(openField.id, { name, crop, geom: pendingZone.geom });
-              setPendingZone(null); refreshFields();
+              if (pendingZone && storeChange(() =>
+                addZone(openField.id, { name, crop, geom: pendingZone.geom })))
+                setPendingZone(null);
             }}
             onDiscardZone={() => setPendingZone(null)}
-            onUpdateZone={(id, p) => { updateZone(openField.id, id, p); refreshFields(); }}
-            onRemoveZone={(id) => { removeZone(openField.id, id); refreshFields(); }}
+            onUpdateZone={(id, p) => { storeChange(() => updateZone(openField.id, id, p)); }}
+            onRemoveZone={(id) => { storeChange(() => removeZone(openField.id, id)); }}
             onBack={() => { setPendingZone(null); setAreaChoice("all");
                             setFieldsView("list"); }} />)}
         {mode === "field" && !fieldOpen && !selection &&
           (draw !== "none" || !fieldsView) && (
-          <FieldPicker draw={draw} points={draft.length}
+          <FieldPicker draw={mapUnavailable ? "none" : draw} points={draft.length}
                        onPick={startField} onDemo={demoPlot}
                        demoLots={lots.map((feature) => ({
                          id: feature.properties.id,
@@ -641,6 +716,7 @@ export default function App() {
                          if (draw === "free") globeRef.current?.setDraft(null);
                          setMovingMap(!movingMap);
                        }}
+                       mapUnavailable={mapUnavailable}
                        zoomLow={zoom < DRAW_ZOOM - 0.5} onZoomIn={zoomToDraw}
                        context={zoneField
                          ? t("zones.drawingFor", { name: zoneField.name })
@@ -651,12 +727,14 @@ export default function App() {
         <Suspense fallback={null}>
           <AreaPanel lat={area.lat} lon={area.lon} cells={area.cells}
                      open={panelOpen} onClose={() => setPanelOpen(false)}
-                     country={country.current} month={playingMonth} />
+                     country={null} month={playingMonth} />
         </Suspense>)}
       {mode === "field" && (
         <Suspense fallback={null}>
           <FieldPanel target={target} open={fieldOpen}
                       onMethods={() => setMethodsOpen(true)}
+                      moistureSelection={selectedMoisture} onMoistureZones={showMoisture}
+                      onMoistureSelect={focusMoisture}
                       onClose={changePlot} onChangePlot={changePlot} />
         </Suspense>)}
       <MethodsDrawer open={methodsOpen}

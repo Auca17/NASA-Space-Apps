@@ -16,6 +16,7 @@ const SENTINEL = "https://tiles.maps.eox.at/wmts/1.0.0/" +
 
 export const BASE_STYLE: StyleSpecification = {
   version: 8,
+  glyphs: "https://tiles.openfreemap.org/fonts/{fontstack}/{range}.pbf",
   projection: { type: "mercator" },
   sources: {
     marble: { type: "raster", tiles: [GIBS], tileSize: 256, maxzoom: 8,
