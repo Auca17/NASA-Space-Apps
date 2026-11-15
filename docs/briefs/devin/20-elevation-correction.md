@@ -30,4 +30,4 @@ Per section: what changed, the Pergamino (no adjustment) and a Valle de Uco poin
 
 ## Then
 
-After task 20 (and task 19), read `docs/briefs/devin/21-agronomy-corrections.md` and execute it: it applies the source-backed answers of the agronomic review and retries IMERG now that the data agreement is accepted. One combined report at the end of the whole chain (17, 18, 19, 20, 21).
+After task 20 (and task 19), read `docs/briefs/devin/21b-imerg.md` and execute it (IMERG for the grid). Task 21 (agronomic corrections) is being done by **another Devin terminal in a separate worktree**: do **not** do task 21 and do not edit `back/knowledge/*`. One combined report at the end of your chain (17, 18, 19, 20, 21b).
