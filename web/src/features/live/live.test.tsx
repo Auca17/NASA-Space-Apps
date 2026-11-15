@@ -1,7 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent, act } from "@testing-library/react";
 import { I18nProvider } from "../../i18n";
-import { summarizeLive } from "../../domain/live";
+import {
+  liveViewBoxes, mergeLiveCells, pointInBoxes, summarizeLive,
+  WORLD_BBOX,
+} from "../../domain/live";
 import type { GlobeHandle } from "../globe/GlobeView";
 
 const apiLiveResult = vi.fn();
@@ -9,11 +12,12 @@ vi.mock("../../api", () => ({ apiLiveResult: (...a: unknown[]) => apiLiveResult(
 const { LiveControls } = await import("./LiveMode");
 
 /** Globe stub: records drawn cells and lets the test fire "moveend". */
-function fakeGlobe() {
+function fakeGlobe(zoom = 1) {
   const moves = new Set<() => void>();
   const drawn: Map<string, number>[] = [];
   const g = {
     bounds: vi.fn(() => [-61, -34, -60, -33] as [number, number, number, number]),
+    center: vi.fn(() => ({ lat: -33.5, lon: -60.5, zoom })),
     setCells: vi.fn((c: Map<string, number>) => { drawn.push(c); }),
     onMove: vi.fn((cb: () => void) => { moves.add(cb); return () => moves.delete(cb); }),
   };
@@ -64,6 +68,47 @@ describe("summarizeLive", () => {
   });
 });
 
+describe("liveViewBoxes (task 33.4b)", () => {
+  it("passes a normal view through unchanged", () => {
+    expect(liveViewBoxes([-61, -34, -60, -33]))
+      .toEqual([[-61, -34, -60, -33]]);
+  });
+  it("clamps a world-zoomed view to the API range instead of 400ing", () => {
+    const boxes = liveViewBoxes([-320, -100, 40, 100]);
+    expect(boxes).toEqual([[-180, -85, 180, 85]]);
+  });
+  it("splits a view that crosses the antimeridian", () => {
+    const boxes = liveViewBoxes([170, -40, -160, -20]);
+    expect(boxes).toEqual([[170, -40, 180, -20], [-180, -40, -160, -20]]);
+    expect(pointInBoxes(-30, 175, boxes)).toBe(true);
+    expect(pointInBoxes(-30, -170, boxes)).toBe(true);
+    expect(pointInBoxes(-30, 0, boxes)).toBe(false);
+  });
+  it("a span of 360° or more is the whole world", () => {
+    expect(liveViewBoxes([-200, -60, 200, 60]))
+      .toEqual([[-180, -60, 180, 60]]);
+  });
+  it("drops degenerate views", () => {
+    expect(liveViewBoxes([-10, 90, 10, 95])).toEqual([]);
+  });
+});
+
+describe("mergeLiveCells", () => {
+  it("keeps world cells outside the view and local cells inside", () => {
+    // world res-3 cell inside the view + one far away
+    const world = { unit: "cells" as const, count: 0, detections: 0,
+      failed: [], cells: new Map([["83c2ecfffffffff", 9],
+                                ["83599afffffffff", 4]]) };
+    const local = { unit: "detections" as const, count: 0, detections: 0,
+      failed: [], cells: new Map([["85c2e8c3fffffff", 2]]) };
+    // view centred on the first world cell
+    const merged = mergeLiveCells(world, local, [-62, -36, -58, -32]);
+    expect(merged.has("83599afffffffff")).toBe(true); // far cell kept
+    expect(merged.has("85c2e8c3fffffff")).toBe(true); // local cell in
+    expect(merged.has("83c2ecfffffffff")).toBe(false); // view cell replaced
+  });
+});
+
 describe("LiveControls states", () => {
   it("shows loading, then the count of detections and the query time", async () => {
     const d = deferred<unknown>();
@@ -98,15 +143,38 @@ describe("LiveControls states", () => {
     expect(screen.getByRole("status")).toHaveTextContent(/1 celda/i);
   });
 
-  it("queries again when the map stops moving or the window changes", async () => {
-    apiLiveResult.mockResolvedValue(ok({ mode: "points", points: [] }));
+  it("fetches the world once per window; moving repaints without "
+     + "a new world query", async () => {
+    apiLiveResult.mockResolvedValue(ok({ mode: "cells",
+      cells: [["85c2e8bbfffffff", 3, 9]] }));
     const f = fakeGlobe();
     renderLive(f.globe);
-    await screen.findByText(/sin detecciones/i);
+    await screen.findByText(/celda/i);
+    // world-wide first query, clamped to the API range
+    expect(apiLiveResult.mock.calls[0]).toEqual(["24h", WORLD_BBOX]);
+    const before = apiLiveResult.mock.calls.length;
     await act(async () => { f.move(); });
+    // zoomed out: no viewport refinement, no refetch at all
+    expect(apiLiveResult.mock.calls.length).toBe(before);
     fireEvent.click(screen.getByRole("button", { name: "7d" }));
-    await screen.findByText(/sin detecciones/i);
-    expect(apiLiveResult.mock.calls.map((c) => c[0])).toEqual(["24h", "24h", "7d"]);
+    await screen.findByText(/celda/i);
+    expect(apiLiveResult.mock.calls.map((c) => c[0]))
+      .toEqual(["24h", "7d"]);
+    expect(apiLiveResult.mock.calls[1][1]).toEqual(WORLD_BBOX);
+  });
+
+  it("refines with a viewport query only when zoomed in", async () => {
+    apiLiveResult.mockResolvedValue(ok({ mode: "points", points: [
+      [-33.5, -60.5, 1, "N20", "2026-11-11T05:12Z"]] }));
+    const f = fakeGlobe(6); // zoom >= POINTS_MIN_ZOOM
+    renderLive(f.globe);
+    await screen.findByText(/detecciones|celda/i);
+    await act(async () => { f.move(); });
+    await act(async () => { await Promise.resolve(); });
+    // world query + one viewport query per move
+    const bboxes = apiLiveResult.mock.calls.map((c) => c[1]);
+    expect(bboxes[0]).toEqual(WORLD_BBOX);
+    expect(bboxes.at(-1)).toEqual([-61, -34, -60, -33]);
   });
 
   it("ignores a slow old response that arrives after a newer one", async () => {

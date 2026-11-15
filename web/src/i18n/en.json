@@ -515,5 +515,9 @@
   "field.coords.lon": "Longitude",
   "field.coords.go": "Use this point",
   "field.coords.invalid": "Invalid coordinates (lat −90…90, lon −180…180)",
-  "orin.detail.label": "Dataset and numbers"
+  "orin.detail.label": "Dataset and numbers",
+  "shell.home": "Ashfield, home",
+  "welcome.row.fire": "Fire history and 7-day risk near you",
+  "welcome.row.live": "Hotspots the satellite sees now, worldwide",
+  "welcome.row.geo": "Use your location to open the fire map"
 }

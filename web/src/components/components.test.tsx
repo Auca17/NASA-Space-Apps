@@ -66,9 +66,11 @@ describe("Welcome", () => {
     expect(onAnalyze).toHaveBeenCalledOnce();
     fireEvent.click(screen.getByRole("button", { name: /pergamino/i }));
     expect(onDemo).toHaveBeenCalledOnce();
-    // fire and live stay reachable as secondary options
-    fireEvent.click(screen.getByRole("button", { name: /mapa de fuego/i }));
-    fireEvent.click(screen.getByRole("button", { name: /focos en vivo/i }));
+    // fire and live stay reachable under the "Otras vistas" disclosure
+    (document.querySelector("details.welcome-more") as HTMLDetailsElement)
+      .open = true;
+    fireEvent.click(screen.getByRole("button", { name: /^abrir el mapa de fuego/i }));
+    fireEvent.click(screen.getByRole("button", { name: /^ver focos en vivo/i }));
     expect(onExplore).toHaveBeenCalledOnce();
     expect(onLive).toHaveBeenCalledOnce();
   });
@@ -82,7 +84,9 @@ describe("Welcome", () => {
         <Welcome onAnalyze={() => {}} onDemo={() => {}} onLive={() => {}}
                  onLocate={() => {}} onExplore={() => {}} />
       </I18nProvider>);
-    fireEvent.click(screen.getByRole("button", { name: /fuego cerca mío/i }));
+    (document.querySelector("details.welcome-more") as HTMLDetailsElement)
+      .open = true;
+    fireEvent.click(screen.getByRole("button", { name: /^ver fuego cerca/i }));
     expect(await screen.findByText(/sin gps/i)).toBeInTheDocument();
     expect(screen.getByPlaceholderText(/buscar ciudad/i)).toBeInTheDocument();
   });

@@ -70,9 +70,12 @@ export function WindLogo({ size = 32, title = "Ashfield" }: { size?: number; tit
       const s = reduce ? 0 : t / 1000;
       const sway = reduce ? 0 : 1 + wind * 3;
       const lean = reduce ? 0 : wind * 16;
-      const aF = lean + Math.sin(s * 1.6) * 2.2 * sway + Math.sin(s * 7.3) * wind * 3;
-      const aL = lean * 0.8 + Math.sin(s * 1.3 + 1.1) * 2.6 * sway + Math.sin(s * 6.1 + 2) * wind * 3;
-      const fl = reduce ? 1 : 1 + Math.sin(s * 9) * 0.03 + Math.sin(s * 14.7) * 0.02;
+      /* idle sway must read at 30 px in the top bar: ±5° flame, ±5.5°
+       * leaf, ~7 % flame flicker (ui-style.md §3 "sway gently and
+       * flicker" — bigger is noise, this is still a breeze) */
+      const aF = lean + Math.sin(s * 1.6) * 5 * sway + Math.sin(s * 7.3) * wind * 3;
+      const aL = lean * 0.8 + Math.sin(s * 1.3 + 1.1) * 5.5 * sway + Math.sin(s * 6.1 + 2) * wind * 3;
+      const fl = reduce ? 1 : 1 + Math.sin(s * 9) * 0.07 + Math.sin(s * 14.7) * 0.045;
       const lk = heat > 0.9 && !reduce ? 1 + Math.sin(s * 11) * 0.03 : 1;
       flameRef.current?.setAttribute("transform",
         `rotate(${aF.toFixed(2)} 31 47) translate(31 47) scale(${(2 - fl).toFixed(3)} ${fl.toFixed(3)}) translate(-31 -47)`);
@@ -108,8 +111,8 @@ export function WindLogo({ size = 32, title = "Ashfield" }: { size?: number; tit
 
   const grad = `wl-heat-${uid}`;
   return (
-    <svg className="wind-logo" viewBox="0 0 64 64" width={size} height={size}
-         role="img" aria-label={title}>
+    <svg className="wind-logo anim" viewBox="0 0 64 64" width={size}
+         height={size} role="img" aria-label={title}>
       <defs>
         <linearGradient id={grad} gradientUnits="userSpaceOnUse" x1="38" y1="47" x2="47" y2="14">
           <stop ref={stopRefs[0]} offset="0" style={{ stopColor: "var(--logo-ember)" }} />

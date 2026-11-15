@@ -62,6 +62,8 @@ export interface GlobeHandle {
   /** Replace the review/field shapes; [] clears them. */
   setShapes(shapes: Shape[]): void;
   setFieldBasemap(active: boolean, satellite: boolean, guide: boolean): void;
+  /** Per-mode zoom limits (world views shallow, field view deep). */
+  setZoomRange(min: number, max: number): void;
   zoomBy(delta: number, bottomPx?: number): void;
   /** Screen pixel (relative to the map) -> [lat, lon]. */
   unproject(x: number, y: number): [number, number];
@@ -93,6 +95,12 @@ export function useGlobe(
         dragRotate: false,
         touchPitch: false,
         pitchWithRotate: false,
+        // one Earth only, bounded near the poles so panning never
+        // shows a wrapped world or empty band beyond the imagery
+        renderWorldCopies: false,
+        maxBounds: [[-179.9, -75], [179.9, 85]],
+        minZoom: 1.5,
+        maxZoom: 9,
         attributionControl: { compact: true },
       });
     } catch {
@@ -430,6 +438,9 @@ export function useGlobe(
         fieldSatellite = satellite;
         guideEnabled = guide;
         updateFieldBasemap();
+      },
+      setZoomRange(min, max) {
+        map.setMinZoom(min); map.setMaxZoom(max);
       },
       zoomBy(delta, bottomPx = 0) {
         const { clientWidth, clientHeight } = map.getContainer();
