@@ -1,5 +1,21 @@
 {
   "captured_at": "2026-11-15",
+  "inferred_rotation": null,
+  "derived_priorities": {
+    "sel": [
+      "water",
+      "avoid_burning",
+      "erosion"
+    ],
+    "warn": [
+      "frost",
+      "heat"
+    ],
+    "unmapped": [
+      "snow",
+      "hail"
+    ]
+  },
   "response": {
     "parcels": [
       {
@@ -89,7 +105,7 @@
           "infiltration": {
             "class": "media",
             "score": 61,
-            "basis": "Puntaje 0-100 a partir de textura Franco-arenoso, MO 12 g/kg, pendiente 3.2 %, 122 días/año de suelo desnudo (grupos hidrológicos de suelo USDA; fórmula en knowledge/README). Ordena el riesgo relativo, no es una medición. Esta parcela comparte la celda de datos climáticos con otra parcela del lote."
+            "basis": "Puntaje 0-100 a partir de textura Franco-arenoso, MO 12 g/kg, pendiente 3.1 %, 122 días/año de suelo desnudo (grupos hidrológicos de suelo USDA; fórmula en knowledge/README). Ordena el riesgo relativo, no es una medición. Esta parcela comparte la celda de datos climáticos con otra parcela del lote."
           }
         },
         "alerts": [
@@ -120,7 +136,7 @@
           "revenue_per_ha": 3080,
           "cost_per_ha": 2800,
           "margin_per_ha": 280,
-          "margin_total": 14461,
+          "margin_total": 14460,
           "break_even_yield_t_ha": 12.73,
           "risk_adjusted_margin_per_ha": 126,
           "basis": "Rinde declarado por el productor (14 t/ha). Margen ajustado con supuestos aproximados: alerta de fuego −5 % del ingreso. No es un pronóstico.",
@@ -179,34 +195,34 @@
             "basis": "0.4 días por año con lluvia fuerte (sobre 20 mm) y terreno con pendiente: el agua escurre, riesgo de anegamiento menor. Esta parcela comparte la celda de datos climáticos con otra parcela del lote."
           },
           "evaporation": {
-            "mm_per_year": 1559,
+            "mm_per_year": 1564,
             "monthly_mm": [
-              202.1,
-              161.3,
-              146.1,
-              103,
-              78,
-              72.7,
-              76.2,
-              94,
-              112,
-              148.7,
-              175.8,
-              204.3
+              202.6,
+              161.7,
+              146.5,
+              103.3,
+              78.3,
+              73,
+              76.5,
+              94.3,
+              112.4,
+              149.1,
+              176.2,
+              204.8
             ],
             "balance_mm": {
-              "1": -166.2,
-              "2": -129,
-              "3": -120.1,
-              "4": -86.5,
-              "5": -53.1,
-              "6": -45.3,
-              "7": -53.7,
-              "8": -73,
-              "9": -101.2,
-              "10": -121.6,
-              "11": -151.3,
-              "12": -176.8
+              "1": -166.7,
+              "2": -129.4,
+              "3": -120.5,
+              "4": -86.8,
+              "5": -53.4,
+              "6": -45.5,
+              "7": -54,
+              "8": -73.3,
+              "9": -101.5,
+              "10": -122,
+              "11": -151.8,
+              "12": -177.2
             },
             "basis": "Estimación de referencia ET0 FAO-56 (Penman-Monteith donde hay datos, Hargreaves en el resto) — EVLAND no está disponible en esta celda; el balance mensual es lluvia menos ET0 en mm. Esta parcela comparte la celda de datos climáticos con otra parcela del lote. Agua de cultivo ≈ ET0 × Kc 0.65 (FAO-56) del catálogo.",
             "crop_water_mm_day": 2.8
@@ -214,7 +230,7 @@
           "infiltration": {
             "class": "media",
             "score": 61,
-            "basis": "Puntaje 0-100 a partir de textura Franco-arenoso, MO 12 g/kg, pendiente 3.2 %, 122 días/año de suelo desnudo (grupos hidrológicos de suelo USDA; fórmula en knowledge/README). Ordena el riesgo relativo, no es una medición. Esta parcela comparte la celda de datos climáticos con otra parcela del lote."
+            "basis": "Puntaje 0-100 a partir de textura Franco-arenoso, MO 12 g/kg, pendiente 3.3 %, 122 días/año de suelo desnudo (grupos hidrológicos de suelo USDA; fórmula en knowledge/README). Ordena el riesgo relativo, no es una medición. Esta parcela comparte la celda de datos climáticos con otra parcela del lote."
           }
         },
         "alerts": [
@@ -304,34 +320,34 @@
             "basis": "0.4 días por año con lluvia fuerte (sobre 20 mm) y terreno con pendiente: el agua escurre, riesgo de anegamiento menor. Esta parcela comparte la celda de datos climáticos con otra parcela del lote."
           },
           "evaporation": {
-            "mm_per_year": 1559,
+            "mm_per_year": 1564,
             "monthly_mm": [
-              202.1,
-              161.3,
-              146.1,
-              103,
-              78,
-              72.7,
-              76.2,
-              94,
-              112,
-              148.7,
-              175.8,
-              204.3
+              202.6,
+              161.7,
+              146.5,
+              103.3,
+              78.3,
+              73,
+              76.5,
+              94.3,
+              112.4,
+              149.1,
+              176.2,
+              204.8
             ],
             "balance_mm": {
-              "1": -166.2,
-              "2": -129,
-              "3": -120.1,
-              "4": -86.5,
-              "5": -53.1,
-              "6": -45.2,
-              "7": -53.7,
-              "8": -73,
-              "9": -101.2,
-              "10": -121.6,
-              "11": -151.3,
-              "12": -176.8
+              "1": -166.7,
+              "2": -129.4,
+              "3": -120.5,
+              "4": -86.8,
+              "5": -53.4,
+              "6": -45.5,
+              "7": -54,
+              "8": -73.3,
+              "9": -101.5,
+              "10": -122,
+              "11": -151.8,
+              "12": -177.2
             },
             "basis": "Estimación de referencia ET0 FAO-56 (Penman-Monteith donde hay datos, Hargreaves en el resto) — EVLAND no está disponible en esta celda; el balance mensual es lluvia menos ET0 en mm. Esta parcela comparte la celda de datos climáticos con otra parcela del lote. Agua de cultivo ≈ ET0 × Kc 0.9 (FAO-56) del catálogo.",
             "crop_water_mm_day": 3.9
@@ -339,7 +355,7 @@
           "infiltration": {
             "class": "media",
             "score": 61,
-            "basis": "Puntaje 0-100 a partir de textura Franco-arenoso, MO 12 g/kg, pendiente 3.2 %, 122 días/año de suelo desnudo (grupos hidrológicos de suelo USDA; fórmula en knowledge/README). Ordena el riesgo relativo, no es una medición. Esta parcela comparte la celda de datos climáticos con otra parcela del lote."
+            "basis": "Puntaje 0-100 a partir de textura Franco-arenoso, MO 12 g/kg, pendiente 3.8 %, 122 días/año de suelo desnudo (grupos hidrológicos de suelo USDA; fórmula en knowledge/README). Ordena el riesgo relativo, no es una medición. Esta parcela comparte la celda de datos climáticos con otra parcela del lote."
           }
         },
         "alerts": [
@@ -375,7 +391,7 @@
           "revenue_per_ha": 9900,
           "cost_per_ha": 2600,
           "margin_per_ha": 7300,
-          "margin_total": 148135,
+          "margin_total": 148133,
           "break_even_yield_t_ha": 5.78,
           "risk_adjusted_margin_per_ha": 6805,
           "basis": "Rinde declarado por el productor (22 t/ha). Margen ajustado con supuestos aproximados: alerta de fuego −5 % del ingreso. No es un pronóstico.",
@@ -434,42 +450,42 @@
             "basis": "0.4 días por año con lluvia fuerte (sobre 20 mm) y terreno con pendiente: el agua escurre, riesgo de anegamiento menor. Esta parcela comparte la celda de datos climáticos con otra parcela del lote."
           },
           "evaporation": {
-            "mm_per_year": 1559,
+            "mm_per_year": 1564,
             "monthly_mm": [
-              202.1,
-              161.3,
-              146.1,
-              103,
-              78,
-              72.7,
-              76.2,
-              94,
-              112,
-              148.7,
-              175.8,
-              204.3
+              202.6,
+              161.7,
+              146.5,
+              103.3,
+              78.3,
+              73,
+              76.5,
+              94.3,
+              112.4,
+              149.1,
+              176.2,
+              204.8
             ],
             "balance_mm": {
-              "1": -166.2,
-              "2": -129,
-              "3": -120.1,
-              "4": -86.5,
-              "5": -53.1,
-              "6": -45.2,
-              "7": -53.7,
-              "8": -73,
-              "9": -101.2,
-              "10": -121.6,
-              "11": -151.3,
-              "12": -176.8
+              "1": -166.7,
+              "2": -129.4,
+              "3": -120.5,
+              "4": -86.8,
+              "5": -53.4,
+              "6": -45.5,
+              "7": -54,
+              "8": -73.3,
+              "9": -101.5,
+              "10": -122,
+              "11": -151.8,
+              "12": -177.2
             },
             "basis": "Estimación de referencia ET0 FAO-56 (Penman-Monteith donde hay datos, Hargreaves en el resto) — EVLAND no está disponible en esta celda; el balance mensual es lluvia menos ET0 en mm. Esta parcela comparte la celda de datos climáticos con otra parcela del lote. Agua de cultivo ≈ ET0 × Kc 1 (FAO-56) del catálogo.",
             "crop_water_mm_day": 4.3
           },
           "infiltration": {
-            "class": "media",
-            "score": 61,
-            "basis": "Puntaje 0-100 a partir de textura Franco-arenoso, MO 12 g/kg, pendiente 3.2 %, 122 días/año de suelo desnudo (grupos hidrológicos de suelo USDA; fórmula en knowledge/README). Ordena el riesgo relativo, no es una medición. Esta parcela comparte la celda de datos climáticos con otra parcela del lote."
+            "class": "alta",
+            "score": 67,
+            "basis": "Puntaje 0-100 a partir de textura Franco-arenoso, MO 12 g/kg, pendiente 2.4 %, 122 días/año de suelo desnudo (grupos hidrológicos de suelo USDA; fórmula en knowledge/README). Ordena el riesgo relativo, no es una medición. Esta parcela comparte la celda de datos climáticos con otra parcela del lote."
           }
         },
         "alerts": [
@@ -500,7 +516,7 @@
           "revenue_per_ha": 7200,
           "cost_per_ha": 1800,
           "margin_per_ha": 5400,
-          "margin_total": 105365,
+          "margin_total": 105363,
           "break_even_yield_t_ha": 2,
           "risk_adjusted_margin_per_ha": 5040,
           "basis": "Rinde declarado por el productor (8 t/ha). Margen ajustado con supuestos aproximados: alerta de fuego −5 % del ingreso. No es un pronóstico.",
@@ -559,34 +575,34 @@
             "basis": "0.4 días por año con lluvia fuerte (sobre 20 mm) y terreno con pendiente: el agua escurre, riesgo de anegamiento menor. Esta parcela comparte la celda de datos climáticos con otra parcela del lote."
           },
           "evaporation": {
-            "mm_per_year": 1559,
+            "mm_per_year": 1564,
             "monthly_mm": [
-              202.1,
-              161.3,
-              146.1,
-              103,
-              78,
-              72.7,
-              76.2,
-              94,
-              112,
-              148.7,
-              175.8,
-              204.3
+              202.6,
+              161.7,
+              146.5,
+              103.3,
+              78.3,
+              73,
+              76.5,
+              94.3,
+              112.4,
+              149.1,
+              176.2,
+              204.8
             ],
             "balance_mm": {
-              "1": -166.2,
-              "2": -129,
-              "3": -120.1,
-              "4": -86.5,
-              "5": -53.1,
-              "6": -45.3,
-              "7": -53.7,
-              "8": -73,
-              "9": -101.2,
-              "10": -121.6,
-              "11": -151.3,
-              "12": -176.8
+              "1": -166.7,
+              "2": -129.4,
+              "3": -120.5,
+              "4": -86.8,
+              "5": -53.4,
+              "6": -45.5,
+              "7": -54,
+              "8": -73.3,
+              "9": -101.5,
+              "10": -122,
+              "11": -151.8,
+              "12": -177.2
             },
             "basis": "Estimación de referencia ET0 FAO-56 (Penman-Monteith donde hay datos, Hargreaves en el resto) — EVLAND no está disponible en esta celda; el balance mensual es lluvia menos ET0 en mm. Esta parcela comparte la celda de datos climáticos con otra parcela del lote. Agua de cultivo ≈ ET0 × Kc 0.6 (FAO-56) del catálogo.",
             "crop_water_mm_day": 2.6
@@ -594,7 +610,7 @@
           "infiltration": {
             "class": "media",
             "score": 61,
-            "basis": "Puntaje 0-100 a partir de textura Franco-arenoso, MO 12 g/kg, pendiente 3.2 %, 122 días/año de suelo desnudo (grupos hidrológicos de suelo USDA; fórmula en knowledge/README). Ordena el riesgo relativo, no es una medición. Esta parcela comparte la celda de datos climáticos con otra parcela del lote."
+            "basis": "Puntaje 0-100 a partir de textura Franco-arenoso, MO 12 g/kg, pendiente 4 %, 122 días/año de suelo desnudo (grupos hidrológicos de suelo USDA; fórmula en knowledge/README). Ordena el riesgo relativo, no es una medición. Esta parcela comparte la celda de datos climáticos con otra parcela del lote."
           }
         },
         "alerts": [
@@ -714,5 +730,187 @@
     ],
     "degraded": true,
     "degraded_reason": "los servicios cercanos (OpenStreetMap) no respondieron"
+  },
+  "rotations": {
+    "diagnosis_id": "dx_b77c5cb8a8a3",
+    "strategies": [
+      {
+        "id": "alfalfa4-maiz",
+        "name": "Pastura de alfalfa 4 años – maíz (bajo riego)",
+        "name_en": "4-yr alfalfa pasture – maize (irrigated)",
+        "is_current": true,
+        "score": 0.5,
+        "confidence": "high",
+        "indicators": {
+          "water_balance": 752,
+          "water_balance_mm": 752,
+          "residue_t_ha_yr": 1.9,
+          "nitrogen": 4,
+          "bare_soil_days": 36,
+          "erosion_risk": "bajo",
+          "infiltration": "alta",
+          "pest_break": 2,
+          "income": "medium",
+          "forage": true,
+          "burns_avoided": 0,
+          "carbon": 1.9
+        },
+        "why": "Es tu rotación actual; sirve de referencia.",
+        "evidence": [
+          {
+            "text": "375.1 mm/año; 1 de cada 4 años < 281.3 mm",
+            "indicator": "rain",
+            "source": "Dato precalculado (GPM IMERG 0,1°) porque el servicio no respondió"
+          },
+          {
+            "text": "0.4 días/año con más de 50 mm",
+            "indicator": "heavy_rain",
+            "source": "Dato precalculado (NASA POWER, 0,5°) porque el servicio no respondió"
+          },
+          {
+            "text": "Período libre de heladas: 31/08 – 31/05",
+            "indicator": "frost",
+            "source": "Dato precalculado (NASA POWER, 0,5°) porque el servicio no respondió"
+          },
+          {
+            "text": "Temporada de quemas: jun–sep; riesgo 7 días: alto",
+            "indicator": "fire",
+            "source": "Serie armonizada MODIS+VIIRS"
+          },
+          {
+            "text": "maiz: consumo observado en el semiárido pampeano (INTA–FAUBA, 138 ensayos de secano): 487 mm (referencia FAO: 650 mm)",
+            "indicator": "water_balance",
+            "source": "el semiárido pampeano (INTA–FAUBA, 138 ensayos de secano)"
+          }
+        ],
+        "benefits": {
+          "water_balance": 0,
+          "water_balance_mm": 0,
+          "residue_t_ha_yr": 0,
+          "nitrogen": 0,
+          "bare_soil_days": 0,
+          "erosion_risk": "bajo",
+          "infiltration": "alta",
+          "pest_break": 0,
+          "income": "medium",
+          "forage": 0,
+          "burns_avoided": 0,
+          "carbon": 0
+        },
+        "gaps": [
+          "alfalfa: aporte de carbono por raíz y corona: sin valor, depende del manejo y de la duración de la pastura",
+          "Sin climatología mensual de lluvia: el balance hídrico usa el promedio anual",
+          "Lluvia anual tiene resolución 0.5°×0.625°: no distingue diferencias dentro del lote",
+          "Sin datos de zonas análogas (field/analogs)"
+        ],
+        "risks": [
+          "Maíz: alta demanda de nitrógeno y de agua en floración.",
+          "Los cambios de rotación tardan 2-3 campañas en mostrar efecto en el suelo.",
+          "Verificar disponibilidad de semilla y maquinaria antes de decidir.",
+          "No viable: agua disponible ~375 mm < 1200 mm del ciclo",
+          "No viable: agua disponible ~188 mm < 650 mm del ciclo",
+          "Validar estas opciones con tu agrónomo de cabecera."
+        ],
+        "sequence": [
+          {
+            "crop": "alfalfa",
+            "start": "03-15",
+            "end": "03-14",
+            "cover": true
+          },
+          {
+            "crop": "alfalfa",
+            "start": "03-15",
+            "end": "03-14",
+            "cover": true
+          },
+          {
+            "crop": "alfalfa",
+            "start": "03-15",
+            "end": "03-14",
+            "cover": true
+          },
+          {
+            "crop": "alfalfa",
+            "start": "03-15",
+            "end": "03-14",
+            "cover": true
+          },
+          {
+            "crop": "maiz",
+            "start": "10-15",
+            "end": "04-15",
+            "cover": true
+          }
+        ],
+        "measures": [
+          {
+            "id": "fire_response_protocol",
+            "name": "Protocolo de incendio para cada cosecha",
+            "factor": "initial_attack",
+            "why": "demora y confusión en los primeros minutos de un incendio: riesgo 7 días: alto",
+            "name_en": "Fire response protocol for each harvest",
+            "why_en": "7-day risk: alto",
+            "benefit": "cada persona sabe qué hacer mientras llegan los bomberos: dar la ubicación exacta y alejar a la gente de la máquina",
+            "requires": {
+              "people": null,
+              "machinery": [],
+              "downtime_h": 0,
+              "cost": "low",
+              "reference_width_m": null,
+              "reference_width_note": null
+            },
+            "cost": "low",
+            "source": "INTA / UIB Balcarce (S. Tourn) + Bomberos Tandil (D. Ibáñez), 'Pautas para evitar incendios durante la cosecha' (2023-12-28), https://www.argentina.gob.ar/node/413622"
+          },
+          {
+            "id": "no_residue_burning",
+            "name": "No quemar rastrojos",
+            "factor": "residue_burning",
+            "why": "quema de rastrojo en época de alta propagación: suelo desnudo en meses de quemas: [6, 7, 8, 9]",
+            "name_en": "Do not burn stubble",
+            "why_en": "bare ground in burning months: [6, 7, 8, 9]",
+            "benefit": "conserva la cobertura del suelo y elimina un foco de ignición evitable; quemar sin autorización está prohibido. La Ley 26.562 exige autorización de la autoridad local competente para quemar, durante todo el año",
+            "requires": {
+              "people": 0,
+              "machinery": [],
+              "downtime_h": 0,
+              "cost": "low",
+              "reference_width_m": null,
+              "reference_width_note": null
+            },
+            "cost": "low",
+            "source": "Ley 26.562 (2009), presupuestos mínimos de protección ambiental para el control de actividades de quema: toda quema requiere autorización previa de la autoridad local"
+          },
+          {
+            "id": "maintain_firebreak",
+            "name": "Hacer cortafuegos dentro y fuera del lote",
+            "factor": "spread_boundary",
+            "why": "propagación desde o hacia lotes vecinos con vegetación seca continua: riesgo 7 días: alto",
+            "name_en": "Build firebreaks inside and around the field",
+            "why_en": "7-day risk: alto",
+            "benefit": "sectoriza el incendio: se quema solo una parte del cultivo",
+            "requires": {
+              "people": 2,
+              "machinery": [
+                "tractor con rastra o disco"
+              ],
+              "downtime_h": null,
+              "cost": "medium",
+              "reference_width_m": 30,
+              "reference_width_note": "referencia prudente para la región chaqueña; el diseño depende del combustible, la pendiente y el viento"
+            },
+            "cost": "medium",
+            "source": "INTA / UIB Balcarce (S. Tourn) + Bomberos Tandil (D. Ibáñez), 'Pautas para evitar incendios durante la cosecha' (2023-12-28), https://www.argentina.gob.ar/node/413622"
+          }
+        ],
+        "measures_gaps": [
+          "fire_weather_high (sin tarjeta fire_weather)",
+          "harvest_stop_conditions (sin tarjeta fire_weather)"
+        ]
+      }
+    ],
+    "disclaimer": "Herramienta de apoyo: no reemplaza tu experiencia ni la de un agrónomo local.",
+    "confidence": "high"
   }
 }

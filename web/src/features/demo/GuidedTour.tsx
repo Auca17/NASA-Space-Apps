@@ -1,8 +1,10 @@
-/** Guided demo tour (task 40): five small hints anchored to real
+/** Guided demo tour (tasks 40/42): six small hints anchored to real
  * elements — the parcels, the fire/water badges, an alert, the
- * priorities tab and "Más información". It never blocks the map: only
- * the hint card itself takes pointer events. Escape or "Cerrar"
- * dismiss it for good (localStorage). */
+ * Rotaciones tab, a rotation card and "Más información". It never
+ * blocks the map: only the hint card itself takes pointer events.
+ * Escape or "Cerrar" dismiss it for good (localStorage). `onStep`
+ * fires when a step activates so anchors hidden inside other tabs
+ * can be revealed before the hint positions itself. */
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useT } from "../../i18n";
 import { markTourSeen, TOUR_STEPS } from "./demoTour";
@@ -10,7 +12,9 @@ import { markTourSeen, TOUR_STEPS } from "./demoTour";
 const MARGIN = 8;
 const HINT_W = 280;
 
-export function GuidedTour({ onClose }: { onClose: () => void }) {
+export function GuidedTour({ onClose, onStep }: {
+    onClose: () => void;
+    onStep?: (stepId: string) => void }) {
   const { t } = useT();
   const [i, setI] = useState(0);
   const [pos, setPos] = useState<{ left: number; top: number } | null>(null);
@@ -54,6 +58,16 @@ export function GuidedTour({ onClose }: { onClose: () => void }) {
     window.addEventListener("resize", onResize);
     return () => window.removeEventListener("resize", onResize);
   }, [place]);
+
+  // Let the app reveal tab-bound anchors, then re-place once the
+  // layout settled (tab switch renders new DOM nodes).
+  useEffect(() => {
+    if (!step || !onStep) return;
+    onStep(step.id);
+    const id = requestAnimationFrame(() => place());
+    return () => cancelAnimationFrame(id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [i, onStep]);
 
   // Escape closes; focus the hint so screen readers announce the step.
   useEffect(() => {

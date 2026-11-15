@@ -12,12 +12,10 @@
 import type {
   Needs, ParcelInput, ParcelsResponse,
 } from "../../domain/parcels";
+import type { RotationsResponse } from "../../api/types";
 import cachedJson from "./mendozaCached.json";
 import type { Economics, Profile } from "../../domain/parcelsProfile";
 import type { LatLon, Multi } from "../../domain/selection";
-
-/** true when the hash is the demo deep-link (/app/#demo). */
-export const isDemoHash = (hash: string) => hash === "#demo";
 
 const r = (...pts: LatLon[]): LatLon[] => pts;
 
@@ -113,9 +111,16 @@ export const MENDOZA_ECON: Economics = {
  * "resultado guardado del <captured_at>". Parcel ids match
  * MENDOZA_PARCELS. */
 const cached = cachedJson as unknown as {
-  captured_at: string; response: ParcelsResponse };
-export const MENDOZA_CACHED: { date: string; res: ParcelsResponse } = {
+  captured_at: string;
+  response: ParcelsResponse;
+  rotations?: RotationsResponse;
+};
+export const MENDOZA_CACHED: {
+  date: string; res: ParcelsResponse;
+  rotations?: RotationsResponse;
+} = {
   date: cached.captured_at,
   res: cached.response,
+  ...(cached.rotations ? { rotations: cached.rotations } : {}),
 };
 

@@ -1,0 +1,1458 @@
+{
+  "captured_at": "2026-11-15",
+  "inferred_rotation": {
+    "id": "alfalfa3-maiz-trigo-soja2",
+    "matched": true
+  },
+  "derived_priorities": {
+    "sel": [
+      "water",
+      "avoid_burning",
+      "erosion"
+    ],
+    "warn": [
+      "frost",
+      "heat"
+    ],
+    "unmapped": [
+      "hail",
+      "snow"
+    ]
+  },
+  "response": {
+    "parcels": [
+      {
+        "id": "soja",
+        "crop": "soja",
+        "area_ha": 46.1,
+        "indicators": {
+          "fire": {
+            "pct": 3,
+            "level": "bajo",
+            "basis": "Probabilidad de fuego en los próximos 7 días según el modelo de la zona."
+          },
+          "water": {
+            "pct": 49,
+            "level": "seco",
+            "basis": "Humedad de la raíz (NASA POWER GWETROOT), promedio de los últimos 30 días; está por debajo del percentil 20 de noviembre en la historia de esta zona. Esta parcela comparte la celda de datos climáticos con otra parcela del lote."
+          },
+          "heat": {
+            "days_over_35": 23.2,
+            "basis": "Promedio anual de días por encima de 35 °C (serie diaria NASA POWER, con corrección por altura). Esta parcela comparte la celda de datos climáticos con otra parcela del lote."
+          },
+          "frost": {
+            "frost_free_days": 289,
+            "window": {
+              "start": "08-26",
+              "end": "06-11"
+            },
+            "basis": "Días del año entre la última helada de primavera y la primera de otoño (mediana de años completos, NASA POWER, con corrección por altura). Esta parcela comparte la celda de datos climáticos con otra parcela del lote."
+          },
+          "snow": {
+            "days_per_year": 0.1,
+            "pct_years_with_snow": 12,
+            "basis": "Días por año con nevada sobre 1 mm (NASA POWER PRECSNOLAND, 2001–hoy); nieva algunos años en esta zona. Esta parcela comparte la celda de datos climáticos con otra parcela del lote."
+          },
+          "hail": {
+            "available": false,
+            "basis": "No hay un dato satelital de granizo para tu zona en esta app; consultá el servicio meteorológico y tu aseguradora."
+          },
+          "enso": {
+            "phase_now": "el_nino",
+            "oni": 2.5,
+            "oni_period": "ASO 2026",
+            "rain_effect_pct": {
+              "el_nino": 17,
+              "la_nina": -25
+            },
+            "basis": "ENSO según el índice ONI de NOAA: ahora El Niño (+2.5 °C). En esta zona, los años El Niño llovieron +17 % y los La Niña -25 % respecto al promedio en octubre–marzo. Es una tendencia histórica, no un pronóstico."
+          },
+          "flood": {
+            "heavy_rain_days_yr": 2.5,
+            "low_slope": false,
+            "basis": "2.5 días por año con lluvia fuerte (sobre 20 mm) y terreno con pendiente: el agua escurre, riesgo de anegamiento menor. Esta parcela comparte la celda de datos climáticos con otra parcela del lote."
+          },
+          "evaporation": {
+            "mm_per_year": 904,
+            "monthly_mm": [
+              120.1,
+              105.2,
+              98.7,
+              65.6,
+              36.5,
+              24,
+              26.4,
+              41,
+              62.2,
+              96.3,
+              117.2,
+              122.6
+            ],
+            "balance_mm": {
+              "1": 3.5,
+              "2": 21.6,
+              "3": 40.1,
+              "4": 45.2,
+              "5": 29.9,
+              "6": 1.5,
+              "7": 7.4,
+              "8": 8,
+              "9": 2.9,
+              "10": 21.5,
+              "11": -7.4,
+              "12": -8.2
+            },
+            "basis": "Cuánta agua pierde el suelo y las plantas al aire por año (NASA POWER EVLAND, mm/día sumada por mes y por año); el balance mensual es lluvia menos evaporación en mm. Esta parcela comparte la celda de datos climáticos con otra parcela del lote."
+          },
+          "infiltration": {
+            "class": "media",
+            "score": 47,
+            "basis": "Puntaje 0-100 a partir de textura Franco-arcilloso, MO 19.5 g/kg, pendiente 2.8 %, 122 días/año de suelo desnudo (grupos hidrológicos de suelo USDA; fórmula en knowledge/README). Ordena el riesgo relativo, no es una medición. Esta parcela comparte la celda de datos climáticos con otra parcela del lote."
+          }
+        },
+        "alerts": [
+          {
+            "kind": "dry",
+            "severity": "medium",
+            "text": "El suelo está más seco que lo normal y el lote tiene Soja. Sin acceso a agua: priorizá el monitoreo y el riego en esta parcela."
+          }
+        ],
+        "order": [
+          "drought",
+          "fire",
+          "flood",
+          "frost",
+          "heat",
+          "enso",
+          "hail"
+        ],
+        "extra": [
+          {
+            "id": "snow",
+            "hidden": true
+          }
+        ],
+        "economics": {
+          "expected_yield_t_ha": 3.4,
+          "yield_source": "user",
+          "revenue_per_ha": 952,
+          "cost_per_ha": 750,
+          "margin_per_ha": 202,
+          "margin_total": 9319,
+          "break_even_yield_t_ha": 2.68,
+          "risk_adjusted_margin_per_ha": 59,
+          "basis": "Rinde declarado por el productor (3.4 t/ha). Margen ajustado con supuestos aproximados: suelo seco −15 % del ingreso. No es un pronóstico.",
+          "currency": "USD"
+        }
+      },
+      {
+        "id": "maiz",
+        "crop": "maiz",
+        "area_ha": 39.5,
+        "indicators": {
+          "fire": {
+            "pct": 3,
+            "level": "bajo",
+            "basis": "Probabilidad de fuego en los próximos 7 días según el modelo de la zona."
+          },
+          "water": {
+            "pct": 49,
+            "level": "seco",
+            "basis": "Humedad de la raíz (NASA POWER GWETROOT), promedio de los últimos 30 días; está por debajo del percentil 20 de noviembre en la historia de esta zona. Esta parcela comparte la celda de datos climáticos con otra parcela del lote."
+          },
+          "heat": {
+            "days_over_35": 23.2,
+            "basis": "Promedio anual de días por encima de 35 °C (serie diaria NASA POWER, con corrección por altura). Esta parcela comparte la celda de datos climáticos con otra parcela del lote."
+          },
+          "frost": {
+            "frost_free_days": 289,
+            "window": {
+              "start": "08-26",
+              "end": "06-11"
+            },
+            "basis": "Días del año entre la última helada de primavera y la primera de otoño (mediana de años completos, NASA POWER, con corrección por altura). Esta parcela comparte la celda de datos climáticos con otra parcela del lote."
+          },
+          "snow": {
+            "days_per_year": 0.1,
+            "pct_years_with_snow": 12,
+            "basis": "Días por año con nevada sobre 1 mm (NASA POWER PRECSNOLAND, 2001–hoy); nieva algunos años en esta zona. Esta parcela comparte la celda de datos climáticos con otra parcela del lote."
+          },
+          "hail": {
+            "available": false,
+            "basis": "No hay un dato satelital de granizo para tu zona en esta app; consultá el servicio meteorológico y tu aseguradora."
+          },
+          "enso": {
+            "phase_now": "el_nino",
+            "oni": 2.5,
+            "oni_period": "ASO 2026",
+            "rain_effect_pct": {
+              "el_nino": 17,
+              "la_nina": -25
+            },
+            "basis": "ENSO según el índice ONI de NOAA: ahora El Niño (+2.5 °C). En esta zona, los años El Niño llovieron +17 % y los La Niña -25 % respecto al promedio en octubre–marzo. Es una tendencia histórica, no un pronóstico."
+          },
+          "flood": {
+            "heavy_rain_days_yr": 2.5,
+            "low_slope": false,
+            "basis": "2.5 días por año con lluvia fuerte (sobre 20 mm) y terreno con pendiente: el agua escurre, riesgo de anegamiento menor. Esta parcela comparte la celda de datos climáticos con otra parcela del lote."
+          },
+          "evaporation": {
+            "mm_per_year": 904,
+            "monthly_mm": [
+              120.1,
+              105.2,
+              98.7,
+              65.6,
+              36.5,
+              24,
+              26.4,
+              41,
+              62.2,
+              96.3,
+              117.2,
+              122.6
+            ],
+            "balance_mm": {
+              "1": 3.5,
+              "2": 21.6,
+              "3": 40.1,
+              "4": 45.2,
+              "5": 29.9,
+              "6": 1.5,
+              "7": 7.4,
+              "8": 8,
+              "9": 2.9,
+              "10": 21.5,
+              "11": -7.4,
+              "12": -8.2
+            },
+            "basis": "Cuánta agua pierde el suelo y las plantas al aire por año (NASA POWER EVLAND, mm/día sumada por mes y por año); el balance mensual es lluvia menos evaporación en mm. Esta parcela comparte la celda de datos climáticos con otra parcela del lote."
+          },
+          "infiltration": {
+            "class": "media",
+            "score": 41,
+            "basis": "Puntaje 0-100 a partir de textura Franco-arcilloso, MO 19.5 g/kg, pendiente 3.7 %, 122 días/año de suelo desnudo (grupos hidrológicos de suelo USDA; fórmula en knowledge/README). Ordena el riesgo relativo, no es una medición. Esta parcela comparte la celda de datos climáticos con otra parcela del lote."
+          }
+        },
+        "alerts": [
+          {
+            "kind": "dry",
+            "severity": "medium",
+            "text": "El suelo está más seco que lo normal y el lote tiene Maíz. Sin acceso a agua: priorizá el monitoreo y el riego en esta parcela."
+          }
+        ],
+        "order": [
+          "drought",
+          "fire",
+          "flood",
+          "frost",
+          "heat",
+          "enso",
+          "hail"
+        ],
+        "extra": [
+          {
+            "id": "snow",
+            "hidden": true
+          }
+        ],
+        "economics": {
+          "expected_yield_t_ha": 9.5,
+          "yield_source": "user",
+          "revenue_per_ha": 2185,
+          "cost_per_ha": 980,
+          "margin_per_ha": 1205,
+          "margin_total": 47562,
+          "break_even_yield_t_ha": 4.26,
+          "risk_adjusted_margin_per_ha": 877,
+          "basis": "Rinde declarado por el productor (9.5 t/ha). Margen ajustado con supuestos aproximados: suelo seco −15 % del ingreso. No es un pronóstico.",
+          "currency": "USD"
+        }
+      },
+      {
+        "id": "trigo",
+        "crop": "trigo",
+        "area_ha": 38.3,
+        "indicators": {
+          "fire": {
+            "pct": 3,
+            "level": "bajo",
+            "basis": "Probabilidad de fuego en los próximos 7 días según el modelo de la zona."
+          },
+          "water": {
+            "pct": 49,
+            "level": "seco",
+            "basis": "Humedad de la raíz (NASA POWER GWETROOT), promedio de los últimos 30 días; está por debajo del percentil 20 de noviembre en la historia de esta zona. Esta parcela comparte la celda de datos climáticos con otra parcela del lote."
+          },
+          "heat": {
+            "days_over_35": 23.2,
+            "basis": "Promedio anual de días por encima de 35 °C (serie diaria NASA POWER, con corrección por altura). Esta parcela comparte la celda de datos climáticos con otra parcela del lote."
+          },
+          "frost": {
+            "frost_free_days": 289,
+            "window": {
+              "start": "08-26",
+              "end": "06-11"
+            },
+            "basis": "Días del año entre la última helada de primavera y la primera de otoño (mediana de años completos, NASA POWER, con corrección por altura). Esta parcela comparte la celda de datos climáticos con otra parcela del lote."
+          },
+          "snow": {
+            "days_per_year": 0.1,
+            "pct_years_with_snow": 12,
+            "basis": "Días por año con nevada sobre 1 mm (NASA POWER PRECSNOLAND, 2001–hoy); nieva algunos años en esta zona. Esta parcela comparte la celda de datos climáticos con otra parcela del lote."
+          },
+          "hail": {
+            "available": false,
+            "basis": "No hay un dato satelital de granizo para tu zona en esta app; consultá el servicio meteorológico y tu aseguradora."
+          },
+          "enso": {
+            "phase_now": "el_nino",
+            "oni": 2.5,
+            "oni_period": "ASO 2026",
+            "rain_effect_pct": {
+              "el_nino": 17,
+              "la_nina": -25
+            },
+            "basis": "ENSO según el índice ONI de NOAA: ahora El Niño (+2.5 °C). En esta zona, los años El Niño llovieron +17 % y los La Niña -25 % respecto al promedio en octubre–marzo. Es una tendencia histórica, no un pronóstico."
+          },
+          "flood": {
+            "heavy_rain_days_yr": 2.5,
+            "low_slope": false,
+            "basis": "2.5 días por año con lluvia fuerte (sobre 20 mm) y terreno con pendiente: el agua escurre, riesgo de anegamiento menor. Esta parcela comparte la celda de datos climáticos con otra parcela del lote."
+          },
+          "evaporation": {
+            "mm_per_year": 904,
+            "monthly_mm": [
+              120.1,
+              105.2,
+              98.7,
+              65.6,
+              36.5,
+              24,
+              26.4,
+              41,
+              62.2,
+              96.3,
+              117.2,
+              122.6
+            ],
+            "balance_mm": {
+              "1": 3.5,
+              "2": 21.6,
+              "3": 40.1,
+              "4": 45.2,
+              "5": 29.9,
+              "6": 1.5,
+              "7": 7.4,
+              "8": 8,
+              "9": 2.9,
+              "10": 21.5,
+              "11": -7.4,
+              "12": -8.2
+            },
+            "basis": "Cuánta agua pierde el suelo y las plantas al aire por año (NASA POWER EVLAND, mm/día sumada por mes y por año); el balance mensual es lluvia menos evaporación en mm. Esta parcela comparte la celda de datos climáticos con otra parcela del lote."
+          },
+          "infiltration": {
+            "class": "media",
+            "score": 41,
+            "basis": "Puntaje 0-100 a partir de textura Franco-arcilloso, MO 19.5 g/kg, pendiente 5.4 %, 122 días/año de suelo desnudo (grupos hidrológicos de suelo USDA; fórmula en knowledge/README). Ordena el riesgo relativo, no es una medición. Esta parcela comparte la celda de datos climáticos con otra parcela del lote."
+          }
+        },
+        "alerts": [
+          {
+            "kind": "dry",
+            "severity": "medium",
+            "text": "El suelo está más seco que lo normal y el lote tiene Trigo. Sin acceso a agua: priorizá el monitoreo y el riego en esta parcela."
+          }
+        ],
+        "order": [
+          "drought",
+          "fire",
+          "flood",
+          "frost",
+          "heat",
+          "enso",
+          "hail"
+        ],
+        "extra": [
+          {
+            "id": "snow",
+            "hidden": true
+          }
+        ],
+        "economics": {
+          "expected_yield_t_ha": 4.5,
+          "yield_source": "user",
+          "revenue_per_ha": 1080,
+          "cost_per_ha": 620,
+          "margin_per_ha": 460,
+          "margin_total": 17626,
+          "break_even_yield_t_ha": 2.58,
+          "risk_adjusted_margin_per_ha": 298,
+          "basis": "Rinde declarado por el productor (4.5 t/ha). Margen ajustado con supuestos aproximados: suelo seco −15 % del ingreso. No es un pronóstico.",
+          "currency": "USD"
+        }
+      },
+      {
+        "id": "pastura",
+        "crop": "alfalfa",
+        "area_ha": 50,
+        "indicators": {
+          "fire": {
+            "pct": 3,
+            "level": "bajo",
+            "basis": "Probabilidad de fuego en los próximos 7 días según el modelo de la zona."
+          },
+          "water": {
+            "pct": 49,
+            "level": "seco",
+            "basis": "Humedad de la raíz (NASA POWER GWETROOT), promedio de los últimos 30 días; está por debajo del percentil 20 de noviembre en la historia de esta zona. Esta parcela comparte la celda de datos climáticos con otra parcela del lote."
+          },
+          "heat": {
+            "days_over_35": 23.2,
+            "basis": "Promedio anual de días por encima de 35 °C (serie diaria NASA POWER, con corrección por altura). Esta parcela comparte la celda de datos climáticos con otra parcela del lote."
+          },
+          "frost": {
+            "frost_free_days": 289,
+            "window": {
+              "start": "08-26",
+              "end": "06-11"
+            },
+            "basis": "Días del año entre la última helada de primavera y la primera de otoño (mediana de años completos, NASA POWER, con corrección por altura). Esta parcela comparte la celda de datos climáticos con otra parcela del lote."
+          },
+          "snow": {
+            "days_per_year": 0.1,
+            "pct_years_with_snow": 12,
+            "basis": "Días por año con nevada sobre 1 mm (NASA POWER PRECSNOLAND, 2001–hoy); nieva algunos años en esta zona. Esta parcela comparte la celda de datos climáticos con otra parcela del lote."
+          },
+          "hail": {
+            "available": false,
+            "basis": "No hay un dato satelital de granizo para tu zona en esta app; consultá el servicio meteorológico y tu aseguradora."
+          },
+          "enso": {
+            "phase_now": "el_nino",
+            "oni": 2.5,
+            "oni_period": "ASO 2026",
+            "rain_effect_pct": {
+              "el_nino": 17,
+              "la_nina": -25
+            },
+            "basis": "ENSO según el índice ONI de NOAA: ahora El Niño (+2.5 °C). En esta zona, los años El Niño llovieron +17 % y los La Niña -25 % respecto al promedio en octubre–marzo. Es una tendencia histórica, no un pronóstico."
+          },
+          "flood": {
+            "heavy_rain_days_yr": 2.5,
+            "low_slope": false,
+            "basis": "2.5 días por año con lluvia fuerte (sobre 20 mm) y terreno con pendiente: el agua escurre, riesgo de anegamiento menor. Esta parcela comparte la celda de datos climáticos con otra parcela del lote."
+          },
+          "evaporation": {
+            "mm_per_year": 904,
+            "monthly_mm": [
+              120.1,
+              105.2,
+              98.7,
+              65.6,
+              36.5,
+              24,
+              26.4,
+              41,
+              62.2,
+              96.3,
+              117.2,
+              122.6
+            ],
+            "balance_mm": {
+              "1": 3.5,
+              "2": 21.6,
+              "3": 40.1,
+              "4": 45.2,
+              "5": 29.9,
+              "6": 1.5,
+              "7": 7.4,
+              "8": 8,
+              "9": 2.9,
+              "10": 21.5,
+              "11": -7.4,
+              "12": -8.2
+            },
+            "basis": "Cuánta agua pierde el suelo y las plantas al aire por año (NASA POWER EVLAND, mm/día sumada por mes y por año); el balance mensual es lluvia menos evaporación en mm. Esta parcela comparte la celda de datos climáticos con otra parcela del lote."
+          },
+          "infiltration": {
+            "class": "media",
+            "score": 41,
+            "basis": "Puntaje 0-100 a partir de textura Franco-arcilloso, MO 19.5 g/kg, pendiente 5.3 %, 122 días/año de suelo desnudo (grupos hidrológicos de suelo USDA; fórmula en knowledge/README). Ordena el riesgo relativo, no es una medición. Esta parcela comparte la celda de datos climáticos con otra parcela del lote."
+          }
+        },
+        "alerts": [
+          {
+            "kind": "dry",
+            "severity": "medium",
+            "text": "El suelo está más seco que lo normal y el lote tiene Alfalfa (pastura). Sin acceso a agua: priorizá el monitoreo y el riego en esta parcela."
+          }
+        ],
+        "order": [
+          "drought",
+          "fire",
+          "flood",
+          "frost",
+          "heat",
+          "enso",
+          "hail"
+        ],
+        "extra": [
+          {
+            "id": "snow",
+            "hidden": true
+          }
+        ],
+        "economics": {
+          "expected_yield_t_ha": 12,
+          "yield_source": "user",
+          "revenue_per_ha": 1440,
+          "cost_per_ha": 500,
+          "margin_per_ha": 940,
+          "margin_total": 46980,
+          "break_even_yield_t_ha": 4.17,
+          "risk_adjusted_margin_per_ha": 724,
+          "basis": "Rinde declarado por el productor (12 t/ha). Margen ajustado con supuestos aproximados: suelo seco −15 % del ingreso. No es un pronóstico.",
+          "currency": "USD"
+        }
+      }
+    ],
+    "zones": [
+      {
+        "kind": "dry",
+        "geometry": {
+          "type": "Polygon",
+          "coordinates": [
+            [
+              [
+                -60.57,
+                -33.8835
+              ],
+              [
+                -60.57,
+                -33.8895
+              ],
+              [
+                -60.5775,
+                -33.8895
+              ],
+              [
+                -60.5775,
+                -33.8835
+              ],
+              [
+                -60.57,
+                -33.8835
+              ]
+            ]
+          ]
+        },
+        "center": [
+          -60.57375,
+          -33.8865
+        ],
+        "radius_m": null,
+        "pct": 49,
+        "label": "Suelo más seco que lo normal (soja)",
+        "source": "NASA POWER GWETROOT",
+        "date": "2026-11-15"
+      },
+      {
+        "kind": "dry",
+        "geometry": {
+          "type": "Polygon",
+          "coordinates": [
+            [
+              [
+                -60.5645,
+                -33.8835
+              ],
+              [
+                -60.563,
+                -33.8855
+              ],
+              [
+                -60.564,
+                -33.8895
+              ],
+              [
+                -60.57,
+                -33.8895
+              ],
+              [
+                -60.57,
+                -33.8835
+              ],
+              [
+                -60.5645,
+                -33.8835
+              ]
+            ]
+          ]
+        },
+        "center": [
+          -60.56678,
+          -33.8865
+        ],
+        "radius_m": null,
+        "pct": 49,
+        "label": "Suelo más seco que lo normal (maiz)",
+        "source": "NASA POWER GWETROOT",
+        "date": "2026-11-15"
+      },
+      {
+        "kind": "dry",
+        "geometry": {
+          "type": "Polygon",
+          "coordinates": [
+            [
+              [
+                -60.564,
+                -33.8895
+              ],
+              [
+                -60.5645,
+                -33.896
+              ],
+              [
+                -60.57,
+                -33.896
+              ],
+              [
+                -60.57,
+                -33.8895
+              ],
+              [
+                -60.564,
+                -33.8895
+              ]
+            ]
+          ]
+        },
+        "center": [
+          -60.56712,
+          -33.8927
+        ],
+        "radius_m": null,
+        "pct": 49,
+        "label": "Suelo más seco que lo normal (trigo)",
+        "source": "NASA POWER GWETROOT",
+        "date": "2026-11-15"
+      },
+      {
+        "kind": "dry",
+        "geometry": {
+          "type": "Polygon",
+          "coordinates": [
+            [
+              [
+                -60.57,
+                -33.8895
+              ],
+              [
+                -60.57,
+                -33.896
+              ],
+              [
+                -60.5775,
+                -33.896
+              ],
+              [
+                -60.5775,
+                -33.8895
+              ],
+              [
+                -60.57,
+                -33.8895
+              ]
+            ]
+          ]
+        },
+        "center": [
+          -60.57375,
+          -33.89275
+        ],
+        "radius_m": null,
+        "pct": 49,
+        "label": "Suelo más seco que lo normal (alfalfa)",
+        "source": "NASA POWER GWETROOT",
+        "date": "2026-11-15"
+      }
+    ],
+    "nearby": {
+      "fire_stations": [],
+      "hospitals": [],
+      "water": [],
+      "source": "OpenStreetMap contributors",
+      "degraded": true
+    },
+    "summary": {
+      "headline": "La sequía es tu principal preocupación en todas las parcelas.",
+      "bullets": [
+        "Soja, maíz, trigo y alfalfa presentan un nivel de humedad del 49%, catalogado como seco.",
+        "El riesgo de fuego es bajo, con un 3% de probabilidad de detección en los próximos siete días.",
+        "Priorizá el monitoreo y el riego en todos los lotes ante la falta de acceso a agua."
+      ],
+      "source": "gemini"
+    },
+    "sources": [
+      {
+        "id": "power",
+        "text": "NASA POWER — clima diario 0,5°×0,625° (lluvia, temperatura, humedad de raíz GWETROOT)"
+      },
+      {
+        "id": "risk_model",
+        "text": "Modelo de riesgo de fuego — probabilidad a 7 días por celda H3"
+      },
+      {
+        "id": "firms",
+        "text": "NASA FIRMS — detecciones activas VIIRS/MODIS de las últimas 72 h"
+      },
+      {
+        "id": "enso",
+        "text": "NOAA CPC — índice ONI (El Niño / La Niña) y efecto histórico sobre la lluvia de la zona"
+      },
+      {
+        "id": "magyp",
+        "text": "MAGyP — rindes departamentales por cultivo cuando el productor no declara el propio"
+      },
+      {
+        "id": "field_grid",
+        "text": "Grilla de campo precalculada (IMERG lluvia, SRTM elevación, cobertura de suelo)"
+      },
+      {
+        "id": "osm",
+        "text": "OpenStreetMap contributors — servicios cercanos (bomberos, hospitales, agua)"
+      }
+    ],
+    "degraded": true,
+    "degraded_reason": "los servicios cercanos (OpenStreetMap) no respondieron"
+  },
+  "rotations": {
+    "diagnosis_id": "dx_274f3959286e",
+    "strategies": [
+      {
+        "id": "alfalfa3-maiz-trigo-soja2",
+        "name": "Pastura de alfalfa 3 años – maíz – trigo / soja 2ª",
+        "name_en": "3-yr alfalfa pasture – maize – wheat / 2nd soy",
+        "is_current": true,
+        "score": 0.5,
+        "confidence": "high",
+        "indicators": {
+          "water_balance": 87,
+          "water_balance_mm": 87,
+          "residue_t_ha_yr": 3.5,
+          "nitrogen": 4,
+          "bare_soil_days": 46,
+          "erosion_risk": "bajo",
+          "infiltration": "alta",
+          "pest_break": 2,
+          "income": "medium",
+          "forage": true,
+          "burns_avoided": 1,
+          "carbon": 3.5
+        },
+        "why": "Es tu rotación actual; sirve de referencia.",
+        "evidence": [
+          {
+            "text": "1.122,8 mm/año; 1 de cada 4 años < 921,4 mm",
+            "indicator": "rain",
+            "source": "GPM IMERG"
+          },
+          {
+            "text": "2 días/año con más de 50 mm",
+            "indicator": "heavy_rain",
+            "source": "NASA POWER"
+          },
+          {
+            "text": "Período libre de heladas: 25/08 – 11/06",
+            "indicator": "frost",
+            "source": "NASA POWER"
+          },
+          {
+            "text": "En zonas análogas (húmedo, heladas cortas, suelo franco arcilloso (785 celdas)), soja ocupa el 54 % del área sembrada y rinde ~2517 kg/ha",
+            "indicator": "analogs",
+            "source": "MAGyP 2024/2025"
+          },
+          {
+            "text": "maiz: consumo observado en el semiárido pampeano (INTA–FAUBA, 138 ensayos de secano): 487 mm (referencia FAO: 650 mm)",
+            "indicator": "water_balance",
+            "source": "el semiárido pampeano (INTA–FAUBA, 138 ensayos de secano)"
+          },
+          {
+            "text": "trigo: consumo observado en el semiárido pampeano (INTA–FAUBA, 138 ensayos de secano): 319 mm (referencia FAO: 550 mm)",
+            "indicator": "water_balance",
+            "source": "el semiárido pampeano (INTA–FAUBA, 138 ensayos de secano)"
+          }
+        ],
+        "benefits": {
+          "water_balance": 0,
+          "water_balance_mm": 0,
+          "residue_t_ha_yr": 0,
+          "nitrogen": 0,
+          "bare_soil_days": 0,
+          "erosion_risk": "bajo",
+          "infiltration": "alta",
+          "pest_break": 0,
+          "income": "medium",
+          "forage": 0,
+          "burns_avoided": 0,
+          "carbon": 0
+        },
+        "gaps": [
+          "alfalfa: aporte de carbono por raíz y corona: sin valor, depende del manejo y de la duración de la pastura",
+          "Días de lluvia fuerte tiene resolución 0.5°×0.625°: no distingue diferencias dentro del lote",
+          "Período sin heladas tiene resolución 0.5°×0.625°: no distingue diferencias dentro del lote",
+          "Días de calor extremo tiene resolución 0.5°×0.625°: no distingue diferencias dentro del lote"
+        ],
+        "risks": [
+          "Maíz: alta demanda de nitrógeno y de agua en floración.",
+          "Trigo: riesgo de heladas tardías en espigazón.",
+          "Monocultivo de soja: presión de malezas resistentes.",
+          "Los cambios de rotación tardan 2-3 campañas en mostrar efecto en el suelo.",
+          "Verificar disponibilidad de semilla y maquinaria antes de decidir.",
+          "Validar estas opciones con tu agrónomo de cabecera."
+        ],
+        "sequence": [
+          {
+            "crop": "alfalfa",
+            "start": "03-15",
+            "end": "03-14",
+            "cover": true
+          },
+          {
+            "crop": "alfalfa",
+            "start": "03-15",
+            "end": "03-14",
+            "cover": true
+          },
+          {
+            "crop": "alfalfa",
+            "start": "03-15",
+            "end": "03-14",
+            "cover": true
+          },
+          {
+            "crop": "maiz",
+            "start": "09-25",
+            "end": "03-15",
+            "cover": true
+          },
+          {
+            "crop": "trigo",
+            "start": "06-01",
+            "end": "12-10",
+            "cover": true
+          },
+          {
+            "crop": "soja",
+            "start": "12-15",
+            "end": "04-30",
+            "cover": true
+          }
+        ],
+        "measures": [
+          {
+            "id": "clean_harvester",
+            "name": "Limpiar la cosechadora",
+            "factor": "machine_ignition",
+            "why": "ignición por residuo seco (restos de trigo, cebada u otro material) acumulado sobre el motor y partes calientes: cosecha en meses secos/de quemas: [12]",
+            "name_en": "Clean the harvester",
+            "why_en": "harvest in dry/burning months: [12]",
+            "benefit": "elimina el foco más frecuente: cerca del 80 % de los incendios de cosecha empiezan en el motor, que trabaja a más de 600 °C",
+            "requires": {
+              "people": 1,
+              "machinery": [
+                "soplador o aire comprimido"
+              ],
+              "downtime_h": 0.5,
+              "cost": "low",
+              "reference_width_m": null,
+              "reference_width_note": null
+            },
+            "cost": "low",
+            "source": "INTA / UIB Balcarce (S. Tourn) + Bomberos Tandil (D. Ibáñez), 'Pautas para evitar incendios durante la cosecha' (2023-12-28), https://www.argentina.gob.ar/node/413622",
+            "checks": [
+              "revisar pérdidas de gasoil y aceite",
+              "revisar el matachispas del escape"
+            ]
+          },
+          {
+            "id": "fire_response_protocol",
+            "name": "Protocolo de incendio para cada cosecha",
+            "factor": "initial_attack",
+            "why": "demora y confusión en los primeros minutos de un incendio: este mes es temporada de quemas (nivel 2)",
+            "name_en": "Fire response protocol for each harvest",
+            "why_en": "this month is burning season (level 2)",
+            "benefit": "cada persona sabe qué hacer mientras llegan los bomberos: dar la ubicación exacta y alejar a la gente de la máquina",
+            "requires": {
+              "people": null,
+              "machinery": [],
+              "downtime_h": 0,
+              "cost": "low",
+              "reference_width_m": null,
+              "reference_width_note": null
+            },
+            "cost": "low",
+            "source": "INTA / UIB Balcarce (S. Tourn) + Bomberos Tandil (D. Ibáñez), 'Pautas para evitar incendios durante la cosecha' (2023-12-28), https://www.argentina.gob.ar/node/413622"
+          },
+          {
+            "id": "no_residue_burning",
+            "name": "No quemar rastrojos",
+            "factor": "residue_burning",
+            "why": "quema de rastrojo en época de alta propagación: este mes es temporada de quemas (nivel 2)",
+            "name_en": "Do not burn stubble",
+            "why_en": "this month is burning season (level 2)",
+            "benefit": "conserva la cobertura del suelo y elimina un foco de ignición evitable; quemar sin autorización está prohibido. La Ley 26.562 exige autorización de la autoridad local competente para quemar, durante todo el año",
+            "requires": {
+              "people": 0,
+              "machinery": [],
+              "downtime_h": 0,
+              "cost": "low",
+              "reference_width_m": null,
+              "reference_width_note": null
+            },
+            "cost": "low",
+            "source": "Ley 26.562 (2009), presupuestos mínimos de protección ambiental para el control de actividades de quema: toda quema requiere autorización previa de la autoridad local"
+          },
+          {
+            "id": "water_and_extinguisher",
+            "name": "Agua y matafuegos a mano",
+            "factor": "initial_attack",
+            "why": "ataque inicial del foco antes de que lleguen los bomberos: cosecha en meses secos/de quemas: [12]",
+            "name_en": "Water and extinguishers at hand",
+            "why_en": "harvest in dry/burning months: [12]",
+            "benefit": "matafuegos tipo A, B y C dimensionados a cada cosechadora y tanque montado de al menos 500 l con bomba para controlar rápido",
+            "requires": {
+              "people": 1,
+              "machinery": [
+                "tanque de 500 l con bomba",
+                "matafuegos ABC"
+              ],
+              "downtime_h": 0,
+              "cost": "medium",
+              "reference_width_m": null,
+              "reference_width_note": null
+            },
+            "cost": "medium",
+            "source": "INTA / UIB Balcarce (S. Tourn) + Bomberos Tandil (D. Ibáñez), 'Pautas para evitar incendios durante la cosecha' (2023-12-28), https://www.argentina.gob.ar/node/413622"
+          }
+        ],
+        "measures_gaps": []
+      },
+      {
+        "id": "maiz-soja-vicia",
+        "name": "Maíz – vicia – soja",
+        "name_en": "Maize – vetch – soy",
+        "is_current": false,
+        "score": 0.708,
+        "confidence": "high",
+        "indicators": {
+          "water_balance": -179,
+          "water_balance_mm": -179,
+          "residue_t_ha_yr": 8.4,
+          "nitrogen": 2,
+          "bare_soil_days": 97,
+          "erosion_risk": "bajo",
+          "infiltration": "alta",
+          "pest_break": 2,
+          "income": "medium",
+          "forage": true,
+          "burns_avoided": 1,
+          "carbon": 8.4
+        },
+        "why": "Atiende tus prioridades de cuidar el agua y evitar quemas. Secuencia: Maíz (sep–mar) → Vicia (cobertura) (abr–oct) → Soja (nov–abr); incluye cultivo de invierno: Vicia (cobertura) (abr–oct); deja el suelo sin cultivo vivo unos 97 días por año.",
+        "evidence": [
+          {
+            "text": "1.122,8 mm/año; 1 de cada 4 años < 921,4 mm",
+            "indicator": "rain",
+            "source": "GPM IMERG"
+          },
+          {
+            "text": "2 días/año con más de 50 mm",
+            "indicator": "heavy_rain",
+            "source": "NASA POWER"
+          },
+          {
+            "text": "Período libre de heladas: 25/08 – 11/06",
+            "indicator": "frost",
+            "source": "NASA POWER"
+          },
+          {
+            "text": "En zonas análogas (húmedo, heladas cortas, suelo franco arcilloso (785 celdas)), soja ocupa el 54 % del área sembrada y rinde ~2517 kg/ha",
+            "indicator": "analogs",
+            "source": "MAGyP 2024/2025"
+          },
+          {
+            "text": "maiz: consumo observado en el semiárido pampeano (INTA–FAUBA, 138 ensayos de secano): 487 mm (referencia FAO: 650 mm)",
+            "indicator": "water_balance",
+            "source": "el semiárido pampeano (INTA–FAUBA, 138 ensayos de secano)"
+          }
+        ],
+        "benefits": {
+          "water_balance": -266,
+          "water_balance_mm": -266,
+          "residue_t_ha_yr": 4.9,
+          "nitrogen": -2,
+          "bare_soil_days": 51,
+          "erosion_risk": "bajo",
+          "infiltration": "alta",
+          "pest_break": 0,
+          "income": "medium",
+          "forage": 0,
+          "burns_avoided": 0,
+          "carbon": 4.9
+        },
+        "gaps": [
+          "Días de lluvia fuerte tiene resolución 0.5°×0.625°: no distingue diferencias dentro del lote",
+          "Período sin heladas tiene resolución 0.5°×0.625°: no distingue diferencias dentro del lote",
+          "Días de calor extremo tiene resolución 0.5°×0.625°: no distingue diferencias dentro del lote",
+          "Humedad del suelo tiene resolución 0.5°×0.625°: no distingue diferencias dentro del lote"
+        ],
+        "risks": [
+          "Maíz: alta demanda de nitrógeno y de agua en floración.",
+          "Vicia puede ser hospedante de plagas de soja; consultar disponibilidad de semilla.",
+          "Monocultivo de soja: presión de malezas resistentes.",
+          "Los cambios de rotación tardan 2-3 campañas en mostrar efecto en el suelo.",
+          "Verificar disponibilidad de semilla y maquinaria antes de decidir.",
+          "Validar estas opciones con tu agrónomo de cabecera."
+        ],
+        "sequence": [
+          {
+            "crop": "maiz",
+            "start": "09-25",
+            "end": "03-15",
+            "cover": true
+          },
+          {
+            "crop": "vicia",
+            "start": "04-01",
+            "end": "10-15",
+            "cover": true
+          },
+          {
+            "crop": "soja",
+            "start": "11-01",
+            "end": "04-15",
+            "cover": true
+          }
+        ],
+        "measures": [
+          {
+            "id": "clean_harvester",
+            "name": "Limpiar la cosechadora",
+            "factor": "machine_ignition",
+            "why": "ignición por residuo seco (restos de trigo, cebada u otro material) acumulado sobre el motor y partes calientes: cosecha en meses secos/de quemas: [10]",
+            "name_en": "Clean the harvester",
+            "why_en": "harvest in dry/burning months: [10]",
+            "benefit": "elimina el foco más frecuente: cerca del 80 % de los incendios de cosecha empiezan en el motor, que trabaja a más de 600 °C",
+            "requires": {
+              "people": 1,
+              "machinery": [
+                "soplador o aire comprimido"
+              ],
+              "downtime_h": 0.5,
+              "cost": "low",
+              "reference_width_m": null,
+              "reference_width_note": null
+            },
+            "cost": "low",
+            "source": "INTA / UIB Balcarce (S. Tourn) + Bomberos Tandil (D. Ibáñez), 'Pautas para evitar incendios durante la cosecha' (2023-12-28), https://www.argentina.gob.ar/node/413622",
+            "checks": [
+              "revisar pérdidas de gasoil y aceite",
+              "revisar el matachispas del escape"
+            ]
+          },
+          {
+            "id": "fire_response_protocol",
+            "name": "Protocolo de incendio para cada cosecha",
+            "factor": "initial_attack",
+            "why": "demora y confusión en los primeros minutos de un incendio: este mes es temporada de quemas (nivel 2)",
+            "name_en": "Fire response protocol for each harvest",
+            "why_en": "this month is burning season (level 2)",
+            "benefit": "cada persona sabe qué hacer mientras llegan los bomberos: dar la ubicación exacta y alejar a la gente de la máquina",
+            "requires": {
+              "people": null,
+              "machinery": [],
+              "downtime_h": 0,
+              "cost": "low",
+              "reference_width_m": null,
+              "reference_width_note": null
+            },
+            "cost": "low",
+            "source": "INTA / UIB Balcarce (S. Tourn) + Bomberos Tandil (D. Ibáñez), 'Pautas para evitar incendios durante la cosecha' (2023-12-28), https://www.argentina.gob.ar/node/413622"
+          },
+          {
+            "id": "no_residue_burning",
+            "name": "No quemar rastrojos",
+            "factor": "residue_burning",
+            "why": "quema de rastrojo en época de alta propagación: este mes es temporada de quemas (nivel 2)",
+            "name_en": "Do not burn stubble",
+            "why_en": "this month is burning season (level 2)",
+            "benefit": "conserva la cobertura del suelo y elimina un foco de ignición evitable; quemar sin autorización está prohibido. La Ley 26.562 exige autorización de la autoridad local competente para quemar, durante todo el año",
+            "requires": {
+              "people": 0,
+              "machinery": [],
+              "downtime_h": 0,
+              "cost": "low",
+              "reference_width_m": null,
+              "reference_width_note": null
+            },
+            "cost": "low",
+            "source": "Ley 26.562 (2009), presupuestos mínimos de protección ambiental para el control de actividades de quema: toda quema requiere autorización previa de la autoridad local"
+          },
+          {
+            "id": "water_and_extinguisher",
+            "name": "Agua y matafuegos a mano",
+            "factor": "initial_attack",
+            "why": "ataque inicial del foco antes de que lleguen los bomberos: cosecha en meses secos/de quemas: [10]",
+            "name_en": "Water and extinguishers at hand",
+            "why_en": "harvest in dry/burning months: [10]",
+            "benefit": "matafuegos tipo A, B y C dimensionados a cada cosechadora y tanque montado de al menos 500 l con bomba para controlar rápido",
+            "requires": {
+              "people": 1,
+              "machinery": [
+                "tanque de 500 l con bomba",
+                "matafuegos ABC"
+              ],
+              "downtime_h": 0,
+              "cost": "medium",
+              "reference_width_m": null,
+              "reference_width_note": null
+            },
+            "cost": "medium",
+            "source": "INTA / UIB Balcarce (S. Tourn) + Bomberos Tandil (D. Ibáñez), 'Pautas para evitar incendios durante la cosecha' (2023-12-28), https://www.argentina.gob.ar/node/413622"
+          }
+        ],
+        "measures_gaps": []
+      },
+      {
+        "id": "sorgo-soja-trigo-soja2",
+        "name": "Sorgo – soja – trigo / soja 2ª",
+        "name_en": "Sorghum – soy – wheat / 2nd soy",
+        "is_current": false,
+        "score": 0.708,
+        "confidence": "high",
+        "indicators": {
+          "water_balance": -48,
+          "water_balance_mm": -48,
+          "residue_t_ha_yr": 7.5,
+          "nitrogen": 2,
+          "bare_soil_days": 140,
+          "erosion_risk": "bajo",
+          "infiltration": "alta",
+          "pest_break": 2,
+          "income": "high",
+          "forage": false,
+          "burns_avoided": 1,
+          "carbon": 7.5
+        },
+        "why": "Atiende tus prioridades de cuidar el agua y evitar quemas. Secuencia: Sorgo granífero (oct–abr) → Soja (nov–abr) → Trigo (jun–dic) → Soja (dic–abr); incluye cultivo de invierno: Trigo (jun–dic); deja el suelo sin cultivo vivo unos 140 días por año.",
+        "evidence": [
+          {
+            "text": "1.122,8 mm/año; 1 de cada 4 años < 921,4 mm",
+            "indicator": "rain",
+            "source": "GPM IMERG"
+          },
+          {
+            "text": "2 días/año con más de 50 mm",
+            "indicator": "heavy_rain",
+            "source": "NASA POWER"
+          },
+          {
+            "text": "Período libre de heladas: 25/08 – 11/06",
+            "indicator": "frost",
+            "source": "NASA POWER"
+          },
+          {
+            "text": "En zonas análogas (húmedo, heladas cortas, suelo franco arcilloso (785 celdas)), soja ocupa el 54 % del área sembrada y rinde ~2517 kg/ha",
+            "indicator": "analogs",
+            "source": "MAGyP 2024/2025"
+          },
+          {
+            "text": "trigo: consumo observado en el semiárido pampeano (INTA–FAUBA, 138 ensayos de secano): 319 mm (referencia FAO: 550 mm)",
+            "indicator": "water_balance",
+            "source": "el semiárido pampeano (INTA–FAUBA, 138 ensayos de secano)"
+          }
+        ],
+        "benefits": {
+          "water_balance": -135,
+          "water_balance_mm": -135,
+          "residue_t_ha_yr": 4,
+          "nitrogen": -2,
+          "bare_soil_days": 94,
+          "erosion_risk": "bajo",
+          "infiltration": "alta",
+          "pest_break": 0,
+          "income": "high",
+          "forage": -1,
+          "burns_avoided": 0,
+          "carbon": 4
+        },
+        "gaps": [
+          "Días de lluvia fuerte tiene resolución 0.5°×0.625°: no distingue diferencias dentro del lote",
+          "Período sin heladas tiene resolución 0.5°×0.625°: no distingue diferencias dentro del lote",
+          "Días de calor extremo tiene resolución 0.5°×0.625°: no distingue diferencias dentro del lote",
+          "Humedad del suelo tiene resolución 0.5°×0.625°: no distingue diferencias dentro del lote"
+        ],
+        "risks": [
+          "Sorgo: mercado más chico que maíz/soja; asegurar salida.",
+          "Monocultivo de soja: presión de malezas resistentes.",
+          "Trigo: riesgo de heladas tardías en espigazón.",
+          "Los cambios de rotación tardan 2-3 campañas en mostrar efecto en el suelo.",
+          "Verificar disponibilidad de semilla y maquinaria antes de decidir.",
+          "Validar estas opciones con tu agrónomo de cabecera."
+        ],
+        "sequence": [
+          {
+            "crop": "sorgo",
+            "start": "10-20",
+            "end": "04-15",
+            "cover": true
+          },
+          {
+            "crop": "soja",
+            "start": "11-01",
+            "end": "04-15",
+            "cover": true
+          },
+          {
+            "crop": "trigo",
+            "start": "06-01",
+            "end": "12-10",
+            "cover": true
+          },
+          {
+            "crop": "soja",
+            "start": "12-15",
+            "end": "04-30",
+            "cover": true
+          }
+        ],
+        "measures": [
+          {
+            "id": "clean_harvester",
+            "name": "Limpiar la cosechadora",
+            "factor": "machine_ignition",
+            "why": "ignición por residuo seco (restos de trigo, cebada u otro material) acumulado sobre el motor y partes calientes: cosecha en meses secos/de quemas: [12]",
+            "name_en": "Clean the harvester",
+            "why_en": "harvest in dry/burning months: [12]",
+            "benefit": "elimina el foco más frecuente: cerca del 80 % de los incendios de cosecha empiezan en el motor, que trabaja a más de 600 °C",
+            "requires": {
+              "people": 1,
+              "machinery": [
+                "soplador o aire comprimido"
+              ],
+              "downtime_h": 0.5,
+              "cost": "low",
+              "reference_width_m": null,
+              "reference_width_note": null
+            },
+            "cost": "low",
+            "source": "INTA / UIB Balcarce (S. Tourn) + Bomberos Tandil (D. Ibáñez), 'Pautas para evitar incendios durante la cosecha' (2023-12-28), https://www.argentina.gob.ar/node/413622",
+            "checks": [
+              "revisar pérdidas de gasoil y aceite",
+              "revisar el matachispas del escape"
+            ]
+          },
+          {
+            "id": "fire_response_protocol",
+            "name": "Protocolo de incendio para cada cosecha",
+            "factor": "initial_attack",
+            "why": "demora y confusión en los primeros minutos de un incendio: este mes es temporada de quemas (nivel 2)",
+            "name_en": "Fire response protocol for each harvest",
+            "why_en": "this month is burning season (level 2)",
+            "benefit": "cada persona sabe qué hacer mientras llegan los bomberos: dar la ubicación exacta y alejar a la gente de la máquina",
+            "requires": {
+              "people": null,
+              "machinery": [],
+              "downtime_h": 0,
+              "cost": "low",
+              "reference_width_m": null,
+              "reference_width_note": null
+            },
+            "cost": "low",
+            "source": "INTA / UIB Balcarce (S. Tourn) + Bomberos Tandil (D. Ibáñez), 'Pautas para evitar incendios durante la cosecha' (2023-12-28), https://www.argentina.gob.ar/node/413622"
+          },
+          {
+            "id": "no_residue_burning",
+            "name": "No quemar rastrojos",
+            "factor": "residue_burning",
+            "why": "quema de rastrojo en época de alta propagación: este mes es temporada de quemas (nivel 2)",
+            "name_en": "Do not burn stubble",
+            "why_en": "this month is burning season (level 2)",
+            "benefit": "conserva la cobertura del suelo y elimina un foco de ignición evitable; quemar sin autorización está prohibido. La Ley 26.562 exige autorización de la autoridad local competente para quemar, durante todo el año",
+            "requires": {
+              "people": 0,
+              "machinery": [],
+              "downtime_h": 0,
+              "cost": "low",
+              "reference_width_m": null,
+              "reference_width_note": null
+            },
+            "cost": "low",
+            "source": "Ley 26.562 (2009), presupuestos mínimos de protección ambiental para el control de actividades de quema: toda quema requiere autorización previa de la autoridad local"
+          },
+          {
+            "id": "water_and_extinguisher",
+            "name": "Agua y matafuegos a mano",
+            "factor": "initial_attack",
+            "why": "ataque inicial del foco antes de que lleguen los bomberos: cosecha en meses secos/de quemas: [12]",
+            "name_en": "Water and extinguishers at hand",
+            "why_en": "harvest in dry/burning months: [12]",
+            "benefit": "matafuegos tipo A, B y C dimensionados a cada cosechadora y tanque montado de al menos 500 l con bomba para controlar rápido",
+            "requires": {
+              "people": 1,
+              "machinery": [
+                "tanque de 500 l con bomba",
+                "matafuegos ABC"
+              ],
+              "downtime_h": 0,
+              "cost": "medium",
+              "reference_width_m": null,
+              "reference_width_note": null
+            },
+            "cost": "medium",
+            "source": "INTA / UIB Balcarce (S. Tourn) + Bomberos Tandil (D. Ibáñez), 'Pautas para evitar incendios durante la cosecha' (2023-12-28), https://www.argentina.gob.ar/node/413622"
+          }
+        ],
+        "measures_gaps": []
+      },
+      {
+        "id": "maiz-soja",
+        "name": "Maíz – soja",
+        "name_en": "Maize – soy",
+        "is_current": false,
+        "score": 0.708,
+        "confidence": "high",
+        "indicators": {
+          "water_balance": -62,
+          "water_balance_mm": -62,
+          "residue_t_ha_yr": 6.4,
+          "nitrogen": 1,
+          "bare_soil_days": 196,
+          "erosion_risk": "bajo",
+          "infiltration": "media",
+          "pest_break": 2,
+          "income": "high",
+          "forage": false,
+          "burns_avoided": 1,
+          "carbon": 6.4
+        },
+        "why": "Atiende tus prioridades de cuidar el agua y evitar quemas. Secuencia: Maíz (sep–mar) → Soja (nov–abr); sin cultivo de invierno; deja el suelo sin cultivo vivo unos 196 días por año.",
+        "evidence": [
+          {
+            "text": "1.122,8 mm/año; 1 de cada 4 años < 921,4 mm",
+            "indicator": "rain",
+            "source": "GPM IMERG"
+          },
+          {
+            "text": "2 días/año con más de 50 mm",
+            "indicator": "heavy_rain",
+            "source": "NASA POWER"
+          },
+          {
+            "text": "Período libre de heladas: 25/08 – 11/06",
+            "indicator": "frost",
+            "source": "NASA POWER"
+          },
+          {
+            "text": "En zonas análogas (húmedo, heladas cortas, suelo franco arcilloso (785 celdas)), soja ocupa el 54 % del área sembrada y rinde ~2517 kg/ha",
+            "indicator": "analogs",
+            "source": "MAGyP 2024/2025"
+          },
+          {
+            "text": "maiz: consumo observado en el semiárido pampeano (INTA–FAUBA, 138 ensayos de secano): 487 mm (referencia FAO: 650 mm)",
+            "indicator": "water_balance",
+            "source": "el semiárido pampeano (INTA–FAUBA, 138 ensayos de secano)"
+          }
+        ],
+        "benefits": {
+          "water_balance": -149,
+          "water_balance_mm": -149,
+          "residue_t_ha_yr": 2.9,
+          "nitrogen": -3,
+          "bare_soil_days": 150,
+          "erosion_risk": "bajo",
+          "infiltration": "media",
+          "pest_break": 0,
+          "income": "high",
+          "forage": -1,
+          "burns_avoided": 0,
+          "carbon": 2.9
+        },
+        "gaps": [
+          "Días de lluvia fuerte tiene resolución 0.5°×0.625°: no distingue diferencias dentro del lote",
+          "Período sin heladas tiene resolución 0.5°×0.625°: no distingue diferencias dentro del lote",
+          "Días de calor extremo tiene resolución 0.5°×0.625°: no distingue diferencias dentro del lote",
+          "Humedad del suelo tiene resolución 0.5°×0.625°: no distingue diferencias dentro del lote"
+        ],
+        "risks": [
+          "Maíz: alta demanda de nitrógeno y de agua en floración.",
+          "Monocultivo de soja: presión de malezas resistentes.",
+          "Los cambios de rotación tardan 2-3 campañas en mostrar efecto en el suelo.",
+          "Verificar disponibilidad de semilla y maquinaria antes de decidir.",
+          "Validar estas opciones con tu agrónomo de cabecera."
+        ],
+        "sequence": [
+          {
+            "crop": "maiz",
+            "start": "09-25",
+            "end": "03-15",
+            "cover": true
+          },
+          {
+            "crop": "soja",
+            "start": "11-01",
+            "end": "04-15",
+            "cover": true
+          }
+        ],
+        "measures": [
+          {
+            "id": "fire_response_protocol",
+            "name": "Protocolo de incendio para cada cosecha",
+            "factor": "initial_attack",
+            "why": "demora y confusión en los primeros minutos de un incendio: este mes es temporada de quemas (nivel 2)",
+            "name_en": "Fire response protocol for each harvest",
+            "why_en": "this month is burning season (level 2)",
+            "benefit": "cada persona sabe qué hacer mientras llegan los bomberos: dar la ubicación exacta y alejar a la gente de la máquina",
+            "requires": {
+              "people": null,
+              "machinery": [],
+              "downtime_h": 0,
+              "cost": "low",
+              "reference_width_m": null,
+              "reference_width_note": null
+            },
+            "cost": "low",
+            "source": "INTA / UIB Balcarce (S. Tourn) + Bomberos Tandil (D. Ibáñez), 'Pautas para evitar incendios durante la cosecha' (2023-12-28), https://www.argentina.gob.ar/node/413622"
+          },
+          {
+            "id": "no_residue_burning",
+            "name": "No quemar rastrojos",
+            "factor": "residue_burning",
+            "why": "quema de rastrojo en época de alta propagación: este mes es temporada de quemas (nivel 2)",
+            "name_en": "Do not burn stubble",
+            "why_en": "this month is burning season (level 2)",
+            "benefit": "conserva la cobertura del suelo y elimina un foco de ignición evitable; quemar sin autorización está prohibido. La Ley 26.562 exige autorización de la autoridad local competente para quemar, durante todo el año",
+            "requires": {
+              "people": 0,
+              "machinery": [],
+              "downtime_h": 0,
+              "cost": "low",
+              "reference_width_m": null,
+              "reference_width_note": null
+            },
+            "cost": "low",
+            "source": "Ley 26.562 (2009), presupuestos mínimos de protección ambiental para el control de actividades de quema: toda quema requiere autorización previa de la autoridad local"
+          }
+        ],
+        "measures_gaps": []
+      }
+    ],
+    "disclaimer": "Herramienta de apoyo: no reemplaza tu experiencia ni la de un agrónomo local.",
+    "confidence": "high"
+  }
+}

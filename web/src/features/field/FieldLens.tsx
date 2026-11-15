@@ -18,7 +18,8 @@ import {
   benefitValue, benefitRows, cardValueText, compareDeltas, deltaText, groupVariants,
   groupedCards, humanizeGap, indicatorLabelKey, irrigationNeedMm, measureReqPairs,
   orderNote, prioWeights, rankNote,
-  seqSegments, verdictDelta, PRIORITY_IDS, type Scenario,
+  seqSegments, verdictDelta, PRIORITY_IDS,
+  deriveRotPriorities, inferCurrentRotation, type Scenario,
 } from "../../domain/rotations";
 import { plainSummary, referenceText, localizeDiag } from "../../domain/clarity";
 import {
@@ -65,6 +66,16 @@ export type AnalysisTarget = {
     /** Dated cached response, shown only if the live call fails. */
     cached: ParcelsResponse;
     cachedDate: string;
+    /** Dated cached rotations reply (task 42): same honesty rules as
+     * `cached` — only when the live rotations run cannot happen. */
+    cachedRotations?: RotationsResponse;
+    /** i18n key of the note shown in the Rotaciones tab when the
+     * engine does not apply to this farm (perennial crops). */
+    rotationsNoteKey?: string;
+    /** The fictional producer line, localized. */
+    producer?: string;
+    /** The other guided demo, offered as "Otro ejemplo: …" link. */
+    other?: { hash: string; label: string };
   };
   profile?: Profile;
   econ?: Economics;
@@ -557,7 +568,7 @@ export interface DemoLot {
 
 export function FieldPanel({ target, open, onClose, onChangePlot, onMethods,
                              onResult, onEmergency, moistureSelection,
-                             onMoistureZones, onMoistureSelect }: {
+                             onMoistureZones, onMoistureSelect, tourStep }: {
   target: AnalysisTarget | null; open: boolean; onClose: () => void;
   onChangePlot: () => void;
   moistureSelection?: number | null;
@@ -569,6 +580,9 @@ export function FieldPanel({ target, open, onClose, onChangePlot, onMethods,
               fixture: boolean) => void;
   /** Open the emergency block (tel numbers + message). */
   onEmergency?: () => void;
+  /** Guided-tour anchor that just became active (task 42): the panel
+   * switches tabs so the anchor actually exists on screen. */
+  tourStep?: string | null;
 }) {
   const lot = target?.demoLot;
   const { t, lang } = useT();
@@ -588,7 +602,6 @@ export function FieldPanel({ target, open, onClose, onChangePlot, onMethods,
   const [current, setCurrent] = useState("unknown");
   const [prioSel, setPrioSel] = useState<string[]>([]);
   const [cons, setCons] = useState<Record<string, boolean>>({});
-  const [step, setStep] = useState<1 | 2>(1);
   const [reading, setReading] = useState(false);
   const [retry, setRetry] = useState(0);
   // parcels flow (task 34): needs -> POST /api/field/parcels -> panel
@@ -601,8 +614,8 @@ export function FieldPanel({ target, open, onClose, onChangePlot, onMethods,
   // kept in localStorage and sent inside the parcels request
   const [profile, setProfile] = useState<Profile>(loadProfile);
   const [econ, setEcon] = useState<Economics>(loadEconomics);
-  const [tab, setTab] = useState<"resumen" | "prioridades" | "mas">(
-    "resumen");
+  const [tab, setTab] = useState<
+    "resumen" | "rotaciones" | "prioridades" | "mas">("resumen");
   /** The detailed diagnosis loads only in the "Más información" tab. */
   const verMas = tab === "mas";
   const updateProfile = (p: Profile) => { setProfile(p); saveProfile(p); };
@@ -619,8 +632,11 @@ export function FieldPanel({ target, open, onClose, onChangePlot, onMethods,
     new Intl.NumberFormat(lang === "en" ? "en" : "es",
       { maximumFractionDigits: 1 }), [lang]);
 
+  // The diagnosis and the catalog load as soon as the parcels result
+  // arrives: the rotations run needs both (task 42), not just the
+  // "Más información" tab that displays them afterwards.
   useEffect(() => {
-    if (!open || !verMas) return;
+    if (!open || !pres?.ok) return;
     let active = true;
     setCatalogFailed(false);
     apiFieldCatalog().then((data) => {
@@ -629,7 +645,7 @@ export function FieldPanel({ target, open, onClose, onChangePlot, onMethods,
       setCatalogFailed(!data);
     });
     return () => { active = false; };
-  }, [open, catalogRetry, verMas]);
+  }, [open, catalogRetry, pres?.ok]);
 
   const body = useMemo<PlotBody | null>(() =>
     target ? plotBody(target.geom) : null, [target]);
@@ -655,11 +671,13 @@ export function FieldPanel({ target, open, onClose, onChangePlot, onMethods,
   // New target: reset the whole flow.
   useEffect(() => {
     setNeeds(undefined); setPres(null); setTab("resumen");
-    setDiag(null); setStep(1); setRots(null); setCachedDate(null);
+    setDiag(null); setRots(null); setCachedDate(null);
     setDiagnosisProblem(undefined);
     // a demo target carries its own fictional profile/economics
     setProfile(target?.profile ?? loadProfile());
     setEcon(target?.econ ?? loadEconomics());
+    autoRotFor.current = null;
+    setPrioSel([]); setCurrent("unknown");
   }, [target]);
 
   // POST /api/field/parcels — the main analysis.
@@ -689,16 +707,16 @@ export function FieldPanel({ target, open, onClose, onChangePlot, onMethods,
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, target, effNeeds, effParcels, lang, pRetry, profile, econ]);
 
-  // The detailed diagnosis only loads behind "Ver más".
+  // The detailed diagnosis loads with the parcels result so the
+  // rotations run can start without extra clicks (task 42).
   useEffect(() => {
-    if (!open || !body || !verMas) return;
+    if (!open || !body || !pres?.ok) return;
     const controller = new AbortController();
     const requests = comparisonRequests.current;
     const changed = lastDiagnosisBody.current !== body;
     if (changed) {
       lastDiagnosisBody.current = body;
       setDiag(null);
-      setStep(1);
       setSc(null);
       if (scenario) { applyScenario(null); return; }
     }
@@ -716,7 +734,7 @@ export function FieldPanel({ target, open, onClose, onChangePlot, onMethods,
       controller.abort();
       requests.latest++;
     };
-  }, [open, body, lot, retry, scenario, verMas]);
+  }, [open, body, lot, retry, scenario, pres?.ok]);
 
   useEffect(() => {
     if (open && verMas) { orinValidation().then(setOrin);
@@ -747,29 +765,33 @@ export function FieldPanel({ target, open, onClose, onChangePlot, onMethods,
     return sel.length < 3 ? [...sel, p] : sel;
   });
 
-  const runRotations = async () => {
+  const runRotations = async (cur = current, sel = prioSel) => {
     if (!diag || diag.coverage?.comparable === false || reading || comparing) return;
     const requests = comparisonRequests.current;
     const version = ++requests.latest;
     setComparing(true);
     setCompareFailed(false);
     setExplain({});
-    const r = await apiRotations({
+    let r = await apiRotations({
       diagnosis: diag,
       zone: diag.zone,
-      current: current === "unknown" ? null : { rotation_id: current },
-      priorities: prioWeights(prioSel),
+      current: cur === "unknown" ? null : { rotation_id: cur },
+      priorities: prioWeights(sel),
       constraints: {
         irrigation: cons.irrigation,
         livestock: cons.livestock,
         limited_market: cons.markets === false,
       },
     });
+    if (!r && target?.demo?.cachedRotations) {
+      // guided demo offline: the dated capture keeps the flow honest
+      r = target.demo.cachedRotations;
+    }
     if (version !== requests.latest) return;
     setComparing(false);
     setCompareFailed(!r);
     setRots(r);
-    setRefRun(current === "unknown");
+    setRefRun(cur === "unknown");
     if (r) {
       const e = await apiExplain(r); // explain takes the rotations response
       if (e && version === requests.latest) {
@@ -779,6 +801,20 @@ export function FieldPanel({ target, open, onClose, onChangePlot, onMethods,
       }
     }
   };
+
+  /* Rotations run automatically once the parcels result brought a
+   * diagnosis and the catalog (task 42): the current rotation is
+   * inferred from the parcels' crops and the priorities derived from
+   * the hazard profile — the farmer can correct both in the form. */
+  const hasEcon = Object.keys(econ.parcels ?? {}).length > 0;
+  const rotDerived = useMemo(
+    () => deriveRotPriorities(profile.order, hasEcon),
+    [profile, hasEcon]);
+  const rotInferredId = useMemo(() => {
+    if (!catalog) return null;
+    return inferCurrentRotation(
+      effParcels.map((p) => p.crop), catalog.rotations);
+  }, [catalog, effParcels]);
 
   const base = useMemo(() => diag ? { ...diag, ...diag.baseline } : null, [diag]);
   const summary = base ? plainSummary(base, lang) : [];
@@ -800,11 +836,43 @@ export function FieldPanel({ target, open, onClose, onChangePlot, onMethods,
   const tv = (vars: Record<string, string | number>) =>
     Object.fromEntries(Object.entries(vars).map(([k, v]) =>
       [k, typeof v === "string" && v.startsWith("risk.cat.") ? t(v) : v]));
-  const openCompare = () => {
-    setStep(2);
-    setTimeout(() => formRef.current?.scrollIntoView(
-      { behavior: "smooth", block: "start" }), 50);
-  };
+
+  const autoRotFor = useRef<string | null>(null);
+  useEffect(() => {
+    if (!open || !diag || !catalog || !canCompare || rots || comparing
+        || reading) return;
+    const key = JSON.stringify(body);
+    if (autoRotFor.current === key) return;
+    autoRotFor.current = key;
+    const cur = rotInferredId?.id ?? "unknown";
+    setCurrent(cur);
+    setPrioSel(rotDerived.sel);
+    void runRotations(cur, rotDerived.sel);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, diag, catalog, canCompare, rots, comparing, reading,
+      body, rotInferredId, rotDerived]);
+
+  // A demo guided run ends on the rotation cards (task 42); a saved
+  // rotations capture also applies when the diagnosis never arrived.
+  useEffect(() => {
+    if (!target?.demo) return;
+    if (rots) { if (tab === "resumen") setTab("rotaciones"); return; }
+    if (pres?.ok && target.demo.cachedRotations && !reading && !diag) {
+      setRots(target.demo.cachedRotations);
+      setRefRun(true);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [target, rots, pres?.ok, reading, diag]);
+
+  // Guided tour steps that live inside a tab: switch so the anchor
+  // exists ("parcels" -> resumen rows, rotation steps -> rotaciones).
+  useEffect(() => {
+    if (!tourStep) return;
+    if (tourStep === "parcels") setTab("resumen");
+    if (tourStep === "rotaciones" || tourStep === "rotcard") {
+      setTab("rotaciones");
+    }
+  }, [tourStep]);
 
   return (
     <BottomSheet open={open}>
@@ -825,8 +893,11 @@ export function FieldPanel({ target, open, onClose, onChangePlot, onMethods,
           </div>
           {target.demo && (
             <p className="muted demo-note">
-              <strong>{t("demo.producer")}</strong><br />
+              <strong>{target.demo.producer ?? t("demo.producer")}</strong><br />
               {t("demo.disclaimer")}
+              {target.demo.other && (
+                <>{" · "}<a href={target.demo.other.hash}>
+                  {target.demo.other.label}</a></>)}
             </p>)}
         </div>)}
       {lot?.synthetic && <SyntheticBanner t={t} />}
@@ -892,6 +963,8 @@ export function FieldPanel({ target, open, onClose, onChangePlot, onMethods,
                   setTab(id as typeof tab)}
                 tabs={[
                   { id: "resumen", label: t("parcels.tab.summary") },
+                  { id: "rotaciones",
+                    label: t("parcels.tab.rotations") },
                   { id: "prioridades",
                     label: t("parcels.tab.priorities") },
                   { id: "mas", label: t("parcels.tab.more") },
@@ -902,6 +975,142 @@ export function FieldPanel({ target, open, onClose, onChangePlot, onMethods,
             <ParcelsResult res={pres.res} parcels={effParcels}
                            profile={profile} t={t} fmt={fmt}
                            onRetry={() => setPRetry((n) => n + 1)} />)}
+          {tab === "rotaciones" && (
+            <section className="rotaciones" data-tour="rotaciones">
+              {target?.demo?.rotationsNoteKey && (
+                <p className="notice" role="status">
+                  {t(target.demo.rotationsNoteKey)}</p>)}
+              {lot && (
+                <p className="notice" role="status">
+                  {t("orin.rot.none", { crop: lot.crop_label })}</p>)}
+              {!lot && !canCompare && diag && (
+                <p className="muted">{t("field.coverage.noCompare")}</p>)}
+              {!lot && canCompare && (
+                <>
+                  {rotInferredId && current === rotInferredId.id && (
+                    <p className="muted rot-est">
+                      {t("rot.estCurrent", {
+                        rot: catalog?.rotations
+                          .find((r) => r.id === rotInferredId.id)
+                          ?.name[lang] ?? rotInferredId.id })}{" "}
+                      <button type="button" className="linklike"
+                              onClick={() => formRef.current
+                                ?.scrollIntoView({ behavior: "smooth",
+                                                   block: "start" })}>
+                        {t("rot.estChange")}</button>
+                    </p>)}
+                  <p className="muted rot-derived" role="note">
+                    {rotDerived.sel.length
+                      ? t("rot.derivedPrio", {
+                          list: rotDerived.sel
+                            .map((p) => t(`prio.${p}`)).join(", ") })
+                      : t("rot.derivedNone")}{" "}
+                    <button type="button" className="linklike"
+                            onClick={() => formRef.current
+                              ?.scrollIntoView({ behavior: "smooth",
+                                                 block: "start" })}>
+                      {t("rot.prioAdjust")}</button>
+                    {rotDerived.warn.length > 0 && (
+                      <span className="rot-note"
+                            title={t("rot.warnHint")}>
+                        {" "}{t("rot.warnConstraints", {
+                          list: rotDerived.warn
+                            .map((h) => t(`parcels.hz.${h}`))
+                            .join(", ") })}</span>)}
+                    {rotDerived.unmapped.length > 0 && (
+                      <span className="rot-note"
+                            title={t("rot.unmappedHint")}>
+                        {" "}{t("rot.unmapped", {
+                          list: rotDerived.unmapped
+                            .map((h) => t(`parcels.hz.${h}`))
+                            .join(", ") })}</span>)}
+                  </p>
+                  {(reading || comparing) && !rots && (
+                    <p role="status">{t("field.form.comparing")}</p>)}
+                  {compareFailed && (
+                    <p role="status">{t("field.form.failed")}{" "}
+                      <button type="button"
+                              onClick={() => void runRotations()}>
+                        {t("field.diagnosis.retry")}</button></p>)}
+                  {!rots && !reading && !comparing && !compareFailed &&
+                    diag && <p className="notice">{t("rot.disclaimer")}</p>}
+                  {rotsView && (
+                    <RotationResults rots={rotsView} diag={diag}
+                                     explain={explain} t={t}
+                                     reference={refRun}
+                                     explainMode={explainMode ?? undefined}
+                                     onMethods={onMethods} />)}
+                  <div ref={formRef}>
+                  <Card title={t("field.form.run")}>
+                    <label>{t("field.form.current")}
+                      <select value={current}
+                              onChange={(e) => setCurrent(e.target.value)}>
+                        <option value="unknown">
+                          {t("field.form.dontKnow")}</option>
+                        {catalog?.rotations.map((r) =>
+                          <option key={r.id} value={r.id}>
+                            {r.name[lang] ?? r.name.es ?? r.id}</option>)}
+                      </select>
+                    </label>
+                    {catalogFailed && (
+                      <p role="status">
+                        {t("field.form.catalogFailed")}{" "}
+                        <button type="button" onClick={() =>
+                          setCatalogRetry((n) => n + 1)}>
+                          {t("field.diagnosis.retry")}
+                        </button>
+                      </p>)}
+                    {current === "unknown" && (
+                      <p className="muted">{t("field.form.dontKnowHint")}</p>)}
+                    <fieldset className="prio-set">
+                      <legend>{t("prio.choose")}</legend>
+                      <div className="prio-chips" role="group"
+                           aria-label={t("prio.choose")}>
+                        {PRIORITY_IDS.map((p) => {
+                          const rank = prioSel.indexOf(p);
+                          return (
+                            <button key={p} type="button" className="chip"
+                                    aria-pressed={rank >= 0}
+                                    onClick={() => togglePrio(p)}>
+                              {t(`prio.${p}`)}
+                              {rank >= 0 &&
+                                <span className="rank"> {rank + 1}</span>}
+                            </button>);
+                        })}
+                      </div>
+                      <p className="muted">{t("prio.hint")}</p>
+                    </fieldset>
+                    <fieldset className="cons-set">
+                      <legend>{t("field.form.constraints")}</legend>
+                      <div className="cons-grid">
+                        {CONSTRAINTS.map((c) => (
+                          <label key={c}>
+                            {t(`field.form.${c}`)}
+                            <select value={String(cons[c] ?? "")} onChange={(e) => {
+                              const value = e.target.value;
+                              setCons((previous) => {
+                                const next = { ...previous };
+                                if (value === "") delete next[c];
+                                else next[c] = value === "true";
+                                return next;
+                              });
+                            }}>
+                              <option value="">{t("field.form.dontKnow")}</option>
+                              <option value="true">{t("field.form.yes")}</option>
+                              <option value="false">{t("field.form.no")}</option>
+                            </select>
+                          </label>))}
+                      </div>
+                    </fieldset>
+                    {comparing && <p role="status">{t("field.form.comparing")}</p>}
+                    <button className="primary"
+                            onClick={() => void runRotations()}
+                            disabled={reading || comparing || !diag}>
+                      {t("field.form.run")}</button>
+                  </Card>
+                  </div>
+                </>)}
+            </section>)}
           {tab === "prioridades" && (
             <section className="card prio-card">
               <h4 style={{ marginTop: 0 }}>{t("parcels.prio.title")}</h4>
@@ -915,6 +1124,15 @@ export function FieldPanel({ target, open, onClose, onChangePlot, onMethods,
                       onClick={() => { setPRetry((n) => n + 1);
                                        setTab("resumen"); }}>
                 {t("parcels.rerun")}</button>
+              {rotDerived.sel.length > 0 && (
+                <p className="muted rot-derived" role="note">
+                  {t("rot.derivedPrio", {
+                    list: rotDerived.sel
+                      .map((p) => t(`prio.${p}`)).join(", ") })}{" "}
+                  <button type="button" className="linklike"
+                          onClick={() => setTab("rotaciones")}>
+                    {t("rot.prioAdjust")}</button>
+                </p>)}
             </section>)}
           {tab === "mas" && (
             <>
@@ -982,9 +1200,6 @@ export function FieldPanel({ target, open, onClose, onChangePlot, onMethods,
           </section>
 
           <div className="field-actions">
-            {step === 1 && !rots && !lot && canCompare && (
-              <button className="primary" onClick={openCompare}>
-                {t("field.form.open")}</button>)}
             <button onClick={onChangePlot}>{t("field.changePlot")}</button>
           </div>
 
@@ -1111,87 +1326,8 @@ export function FieldPanel({ target, open, onClose, onChangePlot, onMethods,
             </div>
           </details>
 
-          {lot && (
-            <p className="notice" role="status">
-              {t("orin.rot.none", { crop: lot.crop_label })}
-            </p>)}
-
-          {step === 2 && !lot && canCompare && (
-            <div ref={formRef}>
-            <Card title={t("field.form.run")}>
-              <label>{t("field.form.current")}
-                <select value={current}
-                        onChange={(e) => setCurrent(e.target.value)}>
-                  <option value="unknown">{t("field.form.dontKnow")}</option>
-                  {catalog?.rotations.map((r) =>
-                    <option key={r.id} value={r.id}>{r.name[lang] ?? r.name.es ?? r.id}</option>)}
-                </select>
-              </label>
-              {catalogFailed && (
-                <p role="status">
-                  {t("field.form.catalogFailed")}{" "}
-                  <button type="button" onClick={() => setCatalogRetry((n) => n + 1)}>
-                    {t("field.diagnosis.retry")}
-                  </button>
-                </p>)}
-              {current === "unknown" && (
-                <p className="muted">{t("field.form.dontKnowHint")}</p>)}
-              <fieldset className="prio-set">
-                <legend>{t("prio.choose")}</legend>
-                <div className="prio-chips" role="group"
-                     aria-label={t("prio.choose")}>
-                  {PRIORITY_IDS.map((p) => {
-                    const rank = prioSel.indexOf(p);
-                    return (
-                      <button key={p} type="button" className="chip"
-                              aria-pressed={rank >= 0}
-                              onClick={() => togglePrio(p)}>
-                        {t(`prio.${p}`)}
-                        {rank >= 0 &&
-                          <span className="rank"> {rank + 1}</span>}
-                      </button>);
-                  })}
-                </div>
-                <p className="muted">{t("prio.hint")}</p>
-              </fieldset>
-              <fieldset className="cons-set">
-                <legend>{t("field.form.constraints")}</legend>
-                <div className="cons-grid">
-                  {CONSTRAINTS.map((c) => (
-                    <label key={c}>
-                      {t(`field.form.${c}`)}
-                      <select value={String(cons[c] ?? "")} onChange={(e) => {
-                        const value = e.target.value;
-                        setCons((previous) => {
-                          const next = { ...previous };
-                          if (value === "") delete next[c];
-                          else next[c] = value === "true";
-                          return next;
-                        });
-                      }}>
-                        <option value="">{t("field.form.dontKnow")}</option>
-                        <option value="true">{t("field.form.yes")}</option>
-                        <option value="false">{t("field.form.no")}</option>
-                      </select>
-                    </label>))}
-                </div>
-              </fieldset>
-              {comparing && <p role="status">{t("field.form.comparing")}</p>}
-              {compareFailed && <p role="status">{t("field.form.failed")}</p>}
-              <button className="primary" onClick={runRotations}
-                      disabled={reading || comparing}>
-                {t("field.form.run")}</button>
-            </Card>
-            </div>)}
         </>
       )}
-
-      {rotsView && <RotationResults rots={rotsView} diag={diag}
-                                explain={explain} t={t}
-                                reference={refRun}
-                                explainMode={explainMode ?? undefined}
-                                onMethods={onMethods} />}
-      {!rots && diag && <p className="notice">{t("rot.disclaimer")}</p>}
         </>
       )}
             <SourcesBlock res={pres.res} t={t} />

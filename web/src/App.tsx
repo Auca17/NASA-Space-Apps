@@ -29,9 +29,8 @@ import {
 import { splitSelection, clipZone, ROAD_HALF_WIDTH } from "./domain/split";
 import { nearestMidpoint, nearestVertex } from "./domain/parcelsGeo";
 import {
-  isDemoHash, MENDOZA_BOUNDARY, MENDOZA_CACHED, MENDOZA_ECON,
-  MENDOZA_NEEDS, MENDOZA_PARCELS, MENDOZA_PROFILE,
-} from "./features/demo/mendozaFarm";
+  DEMO_FARMS, demoForHash, type DemoId,
+} from "./features/demo/demoFarms";
 import { GuidedTour } from "./features/demo/GuidedTour";
 import { tourSeen } from "./features/demo/demoTour";
 import {
@@ -148,6 +147,9 @@ export default function App() {
     res: ParcelsResponse; parcels: ParcelInput[] } | null>(null);
   /** Guided demo tour: opens once the demo result is on the screen. */
   const [demoTour, setDemoTour] = useState(false);
+  /** Anchor id of the active tour step; FieldPanel switches tabs so
+   * the anchored element exists (task 42). */
+  const [tourStep, setTourStep] = useState<string | null>(null);
   /** #demo can fire before the map exists: the farm frame is queued
    * here and applied once the globe reports ready. */
   const demoFitPending = useRef(false);
@@ -489,9 +491,10 @@ export default function App() {
   }, [mode]);
 
   // deep-link: #lat,lon jumps straight to a location (dev + sharing),
-  // #demo opens the guided Mendoza example
+  // #demo / #demo-mendoza open the guided examples
   useEffect(() => {
-    if (isDemoHash(location.hash)) { startDemo(); return; }
+    const id = demoForHash(location.hash);
+    if (id) { startDemo(id); return; }
     const m = location.hash.match(/^#(-?\d+(?:\.\d+)?),(-?\d+(?:\.\d+)?)$/);
     if (m) locate(Number(m[1]), Number(m[2]));
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -499,7 +502,10 @@ export default function App() {
 
   // /app/#demo typed (or tapped from the landing) while the app runs
   useEffect(() => {
-    const on = () => { if (isDemoHash(location.hash)) startDemo(); };
+    const on = () => {
+      const id = demoForHash(location.hash);
+      if (id) startDemo(id);
+    };
     window.addEventListener("hashchange", on);
     return () => window.removeEventListener("hashchange", on);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -711,26 +717,34 @@ export default function App() {
     startField("none");
   };
 
-  /** One-tap guided demo (task 40): a fictional Mendoza farm on a real
-   * Valle de Uco location — parcels, producer profile and a cached
-   * fallback all come from features/demo/mendozaFarm. The analysis
-   * itself is the live /api/field/parcels call. */
-  const startDemo = () => {
+  /** One-tap guided demo (tasks 40/42): a fictional farm on a real
+   * location — "pergamino" (primary, annual crops + rotations) or
+   * "mendoza" (secondary, perennials). Geometry, parcels, producer
+   * profile and the dated cached fallback come from features/demo;
+   * the analysis itself is the live /api/field/parcels call. */
+  const startDemo = (id: DemoId = "pergamino") => {
+    const farm = DEMO_FARMS[id];
     setMode("field"); setDraw("none"); setSelection(null); setAdjust(null);
     setFieldsView(null); setShownField(null); setPendingZone(null);
     setParcelRes(null); setParcelsWizard(false);
+    setDemoTour(false); setTourStep(null);
     demoFitPending.current = true;
     setEmergencyCountry("AR");
     analyze({
-      geom: MENDOZA_BOUNDARY,
-      areaLabel: t("demo.farmArea"),
-      fieldName: t("demo.farmName"),
-      parcels: MENDOZA_PARCELS,
-      needs: MENDOZA_NEEDS,
-      profile: MENDOZA_PROFILE,
-      econ: MENDOZA_ECON,
-      demo: { cached: MENDOZA_CACHED.res,
-              cachedDate: MENDOZA_CACHED.date },
+      geom: farm.boundary,
+      areaLabel: t(farm.areaKey),
+      fieldName: t(farm.nameKey),
+      parcels: farm.parcels,
+      needs: farm.needs,
+      profile: farm.profile,
+      econ: farm.econ,
+      demo: { cached: farm.cached.res,
+              cachedDate: farm.cached.date,
+              cachedRotations: farm.cachedRotations,
+              rotationsNoteKey: farm.rotationsNoteKey,
+              producer: t(farm.producerKey),
+              other: { hash: farm.other.hash,
+                       label: t(farm.other.labelKey) } },
     });
   };
 
@@ -1006,7 +1020,9 @@ export default function App() {
                              res={parcelRes.res} />
           </Suspense>)}
         {demoTour && parcelRes && (
-          <GuidedTour onClose={() => setDemoTour(false)} />)}
+          <GuidedTour onClose={() => { setDemoTour(false);
+                                      setTourStep(null); }}
+                      onStep={(sel) => setTourStep(sel)} />)}
         {mode === "field" && !fieldOpen && !selection &&
           (draw !== "none" || !fieldsView) && (
           <FieldPicker draw={mapUnavailable ? "none" : draw} points={draft.length}
@@ -1053,7 +1069,8 @@ export default function App() {
                       }}
                       onEmergency={() => setEmergOpen(true)}
                       moistureSelection={selectedMoisture} onMoistureZones={showMoisture}
-                      onMoistureSelect={focusMoisture} />
+                      onMoistureSelect={focusMoisture}
+                      tourStep={tourStep} />
         </Suspense>)}
       <MethodsDrawer open={methodsOpen}
                      onClose={() => setMethodsOpen(false)} />
