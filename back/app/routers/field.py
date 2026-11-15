@@ -27,6 +27,9 @@ from ..services.infiltration import (infiltration_class,
                                      infiltration_score)
 from ..services.et0 import METHOD_LABEL, et0_series
 from ..services.accuracy import accuracy_block
+from ..services.timeline import build_timeline
+from ..services.bare_soil_s2 import (bare_soil_estimate,
+                                    reason_text as s2_reason_text)
 
 log = logging.getLogger("field")
 
@@ -456,7 +459,7 @@ def _fmt_es(v, dec=1):
 
 
 def build_cards(power, soilg, slope, ndvi, grid_cell, fire_cal,
-                risk_cell, r5, adj=None, zone=None):
+                risk_cell, r5, adj=None, zone=None, bare_s2=None):
     P = (power or {}).get
     cards = []
 
@@ -676,6 +679,26 @@ def build_cards(power, soilg, slope, ndvi, grid_cell, fire_cal,
             "MODIS MOD13C2 (field/grid)", "0.05°", "low",
             f"~{grid_bare:g} days/yr with bare ground "
             "(monthly NDVI <0.2, precomputed)"))
+    elif bare_s2 and bare_s2.get("bare_soil_days") is not None:
+        n = bare_s2["months_with_data"]
+        bare = bare_s2["bare_soil_days"]
+        card = _card(
+            "vigor_bare_soil", bare, "días/año",
+            f"~{bare:g} días/año con suelo desnudo "
+            f"(NDVI Sentinel-2 <0.2 en {n} meses despejados)",
+            "Sentinel-2 L2A (ESA), 12 months, on demand", "20 m",
+            "medium",
+            f"~{bare:g} days/yr with bare ground "
+            f"(Sentinel-2 NDVI <0.2 over {n} clear months)")
+        card["ndvi_monthly"] = bare_s2["ndvi_monthly"]
+        card["months_with_data"] = n
+        cards.append(card)
+    elif bare_s2 and bare_s2.get("reason"):
+        cards.append(_card(
+            "vigor_bare_soil", None, None,
+            s2_reason_text(bare_s2["reason"], "es"),
+            "Sentinel-2 L2A (ESA), 12 months, on demand", "20 m", "low",
+            s2_reason_text(bare_s2["reason"], "en")))
     else:
         cards.append(_null_card("vigor_bare_soil", "MODIS MOD13Q1", "250 m"))
 
@@ -1190,8 +1213,10 @@ def apply_scenario(power: dict | None, sc: dict) -> dict:
     return out
 
 
-def build_scenario_cards(power, scenario, args, *, adj, zone):
-    cards, burns = build_cards(power, *args, adj=adj, zone=zone)
+def build_scenario_cards(power, scenario, args, *, adj, zone,
+                         bare_s2=None):
+    cards, burns = build_cards(power, *args, adj=adj, zone=zone,
+                               bare_s2=bare_s2)
     calendar = build_calendar(power, args[2], burns)
     if not scenario:
         return cards, calendar, None
@@ -1205,7 +1230,8 @@ def build_scenario_cards(power, scenario, args, *, adj, zone):
             if simulated_grid.get(key) is not None:
                 simulated_grid[key] = round(simulated_grid[key] * factor, 1)
     simulated, _ = build_cards(simulated_power, soil, slope, ndvi, simulated_grid,
-                               fire_cal, risk, cell, adj=adj, zone=zone)
+                               fire_cal, risk, cell, adj=adj, zone=zone,
+                               bare_s2=bare_s2)
     actual = {card["id"]: card for card in cards}
     operational = {"fire", "fire_weather", "recent_weather", "soil_moisture"}
     for index, card in enumerate(simulated):
@@ -1358,6 +1384,13 @@ async def diagnose(request: Request):
                     key=lambda row: row.get("p") or 0, default=None)
 
     degraded = power is None
+    bare_s2 = None
+    if not degraded and not ndvi and \
+            (grid_cell or {}).get("bare_soil_days_yr") is None:
+        try:
+            bare_s2 = await bare_soil_estimate(clat, clon, geom)
+        except Exception as exc:  # optional enrichment: never fail dx
+            log.warning("bare soil s2 failed: %s", type(exc).__name__)
     adj = {"temp_adjust_c": temp_adjust, "elevation_m": elevation_m,
            "power_cell_elevation_m": cell_elev_m, "lat": clat}
     args = (soilg, slope, ndvi, grid_cell, fire_cal, risk_cell, r5c)
@@ -1366,7 +1399,8 @@ async def diagnose(request: Request):
         calendar, baseline = build_calendar(None, ndvi, burns), None
     else:
         cards, calendar, baseline = build_scenario_cards(
-            power, scenario, args, adj=adj, zone=geo["zone"])
+            power, scenario, args, adj=adj, zone=geo["zone"],
+            bare_s2=bare_s2)
     if risk_cell:
         next(c for c in cards if c["id"] == "fire").update(
             generated_at=risk_cell["generated_at"], valid_until=risk_cell["valid_until"])
@@ -1400,6 +1434,8 @@ async def diagnose(request: Request):
          "coverage": {"available_cards": available, "total_cards": len(cards),
                       "comparable": comparable, "indicators": sources},
          "h3_r5": r5s, "h3_r6": r6s, "cards": cards, "calendar": calendar,
+         "timeline": build_timeline(
+             power, clat, "en" if body.get("lang") == "en" else "es"),
          "accuracy": accuracy_block(clat, clon, temp_adjust),
          **({"degraded": True,
              "degraded_reason": DEGRADED_REASON} if degraded else {}),
