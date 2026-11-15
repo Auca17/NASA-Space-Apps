@@ -23,6 +23,9 @@ for (const s of SIZES) {
   const browser = await chromium.launch();
   const ctx = await browser.newContext({
     viewport: { width: s.width, height: s.height }, locale: "es" });
+  // dismiss the guided demo tour so it never blocks the panel
+  await ctx.addInitScript(
+    "localStorage.setItem('ashfield.demoTour.v1','1')");
   const page = await ctx.newPage();
 
   const errs = [];
@@ -61,54 +64,55 @@ for (const s of SIZES) {
     if (await sm.count()) { await sm.click().catch(() => {}); return true; }
     return false;
   };
+  /* on compact widths the field chooser is a peekable sheet: expand
+   * it before touching the option details, which peek hides. */
+  const expandChooser = async () => {
+    const h = page.locator(
+      ".picker-head button[aria-expanded='false']").first();
+    if (await h.count()) await h.click().catch(() => {});
+    await page.waitForTimeout(400);
+  };
+  /* the app boots into the fields list; the chooser opens through
+   * "Agregar campo" → "Buscar". */
+  const openChooser = async () => {
+    await page.locator("summary",
+      { hasText: /Agregar campo|Add field/i }).first()
+      .click().catch(() => {});
+    await page.getByRole("button", { name: /^Buscar$|^Search$/i })
+      .first().click().catch(() => {});
+    await page.waitForTimeout(600);
+    await expandChooser();
+  };
 
-  /* 1 ---------------------------------------------------- welcome ---- */
+  /* 1 ---------------------------------- boot: fields list + map ---- */
   await page.goto(BASE, { waitUntil: "domcontentloaded" });
   await page.waitForTimeout(2500);
-  const wShot = await snap("welcome", 800);
+  const wShot = await snap("boot-fields", 800);
   if (await page.locator(".map").count() === 0)
-    note("welcome", "high", "no .map element on welcome", wShot);
-  flushErrs("welcome", wShot);
+    note("boot", "high", "no .map element on boot", wShot);
+  if (await page.locator(".controls.fields").count() === 0)
+    note("boot", "high", "fields list not shown on boot", wShot);
+  flushErrs("boot", wShot);
 
-  /* 2 --------------------------------------------- Corrientes panel -- */
-  await page.goto(`${BASE}/?r2=1#-27.95,-56.95`,
+  /* 2 ------------- #lat,lon deep link stays in the field flow ------ */
+  await page.goto(`${BASE}#-27.95,-56.95`,
     { waitUntil: "domcontentloaded" });
   await page.waitForTimeout(5000);
   const cShot = await snap("corrientes");
-  flushErrs("corrientes", cShot);
+  if (await page.locator(".map").count() === 0)
+    note("deeplink", "high", "#lat,lon lost the map", cShot);
+  flushErrs("deeplink", cShot);
 
-  /* 3 ------------------------------------------------ historic player - */
-  await page.goto(BASE, { waitUntil: "domcontentloaded" });
-  await page.waitForTimeout(1500);
-  await click(/Abrir el mapa de fuego|Fuego/i);
-  await page.waitForTimeout(2500);
-  const play = page.locator(
-    'button[aria-label*="eproduc"], button:has-text("▶")').first();
-  if (await play.count()) await play.click().catch(() => {});
-  await page.waitForTimeout(2500);
-  const hShot = await snap("historic");
-  flushErrs("historic", hShot);
-
-  /* 4 ------------------------------------------------------ live mode - */
-  await click(/^En vivo$/i);
-  await page.waitForTimeout(4000);
-  const lShot = await snap("live");
-  flushErrs("live", lShot);
-
-  /* 5 --------------------------------- field lens: example farm ----- */
-  await click(/^Analizar mi campo$/i);
-  await page.waitForTimeout(1500);
-  // expand the examples disclosure, then open the example farm
-  await openDetails(/Probar con un ejemplo/);
-  await page.waitForTimeout(400);
-  const demoClicked = await click(/Abrir el ejemplo: finca en Mendoza/i);
+  /* 5 ------------------------------ field lens: #demo example ----- */
+  await page.goto(`${BASE}#demo`, { waitUntil: "domcontentloaded" });
+  await page.waitForSelector(".parcel-badge, [role='tab']",
+    { timeout: 60000 }).catch(() => {});
+  // the detailed diagnosis loads lazily inside "Más información"
+  await page.locator("#tab-mas").first().click().catch(() => {});
   await page.waitForSelector(".dtile, .diag-grid, .strategy",
     { timeout: 120000 }).catch(() => {});
   await page.waitForTimeout(2500);
   const dShot = await snap("field-diagnosis");
-  if (!demoClicked)
-    note("field", "high", "demo button not clickable (chooser state?)",
-         dShot);
   if (!await page.locator(".dtile, .card").first().count())
     note("field", "high", "diagnosis rendered no cards", dShot);
   flushErrs("field-diagnosis", dShot);
@@ -174,8 +178,8 @@ for (const s of SIZES) {
   /* 6 ----------------------------- Chucky field selection ------------ */
   await page.goto(BASE, { waitUntil: "domcontentloaded" });
   await page.waitForTimeout(2000);
-  await click(/^Analizar mi campo$/i);
-  await page.waitForTimeout(1500);
+  await openChooser();
+  await page.waitForTimeout(1000);
   await snap("field-chooser");
 
   // place finder
@@ -202,6 +206,7 @@ for (const s of SIZES) {
   flushErrs("place-finder", pShot2);
 
   // freehand: open "Otras formas de marcar" then pick free draw
+  await expandChooser();
   await openDetails(/Otras formas de marcar/);
   await page.waitForTimeout(400);
   await click(/mano alzada/i);
@@ -232,12 +237,12 @@ for (const s of SIZES) {
   const rvShot = await snap("selection-review");
   flushErrs("review", rvShot);
 
-  // fields panel
-  await click(/^Analizar mi campo$/i);
-  await page.waitForTimeout(800);
-  await click(/Mis campos/i);
-  await page.waitForTimeout(1200);
+  // fields list (the boot sheet)
+  await page.goto(BASE, { waitUntil: "domcontentloaded" });
+  await page.waitForTimeout(1500);
   const fpShot = await snap("fields-panel");
+  if (await page.locator(".controls.fields").count() === 0)
+    note("fields-panel", "medium", "fields list not visible", fpShot);
   flushErrs("fields-panel", fpShot);
 
   // zones (split)

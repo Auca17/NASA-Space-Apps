@@ -1,53 +1,15 @@
-/** Typed clients — one function per contract file/endpoint. */
+/** Typed clients — one function per contract file/endpoint.
+ * The fire-history shards, live detections and risk-by-area clients
+ * left with the fire/live views (task 49); `/api/live` stays on the
+ * backend for the n8n alert workflows. */
 import { dataUrl, apiUrl, fetchJson, postJson } from "./client";
 import type { CropRecommendations } from "./types";
-import type { LiveBody } from "../domain/live";
 import type {
-  MetaJson, GlobeShard, CalShard, DailyShard, RiskShard,
-  LiveResponse, DiagnoseResponse, RotationsResponse,
-  ExplainResponse, RotationEntry, CropEntry, CaseEntry, RiskCell,
+  DiagnoseResponse, RotationsResponse,
+  ExplainResponse, RotationEntry, CropEntry, CaseEntry,
   OrinValidation, OrinLots, MoistureResult, CropDetection, CropZones,
   CurrentCrop,
 } from "./types";
-
-function cachedByKey<T>(load: (key: string) => Promise<T | null>, max: number) {
-  const cache = new Map<string, { expires: number; value: Promise<T | null> }>();
-  return (key: string) => {
-    const entry = cache.get(key);
-    if (entry && entry.expires > Date.now()) return entry.value;
-    cache.delete(key);
-    const value = load(key).then((data) => {
-      if (!data && cache.get(key)?.value === value) cache.delete(key);
-      return data;
-    });
-    cache.set(key, { expires: Date.now() + 10 * 60_000, value });
-    if (cache.size > max) cache.delete(cache.keys().next().value!);
-    return value;
-  };
-}
-
-const loadMeta = cachedByKey(() => fetchJson<MetaJson>(dataUrl("meta.json")), 1);
-export const meta = () => loadMeta("meta");
-
-export const globeMonth = cachedByKey((yyyyMm) =>
-  fetchJson<GlobeShard>(dataUrl(`globe/${yyyyMm}.json`)), 8);
-
-export const fireCal = cachedByKey((r2) =>
-  fetchJson<CalShard>(dataUrl(`fire/cal/${r2}.json`)), 8);
-
-export const fireDaily = cachedByKey((r2) =>
-  fetchJson<DailyShard>(dataUrl(`fire/daily/${r2}.json`)), 4);
-
-export const riskShard = (r2: string) =>
-  fetchJson<RiskShard>(dataUrl(`risk/${r2}.json`));
-
-export const analogsShard = (r2: string) =>
-  fetchJson<{ cells: Record<string, unknown> }>(
-    dataUrl(`field/analogs/${r2}.json`));
-
-export const gridShard = cachedByKey((r2) =>
-  fetchJson<{ cells: Record<string, unknown> }>(
-    dataUrl(`field/grid/${r2}.json`)), 24);
 
 export const apiFieldCatalog = () =>
   fetchJson<{ rotations: RotationEntry[]; crops: CropEntry[] }>(
@@ -62,52 +24,14 @@ export const orinValidation = () =>
 export const orinLots = () =>
   fetchJson<OrinLots>(dataUrl("orin/lots.geojson"));
 
-export function pointsCsvUrl(r2: string, year: number): string {
-  return dataUrl(`fire/points/${r2}/${year}.csv.gz`);
-}
-
 // ------------------------------------------------------------- endpoints --
 
+/** Plot risk/country lookup used to pre-select the emergency numbers
+ * and flag the plot-level fire risk; 404 means "no model output". */
 export function apiRisk(lat: number, lon: number) {
-  return fetchJson<RiskCell & { h3_r5?: string; country?: string | null }>(
+  return fetchJson<{ h3_r5?: string; country?: string | null;
+    ratio?: number | null; risk?: number | null }>(
     apiUrl(`/api/risk?lat=${lat}&lon=${lon}`));
-}
-
-/** Risk query that keeps a transport/server failure apart from a real
- * 404 ("no model output for this cell"): 404 -> ok with data null,
- * anything else broken -> ok:false so the UI can offer a retry. */
-export async function apiRiskResult(lat: number, lon: number):
-    Promise<{ ok: true; data: (RiskCell & { h3_r5?: string;
-              country?: string | null }) | null }
-            | { ok: false; status: number }> {
-  try {
-    const r = await fetch(apiUrl(`/api/risk?lat=${lat}&lon=${lon}`));
-    if (r.status === 404) return { ok: true, data: null };
-    if (!r.ok) return { ok: false, status: r.status };
-    return { ok: true, data: (await r.json()) as RiskCell & {
-      h3_r5?: string; country?: string | null } };
-  } catch {
-    return { ok: false, status: 0 };
-  }
-}
-
-export function apiLive(window: string, bbox: [number, number, number, number]) {
-  return fetchJson<LiveResponse>(
-    apiUrl(`/api/live?window=${window}&bbox=${bbox.join(",")}`));
-}
-
-/** Live query that keeps failures apart from empty results. */
-export async function apiLiveResult(window: string,
-    bbox: [number, number, number, number]):
-    Promise<{ ok: true; data: LiveBody } | { ok: false; status: number }> {
-  try {
-    const r = await fetch(
-      apiUrl(`/api/live?window=${window}&bbox=${bbox.join(",")}`));
-    if (!r.ok) return { ok: false, status: r.status };
-    return { ok: true, data: (await r.json()) as LiveBody };
-  } catch {
-    return { ok: false, status: 0 };
-  }
 }
 
 export async function apiDiagnose(body: unknown, signal?: AbortSignal):

@@ -1,5 +1,7 @@
-/** Task 26: emergency numbers table, distance/direction domain,
- * message template, call block rendering and clipboard fallback. */
+/** Task 26 (trimmed by task 49): emergency numbers table, message
+ * template, call block rendering and clipboard fallback. The
+ * live-detection domain (distance/direction/points) left with the
+ * Live view. */
 import { describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { I18nProvider } from "../../i18n";
@@ -8,10 +10,7 @@ import en from "../../i18n/en.json";
 import {
   EMERGENCY_BY_COUNTRY, EU_NUMBER, EU_MEMBERS, numbersFor,
 } from "../../content/emergency";
-import {
-  DIRECTION_KEYS, compass8, emergencyMessage, haversineKm,
-  livePoints, nearestDetection,
-} from "../../domain/emergency";
+import { emergencyMessage, mapLink } from "../../domain/emergency";
 import { EmergencyBlock } from "./EmergencyBlock";
 
 const t = (k: string, v?: Record<string, string | number>) => {
@@ -63,57 +62,19 @@ describe("emergency country table", () => {
 });
 
 // ---------------------------------------------------------- domain --
-describe("distance and direction", () => {
-  it("computes haversine distance", () => {
-    // ~111 km per degree of latitude
-    expect(haversineKm([-33, -60], [-32, -60])).toBeCloseTo(111, 0);
-    expect(haversineKm([-33, -60], [-33, -60])).toBe(0);
-  });
-  it("computes 8-point compass direction", () => {
-    const o: [number, number] = [-33, -60];
-    expect(compass8(o, [-32, -60])).toBe(0);           // N
-    expect(compass8(o, [-33, -59])).toBe(2);           // E
-    expect(compass8(o, [-34, -60])).toBe(4);           // S
-    expect(compass8(o, [-33, -61])).toBe(6);           // O/W
-    expect(compass8(o, [-32, -59])).toBe(1);           // NE
-    expect(DIRECTION_KEYS).toHaveLength(8);
-  });
-  it("picks the nearest detection with its age", () => {
-    const now = new Date("2026-11-15T12:00:00Z");
-    const n = nearestDetection([
-      { lat: -33.5, lon: -60, at: new Date("2026-11-15T08:00:00Z") },
-      { lat: -33.05, lon: -60, at: new Date("2026-11-15T10:00:00Z") },
-    ], [-33, -60], now);
-    expect(n).not.toBeNull();
-    expect(n!.km).toBeCloseTo(5.5, 0);
-    expect(n!.hoursAgo).toBeCloseTo(2, 1);
-  });
-  it("parses array and object live points", () => {
-    const pts = livePoints({ mode: "points", points: [
-      [-33, -60, 1.2, "VIIRS", "2026-11-15T08:00:00Z"],
-      { lat: -34, lon: -61, acq_datetime: "2026-11-15T09:00:00Z" },
-    ] });
-    expect(pts).toHaveLength(2);
-    expect(pts[0].at!.toISOString()).toBe("2026-11-15T08:00:00.000Z");
-    expect(pts[1].lat).toBe(-34);
-  });
-  it("cells mode has no point detections", () => {
-    expect(livePoints({ mode: "cells", cells: [] })).toEqual([]);
-  });
-});
-
 describe("emergency message", () => {
-  it("includes location and detection when present", () => {
+  it("builds an OSM link the operator can open", () => {
+    expect(mapLink(-33.5, -60.25)).toBe(
+      "https://www.openstreetmap.org/?mlat=-33.50000" +
+      "&mlon=-60.25000#map=14/-33.50000/-60.25000");
+  });
+  it("includes the location for the operator", () => {
     const m = emergencyMessage({
-      lat: -33.5, lon: -60.25, source: "map",
-      detection: { km: 4.2, dirKey: "emerg.dir.no", hoursAgo: 3 },
-    }, t);
+      lat: -33.5, lon: -60.25, source: "map" }, t);
     expect(m).toContain("posible foco de fuego");
     expect(m).toContain("-33.5000");
     expect(m).toContain("openstreetmap.org");
     expect(m).toContain("centro del mapa");
-    expect(m).toContain("4.2 km al NO");
-    expect(m).toContain("3 horas");
   });
   it("says the location is the user's own when shared", () => {
     const m = emergencyMessage(
@@ -124,15 +85,11 @@ describe("emergency message", () => {
   it("omits missing fields instead of inventing them", () => {
     const m = emergencyMessage(
       { lat: -33, lon: -60, source: "map" }, t);
-    expect(m).not.toContain("satelital");
     expect(m).not.toContain("Viento");
     const m2 = emergencyMessage({
       lat: -33, lon: -60, source: "map",
-      detection: { km: 7, dirKey: "emerg.dir.s", hoursAgo: null },
       wind: "norte 25 km/h",
     }, t);
-    expect(m2).toContain("7 km al S");
-    expect(m2).not.toContain("horas");
     expect(m2).toContain("Viento: norte 25 km/h");
   });
 });
@@ -142,7 +99,6 @@ function block(props: Partial<Parameters<typeof EmergencyBlock>[0]> = {}) {
   return render(<I18nProvider>
     <EmergencyBlock country={props.country ?? "AR"}
                     mapCenter={props.mapCenter ?? { lat: -33, lon: -60 }}
-                    detection={props.detection}
                     lead={props.lead} />
   </I18nProvider>);
 }

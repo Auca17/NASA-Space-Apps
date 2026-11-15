@@ -12,9 +12,13 @@ mkdirSync(OUT, { recursive: true });
 for (const w of [390, 1280]) {
   const tag = `${w}px`;
   const browser = await chromium.launch();
-  const page = await (await browser.newContext({
+  const ctx = await browser.newContext({
     viewport: { width: w, height: w === 390 ? 844 : 800 },
-    locale: "es" })).newPage();
+    locale: "es" });
+  // dismiss the guided demo tour so it never blocks the panel
+  await ctx.addInitScript(
+    "localStorage.setItem('ashfield.demoTour.v1','1')");
+  const page = await ctx.newPage();
   page.on("pageerror", (e) => console.log(`[pageerror ${tag}]`, e.message));
   page.on("console", (m) => {
     if (m.type() === "error")
@@ -27,14 +31,11 @@ for (const w of [390, 1280]) {
     return false;
   };
 
-  await page.goto(BASE, { waitUntil: "domcontentloaded" });
-  await page.waitForTimeout(2000);
-  await click(/^Analizar mi campo$/i);
-  await page.waitForTimeout(1200);
-  await page.locator("summary", { hasText: /Probar con un ejemplo/ })
-    .first().click().catch(() => {});
-  await page.waitForTimeout(400);
-  await click(/Abrir el ejemplo: finca en Mendoza/i);
+  await page.goto(`${BASE}#demo`, { waitUntil: "domcontentloaded" });
+  await page.waitForSelector(".parcel-badge, [role='tab']",
+    { timeout: 60000 }).catch(() => {});
+  // the detailed diagnosis loads lazily inside "Más información"
+  await page.locator("#tab-mas").first().click().catch(() => {});
   await page.waitForSelector(".dtile, .card", { timeout: 120000 })
     .catch(() => {});
   await page.waitForTimeout(1500);

@@ -5,14 +5,11 @@ import { WindLogo } from "../../components/WindLogo";
 
 type Hit = { lat: number; lon: number; name: string };
 
-/** First screen: the field analysis is the main path; fire and live
- * hotspots stay one tap away as secondary views. */
-export function Welcome({ onAnalyze, onDemo, onLocate, onExplore, onLive }: {
+/** First screen: the field analysis is the only path. */
+export function Welcome({ onAnalyze, onDemo, onLocate }: {
   onAnalyze: () => void;
   onDemo: () => void;
   onLocate: (lat: number, lon: number) => void;
-  onExplore: () => void;
-  onLive: () => void;
 }) {
   const { t } = useT();
   const [q, setQ] = useState("");
@@ -56,32 +53,6 @@ export function Welcome({ onAnalyze, onDemo, onLocate, onExplore, onLive }: {
       <details className="welcome-more">
         <summary>{t("welcome.more")}</summary>
         <ul className="welcome-alt">
-          <li><button type="button" className="welcome-row"
-                  onClick={onExplore}>
-            <svg className="row-ico" viewBox="0 0 24 24" aria-hidden="true">
-              <path d="M12 21c-4 0-7-2.8-7-6.5C5 9 9.5 6 11 2c.6 2.4 2.6
-                3.8 3.4 6.2.4-1 .6-2.1.4-3.2 2.6 1.7 4.2 4.6 4.2 8
-                0 4.4-3 8-7 8Zm0-2.5c2.2 0 4-1.6 4-4 0-2.6-2.6-4.3-4-7
-               -1.4 2.7-4 4.4-4 7 0 2.4 1.8 4 4 4Z"/></svg>
-            <span className="row-text">
-              <strong>{t("welcome.explore")}</strong>
-              <small>{t("welcome.row.fire")}</small>
-            </span>
-            <span className="row-chev" aria-hidden="true">›</span>
-          </button></li>
-          <li><button type="button" className="welcome-row"
-                  onClick={onLive}>
-            <svg className="row-ico" viewBox="0 0 24 24" aria-hidden="true">
-              <circle cx="12" cy="12" r="3.4"/>
-              <path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3M5 5l2.1 2.1M16.9
-                16.9 19 19M19 5l-2.1 2.1M7.1 16.9 5 19"
-                fill="none" strokeWidth="1.8" strokeLinecap="round"/></svg>
-            <span className="row-text">
-              <strong>{t("welcome.live")}</strong>
-              <small>{t("welcome.row.live")}</small>
-            </span>
-            <span className="row-chev" aria-hidden="true">›</span>
-          </button></li>
           <li><button type="button" className="welcome-row"
                   onClick={geo}>
             <svg className="row-ico" viewBox="0 0 24 24" aria-hidden="true">

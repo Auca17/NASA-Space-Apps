@@ -16,11 +16,13 @@ export interface PendingRow {
 
 export const DATASETS_USED: DatasetRow[] = [
   { name: "FIRMS MODIS + VIIRS",
-    gives: { es: "Serie de focos de calor armonizada",
-             en: "Harmonized active-fire series" },
+    gives: { es: "Serie de focos de calor para la alerta de detección "
+               + "cercana y el modelo de riesgo del lote",
+             en: "Heat-spot series for the nearby-detection alert and "
+               + "the plot risk model" },
     resolution: "1 km / 375 m", period: "2000-hoy",
-    where: { es: "Globo y panel de focos",
-             en: "Globe and fire panel" } },
+    where: { es: "Alerta de foco cercano, riesgo del lote",
+             en: "Nearby-spot alert, plot risk" } },
   { name: "NASA POWER",
     gives: { es: "Clima diario para el diagnóstico y el modelo de riesgo",
              en: "Daily weather for diagnosis and the risk model" },

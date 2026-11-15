@@ -54,18 +54,9 @@ input[type="range"] { min-height: var(--touch); }
 .topbar-name { overflow: hidden; text-overflow: ellipsis; }
 .wind-logo { flex: none; overflow: visible; }
 .topbar .spacer { flex: 1; min-width: 4px; }
-.topbar nav { display: flex; gap: 4px; overflow-x: auto;
-  scrollbar-width: none; flex-shrink: 1; }
-.topbar nav::-webkit-scrollbar { display: none; }
-.topbar nav button { white-space: nowrap; padding: 0 10px;
-  min-height: var(--touch); }
-.topbar nav button[aria-pressed="true"] { background: var(--accent);
-  color: var(--accent-fg); }
 @media (max-width: 480px) {
   .topbar { gap: 4px; padding: 4px 6px; }
   .topbar h1 { max-width: 15vw; font-size: 0.9rem; }
-  .topbar nav { gap: 2px; }
-  .topbar nav button { padding: 0 6px; font-size: 0.8rem; }
   .topbar .meth-link { font-size: 0.8rem; padding: 4px 6px;
     min-height: var(--touch); }
   .topbar button[aria-label="language"] { font-size: 0.8rem;
@@ -89,15 +80,6 @@ input[type="range"] { min-height: var(--touch); }
 .field-basemap button[aria-pressed="true"], .field-guide button[aria-pressed="true"] {
   background: var(--accent);
   color: var(--accent-fg); border-color: transparent; }
-.reticle { position: absolute; left: 50%; top: 50%; width: 28px; height: 28px;
-  transform: translate(-50%, -50%); pointer-events: none; z-index: 5; }
-.reticle::before, .reticle::after { content: ""; position: absolute;
-  background: var(--accent); }
-.reticle::before { left: 50%; top: 0; width: 2px; height: 100%;
-  transform: translateX(-50%); }
-.reticle::after { top: 50%; left: 0; height: 2px; width: 100%;
-  transform: translateY(-50%); }
-
 .welcome { margin: auto; max-width: 460px; padding: 24px; text-align: center; }
 .welcome h2 { font-size: 1.6rem; }
 .welcome .actions { display: flex; flex-direction: column; gap: 10px;
@@ -151,8 +133,6 @@ table.cal th, table.cal td { border: 1px solid var(--border);
 table.cal th { background: var(--panel); font-weight: 600; }
 table.cal td button { min-width: var(--touch); min-height: var(--touch);
   width: 100%; border: 0; border-radius: 0; padding: 0; font-size: 0.8rem; }
-table.cal td.playing { outline: 2px solid var(--accent); }
-table.cal tr.current td { outline: 2px solid var(--accent); }
 
 /* farming calendar: crop bars over the climate rows */
 table.cal td.cal-on { background:
@@ -502,26 +482,6 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
 .place-row .search input { width: 100%; min-width: 0; flex: 1 1 auto; }
 .controls { box-sizing: border-box; overflow-x: hidden; }
 
-/* B3 — while a bottom sheet is open it would cover the playback
- * controls pinned at the bottom; they ride under the top bar instead,
- * and the sheet is capped so both fit at once. Scoped to .controls.hist:
- * the field chooser, review and fields panels are .controls too and
- * must not be lifted (task 40 — that lift stacked them over the map). */
-@media (max-width: 900px) and (min-height: 561px) {
-  .app:has(.panel) .map-wrap .controls.hist {
-    bottom: auto; top: calc(var(--top-safe, 78px) + 8px); }
-  .app:has(.map-wrap .controls.hist) .panel { max-height: 42%; }
-}
-
-/* Reopen affordance when the fire panel is closed (round-2 minor) */
-.fire-reopen { position: absolute; right: 12px;
-  top: calc(var(--top-safe, 78px) + 8px); z-index: 6;
-  padding: 10px 14px; min-height: var(--touch);
-  border-radius: var(--radius-ctl, 10px); font-weight: 600; }
-/* any open sheet takes that corner — the button is only useful once
- * the sheet is closed anyway */
-.app:has(.panel) .fire-reopen { display: none; }
-
 /* Freehand layer: catches the stroke so the map does not pan */
 .freehand-layer { position: absolute; inset: 0; z-index: 4;
   cursor: crosshair; touch-action: none; }
@@ -564,18 +524,12 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
   align-items: center; min-height: 36px; }
 .zones-h { margin: 6px 0 0; font-size: 0.95rem; }
 .analysis-scope { margin: 0; font-size: 0.9rem; }
-.live-status { margin: 0; font-size: 0.9rem; }
-.live-status.err { color: var(--bad); }
 
-/* Narrow phones (390 px, 320 px): the menu gets its own row so
- * «Analizar mi campo», «Fuego» and «En vivo» are never cut. */
+/* Narrow phones (390 px, 320 px): the bar wraps so nothing is cut. */
 @media (max-width: 480px) {
   .topbar { flex-wrap: wrap; row-gap: 4px; padding: 4px 8px; }
   .topbar h1 { max-width: none; flex: 1 1 auto; font-size: 0.95rem; }
   .topbar .spacer { display: none; }
-  .topbar nav { order: 3; flex: 1 1 100%; overflow-x: visible; gap: 4px; }
-  .topbar nav button { flex: 1 1 auto; padding: 0 6px; font-size: 0.85rem;
-    min-width: 0; }
   .field-extents, .field-map-tools { top: 8px; }
   .field-extents { left: 8px; }
   .field-map-tools { right: 8px; }

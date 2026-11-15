@@ -63,7 +63,7 @@ body:has(.app) { background: #0f110e; }
 /* small floating groups: solid glass, no blur (performance budget) */
 .app .field-basemap, .app .field-extents, .app .field-zoom,
 .app .field-guide small, .app .draw-hint, .app .meth-panel,
-.app .fire-reopen, .app .tooltip-pop {
+.app .tooltip-pop {
   background: var(--glass-bg-strong);
   border: 1px solid var(--glass-border);
   box-shadow: var(--glass-shadow);
@@ -137,22 +137,13 @@ body:has(.app) { background: #0f110e; }
   color: inherit; transition: background-color 160ms var(--ease-out); }
 .app .topbar-home:hover { background: var(--surface); }
 .app .topbar-name { font-size: 1.05rem; }
-.app .topbar nav { background: var(--surface); border-radius: var(--radius-pill);
-  padding: 3px; gap: 2px; }
-.app .topbar nav button { border: 0; border-radius: var(--radius-pill);
-  background: transparent; min-height: 38px; padding: 0 14px;
-  color: var(--muted); font-weight: 550; }
-.app .topbar nav button:hover { color: var(--fg); background: var(--surface); }
-.app .topbar nav button[aria-pressed="true"] {
-  background: var(--accent); color: var(--accent-fg); }
 .app .topbar .meth-link, .app .topbar .lang-btn {
   border-radius: var(--radius-pill); }
 @media (max-width: 480px) {
-  /* the nav wraps to its own row here (app.css), so the bar is ~2 rows */
+  /* the bar wraps to ~2 rows here (app.css) */
   .app { --top-safe: 170px; }
   .app .topbar { top: 6px; left: 6px; right: 6px; border-radius: 16px;
     padding: 4px 6px; gap: 4px; }
-  .app .topbar nav button { padding: 0 8px; min-height: 36px; }
 }
 
 /* things anchored to the top of the map clear the floating bar */
@@ -270,8 +261,6 @@ body:has(.app) { background: #0f110e; }
 .app .field-basemap, .app .field-extents, .app .field-zoom {
   border-radius: 14px; padding: 4px; }
 .app .controls { border-radius: 18px; padding: 12px; left: 10px; bottom: 10px; }
-.app .reticle::before, .app .reticle::after { background: var(--logo-ember-hot);
-  box-shadow: 0 0 6px rgba(240, 145, 63, 0.7); }
 .app .maplibregl-ctrl-attrib { background: var(--glass-bg-strong) !important;
   color: var(--muted); border-radius: var(--radius-pill) !important;
   margin: 0 10px 10px 0 !important; padding: 2px 10px !important; }
@@ -298,13 +287,13 @@ body:has(.app) { background: #0f110e; }
  * panel inside the first (task 33.6, layout only) */
 .app .emerg { background: var(--surface); border-radius: var(--radius-ctl); }
 
-/* ---------- mobile shell (task 38): one compact bar, bottom tabs ---------- */
+/* ---------- mobile shell (task 38): one compact bar ---------- */
 .app .menu-btn { display: none; }
 .app .field-frame { display: none; }
-.app .topbar .nav-ico, .app .emerg-ico { display: none; }
+.app .topbar .emerg-ico { display: none; }
 
 @media (max-width: 900px) {
-  /* 1 · the bar is a single row again (the nav moved to the bottom) */
+  /* 1 · the bar is a single compact row */
   .app { --top-safe: 66px; }
   .app .topbar .meth-link, .app .topbar .lang-btn { display: none; }
   .app .topbar .menu-btn { display: inline-flex; align-items: center;
@@ -321,22 +310,7 @@ body:has(.app) { background: #0f110e; }
   .app .topbar .emerg-text { position: absolute; width: 1px; height: 1px;
     overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 
-  /* 2 · mode switch becomes a bottom tab bar above the safe area */
-  .app .topbar nav { position: fixed; left: 0; right: 0; bottom: 0;
-    z-index: 30; margin: 0; display: grid;
-    grid-template-columns: repeat(3, 1fr); gap: 4px;
-    padding: 4px 8px calc(4px + env(safe-area-inset-bottom, 0px));
-    border-radius: 0; border-top: 1px solid var(--glass-border);
-    background: var(--glass-bg-strong); }
-  .app .topbar nav button { display: flex; flex-direction: column;
-    align-items: center; justify-content: center; gap: 3px;
-    min-height: 52px; padding: 2px 4px; font-size: 0.72rem;
-    white-space: normal; line-height: 1.1; overflow: hidden;
-    text-overflow: ellipsis; }
-  .app .topbar nav .nav-ico { display: block; width: 20px; height: 20px;
-    fill: currentColor; stroke: currentColor; }
-
-  /* 3 · map furniture: no zoom buttons on touch (pinch exists), the
+  /* 2 · map furniture: no zoom buttons on touch (pinch exists), the
    *     two extents collapse into one "Encuadre" popover */
   .app .field-zoom { display: none; }
   .app .field-extents { display: none; }
@@ -366,31 +340,44 @@ body:has(.app) { background: #0f110e; }
   .app .topbar-menu button { min-height: 44px; padding: 0 12px;
     text-align: left; }
 
-  /* 4 · sheets and cards clear the tab bar */
-  .app .panel { bottom: calc(64px + env(safe-area-inset-bottom, 0px));
-    max-height: 62%; }
-  .app .controls { bottom: calc(64px + env(safe-area-inset-bottom, 0px)); }
+  /* 4 · sheets respect the safe area; no bottom bar any more */
+  .app .panel { bottom: env(safe-area-inset-bottom, 0px); }
+  .app .controls { bottom: calc(8px + env(safe-area-inset-bottom, 0px)); }
   .app .welcome-overlay {
-    padding-bottom: calc(72px + env(safe-area-inset-bottom, 0px)); }
+    padding-bottom: env(safe-area-inset-bottom, 0px); }
 
-  /* 5 · one sheet at a time: an open .panel (emergencies, fire area)
+  /* field chooser as a peekable bottom sheet (task 38.4). The
+   * component's "expanded" state is the default and renders as the
+   * peek: handle + the main action only. The "collapsed" state
+   * (options list is [hidden]) is un-hidden here and shows the full
+   * sheet — tapping the handle moves between peek and full. */
+  .app .field-chooser { left: 8px; right: 8px;
+    bottom: calc(8px + env(safe-area-inset-bottom, 0px));
+    max-height: 64%; overflow-y: auto; }
+  .app .field-chooser .picker-head button:first-child {
+    font-size: 0; display: inline-flex; align-items: center;
+    justify-content: center; min-width: 44px; flex: 1; }
+  .app .field-chooser .picker-head button:first-child::before {
+    content: ""; display: block; width: 34px; height: 5px;
+    border-radius: 3px; background: var(--muted); }
+  .app .field-chooser:has(.picker-head [data-peek="true"])
+      #field-chooser-options > :not(.row) { display: none; }
+  .app .field-chooser:has(.picker-head [data-peek="false"])
+      #field-chooser-options[hidden] { display: grid; gap: 8px; }
+
+  /* 5 · one sheet at a time: an open .panel (emergencies)
    *     collapses the map sheets (chooser, review, fields, parcels);
-   *     closing the panel restores them. The playback controls are
-   *     exempt — they are lifted above the sheet in app.css (B3). */
-  .app:has(.panel) .map-wrap .controls:not(.hist) { display: none; }
+   *     closing the panel restores them. */
+  .app:has(.panel) .map-wrap .controls { display: none; }
 }
 
-/* short landscape (phones/tablets rotated): a bottom sheet would fight
- * the lifted playback controls for the same ~250 px strip — the sheet
- * becomes a right column and the controls stay bottom-left, capped so
- * they never reach under it. */
+/* short landscape (phones/tablets rotated): a bottom sheet would eat
+ * most of the map — it becomes a right column instead. */
 @media (max-width: 900px) and (max-height: 560px) {
   .app .panel { left: auto; right: 6px;
     top: calc(var(--top-safe) + 4px);
-    bottom: calc(64px + env(safe-area-inset-bottom, 0px));
+    bottom: env(safe-area-inset-bottom, 0px);
     width: min(48%, 340px); max-height: none; }
-  .app .map-wrap .controls.hist { left: 8px; right: auto;
-    max-width: calc(52% - 16px); }
   .app.has-side-panel .field-map-tools {
     right: calc(min(48%, 340px) + 16px); }
 }

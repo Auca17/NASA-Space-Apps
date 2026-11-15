@@ -4,9 +4,7 @@
 import { useState } from "react";
 import { useT } from "../../i18n";
 import { numbersFor } from "../../content/emergency";
-import {
-  DIRECTION_KEYS, emergencyMessage, type NearbyDetection,
-} from "../../domain/emergency";
+import { emergencyMessage } from "../../domain/emergency";
 
 export interface EmergencyBlockProps {
   /** ISO A2 of the point being looked at; null shows the generic text. */
@@ -14,16 +12,13 @@ export interface EmergencyBlockProps {
   /** Visible map centre: the coordinates the message uses when the
    * user has not shared a location. */
   mapCenter: { lat: number; lon: number } | null;
-  /** Nearest satellite detection (live mode), for the card and the
-   * message; null when nothing near or not applicable. */
-  detection?: NearbyDetection | null;
   /** Optional leading sentence (e.g. "si ves fuego, llamá ya"). */
   lead?: string;
 }
 
-export function EmergencyBlock({ country, mapCenter, detection, lead }: {
+export function EmergencyBlock({ country, mapCenter, lead }: {
     country: string | null; mapCenter: { lat: number; lon: number } | null;
-    detection?: NearbyDetection | null; lead?: string }) {
+    lead?: string }) {
   const { t } = useT();
   const [userLoc, setUserLoc] = useState<{ lat: number; lon: number } | null>(null);
   const [locDenied, setLocDenied] = useState(false);
@@ -31,15 +26,10 @@ export function EmergencyBlock({ country, mapCenter, detection, lead }: {
   const [copyFailed, setCopyFailed] = useState(false);
   const numbers = numbersFor(country);
   const at = userLoc ?? mapCenter;
-  const detMsg = detection
-    ? { km: detection.km, dirKey: DIRECTION_KEYS[detection.dir],
-        hoursAgo: detection.hoursAgo }
-    : null;
   const message = at
     ? emergencyMessage({
         lat: at.lat, lon: at.lon,
-        source: userLoc ? "user" : "map",
-        detection: detMsg }, t)
+        source: userLoc ? "user" : "map" }, t)
     : t("emerg.msg.intro");
 
   const copy = async () => {
@@ -94,7 +84,7 @@ export function EmergencyBlock({ country, mapCenter, detection, lead }: {
         </details>
       </div>
       <p className="notice" role="note">
-        {t("live.notice")}. {t("emerg.noticeCall")}
+        {t("emerg.satNotice")}. {t("emerg.noticeCall")}
       </p>
       <p className="muted">
         {t("emerg.privacy")}{" "}
