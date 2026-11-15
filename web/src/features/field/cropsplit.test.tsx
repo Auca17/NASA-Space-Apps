@@ -1,8 +1,9 @@
 import { describe, it, expect, vi, afterEach, beforeEach } from "vitest";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { render, renderHook, screen, fireEvent } from "@testing-library/react";
 import { I18nProvider } from "../../i18n";
 import { FieldDetail } from "./FieldsPanel";
 import { DetectedCrop } from "./DetectedCrop";
+import { useAutoCropSplit } from "./autoCropSplit";
 import { squareRing } from "../../domain/selection";
 import { addZones, geoJsonToMulti, loadFields, saveField, setFieldCrop,
          type Field } from "../../domain/fields";
@@ -43,43 +44,17 @@ describe("crop zones store", () => {
 describe("split by crop", () => {
   const field: Field = { id: "a", name: "A", geom: [[ring]], zones: [], createdAt: "" };
 
-  it("splits the field by crop on its own when it is opened", async () => {
-    vi.stubGlobal("fetch", vi.fn(async (url: string) => String(url).includes("crop-zones")
-      ? json({ status: "available", campaign: "2024-2025", season: "summer",
-               source: "INTA · Mapa Nacional de Cultivos", source_url: "", resolution_m: 30,
-               zones: [{ crop: { id: "soy", es: "Soja", en: "Soybean" }, ha: 60,
-                         geometry: { type: "Polygon", coordinates: [square] } }] })
-      : json({ source: "", source_url: "", resolution_m: 30, seasons: [] })));
-    const f = fns();
-    wrap(<FieldDetail field={field} choice="all" pending={null} {...f} />);
-    await vi.waitFor(() => expect(f.onAddZones).toHaveBeenCalled());
-    expect(f.onCropSplit).toHaveBeenCalledWith("done");
-    const zones = f.onAddZones.mock.calls[0][0];
-    expect(zones).toHaveLength(1);
-    expect(zones[0]).toMatchObject({ name: "Soja", crop: "Soja" });
-    expect(zones[0].geom[0][0][0]).toEqual([-33.97, -60.70]);
+  it("shows that it is looking for crops while the automatic split runs", () => {
+    vi.stubGlobal("fetch", vi.fn(async () => json({ seasons: [] })));
+    wrap(<FieldDetail field={field} choice="all" pending={null} {...fns()} />);
+    expect(screen.getByText(/buscando los cultivos/i)).toBeInTheDocument();
   });
 
-  it("says so when the map has no crops for the field", async () => {
-    vi.stubGlobal("fetch", vi.fn(async () => json({ status: "no_coverage", zones: [],
-      campaign: "2024-2025", season: "summer", source: "", source_url: "",
-      resolution_m: 30 })));
-    const f = fns();
-    wrap(<FieldDetail field={field} choice="all" pending={null} {...f} />);
-    expect(await screen.findByText(/no encontró cultivos/i)).toBeInTheDocument();
-    expect(f.onAddZones).not.toHaveBeenCalled();
-    expect(f.onCropSplit).toHaveBeenCalledWith("none");
-  });
-
-  it("leaves fields that already have zones alone", async () => {
-    const fetch = vi.fn(async (_url: string) => json({ seasons: [] }));
-    vi.stubGlobal("fetch", fetch);
-    const f = fns();
-    wrap(<FieldDetail field={{ ...field, zones: [{ id: "z", name: "", crop: "",
-                                                     geom: [[ring]] }] }}
-                      choice="all" pending={null} {...f} />);
-    await new Promise((r) => setTimeout(r, 20));
-    expect(fetch.mock.calls.some(([u]) => String(u).includes("crop-zones"))).toBe(false);
+  it("explains when the map found no crops", () => {
+    vi.stubGlobal("fetch", vi.fn(async () => json({ seasons: [] })));
+    wrap(<FieldDetail field={{ ...field, cropSplit: "none" }} choice="all"
+                      pending={null} {...fns()} />);
+    expect(screen.getByText(/no encontró cultivos/i)).toBeInTheDocument();
   });
 
   it("does not split again once it was tried (the user may have removed zones)", async () => {
@@ -90,6 +65,47 @@ describe("split by crop", () => {
     await new Promise((r) => setTimeout(r, 20));
     expect(fetch.mock.calls.some(([u]) => String(u).includes("crop-zones"))).toBe(false);
     expect(screen.getByRole("button", { name: /volver a dividir/i })).toBeInTheDocument();
+  });
+});
+
+describe("useAutoCropSplit", () => {
+  const zonesReply = json({ status: "available", campaign: "2024-2025", season: "summer",
+    source: "", source_url: "", resolution_m: 30,
+    zones: [{ crop: { id: "soy", es: "Soja", en: "Soybean" }, ha: 60,
+              geometry: { type: "Polygon", coordinates: [square] } }] });
+  const f = (id: string, extra: Partial<Field> = {}): Field =>
+    ({ id, name: id, geom: [[ring]], zones: [], createdAt: "", ...extra });
+
+  it("splits every saved field with no zones, without opening it", async () => {
+    vi.stubGlobal("fetch", vi.fn(async () => zonesReply.clone()));
+    const apply = vi.fn();
+    renderHook(() => useAutoCropSplit([f("a"), f("b", { cropSplit: "none" })],
+                                      "es", apply));
+    await vi.waitFor(() => expect(apply).toHaveBeenCalledTimes(1));
+    const [id, zones, result] = apply.mock.calls[0];
+    expect(id).toBe("a");
+    expect(result).toBe("done");
+    expect(zones[0]).toMatchObject({ name: "Soja", crop: "Soja" });
+  });
+
+  it("asks only once per field even if the list re-renders", async () => {
+    const fetch = vi.fn(async () => zonesReply.clone());
+    vi.stubGlobal("fetch", fetch);
+    const apply = vi.fn();
+    const fields = [f("c")];
+    const { rerender } = renderHook(({ fs }) => useAutoCropSplit(fs, "es", apply),
+                                    { initialProps: { fs: fields } });
+    rerender({ fs: [...fields] });
+    await vi.waitFor(() => expect(apply).toHaveBeenCalled());
+    expect(fetch).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not mark the field when INTA is down, so it retries later", async () => {
+    vi.stubGlobal("fetch", vi.fn(async () => new Response("", { status: 503 })));
+    const apply = vi.fn();
+    renderHook(() => useAutoCropSplit([f("d")], "es", apply));
+    await new Promise((r) => setTimeout(r, 20));
+    expect(apply).not.toHaveBeenCalled();
   });
 });
 

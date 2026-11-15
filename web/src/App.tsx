@@ -16,6 +16,7 @@ import { FieldPicker, type DrawMode } from "./features/field/FieldPicker";
 import { SelectionReview, AdjustPanel, type LandCheck, type Adjust }
   from "./features/field/SelectionReview";
 import { FieldsList, FieldDetail } from "./features/field/FieldsPanel";
+import { useAutoCropSplit } from "./features/field/autoCropSplit";
 import { useAreaLabel } from "./features/field/areaLabel";
 import { FreehandLayer } from "./features/field/FreehandLayer";
 import type { AnalysisTarget } from "./features/field/FieldLens";
@@ -226,6 +227,15 @@ export default function App() {
     refreshFields();
     return true;
   };
+  // Saved fields with no zones are split by crop on their own (INTA map).
+  useAutoCropSplit(fields, lang, (id, zones, result) => {
+    storeChange(() => {
+      const now = loadFields().find((f) => f.id === id);
+      if (!now || now.zones.length || now.cropSplit) return;  // user got there first
+      if (zones.length) addZones(id, zones);
+      markCropSplit(id, result);
+    });
+  });
 
   /** Map height hidden by the bottom panel on narrow screens (0 when
    * the panel sits beside the map). */

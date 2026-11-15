@@ -1,6 +1,6 @@
 /** "Mis campos": saved fields (this browser only), their crop zones and
  * the choice of which area to analyse. */
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 import { useT } from "../../i18n";
 import {
   fieldHa, zoneHa, analysisOptions, ZONE_COLORS, type Field, type AreaOption,
@@ -8,11 +8,7 @@ import {
 import type { Multi } from "../../domain/selection";
 import { useAreaLabel } from "./areaLabel";
 import { DetectedCrop } from "./DetectedCrop";
-import { apiCropZones } from "../../api";
-import { geoJsonToMulti } from "../../domain/fields";
-import { plotBody } from "../../domain/selection";
-
-type NewZone = { name: string; crop: string; geom: Multi };
+import { cropZonesFor, type NewZone } from "./autoCropSplit";
 type SplitState = null | "loading" | "none" | "unavailable" | "done";
 
 /** Text for the automatic split by crop; kept here, next to its only use. */
@@ -21,13 +17,13 @@ const SPLIT_TXT = {
         loading: "Buscando los cultivos del campo en el mapa del INTA…",
         none: "El mapa del INTA no encontró cultivos en este campo. Podés dibujar las zonas a mano.",
         unavailable: "No pudimos consultar el mapa del INTA ahora. Probá de nuevo en un rato.",
-        done: "Listo: una zona por cultivo, campaña Verano {c}. Lo que no es cultivo queda sin zona.",
+        done: "Listo: una zona por cultivo, campaña Verano 2024-2025. Lo que no es cultivo queda sin zona.",
         hint: "Crea una zona por cada cultivo que ve el satélite, sin cargar nada." },
   en: { go: "Split by crop again (INTA map)",
         loading: "Looking up the field's crops in INTA's map…",
         none: "INTA's map found no crops in this field. You can draw the zones by hand.",
         unavailable: "We couldn't reach INTA's map right now. Try again shortly.",
-        done: "Done: one zone per crop, Summer {c} campaign. Non-crop land stays unzoned.",
+        done: "Done: one zone per crop, Summer 2024-2025 campaign. Non-crop land stays unzoned.",
         hint: "Creates one zone per crop seen from space, no typing needed." },
 } as const;
 
@@ -129,31 +125,19 @@ export function FieldDetail({ field, pending, choice, onChoose, onAnalyze,
   const { t, lang } = useT();
   const st = SPLIT_TXT[lang];
   const [split, setSplit] = useState<SplitState>(null);
-  const [campaign, setCampaign] = useState("");
   const splitByCrop = async () => {
     setSplit("loading");
-    const r = await apiCropZones(plotBody(field.geom));
-    if (!r || r.status === "unavailable") return setSplit("unavailable");
-    if (!r.zones.length) {
-      onCropSplit?.("none");
-      return setSplit("none");
-    }
-    onAddZones?.(r.zones.map((z) => ({ name: z.crop[lang], crop: z.crop[lang],
-                                       geom: geoJsonToMulti(z.geometry) })));
-    onCropSplit?.("done");
-    setCampaign(r.campaign);
-    setSplit("done");
+    const r = await cropZonesFor(field.geom, lang);
+    if (!r) return setSplit("unavailable");
+    if (r.zones.length) onAddZones?.(r.zones);
+    onCropSplit?.(r.result);
+    setSplit(r.result);
   };
-  // Automatic: a field with no zones is split by crop the first time it
-  // is opened. Once tried it is not repeated (the user may remove zones).
-  const autoRan = useRef(false);
-  useEffect(() => {
-    if (autoRan.current || !onAddZones || field.zones.length || field.cropSplit)
-      return;
-    autoRan.current = true;
-    void splitByCrop();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [field.id]);
+  // The first split runs on its own from the fields list (useAutoCropSplit);
+  // here we only say what happened and offer to redo it.
+  const auto = field.zones.length ? null
+    : !field.cropSplit ? "loading" : field.cropSplit === "none" ? "none" : null;
+  const status = split ?? auto;
   const ha = useHa();
   const areaLabel = useAreaLabel();
   const [name, setName] = useState("");
@@ -194,14 +178,13 @@ export function FieldDetail({ field, pending, choice, onChoose, onAnalyze,
                               free: ha(Math.max(0, total - zoned)) })}</p>
       {onAddZones && field.zones.length === 0 && split !== "loading" &&
         (field.cropSplit || split === "unavailable") && (
+
         <div className="crop-split">
           <button onClick={splitByCrop}>{st.go}</button>
           <span className="muted">{st.hint}</span>
         </div>)}
-      {split && split !== "done" && (
-        <p role="status" className="muted">{st[split]}</p>)}
-      {split === "done" && (
-        <p role="status" className="muted">{st.done.replace("{c}", campaign)}</p>)}
+      {status && (
+        <p role="status" className="muted">{st[status]}</p>)}
       {field.zones.length > 0 && (
         <ul className="zone-list">
           {field.zones.map((z, i) => (
