@@ -229,6 +229,11 @@ export const CROP_COLORS: Record<string, string> = {
   colza: "#ffd24a",       // rapeseed yellow
   garbanzo: "#a6761d",    // dark tan
   arveja: "#4dc36b",      // pea green
+  vid: "#8e44ad",         // grape violet
+  olivo: "#6d8b3c",       // olive green
+  ajo: "#e0a458",         // garlic tan
+  frutal_carozo: "#e377c2", // blossom pink
+  monte_nativo: "#4f5d45",  // brushland sage
   otro: "#8a8f98",        // neutral grey
   sin_cultivo: "#6b5d4f", // stubble brown
 };

@@ -28,6 +28,12 @@ import {
 import { splitSelection, clipZone, ROAD_HALF_WIDTH } from "./domain/split";
 import { nearestMidpoint, nearestVertex } from "./domain/parcelsGeo";
 import {
+  isDemoHash, MENDOZA_BOUNDARY, MENDOZA_CACHED, MENDOZA_ECON,
+  MENDOZA_NEEDS, MENDOZA_PARCELS, MENDOZA_PROFILE,
+} from "./features/demo/mendozaFarm";
+import { GuidedTour } from "./features/demo/GuidedTour";
+import { tourSeen } from "./features/demo/demoTour";
+import {
   loadFields, saveField, renameField, deleteField, addZone, updateZone,
   removeZone, fieldHa, analysisOptions, ZONE_COLORS, type Field,
   type AreaOption,
@@ -116,6 +122,11 @@ export default function App() {
   /** Last parcels analysis: zones + per-parcel badges on the map. */
   const [parcelRes, setParcelRes] = useState<{
     res: ParcelsResponse; parcels: ParcelInput[] } | null>(null);
+  /** Guided demo tour: opens once the demo result is on the screen. */
+  const [demoTour, setDemoTour] = useState(false);
+  /** #demo can fire before the map exists: the farm frame is queued
+   * here and applied once the globe reports ready. */
+  const demoFitPending = useRef(false);
   const [lots, setLots] = useState<OrinLots["features"]>([]);
   const [playingMonth, setPlayingMonth] = useState<string | null>(null);
   const [methodsOpen, setMethodsOpen] = useState(false);
@@ -326,6 +337,13 @@ export default function App() {
     globe.fitRing(ARGENTINA_FRAME, coveredBottom());
   }, [globe, mode]);
 
+  // #demo fired before the map was ready: frame the farm once it is.
+  useEffect(() => {
+    if (!globe || !demoFitPending.current || !target) return;
+    demoFitPending.current = false;
+    globe.fitRing(multiPoints(target.geom), coveredBottom());
+  }, [globe, target]);
+
   // Review step: frame the selection and read OpenStreetMap land use
   // from the vector tiles. Unknown land use never blocks confirming;
   // pieces that come from Ajustar selección were already checked.
@@ -395,10 +413,20 @@ export default function App() {
     if (mode !== "fire") globeRef.current?.setCells(new Map(), null);
   }, [mode]);
 
-  // deep-link: #lat,lon jumps straight to a location (dev + sharing)
+  // deep-link: #lat,lon jumps straight to a location (dev + sharing),
+  // #demo opens the guided Mendoza example
   useEffect(() => {
+    if (isDemoHash(location.hash)) { startDemo(); return; }
     const m = location.hash.match(/^#(-?\d+(?:\.\d+)?),(-?\d+(?:\.\d+)?)$/);
     if (m) locate(Number(m[1]), Number(m[2]));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // /app/#demo typed (or tapped from the landing) while the app runs
+  useEffect(() => {
+    const on = () => { if (isDemoHash(location.hash)) startDemo(); };
+    window.addEventListener("hashchange", on);
+    return () => window.removeEventListener("hashchange", on);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -593,6 +621,29 @@ export default function App() {
     startField("none");
   };
 
+  /** One-tap guided demo (task 40): a fictional Mendoza farm on a real
+   * Valle de Uco location — parcels, producer profile and a cached
+   * fallback all come from features/demo/mendozaFarm. The analysis
+   * itself is the live /api/field/parcels call. */
+  const startDemo = () => {
+    setMode("field"); setDraw("none"); setSelection(null); setAdjust(null);
+    setFieldsView(null); setShownField(null); setPendingZone(null);
+    setParcelRes(null); setParcelsWizard(false);
+    demoFitPending.current = true;
+    country.current = "AR";
+    analyze({
+      geom: MENDOZA_BOUNDARY,
+      areaLabel: t("demo.farmArea"),
+      fieldName: t("demo.farmName"),
+      parcels: MENDOZA_PARCELS,
+      needs: MENDOZA_NEEDS,
+      profile: MENDOZA_PROFILE,
+      econ: MENDOZA_ECON,
+      demo: { cached: MENDOZA_CACHED.res,
+              cachedDate: MENDOZA_CACHED.date },
+    });
+  };
+
   const demoPlot = () => {
     const r = circleApprox(DEMO_PLOT.lat, DEMO_PLOT.lon);
     setMode("field"); setDraw("none"); setSelection(null); setAdjust(null);
@@ -779,7 +830,7 @@ export default function App() {
 
         {mode === "welcome" && (
           <div className="welcome-overlay">
-            <Welcome onAnalyze={() => startField("none")} onDemo={demoPlot}
+            <Welcome onAnalyze={() => startField("none")} onDemo={startDemo}
                      onLocate={locate}
                      onExplore={openFire}
                      onLive={() => setMode("live")} />
@@ -854,6 +905,8 @@ export default function App() {
             <ParcelsMapLayer globe={globe} parcels={parcelRes.parcels}
                              res={parcelRes.res} />
           </Suspense>)}
+        {demoTour && parcelRes && (
+          <GuidedTour onClose={() => setDemoTour(false)} />)}
         {mode === "field" && !fieldOpen && !selection &&
           (draw !== "none" || !fieldsView) && (
           <FieldPicker draw={draw} points={draft.length}
@@ -893,8 +946,10 @@ export default function App() {
           <FieldPanel target={target} open={fieldOpen}
                       onMethods={() => setMethodsOpen(true)}
                       onClose={changePlot} onChangePlot={changePlot}
-                      onResult={(res, parcels) =>
-                        setParcelRes({ res, parcels })}
+                      onResult={(res, parcels) => {
+                        setParcelRes({ res, parcels });
+                        if (target?.demo && !tourSeen()) setDemoTour(true);
+                      }}
                       onEmergency={() => setEmergOpen(true)} />
         </Suspense>)}
       <MethodsDrawer open={methodsOpen}

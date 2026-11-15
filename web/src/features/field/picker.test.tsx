@@ -69,6 +69,34 @@ describe("FieldPicker", () => {
     expect(screen.getByText(/tocá el centro de tu lote/i)).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /cancelar/i })).toBeInTheDocument();
   });
+
+  it("reports aria-expanded matching the visible state, wide or compact",
+      () => {
+    const realMM = window.matchMedia;
+    try {
+      // wide: options visible by default -> expanded
+      window.matchMedia = (() =>
+        ({ matches: false, addEventListener() {},
+           removeEventListener() {} })) as unknown as typeof matchMedia;
+      const first = renderPicker("none");
+      const toggle = () => screen.getByRole("button",
+        { name: /ver más mapa|buscar o marcar lote/i });
+      expect(toggle()).toHaveAttribute("aria-expanded", "true");
+      fireEvent.click(toggle());
+      expect(toggle()).toHaveAttribute("aria-expanded", "false");
+      first.unmount();
+
+      // compact: the default "peek" shows only the main action ->
+      // collapsed; tapping the handle opens the full sheet
+      window.matchMedia = (() =>
+        ({ matches: true, addEventListener() {},
+           removeEventListener() {} })) as unknown as typeof matchMedia;
+      renderPicker("none");
+      expect(toggle()).toHaveAttribute("aria-expanded", "false");
+      fireEvent.click(toggle());
+      expect(toggle()).toHaveAttribute("aria-expanded", "true");
+    } finally { window.matchMedia = realMM; }
+  });
 });
 
 describe("FieldPicker place finder", () => {
