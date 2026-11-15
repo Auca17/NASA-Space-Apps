@@ -12,7 +12,7 @@ from fastapi import APIRouter, Request
 from fastapi.responses import JSONResponse
 
 from ..cache import utc_today
-from ..h3util import h3_r2, h3_r5, h3_r6
+from ..h3util import h3_r5, h3_r6
 from ..services import field_sources as src
 from ..services.geodesy import ring_area_ha, ring_centroid
 from ..services.data import risk_shard
@@ -1030,8 +1030,11 @@ async def diagnose(request: Request):
         return err
     (clat, clon), area_ha, r5s, r6s, bbox = parsed
     r6c = r6s[0]
-    r2 = h3_r2(clat, clon)
     r5c = r5s[0]
+    # shard index is the res-2 parent of the res-5 cell, NOT the res-2
+    # of the centroid: ~6% of res-5 centroids fall across a res-2
+    # boundary, which would fetch a shard missing this cell (audit, t29)
+    r2 = h3.cell_to_parent(r5c, 2)
 
     async with httpx.AsyncClient(timeout=TIMEOUT) as client:
         fetches = asyncio.gather(
