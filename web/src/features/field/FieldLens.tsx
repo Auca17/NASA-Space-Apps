@@ -175,8 +175,12 @@ export function SeqBar({ s, t, soilPh }: {
           <p><strong>{t("rot.fallow.when", { from: dayOf(gap.start), to: dayOf(gap.end), days: gap.days })}</strong>
             {gap.after && gap.before && <> {t("rot.fallow.between", { after: cleanName(gap.after), before: cleanName(gap.before) })}</>}
           </p>
-          <ul>{gap.tips.map((tip) => <li key={tip}>{t(`rot.fallow.tip.${tip}`, {
-            before: cleanName(gap.before), ph: soilPh != null ? String(soilPh).replace(".", lang === "es" ? "," : ".") : "" })}</li>)}</ul>
+          <ol className="fallow-steps">{gap.steps.map((step) => <li key={step.key}>
+            <strong>{step.to ? `${dayOf(step.from)} → ${dayOf(step.to)}` : dayOf(step.from)}</strong>{" "}
+            {t(`rot.fallow.do.${step.key}`, {
+              after: cleanName(step.vars?.after), before: cleanName(step.vars?.before ?? gap.before),
+              ph: soilPh != null ? String(soilPh).replace(".", lang === "es" ? "," : ".") : "" })}
+          </li>)}</ol>
         </div>)}
       </div>}
     </div>);

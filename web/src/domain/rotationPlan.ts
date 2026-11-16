@@ -121,19 +121,27 @@ export function rotationTech(ind: Record<string, unknown>, crops: CropInfo[] = [
   return out;
 }
 
+export type FallowStep = {
+  from: string;
+  to?: string;
+  /** i18n suffix under rot.fallow.do.* */
+  key: string;
+  vars?: Record<string, string>;
+};
 export type FallowTip = {
   start: string; end: string; days: number;
   after?: string; before?: string;
-  /** i18n suffixes under rot.fallow.tip.* */
-  tips: string[];
+  /** dated, imperative to-do list for the period */
+  steps: FallowStep[];
 };
 
-/** What to do in each period without a crop: weeds, residue, a cover
- * crop when the gap is a long autumn-winter one, soil test and liming
- * when the soil pH misses a crop's range, and sowing preparation. */
+/** Dated to-do list for each period without a crop. A long
+ * autumn-winter gap gets a cover crop (vicia before maize, which needs
+ * nitrogen; rye otherwise); any other gap gets weed control. Liming
+ * comes first when the soil pH misses a crop of the rotation. */
 export function fallowAdvice(plan: Plan, crops: CropInfo[] = [], soilPh?: number | null): FallowTip[] {
   const acid = soilPh != null && crops.some((c) => c.ph_min != null && soilPh < c.ph_min);
-  const gaps: Omit<FallowTip, "tips">[] = [];
+  const gaps: Omit<FallowTip, "steps">[] = [];
   plan.entries.forEach((e, i) => {
     if (e.kind !== "fallow") return;
     gaps.push({ start: e.start, end: e.end, days: e.days,
@@ -144,14 +152,30 @@ export function fallowAdvice(plan: Plan, crops: CropInfo[] = [], soilPh?: number
     gaps.push({ ...plan.restartFallow, after: last?.crop, before: plan.restart });
   }
   return gaps.map((gap) => {
+    const s = doy(gap.start);
+    const D = gap.days;
+    const at = (n: number) => md(s + n);
     const month = Number(gap.start.slice(0, 2));
-    const winter = month >= 3 && month <= 8;
-    const tips = ["weeds"];
-    if (gap.days >= 20) tips.push("residue");
-    if (gap.days >= 60 && winter) tips.push(gap.before === "maiz" ? "coverForMaize" : "cover");
-    if (gap.days >= 45) tips.push("soilTest");
-    if (acid && gap.days >= 45) tips.push("lime");
-    tips.push("sowPrep");
-    return { ...gap, tips };
+    const cover = D >= 60 && month >= 3 && month <= 8;
+    const steps: FallowStep[] = [];
+    const afterCover = crops.find((c) => c.id === gap.after)?.role === "cover";
+    if (gap.after) steps.push({ from: gap.start, key: afterCover ? "afterCover" : "harvest", vars: { after: gap.after } });
+    if (acid && D >= 45) steps.push({ from: at(1), to: at(10), key: "lime" });
+    if (cover) {
+      const crop = gap.before === "maiz" ? "vicia" : "centeno";
+      steps.push({ from: at(1), to: at(10), key: crop === "vicia" ? "coverSowVicia" : "coverSow" });
+      steps.push({ from: at(11), to: at(D - 31), key: "coverGrow" });
+      steps.push({ from: at(D - 30), key: "soilTest", vars: { before: gap.before ?? "" } });
+      steps.push({ from: at(D - 21), key: "coverEnd" });
+    } else if (D >= 20) {
+      steps.push({ from: at(1), to: at(D - 15), key: "weeds" });
+      if (D >= 45) steps.push({ from: at(D - 30), key: "soilTest", vars: { before: gap.before ?? "" } });
+      steps.push({ from: at(D - 14), key: "chemFallow" });
+    } else {
+      steps.push({ from: at(1), to: gap.end, key: "weedsShort" });
+    }
+    if (D >= 20) steps.push({ from: at(D - 7), to: gap.end, key: "sowPrep" });
+    if (gap.before) steps.push({ from: md(s + D), key: "sow", vars: { before: gap.before } });
+    return { ...gap, steps };
   });
 }

@@ -61,6 +61,8 @@ it("says what to do with the land in the months without a crop", async () => {
   expect(screen.getByRole("heading", { name: /meses sin cultivo: qué hacer/i })).toBeInTheDocument();
   expect(screen.getByText(/1 oct.*31 oct.*\(31 días sin cultivo\)/i)).toBeInTheDocument();
   expect(screen.getByText(/después de centeno y antes de soja/i)).toBeInTheDocument();
-  expect(screen.getByText(/controlar las malezas/i)).toBeInTheDocument();
-  expect(screen.getByText(/unas semanas antes de sembrar soja/i)).toBeInTheDocument();
+  expect(screen.getByText(/con la cobertura de centeno ya secada/i)).toBeInTheDocument();
+  expect(screen.getByText(/barbecho químico final/i)).toBeInTheDocument();
+  const sow = screen.getByText(/^sembrar soja\.$/i);
+  expect(sow.closest("li")).toHaveTextContent(/1 nov.*sembrar soja/i);
 });

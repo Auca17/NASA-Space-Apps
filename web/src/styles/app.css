@@ -711,3 +711,5 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
 .fallow-advice h5 { margin: 0 0 6px; font-size: .9rem; }
 .fallow-gap p { margin: 6px 0 2px; font-size: .85rem; }
 .fallow-gap ul { margin: 0; padding-left: 18px; display: grid; gap: 4px; font-size: .85rem; }
+.fallow-steps { margin: 0; padding-left: 20px; display: grid; gap: 5px; font-size: .85rem; }
+.fallow-steps strong { white-space: nowrap; }

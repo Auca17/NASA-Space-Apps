@@ -69,19 +69,23 @@ describe("rotationTech", () => {
 
 describe("fallowAdvice", () => {
   const crops = [info("maiz", "grain", { ph_min: 5.8, ph_max: 7 }), info("soja", "grain")];
-  it("says what to do in each period without a crop", async () => {
+  it("gives a dated to-do list with a cover crop in a long autumn-winter gap", async () => {
     const { fallowAdvice } = await import("./rotationPlan");
     const plan = rotationPlan([
       { crop: "soja", start: "11-01", end: "04-15" },
       { crop: "maiz", start: "09-25", end: "03-15" },
     ], crops);
-    const tips = fallowAdvice(plan, crops, 5.5);
-    expect(tips.map((f) => [f.start, f.end, f.after, f.before])).toEqual([
-      ["04-16", "09-24", "soja", "maiz"], ["03-16", "10-31", "maiz", "soja"]]);
-    expect(tips[0].tips).toEqual(["weeds", "residue", "coverForMaize", "soilTest", "lime", "sowPrep"]);
+    const [beforeMaize, beforeSoy] = fallowAdvice(plan, crops, 5.5);
+    expect([beforeMaize.start, beforeMaize.end, beforeMaize.after, beforeMaize.before])
+      .toEqual(["04-16", "09-24", "soja", "maiz"]);
+    expect(beforeMaize.steps.map((step) => [step.key, step.from, step.to ?? ""])).toEqual([
+      ["harvest", "04-16", ""], ["lime", "04-17", "04-26"], ["coverSowVicia", "04-17", "04-26"],
+      ["coverGrow", "04-27", "08-25"], ["soilTest", "08-26", ""], ["coverEnd", "09-04", ""],
+      ["sowPrep", "09-18", "09-24"], ["sow", "09-25", ""]]);
+    expect(beforeSoy.steps.find((step) => step.key === "coverSow")).toBeDefined();
   });
 
-  it("keeps short turnarounds to weeds and sowing", async () => {
+  it("keeps a short turnaround to weed control and sowing", async () => {
     const { fallowAdvice } = await import("./rotationPlan");
     const plan = rotationPlan([
       { crop: "centeno", start: "04-15", end: "09-30" },
@@ -89,6 +93,7 @@ describe("fallowAdvice", () => {
     ], [info("centeno", "cover"), info("soja", "grain")]);
     const tips = fallowAdvice(plan, [], null);
     expect(tips).toHaveLength(1);
-    expect(tips[0].tips).toEqual(["weeds", "residue", "sowPrep"]);
+    expect(tips[0].steps.map((step) => step.key)).toEqual(["harvest", "weeds", "chemFallow", "sowPrep", "sow"]);
+    expect(tips[0].steps.at(-1)).toEqual({ from: "11-01", key: "sow", vars: { before: "soja" } });
   });
 });
