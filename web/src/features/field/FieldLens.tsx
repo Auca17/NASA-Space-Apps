@@ -1,6 +1,7 @@
 import { CropRecommendations } from "./CropRecommendations";
 import { DecisionDetail } from "./DecisionDetail";
 import { RotationPlan } from "./RotationPlan";
+import { fallowAdvice, rotationPlan } from "../../domain/rotationPlan";
 import { moistureGeometry } from "../../domain/moisture";
 import { MoisturePanel } from "./MoisturePanel";
 import type { CurrentCrop, MoistureZone } from "../../api/types";
@@ -115,21 +116,41 @@ function Afinity({ score, t }: {
     </div>);
 }
 
-/** Covered-vs-bare crop segments over a 12-month bar. */
-function SeqBar({ s, t }: {
+/** Month-by-month calendar of the rotation: one row per crop, green
+ * while the crop is in the field, brown while the field has no crop. */
+export function SeqBar({ s, t, soilPh }: {
     s: Strategy;
+    soilPh?: number | null;
     t: (k: string, v?: Record<string, string | number>) => string }) {
+  const { lang } = useT();
   const months = t("ui.monthInitials").split(",");
+  const month = new Intl.DateTimeFormat(lang, { month: "short", timeZone: "UTC" });
+  const monthOf = (md: string) => month.format(new Date(`2025-${md}T00:00:00Z`));
+  const names = new Map((s.crops_info ?? []).map((c) => [c.id, c.name[lang] ?? c.name.es ?? c.id]));
+  const anyBare = s.sequence.some((seq) => seq.cover === false);
+  const day = new Intl.DateTimeFormat(lang, { day: "numeric", month: "short", timeZone: "UTC" });
+  const dayOf = (md: string) => day.format(new Date(`2025-${md}T00:00:00Z`));
+  // mid-sentence crop name: "Vicia (cobertura)" -> "vicia"
+  const cleanName = (id?: string) => (id ? names.get(id) ?? id : "")
+    .replace(/\s*\([^)]*\)$/, "").toLocaleLowerCase(lang);
+  const gaps = fallowAdvice(rotationPlan(s.sequence, s.crops_info ?? [], soilPh), s.crops_info ?? [], soilPh);
   return (
     <div className="seqbars">
+      <p className="seq-help">{t("rot.seq.help")}</p>
+      <ul className="seq-legend">
+        <li><span className="seq-swatch covered" aria-hidden="true" />{t("rot.seq.crop")}</li>
+        <li><span className="seq-swatch empty" aria-hidden="true" />{t("rot.seq.empty")}</li>
+        {anyBare && <li><span className="seq-swatch bare" aria-hidden="true" />{t("rot.seq.thin")}</li>}
+      </ul>
       {s.sequence.map((seq, i) => {
         const covered = seq.cover !== false;
+        const name = names.get(seq.crop) ?? seq.crop;
+        const span = `${monthOf(seq.start)} → ${monthOf(seq.end)}`;
         return (
           <div className="seqrow" key={i}>
-            <span className="seqcrop">{seq.crop}</span>
+            <span className="seqcrop">{name}</span>
             <span className="seqbar" role="img"
-                  aria-label={`${seq.crop}: ${seq.start}–${seq.end} · ` +
-                    (covered ? t("rot.covered") : t("rot.bare"))}>
+                  aria-label={t("rot.seq.row", { crop: name, span })}>
               {seqSegments(seq.start, seq.end).map((seg, j) => (
                 <span key={j}
                       className={`seqfill ${covered ? "covered" : "bare"}`}
@@ -138,9 +159,7 @@ function SeqBar({ s, t }: {
                         width: `${((seg.to - seg.from + 1) / 12) * 100}%`,
                       }} />))}
             </span>
-            <span className="seqcov">
-              {covered ? t("rot.covered") : t("rot.bare")}
-            </span>
+            <span className="seqcov">{span}</span>
           </div>);
       })}
       <div className="seqrow seqmonths" aria-hidden="true">
@@ -150,6 +169,16 @@ function SeqBar({ s, t }: {
         </span>
         <span className="seqcov" />
       </div>
+      {gaps.length > 0 && <div className="fallow-advice">
+        <h5>{t("rot.fallow.title")}</h5>
+        {gaps.map((gap, i) => <div key={i} className="fallow-gap">
+          <p><strong>{t("rot.fallow.when", { from: dayOf(gap.start), to: dayOf(gap.end), days: gap.days })}</strong>
+            {gap.after && gap.before && <> {t("rot.fallow.between", { after: cleanName(gap.after), before: cleanName(gap.before) })}</>}
+          </p>
+          <ul>{gap.tips.map((tip) => <li key={tip}>{t(`rot.fallow.tip.${tip}`, {
+            before: cleanName(gap.before), ph: soilPh != null ? String(soilPh).replace(".", lang === "es" ? "," : ".") : "" })}</li>)}</ul>
+        </div>)}
+      </div>}
     </div>);
 }
 
@@ -305,8 +334,8 @@ function StrategyCard({ s, t, current, variants, explain,
           <RotationPlan s={s} soilPh={soilPh} t={t} />
         </Section>)}
       {s.sequence.length > 0 && (
-        <Section title={t("rot.sequence")} open>
-          <SeqBar s={s} t={t} />
+        <Section title={t("rot.seq.title")} open>
+          <SeqBar s={s} t={t} soilPh={soilPh} />
         </Section>)}
       <Section title={t("rot.evidence")} count={s.evidence.length}>
         <ul>{s.evidence.map((e, i) => <li key={i}>{e.text}

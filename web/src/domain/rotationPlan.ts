@@ -120,3 +120,38 @@ export function rotationTech(ind: Record<string, unknown>, crops: CropInfo[] = [
   }
   return out;
 }
+
+export type FallowTip = {
+  start: string; end: string; days: number;
+  after?: string; before?: string;
+  /** i18n suffixes under rot.fallow.tip.* */
+  tips: string[];
+};
+
+/** What to do in each period without a crop: weeds, residue, a cover
+ * crop when the gap is a long autumn-winter one, soil test and liming
+ * when the soil pH misses a crop's range, and sowing preparation. */
+export function fallowAdvice(plan: Plan, crops: CropInfo[] = [], soilPh?: number | null): FallowTip[] {
+  const acid = soilPh != null && crops.some((c) => c.ph_min != null && soilPh < c.ph_min);
+  const gaps: Omit<FallowTip, "tips">[] = [];
+  plan.entries.forEach((e, i) => {
+    if (e.kind !== "fallow") return;
+    gaps.push({ start: e.start, end: e.end, days: e.days,
+                after: plan.entries[i - 1]?.crop, before: plan.entries[i + 1]?.crop });
+  });
+  if (plan.restartFallow) {
+    const last = [...plan.entries].reverse().find((e) => e.crop);
+    gaps.push({ ...plan.restartFallow, after: last?.crop, before: plan.restart });
+  }
+  return gaps.map((gap) => {
+    const month = Number(gap.start.slice(0, 2));
+    const winter = month >= 3 && month <= 8;
+    const tips = ["weeds"];
+    if (gap.days >= 20) tips.push("residue");
+    if (gap.days >= 60 && winter) tips.push(gap.before === "maiz" ? "coverForMaize" : "cover");
+    if (gap.days >= 45) tips.push("soilTest");
+    if (acid && gap.days >= 45) tips.push("lime");
+    tips.push("sowPrep");
+    return { ...gap, tips };
+  });
+}

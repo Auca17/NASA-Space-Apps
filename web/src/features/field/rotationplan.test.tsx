@@ -36,3 +36,31 @@ it("explains the rotation month by month for someone who does not know it", () =
   expect(screen.getByText(/faltan 185 mm por año/i)).toBeInTheDocument();
   expect(screen.getByText("Barbecho")).toBeInTheDocument();
 });
+
+it("explains the month-by-month bar with a legend and the crop names", async () => {
+  const { SeqBar } = await import("./FieldLens");
+  function Bar() {
+    const { t } = useT();
+    return <SeqBar s={strategy} t={t} />;
+  }
+  render(<I18nProvider><Bar /></I18nProvider>);
+  expect(screen.getByText(/cómo leerlo/i)).toBeInTheDocument();
+  expect(screen.getByText("Cultivo en el lote")).toBeInTheDocument();
+  expect(screen.getByText(/sin este cultivo \(barbecho/i)).toBeInTheDocument();
+  expect(screen.getByRole("img", { name: /soja: en el lote de nov.* → abr/i })).toBeInTheDocument();
+  expect(screen.queryByText("cubierto")).not.toBeInTheDocument();
+});
+
+it("says what to do with the land in the months without a crop", async () => {
+  const { SeqBar } = await import("./FieldLens");
+  function Bar() {
+    const { t } = useT();
+    return <SeqBar s={strategy} t={t} soilPh={6.4} />;
+  }
+  render(<I18nProvider><Bar /></I18nProvider>);
+  expect(screen.getByRole("heading", { name: /meses sin cultivo: qué hacer/i })).toBeInTheDocument();
+  expect(screen.getByText(/1 oct.*31 oct.*\(31 días sin cultivo\)/i)).toBeInTheDocument();
+  expect(screen.getByText(/después de centeno y antes de soja/i)).toBeInTheDocument();
+  expect(screen.getByText(/controlar las malezas/i)).toBeInTheDocument();
+  expect(screen.getByText(/unas semanas antes de sembrar soja/i)).toBeInTheDocument();
+});

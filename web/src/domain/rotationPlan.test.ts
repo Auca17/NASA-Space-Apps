@@ -66,3 +66,29 @@ describe("rotationTech", () => {
     expect(lines).toEqual([{ key: "rot.tech.phOut", vars: { ph: "5.9", crops: "alfalfa (6.3–7.5)" } }]);
   });
 });
+
+describe("fallowAdvice", () => {
+  const crops = [info("maiz", "grain", { ph_min: 5.8, ph_max: 7 }), info("soja", "grain")];
+  it("says what to do in each period without a crop", async () => {
+    const { fallowAdvice } = await import("./rotationPlan");
+    const plan = rotationPlan([
+      { crop: "soja", start: "11-01", end: "04-15" },
+      { crop: "maiz", start: "09-25", end: "03-15" },
+    ], crops);
+    const tips = fallowAdvice(plan, crops, 5.5);
+    expect(tips.map((f) => [f.start, f.end, f.after, f.before])).toEqual([
+      ["04-16", "09-24", "soja", "maiz"], ["03-16", "10-31", "maiz", "soja"]]);
+    expect(tips[0].tips).toEqual(["weeds", "residue", "coverForMaize", "soilTest", "lime", "sowPrep"]);
+  });
+
+  it("keeps short turnarounds to weeds and sowing", async () => {
+    const { fallowAdvice } = await import("./rotationPlan");
+    const plan = rotationPlan([
+      { crop: "centeno", start: "04-15", end: "09-30" },
+      { crop: "soja", start: "11-01", end: "04-10" },
+    ], [info("centeno", "cover"), info("soja", "grain")]);
+    const tips = fallowAdvice(plan, [], null);
+    expect(tips).toHaveLength(1);
+    expect(tips[0].tips).toEqual(["weeds", "residue", "sowPrep"]);
+  });
+});

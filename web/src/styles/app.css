@@ -697,3 +697,17 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
 @media (max-width: 560px) {
   .parcels { max-height: 46vh; }
 }
+.seq-help { margin: 0 0 6px; font-size: .85rem; color: var(--muted); }
+.seq-legend { display: flex; flex-wrap: wrap; gap: 4px 14px; margin: 0 0 8px; padding: 0;
+  list-style: none; font-size: .8rem; }
+.seq-legend li { display: flex; align-items: center; gap: 6px; }
+.seq-swatch { width: 14px; height: 10px; border-radius: 3px; display: inline-block; }
+.seq-swatch.covered { background: var(--covered); }
+.seq-swatch.empty { background: var(--bare); }
+.seq-swatch.bare { background: repeating-linear-gradient(45deg,
+  #8a6d1f, #8a6d1f 3px, var(--bare) 3px, var(--bare) 6px); }
+.seqcov { width: auto; min-width: 72px; }
+.fallow-advice { margin-top: 10px; }
+.fallow-advice h5 { margin: 0 0 6px; font-size: .9rem; }
+.fallow-gap p { margin: 6px 0 2px; font-size: .85rem; }
+.fallow-gap ul { margin: 0; padding-left: 18px; display: grid; gap: 4px; font-size: .85rem; }
