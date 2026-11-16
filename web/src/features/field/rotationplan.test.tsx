@@ -31,8 +31,10 @@ it("explains the rotation month by month for someone who does not know it", () =
   expect(screen.getByText(/1 oct.*31 oct.*barbecho \(31 días\)/i)).toBeInTheDocument();
   expect(screen.getByText(/1 nov.*10 abr.*soja/i)).toBeInTheDocument();
   expect(screen.getByText(/después.*vuelve a empezar con centeno/i)).toBeInTheDocument();
-  expect(screen.getByText(/soja es una leguminosa/i)).toBeInTheDocument();
-  expect(screen.getByText(/pH 5,2.*por debajo.*5,5–7.*encalar/i)).toBeInTheDocument();
+  expect(screen.getByRole("heading", { name: /por qué está cada cultivo/i })).toBeInTheDocument();
+  expect(screen.getByText(/es una leguminosa: fija nitrógeno del aire, así que centeno/i)).toBeInTheDocument();
+  expect(screen.getByText(/^cultivo de cobertura: no se cosecha. ocupa el lote/i)).toBeInTheDocument();
+  expect(screen.getByText(/pH del suelo 5,2: por debajo de su rango \(5,5–7\)\. Hay que encalar/i)).toBeInTheDocument();
   expect(screen.getByText(/faltan 185 mm por año/i)).toBeInTheDocument();
   expect(screen.getByText("Barbecho")).toBeInTheDocument();
 });

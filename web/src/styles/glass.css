@@ -419,3 +419,7 @@ body:has(.app) { background: #0f110e; }
 .rot-note { font-size: .85rem; }
 .rot-glossary { margin: 8px 0; font-size: .9rem; }
 .rot-tech { margin: 0; padding-left: 18px; display: grid; gap: 4px; font-size: .9rem; }
+.rot-why { margin: 0 0 8px; display: grid; gap: 8px; }
+.rot-why dt { font-weight: 600; font-size: .9rem; }
+.rot-why dd { margin: 2px 0 0; }
+.rot-why ul { margin: 0; padding-left: 18px; display: grid; gap: 3px; font-size: .88rem; }

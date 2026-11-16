@@ -272,3 +272,51 @@ export function withCover(runs: { from: number; to: number; who: string }[], cov
   });
   return out;
 }
+
+/** Why each crop is in the rotation: its role, what it gives the next
+ * crop and the soil, and the data behind it. */
+export function whyEachCrop(sequence: Step[], crops: CropInfo[] = [], soilPh: number | null | undefined,
+                            fmt: (n: number) => string): { crop: string; lines: Reason[] }[] {
+  const info = new Map(crops.map((c) => [c.id, c]));
+  const n = sequence.length;
+  const seen = new Set<string>();
+  const out: { crop: string; lines: Reason[] }[] = [];
+  sequence.forEach((step, i) => {
+    if (seen.has(step.crop)) return;
+    seen.add(step.crop);
+    const c = info.get(step.crop);
+    const lines: Reason[] = [];
+    const neighbour = (dir: 1 | -1) => {
+      for (let k = 1; k < n; k++) {
+        const other = sequence[(i + dir * k + n * k) % n];
+        if (other.crop !== step.crop) return other.crop;
+      }
+      return undefined;
+    };
+    const prev = neighbour(-1);
+    const next = neighbour(1);
+    const role = c?.role ?? "grain";
+    if (role === "cover") lines.push({ key: "rot.why.cover", vars: {} });
+    else if (role === "pasture") lines.push({ key: "rot.why.pasture", vars: {
+      years: fmt(sequence.filter((x) => x.crop === step.crop).length) } });
+    else lines.push({ key: "rot.why.grain", vars: {} });
+    if (c?.n_fixation && next) lines.push({ key: "rot.why.legume", vars: { next } });
+    const p = prev ? info.get(prev) : undefined;
+    if (c && p) lines.push(p.family !== c.family
+      ? { key: "rot.why.family", vars: { prev: prev!, fam: c.family, famPrev: p.family } }
+      : { key: "rot.why.sameFamily", vars: { prev: prev!, fam: c.family } });
+    if (c) lines.push({ key: c.residue_t_ha >= 4 ? "rot.why.residueHigh" : "rot.why.residueLow",
+                        vars: { t: fmt(c.residue_t_ha) } });
+    if (c?.root_depth_cm != null && c.root_depth_cm >= 120) lines.push({ key: "rot.why.roots",
+      vars: { cm: fmt(c.root_depth_cm) } });
+    if (c) lines.push({ key: "rot.why.water", vars: { mm: fmt(c.water_mm_cycle) } });
+    const fit = phFit(soilPh, c);
+    if (fit && soilPh != null && c) {
+      const range = c.ph_max != null ? `${fmt(c.ph_min!)}–${fmt(c.ph_max)}` : `≥ ${fmt(c.ph_min!)}`;
+      lines.push({ key: fit === "ok" ? "rot.why.phOk" : fit === "low" ? "rot.why.phLow" : "rot.why.phHigh",
+                   vars: { ph: fmt(soilPh), range } });
+    }
+    out.push({ crop: step.crop, lines });
+  });
+  return out;
+}

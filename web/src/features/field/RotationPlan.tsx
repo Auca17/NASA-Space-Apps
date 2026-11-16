@@ -1,7 +1,6 @@
 import type { Strategy } from "../../api/types";
 import { useT } from "../../i18n";
-import { phRange } from "../../domain/cropDetail";
-import { rotationPlan, rotationTech, type PlanEntry } from "../../domain/rotationPlan";
+import { rotationPlan, rotationTech, whyEachCrop, type PlanEntry } from "../../domain/rotationPlan";
 
 type TFn = (k: string, v?: Record<string, string | number>) => string;
 
@@ -25,14 +24,19 @@ export function RotationPlan({ s, soilPh, t }: { s: Strategy; soilPh?: number | 
   const years = [...new Set(plan.entries.map((e) => e.year))];
   const lines = (e: PlanEntry) => {
     const vars = { from: day(e.start), to: day(e.end), crop: name(e.crop), days: e.days };
-    const out = [t(`rot.plan.${e.kind}`, vars)];
-    const c = e.crop ? info.get(e.crop) : undefined;
-    if (c?.n_fixation && e.kind !== "fallow") out.push(t("rot.plan.legume", { crop: name(e.crop) }));
-    if ((e.ph === "low" || e.ph === "high") && soilPh != null && c)
-      out.push(t(e.ph === "low" ? "rot.plan.phLow" : "rot.plan.phHigh",
-        { crop: name(e.crop), ph: fmt(soilPh), range: phRange(c, fmt) }));
-    return out;
+    return [t(`rot.plan.${e.kind}`, vars)];
   };
+  const lower = (id: string) => name(id).toLocaleLowerCase(lang);
+  const why = whyEachCrop(s.sequence, crops, soilPh, fmt).map(({ crop, lines: reasons }) => ({
+    crop,
+    texts: reasons.map(({ key, vars }) => t(key, {
+      ...vars,
+      ...(vars.prev ? { prev: lower(vars.prev) } : {}),
+      ...(vars.next ? { next: lower(vars.next) } : {}),
+      ...(vars.fam ? { fam: t(`rot.family.${vars.fam}`) } : {}),
+      ...(vars.famPrev ? { famPrev: t(`rot.family.${vars.famPrev}`) } : {}),
+    })),
+  }));
   const tech = rotationTech(s.indicators, crops, soilPh, fmt, lang);
   return <div className="rot-plan">
     <p>{t("rot.plan.intro", { years: plan.years })}</p>
@@ -47,6 +51,11 @@ export function RotationPlan({ s, soilPh, t }: { s: Strategy; soilPh?: number | 
       ? t("rot.plan.restartFallow", { from: day(plan.restartFallow.start), to: day(plan.restartFallow.end),
           days: plan.restartFallow.days, crop: name(plan.restart) })
       : t("rot.plan.restart", { crop: name(plan.restart) })}</p>}
+    <h5>{t("rot.why.title")}</h5>
+    <dl className="rot-why">{why.map(({ crop, texts }) => <div key={crop}>
+      <dt>{name(crop)}</dt>
+      <dd><ul>{texts.map((text) => <li key={text}>{text}</li>)}</ul></dd>
+    </div>)}</dl>
     <details className="rot-glossary">
       <summary>{t("rot.plan.glossary")}</summary>
       <dl className="plain-list">{["fallow", "cover", "second", "pasture", "legume"].map((k) =>

@@ -127,3 +127,30 @@ describe("coverSpans / withCover", () => {
       .toEqual(["0-3:own", "4-9:cover:centeno", "10-11:own"]);
   });
 });
+
+describe("whyEachCrop", () => {
+  it("explains the role of every crop of the rotation with its data", async () => {
+    const { whyEachCrop } = await import("./rotationPlan");
+    const seq = [
+      { crop: "maiz", start: "09-25", end: "03-15" },
+      { crop: "vicia", start: "04-01", end: "10-15" },
+      { crop: "soja", start: "11-01", end: "04-15" },
+    ];
+    const crops = [
+      info("maiz", "grain", { family: "Poaceae", residue_t_ha: 6.5, root_depth_cm: 130, water_mm_cycle: 650 }),
+      info("vicia", "cover", { family: "Fabaceae", n_fixation: true, residue_t_ha: 3.5, water_mm_cycle: 175 }),
+      info("soja", "grain", { family: "Fabaceae", n_fixation: true, residue_t_ha: 3.3, ph_min: 5.5, ph_max: 7,
+                              water_mm_cycle: 575 }),
+    ];
+    const why = whyEachCrop(seq, crops, 6.8, (n) => String(n));
+    expect(why.map((w) => w.crop)).toEqual(["maiz", "vicia", "soja"]);
+    expect(why[0].lines.map((l) => l.key)).toEqual([
+      "rot.why.grain", "rot.why.family", "rot.why.residueHigh", "rot.why.roots", "rot.why.water"]);
+    expect(why[0].lines[1].vars).toEqual({ prev: "soja", fam: "Poaceae", famPrev: "Fabaceae" });
+    expect(why[1].lines.map((l) => l.key)).toEqual([
+      "rot.why.cover", "rot.why.legume", "rot.why.family", "rot.why.residueLow", "rot.why.water"]);
+    expect(why[1].lines[1].vars).toEqual({ next: "soja" });
+    expect(why[2].lines.map((l) => l.key)).toContain("rot.why.sameFamily");
+    expect(why[2].lines.at(-1)).toEqual({ key: "rot.why.phOk", vars: { ph: "6.8", range: "5.5–7" } });
+  });
+});
