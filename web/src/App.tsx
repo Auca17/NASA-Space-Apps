@@ -32,12 +32,13 @@ import {
 } from "./domain/selection";
 import { splitSelection, clipZone, detectParcels, ROAD_HALF_WIDTH } from "./domain/split";
 import { nearestMidpoint, nearestVertex } from "./domain/parcelsGeo";
+import { exampleFields } from "./features/demo/exampleFields";
 import {
   isDemoHash, MENDOZA_BOUNDARY, MENDOZA_CACHED, MENDOZA_ECON, MENDOZA_NEEDS,
   MENDOZA_PARCELS, MENDOZA_PROFILE,
 } from "./features/demo/mendozaFarm";
 import {
-  loadFields, saveField, renameField, deleteField, addZone, updateZone,
+  loadFields, saveField, saveExampleFields, renameField, deleteField, addZone, updateZone,
   addZones, setFieldCrop, markCropSplit,
   fieldHa, acceptDetection, discardParcel, replaceParcel, zoneHa,
   type Field, type Zone,
@@ -162,7 +163,11 @@ export default function App() {
   const [selection, setSelection] = useState<Selection | null>(null);
   const [landCheck, setLandCheck] = useState<LandCheck>("checking");
   const [adjust, setAdjust] = useState<Adjust | null>(null);
-  const [fields, setFields] = useState<Field[]>(() => loadFields());
+  // the two example fields are always in «Mis campos» (re-added if deleted)
+  const [fields, setFields] = useState<Field[]>(() => {
+    try { saveExampleFields(exampleFields(lang)); } catch { /* storage off */ }
+    return loadFields();
+  });
   const [fieldsView, setFieldsView] = useState<FieldsView>("list");
   const [shownField, setShownField] = useState<string | null>(null);
   /** plot highlighted on the map: a confirmed plot id or "p<i>" for a
