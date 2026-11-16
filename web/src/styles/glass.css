@@ -443,3 +443,28 @@ body:has(.app) { background: #0f110e; }
 .econ-note { margin: 8px 0 4px; font-size: .85rem; }
 .econ-more > summary { cursor: pointer; font-size: .9rem; padding: 6px 0; }
 .econ-more p, .econ-more ul { font-size: .88rem; margin: 4px 0; }
+
+/* Recomendaciones: two folds after picking the parcel */
+.rec-group { margin: 12px 0; border: 1px solid var(--border);
+  border-radius: 14px; background: var(--surface); }
+.rec-group > summary { cursor: pointer; list-style: none; display: grid;
+  gap: 2px; padding: 14px 16px; min-height: var(--touch); border-radius: 14px; }
+.rec-group > summary::-webkit-details-marker { display: none; }
+.rec-group > summary::after { content: "▸"; justify-self: end; grid-row: 1;
+  grid-column: 2; font-size: 1.1rem; }
+.rec-group[open] > summary::after { content: "▾"; }
+.rec-group-title { font-size: 1.05rem; font-weight: 700; grid-column: 1; }
+.rec-group-hint { font-size: .85rem; color: var(--muted); grid-column: 1; }
+.rec-group[open] > summary { border-bottom: 1px solid var(--border);
+  border-bottom-left-radius: 0; border-bottom-right-radius: 0; }
+.rec-group > :not(summary) { padding-left: 14px; padding-right: 14px; }
+.rec-group > :last-child { padding-bottom: 12px; }
+/* primary fold: reads as the main button */
+.app .rec-group.primary { border-color: transparent; }
+.app .rec-group.primary > summary { background: var(--accent); color: var(--accent-fg);
+  box-shadow: 0 6px 18px rgba(140, 192, 111, 0.22); }
+.app .rec-group.primary .rec-group-hint { color: var(--accent-fg); opacity: .85; }
+.rec-group.primary > summary:hover { filter: brightness(1.06); }
+.rec-group summary:focus-visible { outline: 3px solid var(--fg); outline-offset: 2px; }
+/* the fold already says "Qué sembrar…": hide the repeated heading */
+.rec-group .crop-recs > h3:first-of-type { display: none; }

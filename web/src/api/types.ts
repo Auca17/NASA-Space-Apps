@@ -259,6 +259,8 @@ export interface CropLand {
 
 export interface CropRecommendations {
   status: "ok" | "missing_climate" | "missing_harvest" | "perennial" | "no_catalog";
+  /** the parcel holds a permanent crop: options if it is replanted */
+  after_perennial?: boolean;
   available_from: string | null;
   soil_data?: boolean;
   ranking_source?: "gemini" | "catalog";

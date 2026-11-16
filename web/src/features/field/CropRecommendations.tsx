@@ -62,9 +62,11 @@ export function CropRecommendations({ diagnosis, crops, declared, observation, r
   }, [diagnosis, current, detecting, resources, retry, lang]);
 
   const afterCrop = current !== "unknown" && current !== "fallow" && current !== "perennial";
-  const name = crops.find((row) => row.id === current)?.name;
+  const name = (crops.find((row) => row.id === current) ??
+    crops.find((row) => row.id === declared))?.name;
+  const cap = (x: string) => x.charAt(0).toUpperCase() + x.slice(1);
   const cropName = current === "winter_cereal" ? t("recs.winterCereal")
-    : name?.[lang] ?? name?.es ?? declared ?? (current === "maiz" ? t("recs.maize") : current);
+    : name?.[lang] ?? name?.es ?? cap(declared ?? (current === "maiz" ? t("recs.maize") : current));
   const formatDate = (day: string) => new Intl.DateTimeFormat(lang, {
     dateStyle: "medium", timeZone: "UTC",
   }).format(new Date(day + "T00:00:00Z"));
@@ -117,6 +119,7 @@ export function CropRecommendations({ diagnosis, crops, declared, observation, r
           crop: t("recs.observed." + observedClass),
         })}{observation?.as_of && ` · ${formatDate(observation.as_of)}`}</p>
       : <p className="muted">{t("recs.unknown")}</p>}
+    {!detecting && result?.after_perennial && <p className="muted">{t("recs.afterPerennial")}</p>}
     {!detecting && result?.available_from && <p className="muted">{t("recs.after", {
       date: formatDate(result.available_from),
     })}</p>}

@@ -988,5 +988,11 @@
   "parcels.legend.fire": "probabilidad de fuego en los próximos 7 días",
   "parcels.legend.water": "humedad del suelo en la zona de raíces",
   "card.temp_mean": "Temperatura media",
-  "parcels.alert.all": "Todas las parcelas"
+  "parcels.alert.all": "Todas las parcelas",
+  "recs.group.rotations": "Plan de Cultivos",
+  "recs.group.rotationsHint": "Qué sembrar campaña por campaña: la rotación de la zona y sus alternativas, el calendario mes a mes, qué hacer en los meses sin cultivo y el costo-beneficio.",
+  "recs.group.cropsHint": "El cultivo que mejor encaja en la próxima campaña, ordenado según los datos de esta parcela.",
+  "recs.group.waiting": "Estamos leyendo los datos de esta parcela…",
+  "recs.afterPerennial": "La parcela tiene un cultivo permanente. Estas son las tres mejores opciones para la zona si se renueva o se replanta.",
+  "recs.parcels": "Resumen por parcela"
 }

@@ -1191,8 +1191,11 @@ def recommend_crops(diagnosis, current, priorities, constraints, *, today=None):
     zone = diagnosis.get("zone")
     today = today or date.today()
     empty = {"available_from": None, "options": []}
-    if current == "perennial":
-        return {**empty, "status": "perennial"}
+    # a permanent cover (alfalfa, vine, olives...) still gets the three
+    # best crops for the zone: the options if the parcel is replanted
+    after_perennial = current == "perennial"
+    if after_perennial:
+        current = "unknown"
     if not isinstance(zone, str) or zone not in ZONE_CROPS:
         return {**empty, "status": "no_catalog"}
     ff = _frost_free_doys(diagnosis)
@@ -1317,7 +1320,8 @@ def recommend_crops(diagnosis, current, priorities, constraints, *, today=None):
                        "source": crop.sources[0]})
     result.sort(key=lambda item: (item["conditional"], -item["score"],
                                   item["sow_from"], item["id"]))
-    return {"status": "ok", "available_from": earliest.isoformat() if harvests else None,
+    return {"status": "ok", "after_perennial": after_perennial,
+            "available_from": earliest.isoformat() if harvests else None,
             "soil_data": infiltration is not None,
             "options": result, "regional_crops": [
                 {"id": crop.id, "name": crop.name}

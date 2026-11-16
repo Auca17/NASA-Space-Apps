@@ -988,5 +988,11 @@
   "parcels.legend.fire": "chance of fire in the next 7 days",
   "parcels.legend.water": "soil moisture in the root zone",
   "card.temp_mean": "Mean temperature",
-  "parcels.alert.all": "Every parcel"
+  "parcels.alert.all": "Every parcel",
+  "recs.group.rotations": "Crop Plan",
+  "recs.group.rotationsHint": "What to sow season by season: the zone's rotation and its alternatives, the month-by-month calendar, what to do in the months without a crop, and the cost-benefit.",
+  "recs.group.cropsHint": "The crop that fits best next season, ranked with this parcel's data.",
+  "recs.group.waiting": "Reading this parcel's data…",
+  "recs.afterPerennial": "The parcel has a permanent crop. These are the zone's three best options if it is renewed or replanted.",
+  "recs.parcels": "Parcel summary"
 }

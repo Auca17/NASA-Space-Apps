@@ -240,11 +240,6 @@ table.cal th .glossary-btn { margin-left: 4px; }
   color: var(--accent-fg); }
 
 .strategies { display: grid; gap: 12px; }
-@media (max-width: 720px) {
-  .strategies { grid-auto-flow: column; overflow-x: auto;
-    scroll-snap-type: x mandatory; }
-  .strategies > * { min-width: 78vw; scroll-snap-align: start; }
-}
 @media (min-width: 721px) { .strategies { grid-template-columns: 1fr; } }
 .strategy.current { border-color: var(--accent); border-width: 2px; }
 .seq-timeline { display: flex; flex-direction: column; gap: 4px;

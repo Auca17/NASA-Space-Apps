@@ -317,3 +317,96 @@ export function normalizeCropLabel(label: string | undefined): string {
   };
   return table[s] ?? "otro";
 }
+
+
+/** Display names of the catalog crops (back/knowledge/crops.json), so
+ * the UI never shows a raw id like "maiz". */
+const CROP_NAMES: Record<string, { es: string; en: string }> = {
+  "soja": {
+    "es": "Soja",
+    "en": "Soybean"
+  },
+  "maiz": {
+    "es": "Maíz",
+    "en": "Maize"
+  },
+  "trigo": {
+    "es": "Trigo",
+    "en": "Wheat"
+  },
+  "girasol": {
+    "es": "Girasol",
+    "en": "Sunflower"
+  },
+  "sorgo": {
+    "es": "Sorgo granífero",
+    "en": "Grain sorghum"
+  },
+  "cebada": {
+    "es": "Cebada",
+    "en": "Barley"
+  },
+  "mani": {
+    "es": "Maní",
+    "en": "Peanut"
+  },
+  "algodon": {
+    "es": "Algodón",
+    "en": "Cotton"
+  },
+  "alfalfa": {
+    "es": "Alfalfa (pastura)",
+    "en": "Alfalfa (pasture)"
+  },
+  "avena": {
+    "es": "Avena",
+    "en": "Oat"
+  },
+  "centeno": {
+    "es": "Centeno (cobertura)",
+    "en": "Cereal rye (cover crop)"
+  },
+  "vicia": {
+    "es": "Vicia (cobertura)",
+    "en": "Vetch (cover crop)"
+  },
+  "colza": {
+    "es": "Colza / carinata",
+    "en": "Rapeseed / carinata"
+  },
+  "garbanzo": {
+    "es": "Garbanzo",
+    "en": "Chickpea"
+  },
+  "arveja": {
+    "es": "Arveja",
+    "en": "Field pea"
+  },
+  "vid": {
+    "es": "Vid (vinificación)",
+    "en": "Grapevine (wine)"
+  },
+  "olivo": {
+    "es": "Olivo",
+    "en": "Olive"
+  },
+  "ajo": {
+    "es": "Ajo",
+    "en": "Garlic"
+  },
+  "frutal_carozo": {
+    "es": "Frutales de carozo (durazno, ciruela, cereza)",
+    "en": "Stone fruit (peach, plum, cherry)"
+  },
+  "monte_nativo": {
+    "es": "Monte nativo",
+    "en": "Native woodland"
+  }
+};
+
+export function cropDisplayName(id: string, lang: string): string {
+  const n = CROP_NAMES[id];
+  if (n) return lang === "en" ? n.en : n.es;
+  const plain = id.replace(/_/g, " ");
+  return plain.charAt(0).toUpperCase() + plain.slice(1);
+}
