@@ -142,6 +142,20 @@ export interface RankedDecision {
   evidence: Record<string, number | string | boolean>;
 }
 
+/** A crop of a rotation, with the traits that explain its role. */
+export interface CropInfo {
+  id: string;
+  name: Record<string, string>;
+  family: string;
+  role: "grain" | "cover" | "pasture";
+  n_fixation: boolean;
+  residue_t_ha: number;
+  root_depth_cm: number | null;
+  water_mm_cycle: number;
+  ph_min: number | null;
+  ph_max: number | null;
+}
+
 export interface Strategy {
   id: string;
   name: string;
@@ -156,6 +170,7 @@ export interface Strategy {
   gaps: string[];
   risks: string[];
   sequence: { crop: string; start: string; end: string; cover?: boolean }[];
+  crops_info?: CropInfo[];
   measures?: Measure[];
   measures_gaps?: string[];
   decision?: RankedDecision;
@@ -167,6 +182,8 @@ export interface RotationsResponse {
   disclaimer: string;
   soil_data?: boolean;
   ranking_source?: "gemini" | "catalog";
+  /** soil pH (water) from SoilGrids, when available */
+  soil_ph?: number | null;
   /** "low" when the zone has no validated rotation (e.g. Patagonia). */
   confidence?: string;
   /** Top-level gaps, e.g. "sin rotaciones validadas para esta zona". */
@@ -217,7 +234,7 @@ export interface CropLand {
   infiltration?: number; infiltration_class?: "alta" | "media" | "baja";
   slope_pct?: number; heavy_rain_days?: number; root_moisture_pct?: number;
   rain_30d_mm?: number; rain_30d_normal_mm?: number; rain_30d_pct?: number;
-  bare_soil_days?: number; groundwater?: string; heat_days?: number;
+  bare_soil_days?: number; groundwater?: string; heat_days?: number; ph?: number;
 }
 
 export interface CropRecommendations {
@@ -230,7 +247,7 @@ export interface CropRecommendations {
   regional_crops?: CropEntry[];
   options: {
     id: string; name: CropEntry["name"]; score: number; conditional: boolean;
-    conditions?: ("water" | "frost" | "rain_missing")[];
+    conditions?: ("water" | "frost" | "rain_missing" | "ph_low" | "ph_high")[];
     sow_from: string; sow_until: string;
     water_demand_mm: number; rain_mm: number | null; rain_period?: "cycle" | "year";
     cover_days?: number;
@@ -238,6 +255,7 @@ export interface CropRecommendations {
     bare_days?: number; erosion?: number | null; erosion_level?: "baja" | "media" | "alta" | null;
     drought_tolerance?: Level; heat_tolerance?: Level; frost_tolerance?: Level;
     root_depth_cm?: number | null; residue_t_ha?: number; n_fixation?: boolean;
+    ph_min?: number | null; ph_max?: number | null; ph_fit?: "ok" | "low" | "high" | null;
     rain_expected_mm?: number; balance_expected_mm?: number;
     decision?: RankedDecision;
     needs_irrigation: boolean;

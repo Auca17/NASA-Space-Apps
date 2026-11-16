@@ -81,6 +81,45 @@ def apply_outlook(result: dict, diag: dict, outlook: dict | None, *, today: date
     return result
 
 
+def add_soil_ph(cards: list, ph) -> None:
+    """Completes the soil card with the point pH when the sampled
+    SoilGrids rows did not bring one."""
+    if not isinstance(ph, (int, float)) or isinstance(ph, bool):
+        return
+    soil = next((c for c in cards if c.get("id") == "soil"), None)
+    if soil is None or soil.get("ph") is not None:
+        return
+    soil["ph"] = round(float(ph), 1)
+    for key in ("text", "text_en"):
+        text = soil.get(key) or ""
+        known = text and soil.get("value") is not None
+        soil[key] = f"{text}; pH {ph:.1f}" if known else f"pH {ph:.1f}"
+
+
+SOIL_PH_WAIT = 12
+
+
+async def ensure_soil_ph(diag: dict) -> bool:
+    """Adds the SoilGrids point pH to the diagnosis soil card when it has
+    none. Asked here, after the diagnosis burst, because SoilGrids
+    throttles bursts of requests. True when a pH was added."""
+    soil = next((c for c in diag.get("cards", []) if isinstance(c, dict) and c.get("id") == "soil"), None)
+    centroid = diag.get("centroid")
+    if soil is None or soil.get("ph") is not None or not (
+            isinstance(centroid, list) and len(centroid) == 2):
+        return False
+    try:
+        import httpx
+        lat, lon = float(centroid[0]), float(centroid[1])
+        async with httpx.AsyncClient() as client:
+            ph = await asyncio.wait_for(src.soil_ph(client, lat, lon, h3_r6(lat, lon)), timeout=SOIL_PH_WAIT)
+    except Exception as exc:  # noqa: BLE001 - pH is optional
+        log.warning("soil pH unavailable: %s", type(exc).__name__)
+        return False
+    add_soil_ph(diag["cards"], ph)
+    return soil.get("ph") is not None
+
+
 def _num(diag: dict, cid: str):
     value = (_card(diag, cid) or {}).get("value")
     return value if isinstance(value, (int, float)) and not isinstance(value, bool) else None
@@ -100,6 +139,8 @@ def land_state(diag: dict) -> dict:
         if score is not None:
             land["infiltration"] = score
             land["infiltration_class"] = infiltration_class(score)
+    if isinstance(soil.get("ph"), (int, float)) and not isinstance(soil.get("ph"), bool):
+        land["ph"] = soil["ph"]
     for key, cid in (("slope_pct", "slope"), ("heavy_rain_days", "heavy_rain"),
                      ("root_moisture_pct", "soil_moisture"), ("heat_days", "heat")):
         if (value := _num(diag, cid)) is not None:

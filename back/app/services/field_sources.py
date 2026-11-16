@@ -158,18 +158,19 @@ async def power_daily(client: httpx.AsyncClient, lat: float, lon: float,
 
 async def soilgrids(client: httpx.AsyncClient, lat: float, lon: float,
                     h3_r6: str) -> dict | None:
-    """Weighted 0-30 cm clay/silt/sand % and SOC g/kg. None if slow/empty."""
+    """Weighted 0-30 cm clay/silt/sand %, SOC g/kg and pH in water.
+    None if slow/empty."""
     async def go():
         r = await client.get(SOILGRIDS_URL, params=[
             ("lon", lon), ("lat", lat),
-            *[("property", p) for p in ("clay", "silt", "sand", "soc")],
+            *[("property", p) for p in ("clay", "silt", "sand", "soc", "phh2o")],
             *[("depth", d) for d, _ in SOILGRIDS_DEPTHS],
             ("value", "mean")], timeout=TIMEOUT)
         r.raise_for_status()
         layers = {ly["name"]: ly for ly in
                   r.json().get("properties", {}).get("layers", [])}
         out = {}
-        for prop in ("clay", "silt", "sand", "soc"):
+        for prop in ("clay", "silt", "sand", "soc", "phh2o"):
             vals = [(lyr["depths"][i]["values"].get("mean"), w)
                     for i, (_, w) in enumerate(SOILGRIDS_DEPTHS)
                     if (lyr := layers.get(prop)) and i < len(lyr["depths"])]
@@ -178,10 +179,39 @@ async def soilgrids(client: httpx.AsyncClient, lat: float, lon: float,
             num = sum(v * w for v, w in vals if v is not None)
             den = sum(w for v, w in vals if v is not None)
             out[prop] = num / den if den else None
+        ph = out.pop("phh2o")
+        if ph is not None:
+            out["ph"] = ph / 10  # SoilGrids maps pH*10
         if all(v is None for v in out.values()):
             return None
         return out
-    return await _cached(h3_r6, "soilgrids", go)
+    return await _cached(h3_r6, "soilgrids_v2", go)
+
+
+SOIL_PH_TIMEOUT = httpx.Timeout(10.0)
+
+
+async def soil_ph(client: httpx.AsyncClient, lat: float, lon: float,
+                  h3_r6: str) -> float | None:
+    """0-30 cm weighted pH in water at one point (SoilGrids phh2o).
+
+    One light request with its own timeout, so the field gets a pH
+    even when the full texture sampling times out."""
+    async def go():
+        r = await client.get(SOILGRIDS_URL, params=[
+            ("lon", lon), ("lat", lat), ("property", "phh2o"),
+            *[("depth", d) for d, _ in SOILGRIDS_DEPTHS],
+            ("value", "mean")], timeout=SOIL_PH_TIMEOUT)
+        r.raise_for_status()
+        layers = r.json().get("properties", {}).get("layers", [])
+        depths = layers[0]["depths"] if layers else []
+        vals = [((depths[i].get("values") or {}).get("mean"), w)
+                for i, (_, w) in enumerate(SOILGRIDS_DEPTHS) if i < len(depths)]
+        den = sum(w for v, w in vals if v is not None)
+        if not den:
+            return None
+        return round(sum(v * w for v, w in vals if v is not None) / den / 10, 1)
+    return await _cached(h3_r6, "soil_ph", go)
 
 
 # ------------------------------------------------------------ terrain -------

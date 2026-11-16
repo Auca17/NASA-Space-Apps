@@ -44,6 +44,8 @@ class Crop(BaseModel):
     water_mm_observed: float | None = None
     water_observed_note: str | None = None
     root_depth_cm: int | None = 100
+    ph_min: float | None = None  # soil pH (water) range the crop prefers
+    ph_max: float | None = None
     n_fixation: bool = False
     residue_t_ha: float = 0.0
     residue_note: str | None = None

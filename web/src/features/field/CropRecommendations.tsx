@@ -3,7 +3,7 @@ import { apiCropRecommendations } from "../../api";
 import type { CropEntry, CropRecommendations as Result, CurrentCrop, DiagnoseResponse } from "../../api/types";
 import { PRIORITY_IDS, prioWeights } from "../../domain/rotations";
 import { useT } from "../../i18n";
-import { detailSections } from "../../domain/cropDetail";
+import { detailSections, phRange } from "../../domain/cropDetail";
 import { outlookLine } from "../../domain/cropReasons";
 import { DecisionDetail } from "./DecisionDetail";
 
@@ -84,6 +84,8 @@ export function CropRecommendations({ diagnosis, crops, declared, observation, p
     {optionConditions(row).map((condition) => <p className="rec-conditional" key={condition}>
       {t("recs.condition." + condition, {
         gap: formatNumber.format(row.water_demand_mm - (row.rain_mm ?? 0)),
+        ph: result?.status === "ok" && result.land?.ph != null ? formatNumber.format(result.land.ph) : "",
+        range: phRange(row, formatNumber.format),
       })}
     </p>)}
     {(() => {

@@ -411,3 +411,11 @@ body:has(.app) { background: #0f110e; }
 .rec-tech .rec-minus::marker { content: "!  "; color: var(--warn); }
 .detail-section h5 { margin: 10px 0 4px; font-size: .85rem; }
 .detail-section ul { margin: 0; padding-left: 18px; display: grid; gap: 4px; font-size: .9rem; }
+.rot-plan > p { margin: 0 0 8px; }
+.rot-years { margin: 0; padding-left: 0; list-style: none; display: grid; gap: 10px; }
+.rot-years ul { margin: 4px 0 0; padding-left: 18px; display: grid; gap: 6px; font-size: .9rem; }
+.rot-step span { display: block; }
+.rot-step.fallow { color: var(--muted, inherit); }
+.rot-note { font-size: .85rem; }
+.rot-glossary { margin: 8px 0; font-size: .9rem; }
+.rot-tech { margin: 0; padding-left: 18px; display: grid; gap: 4px; font-size: .9rem; }

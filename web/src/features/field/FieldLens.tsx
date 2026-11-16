@@ -1,5 +1,6 @@
 import { CropRecommendations } from "./CropRecommendations";
 import { DecisionDetail } from "./DecisionDetail";
+import { RotationPlan } from "./RotationPlan";
 import { moistureGeometry } from "../../domain/moisture";
 import { MoisturePanel } from "./MoisturePanel";
 import type { CurrentCrop, MoistureZone } from "../../api/types";
@@ -238,14 +239,15 @@ const REF_VERDICT: Record<string, string> = {
 };
 
 function StrategyCard({ s, t, current, variants, explain,
-                        reference = false, rank }: {
+                        reference = false, rank, soilPh }: {
     s: Strategy;
     t: (k: string, v?: Record<string, string | number>) => string;
     current?: Strategy | null;
     variants?: Strategy[];
     explain?: string;
     reference?: boolean;
-    rank?: { key: string; n?: number } | null }) {
+    rank?: { key: string; n?: number } | null;
+    soilPh?: number | null }) {
   const irr = irrigationNeedMm(s);
   const vd = verdictDelta(s, current);
   const vkey = reference ? REF_VERDICT[vd.key] ?? vd.key : vd.key;
@@ -295,6 +297,10 @@ function StrategyCard({ s, t, current, variants, explain,
                 ? t(b.value) : b.value}</li>))}
             {irr != null && <li>{t("rot.irrigated", { mm: irr })}</li>}
           </ul>
+        </Section>)}
+      {s.sequence.length > 0 && (
+        <Section title={t("rot.plan.title")} open>
+          <RotationPlan s={s} soilPh={soilPh} t={t} />
         </Section>)}
       {s.sequence.length > 0 && (
         <Section title={t("rot.sequence")} open>
@@ -445,7 +451,8 @@ export function RotationResults({ rots, diag, explain = {}, t,
                 measures: g.primary.measures?.filter((measure) => !commonIds.has(measure.id)) }} t={t}
                             current={current} variants={g.variants}
                             explain={explain[g.primary.id]}
-                            reference={reference} rank={rankNote(g.primary.id, rots)} />))}
+                            reference={reference} rank={rankNote(g.primary.id, rots)}
+                            soilPh={rots.soil_ph} />))}
           </div>
           {groups.length > 1 && (
             <div className="carousel-dots">

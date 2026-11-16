@@ -58,9 +58,12 @@
         "USDA FAS IPAD, Argentina crop calendar (Commodity Intelligence Report, 2024-11)",
         "Rastrojo estimado = rinde medio × (1 − IC) / IC; rinde MAGyP Estimaciones Agrícolas, índice de cosecha (IC) de bibliografía — borrador a validar (REVIEW.md)",
         "FAO-56, Allen et al. (1998), tabla 12: Kc media estación = 1.15 — pendiente de validación local (REVIEW.md)",
-        "FAO-56/INTA: grados-día base 10 °C del ciclo siembra→madurez ≈ 2000 °C·d — pendiente de validación local (REVIEW.md)"
+        "FAO-56/INTA: grados-día base 10 °C del ciclo siembra→madurez ≈ 2000 °C·d — pendiente de validación local (REVIEW.md)",
+        "pH: Oklahoma State University Extension, PSS-2229 'Soil pH and Buffer Index', tabla 1 (pH preferido de cultivos extensivos): soja y vicia 5,5–7,0"
       ],
-      "kc_mid": 1.15
+      "kc_mid": 1.15,
+      "ph_min": 5.5,
+      "ph_max": 7.0
     },
     {
       "id": "maiz",
@@ -141,9 +144,12 @@
         "INTA (2024), zonificación de fechas de siembra de maíz frente a la chicharrita (Dalbulus maidis), cuatro zonas",
         "Rastrojo estimado = rinde medio × (1 − IC) / IC; rinde MAGyP Estimaciones Agrícolas, índice de cosecha (IC) de bibliografía — borrador a validar (REVIEW.md)",
         "FAO-56, Allen et al. (1998), tabla 12: Kc media estación = 1.2 — pendiente de validación local (REVIEW.md)",
-        "FAO-56/INTA: grados-día base 10 °C del ciclo siembra→madurez ≈ 1700 °C·d — pendiente de validación local (REVIEW.md)"
+        "FAO-56/INTA: grados-día base 10 °C del ciclo siembra→madurez ≈ 1700 °C·d — pendiente de validación local (REVIEW.md)",
+        "pH: Cornell University, Certified Crop Advisor (Northeast), Competency Area 1, PO 2: rango de pH de crecimiento normal: maíz 5,8–7,0"
       ],
-      "kc_mid": 1.2
+      "kc_mid": 1.2,
+      "ph_min": 5.8,
+      "ph_max": 7.0
     },
     {
       "id": "trigo",
@@ -204,9 +210,12 @@
         "USDA FAS IPAD, Argentina crop calendar (Commodity Intelligence Report, 2024-11): siembra mayo–julio, cosecha noviembre–enero",
         "Rastrojo estimado = rinde medio × (1 − IC) / IC; rinde MAGyP Estimaciones Agrícolas, índice de cosecha (IC) de bibliografía — borrador a validar (REVIEW.md)",
         "FAO-56, Allen et al. (1998), tabla 12: Kc media estación = 1.15 — pendiente de validación local (REVIEW.md)",
-        "FAO-56/INTA: grados-día base 10 °C del ciclo siembra→madurez ≈ 1500 °C·d — pendiente de validación local (REVIEW.md)"
+        "FAO-56/INTA: grados-día base 10 °C del ciclo siembra→madurez ≈ 1500 °C·d — pendiente de validación local (REVIEW.md)",
+        "pH: Oklahoma State University Extension, PSS-2229 'Soil pH and Buffer Index', tabla 1 (pH preferido de cultivos extensivos): sorgo y trigo 5,5–7,0"
       ],
-      "kc_mid": 1.15
+      "kc_mid": 1.15,
+      "ph_min": 5.5,
+      "ph_max": 7.0
     },
     {
       "id": "girasol",
@@ -258,9 +267,12 @@
         "Bolsa de Cereales de Buenos Aires, Panorama Agrícola Semanal (avance de siembra y cosecha por región)",
         "Rastrojo estimado = rinde medio × (1 − IC) / IC; rinde MAGyP Estimaciones Agrícolas, índice de cosecha (IC) de bibliografía — borrador a validar (REVIEW.md)",
         "FAO-56, Allen et al. (1998), tabla 12: Kc media estación = 1.15 — pendiente de validación local (REVIEW.md)",
-        "FAO-56/INTA: grados-día base 10 °C del ciclo siembra→madurez ≈ 1600 °C·d — pendiente de validación local (REVIEW.md)"
+        "FAO-56/INTA: grados-día base 10 °C del ciclo siembra→madurez ≈ 1600 °C·d — pendiente de validación local (REVIEW.md)",
+        "pH: University of Delaware Cooperative Extension, 'Measurement and Management of Soil pH for Crop Production': pH objetivo y crítico: girasol objetivo 6,0, crítico 5,5 (sin máximo publicado)"
       ],
-      "kc_mid": 1.15
+      "kc_mid": 1.15,
+      "ph_min": 5.5,
+      "ph_max": null
     },
     {
       "id": "sorgo",
@@ -321,9 +333,12 @@
         "Bolsa de Cereales de Buenos Aires, Panorama Agrícola Semanal (avance de siembra y cosecha por región)",
         "Rastrojo estimado = rinde medio × (1 − IC) / IC; rinde MAGyP Estimaciones Agrícolas, índice de cosecha (IC) de bibliografía — borrador a validar (REVIEW.md)",
         "FAO-56, Allen et al. (1998), tabla 12: Kc media estación = 1.1 — pendiente de validación local (REVIEW.md)",
-        "FAO-56/INTA: grados-día base 10 °C del ciclo siembra→madurez ≈ 1800 °C·d — pendiente de validación local (REVIEW.md)"
+        "FAO-56/INTA: grados-día base 10 °C del ciclo siembra→madurez ≈ 1800 °C·d — pendiente de validación local (REVIEW.md)",
+        "pH: Oklahoma State University Extension, PSS-2229 'Soil pH and Buffer Index', tabla 1 (pH preferido de cultivos extensivos): sorgo y trigo 5,5–7,0"
       ],
-      "kc_mid": 1.1
+      "kc_mid": 1.1,
+      "ph_min": 5.5,
+      "ph_max": 7.0
     },
     {
       "id": "cebada",
@@ -363,9 +378,12 @@
         "Bolsa de Cereales de Buenos Aires, Panorama Agrícola Semanal (avance de siembra y cosecha por región)",
         "Rastrojo estimado = rinde medio × (1 − IC) / IC; rinde MAGyP Estimaciones Agrícolas, índice de cosecha (IC) de bibliografía — borrador a validar (REVIEW.md)",
         "FAO-56, Allen et al. (1998), tabla 12: Kc media estación = 1.15 — pendiente de validación local (REVIEW.md)",
-        "FAO-56/INTA: grados-día base 10 °C del ciclo siembra→madurez ≈ 1400 °C·d — pendiente de validación local (REVIEW.md)"
+        "FAO-56/INTA: grados-día base 10 °C del ciclo siembra→madurez ≈ 1400 °C·d — pendiente de validación local (REVIEW.md)",
+        "pH: Oklahoma State University Extension, PSS-2229 'Soil pH and Buffer Index', tabla 1 (pH preferido de cultivos extensivos): cebada 6,3–7,0"
       ],
-      "kc_mid": 1.15
+      "kc_mid": 1.15,
+      "ph_min": 6.3,
+      "ph_max": 7.0
     },
     {
       "id": "mani",
@@ -527,9 +545,12 @@
         "residue_t_ha = 0,0: la biomasa aérea se retira por corte o pastoreo (ventana de 'cosecha' = período de cortes) — validar",
         "root_carbon_note: el aporte de carbono por raíz y corona no tiene valor (depende del manejo y de la duración de la pastura) — sigue pendiente de validación local",
         "FAO-56, Allen et al. (1998), tabla 12: Kc media estación = 1.1 — pendiente de validación local (REVIEW.md)",
-        "gdd_base10 null: perenne de cortes sucesivos, no aplica un ciclo único siembra→madurez (REVIEW.md)"
+        "gdd_base10 null: perenne de cortes sucesivos, no aplica un ciclo único siembra→madurez (REVIEW.md)",
+        "pH: Oklahoma State University Extension, PSS-2229 'Soil pH and Buffer Index', tabla 1 (pH preferido de cultivos extensivos): alfalfa 6,3–7,5"
       ],
-      "kc_mid": 1.1
+      "kc_mid": 1.1,
+      "ph_min": 6.3,
+      "ph_max": 7.5
     },
     {
       "id": "avena",
@@ -567,9 +588,12 @@
         "MAGyP, Estimaciones Agrícolas (área, rinde y avance de siembra/cosecha por delegación)",
         "Rastrojo estimado = rinde medio × (1 − IC) / IC; rinde MAGyP Estimaciones Agrícolas, índice de cosecha (IC) de bibliografía — borrador a validar (REVIEW.md)",
         "FAO-56, Allen et al. (1998), tabla 12: Kc media estación = 1.15 — pendiente de validación local (REVIEW.md)",
-        "FAO-56/INTA: grados-día base 10 °C del ciclo siembra→madurez ≈ 1300 °C·d — pendiente de validación local (REVIEW.md)"
+        "FAO-56/INTA: grados-día base 10 °C del ciclo siembra→madurez ≈ 1300 °C·d — pendiente de validación local (REVIEW.md)",
+        "pH: Cornell University, Certified Crop Advisor (Northeast), Competency Area 1, PO 2: rango de pH de crecimiento normal: avena 5,8–7,0"
       ],
-      "kc_mid": 1.15
+      "kc_mid": 1.15,
+      "ph_min": 5.8,
+      "ph_max": 7.0
     },
     {
       "id": "centeno",
@@ -607,9 +631,12 @@
         "root_depth_cm: null, FAO-56 tabla 22 no lista centeno",
         "residue_t_ha: biomasa de cobertura al secado, INTA EEA General Villegas, ensayos de cultivos de cobertura vicia y centeno: uso consuntivo 110–241 mm según momento de secado — validar",
         "FAO-56, Allen et al. (1998), tabla 12: Kc media estación = 1.15 — pendiente de validación local (REVIEW.md)",
-        "FAO-56/INTA: grados-día base 10 °C del ciclo siembra→madurez ≈ 1200 °C·d — pendiente de validación local (REVIEW.md)"
+        "FAO-56/INTA: grados-día base 10 °C del ciclo siembra→madurez ≈ 1200 °C·d — pendiente de validación local (REVIEW.md)",
+        "pH: Texas A&M AgriLife, 'Soil pH and Forage Production': rango de pH: centeno 5,0–7,0 (uso forrajero/cobertura)"
       ],
-      "kc_mid": 1.15
+      "kc_mid": 1.15,
+      "ph_min": 5.0,
+      "ph_max": 7.0
     },
     {
       "id": "vicia",
@@ -654,9 +681,12 @@
         "root_depth_cm: null, FAO-56 tabla 22 no lista vicia",
         "residue_t_ha: biomasa de cobertura al secado — validar",
         "FAO-56, Allen et al. (1998), tabla 12: Kc media estación = 1.1 — pendiente de validación local (REVIEW.md)",
-        "FAO-56/INTA: grados-día base 10 °C del ciclo siembra→madurez ≈ 1300 °C·d — pendiente de validación local (REVIEW.md)"
+        "FAO-56/INTA: grados-día base 10 °C del ciclo siembra→madurez ≈ 1300 °C·d — pendiente de validación local (REVIEW.md)",
+        "pH: Oklahoma State University Extension, PSS-2229 'Soil pH and Buffer Index', tabla 1 (pH preferido de cultivos extensivos): soja y vicia 5,5–7,0"
       ],
-      "kc_mid": 1.1
+      "kc_mid": 1.1,
+      "ph_min": 5.5,
+      "ph_max": 7.0
     },
     {
       "id": "colza",
@@ -787,9 +817,12 @@
         "MAGyP, Estimaciones Agrícolas (área, rinde y avance de siembra/cosecha por delegación)",
         "Rastrojo estimado = rinde medio × (1 − IC) / IC; rinde MAGyP Estimaciones Agrícolas, índice de cosecha (IC) de bibliografía — borrador a validar (REVIEW.md)",
         "FAO-56, Allen et al. (1998), tabla 12: Kc media estación = 1.15 — pendiente de validación local (REVIEW.md)",
-        "FAO-56/INTA: grados-día base 10 °C del ciclo siembra→madurez ≈ 1200 °C·d — pendiente de validación local (REVIEW.md)"
+        "FAO-56/INTA: grados-día base 10 °C del ciclo siembra→madurez ≈ 1200 °C·d — pendiente de validación local (REVIEW.md)",
+        "pH: Oregon State University Extension, EM 9060 (este de Oregon): pH mínimo tolerado: arveja 6,0 (sin máximo publicado)"
       ],
-      "kc_mid": 1.15
+      "kc_mid": 1.15,
+      "ph_min": 6.0,
+      "ph_max": null
     },
     {
       "id": "vid",
@@ -924,9 +957,12 @@
         "FAO-56, tabla 22: profundidad radicular ajo 0,3–0,5 m",
         "INTA EEA Mendoza (cuenca sur): calendario ajo siembra otoño, cosecha nov–dic — pendiente de validación local (REVIEW.md)",
         "FAO-56, Allen et al. (1998), tabla 12: Kc media estación = 1 — pendiente de validación local (REVIEW.md)",
-        "FAO-56/INTA: grados-día base 10 °C del ciclo siembra→madurez ≈ 1400 °C·d — pendiente de validación local (REVIEW.md)"
+        "FAO-56/INTA: grados-día base 10 °C del ciclo siembra→madurez ≈ 1400 °C·d — pendiente de validación local (REVIEW.md)",
+        "pH: Oregon State University Extension, EM 9060 (este de Oregon): pH mínimo tolerado: ajo 6,5 (sin máximo publicado)"
       ],
-      "kc_mid": 1.0
+      "kc_mid": 1.0,
+      "ph_min": 6.5,
+      "ph_max": null
     },
     {
       "id": "frutal_carozo",

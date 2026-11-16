@@ -145,6 +145,40 @@ def _soil_infiltration(diag: dict) -> int | None:
     return infiltration_score(texture, carbon, slope if isinstance(slope, (int, float)) else None, None)
 
 
+def _soil_ph(diag: dict) -> float | None:
+    ph = (_card(diag, "soil") or {}).get("ph")
+    return float(ph) if isinstance(ph, (int, float)) and not isinstance(ph, bool) else None
+
+
+def _ph_fit(soil_ph: float | None, crop: Crop) -> str | None:
+    """'ok' / 'low' / 'high' against the crop's sourced pH range; None
+    when the soil pH or the crop range is unknown."""
+    if soil_ph is None or crop.ph_min is None:
+        return None
+    if soil_ph < crop.ph_min:
+        return "low"
+    if crop.ph_max is not None and soil_ph > crop.ph_max:
+        return "high"
+    return "ok"
+
+
+COVER_CROPS = {"centeno", "vicia", "avena"}
+
+
+def _crop_role(crop: Crop) -> str:
+    if crop.water_period == "year":
+        return "pasture"
+    return "cover" if crop.id in COVER_CROPS else "grain"
+
+
+def _crops_info(rot) -> list[dict]:
+    return [{"id": c.id, "name": c.name, "family": c.family, "role": _crop_role(c),
+             "n_fixation": c.n_fixation, "residue_t_ha": c.residue_t_ha,
+             "root_depth_cm": c.root_depth_cm, "water_mm_cycle": c.water_mm_cycle,
+             "ph_min": c.ph_min, "ph_max": c.ph_max}
+            for c in crops_unique(rot)]
+
+
 def _soil_cover_fit(infiltration: int | None, bare_days: int) -> float | None:
     """Relative trade-off between exposure and infiltration, never a water depth."""
     if infiltration is None:
@@ -782,6 +816,7 @@ def _sections(rot: Rotation, ind: dict, cur_ind: dict,
         "risks": _risks(rot, viable, reasons),
         "sequence": [{"crop": s.crop, "start": s.start, "end": s.end,
                       "cover": s.cover} for s in rot.sequence],
+        "crops_info": _crops_info(rot),
     }
 
 
@@ -977,7 +1012,8 @@ def run(diagnosis: dict, current: dict | None, priorities: dict,
         })
     out = {"diagnosis_id": diagnosis.get("diagnosis_id"),
            "strategies": strategies, "disclaimer": DISCLAIMER,
-           "confidence": confidence, "soil_data": _soil_infiltration(diagnosis) is not None}
+           "confidence": confidence, "soil_data": _soil_infiltration(diagnosis) is not None,
+           "soil_ph": _soil_ph(diagnosis)}
     if zone_gaps or not strategies:
         out["gaps"] = zone_gaps or \
             ["sin rotaciones validadas para esta zona"]
@@ -1045,6 +1081,7 @@ def recommend_crops(diagnosis, current, priorities, constraints, *, today=None):
     slope = (_card(diagnosis, "slope") or {}).get("value")
     heavy_rain = (_card(diagnosis, "heavy_rain") or {}).get("value")
     burns = _burn_months(diagnosis)
+    soil_ph = _soil_ph(diagnosis)
     for crop in KNOWLEDGE.crops.values():
         window = crop.window(zone)
         if not window or not (sowing := _next_sowing(earliest, *window[:2])):
@@ -1110,6 +1147,9 @@ def recommend_crops(diagnosis, current, priorities, constraints, *, today=None):
             conditions.append("frost")
         if rain is None and crop.water_mm_cycle >= 500 and constraints.get("irrigation") is not True:
             conditions.append("rain_missing")
+        ph_fit = _ph_fit(soil_ph, crop)
+        if ph_fit in {"low", "high"}:
+            conditions.append(f"ph_{ph_fit}")
         result.append({"id": crop.id, "name": crop.name, "score": round(affinity, 3),
                        "sow_from": start.isoformat(), "sow_until": end.isoformat(),
                        "water_demand_mm": crop.water_mm_cycle,
@@ -1128,6 +1168,7 @@ def recommend_crops(diagnosis, current, priorities, constraints, *, today=None):
                        "root_depth_cm": crop.root_depth_cm,
                        "residue_t_ha": crop.residue_t_ha,
                        "n_fixation": crop.n_fixation,
+                       "ph_min": crop.ph_min, "ph_max": crop.ph_max, "ph_fit": ph_fit,
                        "same_family": bool(previous and not different_family),
                        "conditional": bool(conditions), "conditions": conditions,
                        "source": crop.sources[0]})

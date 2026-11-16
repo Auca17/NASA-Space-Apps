@@ -12,12 +12,25 @@ type Option = Partial<CropRecommendations["options"][number]> &
 
 const signed = (n: number, fmt: (n: number) => string) => (n > 0 ? "+" : "") + fmt(n);
 
-function decisionLines(row: Option, balance: number | undefined, fmt: (n: number) => string): Line[] {
+export function phRange(row: { ph_min?: number | null; ph_max?: number | null },
+                        fmt: (n: number) => string): string {
+  if (row.ph_min == null) return "";
+  return row.ph_max != null ? `${fmt(row.ph_min)}–${fmt(row.ph_max)}` : `≥ ${fmt(row.ph_min)}`;
+}
+
+function decisionLines(row: Option, balance: number | undefined, ph: number | undefined,
+                       fmt: (n: number) => string): Line[] {
   const plus: Line[] = [];
   const minus: Line[] = [];
   if (balance != null) {
     if (balance >= 0) plus.push({ key: "recs.detail.plus.water", vars: { balance: signed(balance, fmt) }, tone: "plus" });
     else minus.push({ key: "recs.detail.minus.water", vars: { gap: fmt(-balance) }, tone: "minus" });
+  }
+  if (ph != null && row.ph_fit) {
+    const vars = { ph: fmt(ph), range: phRange(row, fmt) };
+    if (row.ph_fit === "ok") plus.push({ key: "recs.detail.plus.ph", vars, tone: "plus" });
+    else minus.push({ key: row.ph_fit === "low" ? "recs.detail.minus.phLow" : "recs.detail.minus.phHigh",
+                      vars, tone: "minus" });
   }
   if (row.fits_frost === true) plus.push({ key: "recs.detail.plus.frost", vars: {}, tone: "plus" });
   if (row.fits_frost === false) minus.push({ key: "recs.detail.minus.frost", vars: {}, tone: "minus" });
@@ -33,6 +46,13 @@ function landLines(row: Option, l: CropLand, fmt: (n: number) => string): Line[]
   const out: Line[] = [];
   if (l.carbon_g_kg != null && l.infiltration != null) out.push({ key: "recs.detail.soil", vars: {
     texture: l.texture ?? "", carbon: fmt(l.carbon_g_kg), infil: fmt(l.infiltration) } });
+  if (l.ph != null) {
+    out.push(row.ph_fit && row.ph_min != null
+      ? { key: `recs.detail.ph.${row.ph_fit}`, vars: { ph: fmt(l.ph), range: phRange(row, fmt) } }
+      : { key: "recs.detail.ph.noRange", vars: { ph: fmt(l.ph) } });
+  } else if (row.ph_min != null) {
+    out.push({ key: "recs.detail.ph.unknown", vars: { range: phRange(row, fmt) } });
+  }
   if (l.infiltration_class && row.bare_days != null) out.push({
     key: `recs.detail.infil.${l.infiltration_class}`, vars: { bare: fmt(row.bare_days) } });
   if (row.erosion_level && l.slope_pct != null && l.heavy_rain_days != null && row.bare_days != null) {
@@ -95,7 +115,7 @@ export function detailSections(row: Option, land: CropLand | null | undefined,
   if (l.heat_days != null && row.heat_tolerance) risks.push({
     key: `recs.detail.heat.${row.heat_tolerance}`, vars: { days: fmt(l.heat_days) } });
   const sections: Section[] = [
-    { id: "decision", lines: decisionLines(row, balance, fmt) },
+    { id: "decision", lines: decisionLines(row, balance, l.ph, fmt) },
     { id: "land", lines: landLines(row, l, fmt) },
     { id: "water", lines: waterLines(row, l, tech.find((r) => r.key.startsWith("recs.tech.balance")), fmt) },
     { id: "climate", lines: climateLines(row, l, outlook, tech.find((r) => r.key.startsWith("recs.tech.season.")), fmt) },

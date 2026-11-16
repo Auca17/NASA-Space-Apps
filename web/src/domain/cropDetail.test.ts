@@ -69,4 +69,14 @@ describe("detailSections", () => {
     expect(keys(s, "water")).toEqual(["recs.detail.drought.medium"]);
     expect(s.find((x) => x.id === "climate")).toBeUndefined();
   });
+
+  it("compares the soil pH with the crop range and says what to do", () => {
+    const acid = detailSections({ ...soja, ph_min: 6.3, ph_max: 7.5, ph_fit: "low" }, { ...land, ph: 5.9 }, null, fmt);
+    expect(acid[0].lines.find((l) => l.key === "recs.detail.minus.phLow")?.vars).toEqual({ ph: "5.9", range: "6.3–7.5" });
+    expect(acid[1].lines[1]).toEqual({ key: "recs.detail.ph.low", vars: { ph: "5.9", range: "6.3–7.5" } });
+    const fine = detailSections({ ...soja, ph_min: 5.5, ph_max: null, ph_fit: "ok" }, { ...land, ph: 6.2 }, null, fmt);
+    expect(fine[1].lines[1]).toEqual({ key: "recs.detail.ph.ok", vars: { ph: "6.2", range: "≥ 5.5" } });
+    const unknown = detailSections({ ...soja, ph_min: 5.5, ph_max: 7, ph_fit: null }, land, null, fmt);
+    expect(unknown[1].lines[1].key).toBe("recs.detail.ph.unknown");
+  });
 });

@@ -14,7 +14,7 @@ from .infiltration import TEXTURE_BASE
 log = logging.getLogger(__name__)
 CLIMATE = {"rain", "heavy_rain", "frost", "heat", "slope", "soil", "infiltration"}
 CROP_FACTS = ("rain_mm", "water_demand_mm", "balance_mm", "rain_wet_mm", "rain_expected_mm",
-              "balance_expected_mm", "cover_days", "fits_frost", "same_family")
+              "balance_expected_mm", "cover_days", "fits_frost", "same_family", "ph_min", "ph_max")
 ROTATION_FACTS = ("water_balance_mm", "bare_soil_days", "soil_cover_fit", "residue_t_ha_yr", "pest_break")
 SYSTEM = (
     "Rank the supplied crop or rotation candidates for this parcel. Use the available climate and soil facts, "
@@ -22,7 +22,7 @@ SYSTEM = (
     "and constraints. Keep unconditioned candidates before conditional ones. Rank each supplied id exactly once. "
     "Use only facts provided, no assumed irrigation, yield, or suitability. Write a technical agronomic explanation "
     "for each candidate: state the decisive numbers with their units (cycle rain against crop water demand and the "
-    "resulting balance, frost, soil cover days, erosion or previous crop family) and the cause-effect behind the "
+    "resulting balance, soil pH against the crop pH range, frost, soil cover days, erosion or previous crop family) and the cause-effect behind the "
     "decision. When a season block is given, add the expected rain or balance for the coming season under that ENSO "
     "phase and say it is a historical tendency, not a forecast. Write in the requested language, with Argentine voseo "
     "for es, at most 40 words per choice. "
@@ -52,6 +52,8 @@ async def rank_candidates(result: dict, diag: dict, priorities: dict, constraint
             texture = card.get("texture")
             if cid == "soil" and isinstance(texture, str) and texture in TEXTURE_BASE:
                 climate["texture"] = texture
+            if cid == "soil":
+                climate.update(_number_facts({"soil_ph": card.get("ph")}, ("soil_ph",)))
         outlook = result.get("outlook") if kind == "crop" else None
         season = None
         if isinstance(outlook, dict) and outlook.get("phase"):

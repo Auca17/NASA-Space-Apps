@@ -758,14 +758,18 @@ def build_cards(power, soilg, slope, ndvi, grid_cell, fire_cal,
     if soilg:
         tex = texture_class(soilg)
         soc = soilg.get("soc")
-        parts = [t for t in (tex, f"MO {soc:.1f} g/kg" if soc else None) if t]
+        ph = soilg.get("ph")
+        ph_text = f"pH {ph:.1f}" if isinstance(ph, (int, float)) else None
+        parts = [t for t in (tex, f"MO {soc:.1f} g/kg" if soc else None, ph_text) if t]
         parts_en = [t for t in (_texture_en(tex),
-                                f"OM {soc:.1f} g/kg" if soc else None) if t]
+                                f"OM {soc:.1f} g/kg" if soc else None, ph_text) if t]
         cards.append(_card("soil", round(soc, 1) if soc else None, "g/kg",
                            "; ".join(parts) or "Sin datos",
                            "ISRIC SoilGrids v2", "250 m", "medium",
                            "; ".join(parts_en) or "No data"))
         cards[-1]["texture"] = tex
+        if ph_text:
+            cards[-1]["ph"] = round(ph, 1)
     elif grid_soil.get("texture") or grid_soil.get("soc_g_kg") is not None:
         soc = grid_soil.get("soc_g_kg")
         parts = [t for t in (grid_soil.get("texture"),
@@ -1624,7 +1628,7 @@ async def recommendation_zones(request: Request):
 @router.post("/api/field/recommendations")
 async def recommendations(request: Request):
     from ..services.ai_ranking import rank_candidates
-    from ..services.crop_outlook import apply_outlook, fetch_outlook, land_state
+    from ..services.crop_outlook import apply_outlook, ensure_soil_ph, fetch_outlook, land_state
     from ..services.rotations import KNOWLEDGE, PRIORITY_MAP, recommend_crops
 
     body = await json_object(request)
@@ -1651,6 +1655,8 @@ async def recommendations(request: Request):
     try:
         result = recommend_crops(diag, current, priorities, constraints)
         if result["status"] == "ok":
+            if await ensure_soil_ph(diag):
+                result = recommend_crops(diag, current, priorities, constraints)
             apply_outlook(result, diag, await fetch_outlook(diag))
             result["land"] = land_state(diag)
         if body.get("rank_with_gemini") is True and result["status"] == "ok":
@@ -1749,6 +1755,8 @@ async def rotations(request: Request):
                                         parent, path)
         analogs = await field_shards(r5s, "field/analogs", analog_shard)
         analog = next((analogs[cell] for cell in r5s if cell in analogs), None)
+    from ..services.crop_outlook import ensure_soil_ph
+    await ensure_soil_ph(diag)
     try:
         out = run(diag, current, priorities, constraints,
                   zone, analog=analog, hazards=hazard_set, candidate_limit=6 if ai_rank else 3)

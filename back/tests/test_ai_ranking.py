@@ -12,6 +12,10 @@ def offline_outlook(monkeypatch):
         return {}
     monkeypatch.setattr(crop_outlook.enso, "fetch_oni", no_index)
 
+    async def no_ph(*args, **kwargs):
+        return None
+    monkeypatch.setattr(crop_outlook.src, "soil_ph", no_ph)
+
 
 def diagnosis():
     return {"zone": "cuyo", "centroid": [-33.8, -69.1], "cards": [
@@ -93,3 +97,23 @@ async def test_gemini_gets_the_water_balance_and_the_season_outlook(monkeypatch)
     assert "technical" in system.lower()
     assert result["options"][0]["decision"]["evidence"] == {
         "balance_expected_mm": 16, "enso_rain_effect_pct": -20, "oni": -0.8}
+
+
+@pytest.mark.asyncio
+async def test_gemini_can_cite_the_soil_ph_against_the_crop_range(monkeypatch):
+    monkeypatch.setenv("GEMINI_API_KEY", "test-key")
+    calls = []
+
+    async def gemini(client, key, payload, system):
+        calls.append(payload)
+        return {"choices": [{"id": "alfalfa", "why": "pH del suelo 5.9 por debajo del mínimo 6.3 de la alfalfa: hay que encalar.",
+                             "uses": ["soil_ph", "ph_min"]}]}
+
+    monkeypatch.setattr(ranking, "_call_gemini", gemini)
+    diag = {"zone": "cuyo", "cards": [{"id": "soil", "value": 12, "ph": 5.9, "texture": "Arcilloso"}]}
+    result = await ranking.rank_candidates(
+        {"options": [{"id": "alfalfa", "conditional": True, "ph_min": 6.3, "ph_max": 7.5}]},
+        diag, {}, {}, "es", kind="crop")
+    assert calls[0]["parcel"]["soil_ph"] == 5.9
+    assert calls[0]["candidates"][0]["facts"] == {"ph_min": 6.3, "ph_max": 7.5}
+    assert result["options"][0]["decision"]["evidence"] == {"soil_ph": 5.9, "ph_min": 6.3}
