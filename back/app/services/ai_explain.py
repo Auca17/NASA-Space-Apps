@@ -52,7 +52,15 @@ SYSTEM = (
     "datos ni cambies el ranking. Respondés estrictamente JSON: "
     '{"strategies":[{"id":"...","text":"...","cites":["indicator_id"]}]}'
     " con un párrafo de máximo 70 palabras por estrategia y una oración "
-    "obligatoria sobre la mayor brecha de información.")
+    "obligatoria sobre la mayor brecha de información. No uses las "
+    "palabras 'siempre', 'garantiza', 'seguro que' ni 'sin riesgo'. "
+    "En \"cites\" poné solo claves de indicators, ids de changes o ids de "
+    "measures del JSON. Cómo leer changes: cada ítem compara la estrategia "
+    "con la de referencia (is_current); \"efecto\" ya dice si el cambio es "
+    "mejor o peor y \"cuanto\" es la magnitud. Respetá \"efecto\" tal "
+    "cual: nunca presentes como mejora un cambio con efecto peor, y "
+    "nombrá al menos un cambio peor cuando lo haya. La oración de la brecha tiene "
+    "que nombrar la brecha más propia de esa estrategia cuando la haya.")
 
 PARCELS_SYSTEM_ES = (
     "Resumís para un productor, en español rioplatense con voseo, el "
@@ -125,6 +133,33 @@ def _sanitize(x):
     return x
 
 
+# Numeric deltas against the reference, with the direction already
+# decided: small models misread signs ("-88 mm" read as "more water").
+_CHANGE_LABELS = {
+    "water_balance_mm": ("agua que toma del suelo (mm por año)", False),
+    "bare_soil_days": ("días por año sin cultivo vivo", False),
+    "pest_break": ("campañas seguidas con la misma plaga", False),
+    "residue_t_ha_yr": ("rastrojo (t/ha por año)", True),
+    "nitrogen": ("cultivos que fijan nitrógeno", True),
+    "families": ("familias de cultivos en el ciclo", True),
+    "forage": ("forraje", True),
+    "burns_avoided": ("quemas evitadas", True),
+}
+
+
+def _changes(benefits: dict | None) -> list[dict]:
+    out = []
+    for key, (label, higher_better) in _CHANGE_LABELS.items():
+        d = (benefits or {}).get(key)
+        if not isinstance(d, (int, float)) or isinstance(d, bool) or d == 0:
+            continue
+        better = (d > 0) == higher_better
+        out.append({"id": key, "que": label,
+                    "cambio": "sube" if d > 0 else "baja",
+                    "cuanto": abs(d), "efecto": "mejor" if better else "peor"})
+    return out
+
+
 def _input_json(rotations: dict) -> dict:
     items = []
     for s in rotations.get("strategies", []):
@@ -132,15 +167,43 @@ def _input_json(rotations: dict) -> dict:
             "id": s.get("id"), "is_current": bool(s.get("is_current")),
             "confidence": s.get("confidence"),
             "indicators": s.get("indicators"),
-            "benefits": s.get("benefits"),
+            "changes": [] if s.get("is_current") else
+            _changes(s.get("benefits")),
             "evidence": s.get("evidence"), "gaps": s.get("gaps"),
             "risks": s.get("risks"), "measures": s.get("measures")})
     return _sanitize({"strategies": items,
                       "confidence": rotations.get("confidence")})
 
 
+_NUM_RE = re.compile(r"-?\d{1,3}(?:\.\d{3})+(?:,\d+)?|-?\d+(?:[.,]\d+)?")
+
+
+def _number_options(token: str) -> set[float]:
+    """Readings of one number as written in Spanish or English text:
+    "3,3" -> 3.3, "1.122,8" -> 1122.8, "1.122" -> 1122 or 1.122."""
+    if "," in token and "." in token:          # 1.122,8
+        return {float(token.replace(".", "").replace(",", "."))}
+    if "," in token:                            # 3,3
+        return {float(token.replace(",", "."))}
+    if re.fullmatch(r"-?\d{1,3}(?:\.\d{3})+", token):  # 1.122 (ambiguous)
+        return {float(token.replace(".", "")), float(token)}
+    return {float(token)}
+
+
 def _numbers(text: str) -> list[float]:
-    return [float(m) for m in re.findall(r"-?\d+(?:[.,]\d+)?", text)]
+    """First reading of every number in the text (see _number_options)."""
+    return [min(_number_options(m)) for m in _NUM_RE.findall(text)]
+
+
+def _numbers_ok(text: str, allowed: set[float]) -> bool:
+    """Every number in the text matches some input value, under at
+    least one of its readings (rounded to 0.1 tolerated)."""
+    allowed1 = {round(v, 1) for v in allowed}
+    for token in _NUM_RE.findall(text):
+        if not any(round(n, 3) in allowed or round(n * 10) / 10 in allowed1
+                   for n in _number_options(token)):
+            return False
+    return True
 
 
 def _allowed_numbers(rotations: dict) -> set[float]:
@@ -159,6 +222,8 @@ def _allowed_numbers(rotations: dict) -> set[float]:
                 walk(v)
 
     walk(rotations)
+    # "reduce 102 días" reads the delta -102 as a magnitude
+    vals |= {abs(v) for v in vals}
     out = set(vals)
     for v in vals:
         out |= {round(v), round(v, 1), round(v * 100), round(v / 1000),
@@ -167,13 +232,17 @@ def _allowed_numbers(rotations: dict) -> set[float]:
 
 
 def _cite_ids(rotations: dict) -> set[str]:
+    """Ids the model may cite: every indicator/benefit key, numeric or
+    not (income "medium", infiltration "alta" are real indicators), and
+    the ids of evidence items and prevention measures."""
     ids: set[str] = set()
 
     def walk(x):
         if isinstance(x, dict):
             for k, v in x.items():
-                if isinstance(v, (int, float)):
-                    ids.add(str(k))
+                ids.add(str(k))
+                if k in ("id", "factor", "indicator") and isinstance(v, str):
+                    ids.add(v)
                 walk(v)
         elif isinstance(x, list):
             for v in x:
@@ -203,10 +272,8 @@ def _validate(answer: dict, rotations: dict) -> dict | None:
         low = text.lower()
         if any(w in low for w in BLOCKLIST):
             return None
-        for n in _numbers(text):
-            if round(n, 3) not in allowed and round(n * 10) / 10 not in {
-                    round(v, 1) for v in allowed}:
-                return None
+        if not _numbers_ok(text, allowed):
+            return None
         for c in it.get("cites") or []:
             if c not in cites:
                 return None
@@ -356,11 +423,8 @@ def _validate_summary(answer: dict, allowed: set) -> dict | None:
         low = t.lower()
         if any(w in low for w in BLOCKLIST):
             return None
-        for n in _numbers(t):
-            if round(n, 3) not in allowed and \
-                    round(n * 10) / 10 not in {
-                    round(v, 1) for v in allowed}:
-                return None
+        if not _numbers_ok(t, allowed):
+            return None
     return {"headline": head.strip(), "bullets": out_b[:3]}
 
 

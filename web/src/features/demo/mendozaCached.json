@@ -1,15 +1,15 @@
 {
-  "captured_at": "2026-11-15",
+  "captured_at": "2026-11-16",
   "response": {
     "parcels": [
       {
-        "id": "vid",
-        "crop": "vid",
-        "area_ha": 51.6,
+        "id": "alfalfa",
+        "crop": "alfalfa",
+        "area_ha": 123.4,
         "indicators": {
           "fire": {
-            "pct": 15,
-            "level": "alto",
+            "pct": 3,
+            "level": "bajo",
             "basis": "Probabilidad de fuego en los próximos 7 días según el modelo de la zona."
           },
           "water": {
@@ -18,14 +18,14 @@
             "basis": "Humedad de la raíz (NASA POWER GWETROOT), promedio de los últimos 30 días; está por encima del percentil 80 de noviembre en la historia de esta zona. Esta parcela comparte la celda de datos climáticos con otra parcela del lote."
           },
           "heat": {
-            "days_over_35": 17.8,
+            "days_over_35": 8.5,
             "basis": "Promedio anual de días por encima de 35 °C (serie diaria NASA POWER, con corrección por altura). Esta parcela comparte la celda de datos climáticos con otra parcela del lote."
           },
           "frost": {
-            "frost_free_days": 273,
+            "frost_free_days": 293,
             "window": {
-              "start": "08-31",
-              "end": "05-31"
+              "start": "08-24",
+              "end": "06-13"
             },
             "basis": "Días del año entre la última helada de primavera y la primera de otoño (mediana de años completos, NASA POWER, con corrección por altura). Esta parcela comparte la celda de datos climáticos con otra parcela del lote."
           },
@@ -49,47 +49,2223 @@
             "basis": "ENSO según el índice ONI de NOAA: ahora El Niño (+2.5 °C). En esta zona, los años El Niño llovieron -4 % y los La Niña +0 % respecto al promedio en octubre–marzo. Es una tendencia histórica, no un pronóstico."
           },
           "flood": {
-            "heavy_rain_days_yr": 0.4,
+            "heavy_rain_days_yr": 0,
             "low_slope": false,
-            "basis": "0.4 días por año con lluvia fuerte (sobre 20 mm) y terreno con pendiente: el agua escurre, riesgo de anegamiento menor. Esta parcela comparte la celda de datos climáticos con otra parcela del lote."
+            "basis": "0 días por año con lluvia fuerte (sobre 20 mm) y terreno con pendiente: el agua escurre, riesgo de anegamiento menor. Esta parcela comparte la celda de datos climáticos con otra parcela del lote."
           },
           "evaporation": {
-            "mm_per_year": 1559,
+            "mm_per_year": 1557,
             "monthly_mm": [
-              202.1,
-              161.3,
-              146.1,
-              103,
-              78,
-              72.7,
-              76.2,
+              201.6,
+              161,
+              145.9,
+              103.1,
+              78.2,
+              72.9,
+              76.4,
               94,
-              112,
-              148.7,
-              175.8,
-              204.3
+              111.9,
+              148.3,
+              175.3,
+              203.8
             ],
             "balance_mm": {
-              "1": -166.2,
-              "2": -129,
-              "3": -120.1,
-              "4": -86.5,
-              "5": -53.1,
-              "6": -45.3,
-              "7": -53.7,
+              "1": -165.7,
+              "2": -128.7,
+              "3": -119.9,
+              "4": -86.6,
+              "5": -53.3,
+              "6": -45.4,
+              "7": -53.8,
               "8": -73,
-              "9": -101.2,
-              "10": -121.6,
-              "11": -151.3,
-              "12": -176.8
+              "9": -101,
+              "10": -121.3,
+              "11": -150.9,
+              "12": -176.3
+            },
+            "basis": "Estimación de referencia ET0 FAO-56 (Penman-Monteith donde hay datos, Hargreaves en el resto) — EVLAND no está disponible en esta celda; el balance mensual es lluvia menos ET0 en mm. Esta parcela comparte la celda de datos climáticos con otra parcela del lote. Agua de cultivo ≈ ET0 × Kc 1.1 (FAO-56) del catálogo.",
+            "crop_water_mm_day": 4.7
+          },
+          "infiltration": {
+            "class": "alta",
+            "score": 72,
+            "basis": "Puntaje 0-100 a partir de textura Franco-arenoso, MO 10.2 g/kg, pendiente 3.1 %, 0 días/año de suelo desnudo (grupos hidrológicos de suelo USDA; fórmula en knowledge/README). Ordena el riesgo relativo, no es una medición. Esta parcela comparte la celda de datos climáticos con otra parcela del lote."
+          }
+        },
+        "timeline": {
+          "months": [
+            "2024-11",
+            "2024-12",
+            "2025-01",
+            "2025-02",
+            "2025-03",
+            "2025-04",
+            "2025-05",
+            "2025-06",
+            "2025-07",
+            "2025-08",
+            "2025-09",
+            "2025-10",
+            "2025-11",
+            "2025-12",
+            "2026-01",
+            "2026-02",
+            "2026-03",
+            "2026-04",
+            "2026-05",
+            "2026-06",
+            "2026-07",
+            "2026-08",
+            "2026-09",
+            "2026-10",
+            "2026-11"
+          ],
+          "partial_last": true,
+          "series": {
+            "rain_mm": {
+              "values": [
+                1.18,
+                9.41,
+                25.51,
+                7.94,
+                22.76,
+                3.23,
+                21.02,
+                105.43,
+                2.03,
+                58.22,
+                3.76,
+                1.23,
+                17.74,
+                14.52,
+                60.13,
+                8.83,
+                25.69,
+                13.63,
+                2.15,
+                2.35,
+                39.04,
+                14.98,
+                11.44,
+                208.49,
+                null
+              ],
+              "normal": [
+                31.617,
+                33.575,
+                26.467,
+                18.875,
+                29.783,
+                28.721,
+                26.166,
+                21.155,
+                12.3,
+                16.009,
+                21.551,
+                20.363
+              ],
+              "anomaly_pct": [
+                -95,
+                -54,
+                -19,
+                -76,
+                -14,
+                -83,
+                -29,
+                267,
+                -92,
+                175,
+                -69,
+                -92,
+                -18,
+                -29,
+                90,
+                -74,
+                -3,
+                -28,
+                -93,
+                -92,
+                49,
+                -29,
+                -7,
+                1202,
+                null
+              ]
+            },
+            "tmax_c": {
+              "values": [
+                29.72,
+                30.67,
+                32.6,
+                35,
+                29.12,
+                25.04,
+                22.64,
+                15.6,
+                19.89,
+                17.81,
+                23.03,
+                26.2,
+                28.35,
+                30.48,
+                31.43,
+                31.59,
+                29.61,
+                25.36,
+                21.85,
+                18.88,
+                17.13,
+                17.63,
+                21.18,
+                17.82,
+                null
+              ],
+              "normal": [
+                31.705,
+                30.711,
+                28.889,
+                24.804,
+                20.306,
+                17.287,
+                16.405,
+                18.386,
+                21.103,
+                24.584,
+                27.928,
+                30.466
+              ],
+              "anomaly_c": [
+                1.8,
+                0.2,
+                0.9,
+                4.3,
+                0.2,
+                0.2,
+                2.3,
+                -1.7,
+                3.5,
+                -0.6,
+                1.9,
+                1.6,
+                0.4,
+                0,
+                -0.3,
+                0.9,
+                0.7,
+                0.6,
+                1.5,
+                1.6,
+                0.7,
+                -0.8,
+                0.1,
+                -6.8,
+                null
+              ]
+            },
+            "root_moisture": {
+              "values": [
+                0.28,
+                0.27,
+                0.28,
+                0.27,
+                0.28,
+                0.28,
+                0.28,
+                0.32,
+                0.33,
+                0.32,
+                0.33,
+                0.31,
+                0.3,
+                0.3,
+                0.3,
+                0.31,
+                0.3,
+                0.3,
+                0.29,
+                0.29,
+                0.29,
+                0.31,
+                0.3,
+                0.53,
+                null
+              ],
+              "normal": [
+                0.305,
+                0.308,
+                0.31,
+                0.311,
+                0.316,
+                0.323,
+                0.325,
+                0.329,
+                0.325,
+                0.317,
+                0.311,
+                0.304
+              ],
+              "anomaly_pct": [
+                -9,
+                -10,
+                -9,
+                -12,
+                -10,
+                -11,
+                -12,
+                0,
+                1,
+                -1,
+                3,
+                -3,
+                -2,
+                -2,
+                -1,
+                -1,
+                -3,
+                -4,
+                -8,
+                -10,
+                -9,
+                -6,
+                -7,
+                67,
+                null
+              ]
+            },
+            "heat_days_35": {
+              "values": [
+                0,
+                0,
+                5,
+                14,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                3,
+                1,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                null
+              ]
+            },
+            "frost_days": {
+              "values": [
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                8,
+                0,
+                2,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                6,
+                1,
+                2,
+                0,
+                null
+              ]
+            }
+          },
+          "normals_period": "2001-2020",
+          "basis": "Los 'normales' son la media del mismo mes del año entre 2001 y 2020 en esta celda.",
+          "source": "NASA POWER daily",
+          "headline": "En los últimos 3 meses llovió 375 % más de lo normal y el suelo está más húmedo que lo normal, y la primavera viene 2.5 °C más fría que lo normal."
+        },
+        "alerts": [],
+        "order": [
+          "frost",
+          "drought",
+          "fire",
+          "heat",
+          "enso",
+          "snow",
+          "hail"
+        ],
+        "extra": [
+          {
+            "id": "flood",
+            "hidden": true
+          }
+        ],
+        "accuracy": {
+          "temp_rmse_c": 4.5,
+          "temp_rmse_adjusted_c": 2.5,
+          "rain_bias_mm_month": 10.52,
+          "rain_rmse_mm_month": 32.14,
+          "rain_r": 0.463,
+          "stations": {
+            "temperature": 53,
+            "rain": 9
+          },
+          "elevation_correction_c": 9.3,
+          "note": "Qué tan bien le pegan los datos satelitales en mediciones de campo: temperatura con 53 estaciones Orin (Mendoza); lluvia regional (9 estaciones SIGA a menos de 200 km). Punto de referencia, no una garantía para este lote.",
+          "sources": [
+            "orin_validation",
+            "siga_rain_validation"
+          ]
+        }
+      },
+      {
+        "id": "ajo",
+        "crop": "ajo",
+        "area_ha": 123.5,
+        "indicators": {
+          "fire": {
+            "pct": 3,
+            "level": "bajo",
+            "basis": "Probabilidad de fuego en los próximos 7 días según el modelo de la zona."
+          },
+          "water": {
+            "pct": 55,
+            "level": "humedo",
+            "basis": "Humedad de la raíz (NASA POWER GWETROOT), promedio de los últimos 30 días; está por encima del percentil 80 de noviembre en la historia de esta zona. Esta parcela comparte la celda de datos climáticos con otra parcela del lote."
+          },
+          "heat": {
+            "days_over_35": 8.5,
+            "basis": "Promedio anual de días por encima de 35 °C (serie diaria NASA POWER, con corrección por altura). Esta parcela comparte la celda de datos climáticos con otra parcela del lote."
+          },
+          "frost": {
+            "frost_free_days": 293,
+            "window": {
+              "start": "08-24",
+              "end": "06-13"
+            },
+            "basis": "Días del año entre la última helada de primavera y la primera de otoño (mediana de años completos, NASA POWER, con corrección por altura). Esta parcela comparte la celda de datos climáticos con otra parcela del lote."
+          },
+          "snow": {
+            "days_per_year": 21.2,
+            "pct_years_with_snow": 100,
+            "basis": "Días por año con nevada sobre 1 mm (NASA POWER PRECSNOLAND, 2001–hoy); nieva algunos años en esta zona. Esta parcela comparte la celda de datos climáticos con otra parcela del lote."
+          },
+          "hail": {
+            "available": false,
+            "basis": "No hay un dato satelital de granizo para tu zona en esta app; consultá el servicio meteorológico y tu aseguradora."
+          },
+          "enso": {
+            "phase_now": "el_nino",
+            "oni": 2.5,
+            "oni_period": "ASO 2026",
+            "rain_effect_pct": {
+              "el_nino": -4,
+              "la_nina": 0
+            },
+            "basis": "ENSO según el índice ONI de NOAA: ahora El Niño (+2.5 °C). En esta zona, los años El Niño llovieron -4 % y los La Niña +0 % respecto al promedio en octubre–marzo. Es una tendencia histórica, no un pronóstico."
+          },
+          "flood": {
+            "heavy_rain_days_yr": 0,
+            "low_slope": false,
+            "basis": "0 días por año con lluvia fuerte (sobre 20 mm) y terreno con pendiente: el agua escurre, riesgo de anegamiento menor. Esta parcela comparte la celda de datos climáticos con otra parcela del lote."
+          },
+          "evaporation": {
+            "mm_per_year": 1557,
+            "monthly_mm": [
+              201.6,
+              161,
+              145.9,
+              103.1,
+              78.2,
+              72.9,
+              76.4,
+              94,
+              111.9,
+              148.3,
+              175.3,
+              203.8
+            ],
+            "balance_mm": {
+              "1": -165.7,
+              "2": -128.7,
+              "3": -119.9,
+              "4": -86.6,
+              "5": -53.3,
+              "6": -45.4,
+              "7": -53.8,
+              "8": -73,
+              "9": -101,
+              "10": -121.3,
+              "11": -150.9,
+              "12": -176.3
+            },
+            "basis": "Estimación de referencia ET0 FAO-56 (Penman-Monteith donde hay datos, Hargreaves en el resto) — EVLAND no está disponible en esta celda; el balance mensual es lluvia menos ET0 en mm. Esta parcela comparte la celda de datos climáticos con otra parcela del lote. Agua de cultivo ≈ ET0 × Kc 1 (FAO-56) del catálogo.",
+            "crop_water_mm_day": 4.3
+          },
+          "infiltration": {
+            "class": "alta",
+            "score": 78,
+            "basis": "Puntaje 0-100 a partir de textura Franco-arenoso, MO 10.2 g/kg, pendiente 2.3 %, 0 días/año de suelo desnudo (grupos hidrológicos de suelo USDA; fórmula en knowledge/README). Ordena el riesgo relativo, no es una medición. Esta parcela comparte la celda de datos climáticos con otra parcela del lote."
+          }
+        },
+        "timeline": {
+          "months": [
+            "2024-11",
+            "2024-12",
+            "2025-01",
+            "2025-02",
+            "2025-03",
+            "2025-04",
+            "2025-05",
+            "2025-06",
+            "2025-07",
+            "2025-08",
+            "2025-09",
+            "2025-10",
+            "2025-11",
+            "2025-12",
+            "2026-01",
+            "2026-02",
+            "2026-03",
+            "2026-04",
+            "2026-05",
+            "2026-06",
+            "2026-07",
+            "2026-08",
+            "2026-09",
+            "2026-10",
+            "2026-11"
+          ],
+          "partial_last": true,
+          "series": {
+            "rain_mm": {
+              "values": [
+                1.18,
+                9.41,
+                25.51,
+                7.94,
+                22.76,
+                3.23,
+                21.02,
+                105.43,
+                2.03,
+                58.22,
+                3.76,
+                1.23,
+                17.74,
+                14.52,
+                60.13,
+                8.83,
+                25.69,
+                13.63,
+                2.15,
+                2.35,
+                39.04,
+                14.98,
+                11.44,
+                208.49,
+                null
+              ],
+              "normal": [
+                31.617,
+                33.575,
+                26.467,
+                18.875,
+                29.783,
+                28.721,
+                26.166,
+                21.155,
+                12.3,
+                16.009,
+                21.551,
+                20.363
+              ],
+              "anomaly_pct": [
+                -95,
+                -54,
+                -19,
+                -76,
+                -14,
+                -83,
+                -29,
+                267,
+                -92,
+                175,
+                -69,
+                -92,
+                -18,
+                -29,
+                90,
+                -74,
+                -3,
+                -28,
+                -93,
+                -92,
+                49,
+                -29,
+                -7,
+                1202,
+                null
+              ]
+            },
+            "tmax_c": {
+              "values": [
+                29.72,
+                30.67,
+                32.6,
+                35,
+                29.12,
+                25.04,
+                22.64,
+                15.6,
+                19.89,
+                17.81,
+                23.03,
+                26.2,
+                28.35,
+                30.48,
+                31.43,
+                31.59,
+                29.61,
+                25.36,
+                21.85,
+                18.88,
+                17.13,
+                17.63,
+                21.18,
+                17.82,
+                null
+              ],
+              "normal": [
+                31.705,
+                30.711,
+                28.889,
+                24.804,
+                20.306,
+                17.287,
+                16.405,
+                18.386,
+                21.103,
+                24.584,
+                27.928,
+                30.466
+              ],
+              "anomaly_c": [
+                1.8,
+                0.2,
+                0.9,
+                4.3,
+                0.2,
+                0.2,
+                2.3,
+                -1.7,
+                3.5,
+                -0.6,
+                1.9,
+                1.6,
+                0.4,
+                0,
+                -0.3,
+                0.9,
+                0.7,
+                0.6,
+                1.5,
+                1.6,
+                0.7,
+                -0.8,
+                0.1,
+                -6.8,
+                null
+              ]
+            },
+            "root_moisture": {
+              "values": [
+                0.28,
+                0.27,
+                0.28,
+                0.27,
+                0.28,
+                0.28,
+                0.28,
+                0.32,
+                0.33,
+                0.32,
+                0.33,
+                0.31,
+                0.3,
+                0.3,
+                0.3,
+                0.31,
+                0.3,
+                0.3,
+                0.29,
+                0.29,
+                0.29,
+                0.31,
+                0.3,
+                0.53,
+                null
+              ],
+              "normal": [
+                0.305,
+                0.308,
+                0.31,
+                0.311,
+                0.316,
+                0.323,
+                0.325,
+                0.329,
+                0.325,
+                0.317,
+                0.311,
+                0.304
+              ],
+              "anomaly_pct": [
+                -9,
+                -10,
+                -9,
+                -12,
+                -10,
+                -11,
+                -12,
+                0,
+                1,
+                -1,
+                3,
+                -3,
+                -2,
+                -2,
+                -1,
+                -1,
+                -3,
+                -4,
+                -8,
+                -10,
+                -9,
+                -6,
+                -7,
+                67,
+                null
+              ]
+            },
+            "heat_days_35": {
+              "values": [
+                0,
+                0,
+                5,
+                14,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                3,
+                1,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                null
+              ]
+            },
+            "frost_days": {
+              "values": [
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                8,
+                0,
+                2,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                6,
+                1,
+                2,
+                0,
+                null
+              ]
+            }
+          },
+          "normals_period": "2001-2020",
+          "basis": "Los 'normales' son la media del mismo mes del año entre 2001 y 2020 en esta celda.",
+          "source": "NASA POWER daily",
+          "headline": "En los últimos 3 meses llovió 375 % más de lo normal y el suelo está más húmedo que lo normal, y la primavera viene 2.5 °C más fría que lo normal."
+        },
+        "alerts": [],
+        "order": [
+          "frost",
+          "drought",
+          "fire",
+          "heat",
+          "enso",
+          "snow",
+          "hail"
+        ],
+        "extra": [
+          {
+            "id": "flood",
+            "hidden": true
+          }
+        ],
+        "accuracy": {
+          "temp_rmse_c": 4.5,
+          "temp_rmse_adjusted_c": 2.5,
+          "rain_bias_mm_month": 10.52,
+          "rain_rmse_mm_month": 32.14,
+          "rain_r": 0.463,
+          "stations": {
+            "temperature": 53,
+            "rain": 9
+          },
+          "elevation_correction_c": 9.3,
+          "note": "Qué tan bien le pegan los datos satelitales en mediciones de campo: temperatura con 53 estaciones Orin (Mendoza); lluvia regional (9 estaciones SIGA a menos de 200 km). Punto de referencia, no una garantía para este lote.",
+          "sources": [
+            "orin_validation",
+            "siga_rain_validation"
+          ]
+        },
+        "economics": {
+          "expected_yield_t_ha": 8,
+          "yield_source": "user",
+          "revenue_per_ha": 7200,
+          "cost_per_ha": 1800,
+          "margin_per_ha": 5400,
+          "margin_total": 666908,
+          "break_even_yield_t_ha": 2,
+          "risk_adjusted_margin_per_ha": 5400,
+          "basis": "Rinde declarado por el productor (8 t/ha). Margen ajustado con supuestos aproximados: sin factores de riesgo del ingreso. No es un pronóstico.",
+          "currency": "USD"
+        }
+      },
+      {
+        "id": "vid",
+        "crop": "vid",
+        "area_ha": 123.4,
+        "indicators": {
+          "fire": {
+            "pct": 3,
+            "level": "bajo",
+            "basis": "Probabilidad de fuego en los próximos 7 días según el modelo de la zona."
+          },
+          "water": {
+            "pct": 55,
+            "level": "humedo",
+            "basis": "Humedad de la raíz (NASA POWER GWETROOT), promedio de los últimos 30 días; está por encima del percentil 80 de noviembre en la historia de esta zona. Esta parcela comparte la celda de datos climáticos con otra parcela del lote."
+          },
+          "heat": {
+            "days_over_35": 8.5,
+            "basis": "Promedio anual de días por encima de 35 °C (serie diaria NASA POWER, con corrección por altura). Esta parcela comparte la celda de datos climáticos con otra parcela del lote."
+          },
+          "frost": {
+            "frost_free_days": 293,
+            "window": {
+              "start": "08-24",
+              "end": "06-13"
+            },
+            "basis": "Días del año entre la última helada de primavera y la primera de otoño (mediana de años completos, NASA POWER, con corrección por altura). Esta parcela comparte la celda de datos climáticos con otra parcela del lote."
+          },
+          "snow": {
+            "days_per_year": 21.2,
+            "pct_years_with_snow": 100,
+            "basis": "Días por año con nevada sobre 1 mm (NASA POWER PRECSNOLAND, 2001–hoy); nieva algunos años en esta zona. Esta parcela comparte la celda de datos climáticos con otra parcela del lote."
+          },
+          "hail": {
+            "available": false,
+            "basis": "No hay un dato satelital de granizo para tu zona en esta app; consultá el servicio meteorológico y tu aseguradora."
+          },
+          "enso": {
+            "phase_now": "el_nino",
+            "oni": 2.5,
+            "oni_period": "ASO 2026",
+            "rain_effect_pct": {
+              "el_nino": -4,
+              "la_nina": 0
+            },
+            "basis": "ENSO según el índice ONI de NOAA: ahora El Niño (+2.5 °C). En esta zona, los años El Niño llovieron -4 % y los La Niña +0 % respecto al promedio en octubre–marzo. Es una tendencia histórica, no un pronóstico."
+          },
+          "flood": {
+            "heavy_rain_days_yr": 0,
+            "low_slope": false,
+            "basis": "0 días por año con lluvia fuerte (sobre 20 mm) y terreno con pendiente: el agua escurre, riesgo de anegamiento menor. Esta parcela comparte la celda de datos climáticos con otra parcela del lote."
+          },
+          "evaporation": {
+            "mm_per_year": 1557,
+            "monthly_mm": [
+              201.6,
+              161,
+              145.9,
+              103.1,
+              78.2,
+              72.9,
+              76.4,
+              94,
+              111.9,
+              148.3,
+              175.3,
+              203.8
+            ],
+            "balance_mm": {
+              "1": -165.7,
+              "2": -128.7,
+              "3": -119.9,
+              "4": -86.6,
+              "5": -53.3,
+              "6": -45.4,
+              "7": -53.8,
+              "8": -73,
+              "9": -101,
+              "10": -121.3,
+              "11": -150.9,
+              "12": -176.3
             },
             "basis": "Estimación de referencia ET0 FAO-56 (Penman-Monteith donde hay datos, Hargreaves en el resto) — EVLAND no está disponible en esta celda; el balance mensual es lluvia menos ET0 en mm. Esta parcela comparte la celda de datos climáticos con otra parcela del lote. Agua de cultivo ≈ ET0 × Kc 0.7 (FAO-56) del catálogo.",
             "crop_water_mm_day": 3
           },
           "infiltration": {
-            "class": "media",
-            "score": 61,
-            "basis": "Puntaje 0-100 a partir de textura Franco-arenoso, MO 12 g/kg, pendiente 3.1 %, 122 días/año de suelo desnudo (grupos hidrológicos de suelo USDA; fórmula en knowledge/README). Ordena el riesgo relativo, no es una medición. Esta parcela comparte la celda de datos climáticos con otra parcela del lote."
+            "class": "alta",
+            "score": 72,
+            "basis": "Puntaje 0-100 a partir de textura Franco-arenoso, MO 10.2 g/kg, pendiente 4.5 %, 0 días/año de suelo desnudo (grupos hidrológicos de suelo USDA; fórmula en knowledge/README). Ordena el riesgo relativo, no es una medición. Esta parcela comparte la celda de datos climáticos con otra parcela del lote."
+          }
+        },
+        "timeline": {
+          "months": [
+            "2024-11",
+            "2024-12",
+            "2025-01",
+            "2025-02",
+            "2025-03",
+            "2025-04",
+            "2025-05",
+            "2025-06",
+            "2025-07",
+            "2025-08",
+            "2025-09",
+            "2025-10",
+            "2025-11",
+            "2025-12",
+            "2026-01",
+            "2026-02",
+            "2026-03",
+            "2026-04",
+            "2026-05",
+            "2026-06",
+            "2026-07",
+            "2026-08",
+            "2026-09",
+            "2026-10",
+            "2026-11"
+          ],
+          "partial_last": true,
+          "series": {
+            "rain_mm": {
+              "values": [
+                1.18,
+                9.41,
+                25.51,
+                7.94,
+                22.76,
+                3.23,
+                21.02,
+                105.43,
+                2.03,
+                58.22,
+                3.76,
+                1.23,
+                17.74,
+                14.52,
+                60.13,
+                8.83,
+                25.69,
+                13.63,
+                2.15,
+                2.35,
+                39.04,
+                14.98,
+                11.44,
+                208.49,
+                null
+              ],
+              "normal": [
+                31.617,
+                33.575,
+                26.467,
+                18.875,
+                29.783,
+                28.721,
+                26.166,
+                21.155,
+                12.3,
+                16.009,
+                21.551,
+                20.363
+              ],
+              "anomaly_pct": [
+                -95,
+                -54,
+                -19,
+                -76,
+                -14,
+                -83,
+                -29,
+                267,
+                -92,
+                175,
+                -69,
+                -92,
+                -18,
+                -29,
+                90,
+                -74,
+                -3,
+                -28,
+                -93,
+                -92,
+                49,
+                -29,
+                -7,
+                1202,
+                null
+              ]
+            },
+            "tmax_c": {
+              "values": [
+                29.72,
+                30.67,
+                32.6,
+                35,
+                29.12,
+                25.04,
+                22.64,
+                15.6,
+                19.89,
+                17.81,
+                23.03,
+                26.2,
+                28.35,
+                30.48,
+                31.43,
+                31.59,
+                29.61,
+                25.36,
+                21.85,
+                18.88,
+                17.13,
+                17.63,
+                21.18,
+                17.82,
+                null
+              ],
+              "normal": [
+                31.705,
+                30.711,
+                28.889,
+                24.804,
+                20.306,
+                17.287,
+                16.405,
+                18.386,
+                21.103,
+                24.584,
+                27.928,
+                30.466
+              ],
+              "anomaly_c": [
+                1.8,
+                0.2,
+                0.9,
+                4.3,
+                0.2,
+                0.2,
+                2.3,
+                -1.7,
+                3.5,
+                -0.6,
+                1.9,
+                1.6,
+                0.4,
+                0,
+                -0.3,
+                0.9,
+                0.7,
+                0.6,
+                1.5,
+                1.6,
+                0.7,
+                -0.8,
+                0.1,
+                -6.8,
+                null
+              ]
+            },
+            "root_moisture": {
+              "values": [
+                0.28,
+                0.27,
+                0.28,
+                0.27,
+                0.28,
+                0.28,
+                0.28,
+                0.32,
+                0.33,
+                0.32,
+                0.33,
+                0.31,
+                0.3,
+                0.3,
+                0.3,
+                0.31,
+                0.3,
+                0.3,
+                0.29,
+                0.29,
+                0.29,
+                0.31,
+                0.3,
+                0.53,
+                null
+              ],
+              "normal": [
+                0.305,
+                0.308,
+                0.31,
+                0.311,
+                0.316,
+                0.323,
+                0.325,
+                0.329,
+                0.325,
+                0.317,
+                0.311,
+                0.304
+              ],
+              "anomaly_pct": [
+                -9,
+                -10,
+                -9,
+                -12,
+                -10,
+                -11,
+                -12,
+                0,
+                1,
+                -1,
+                3,
+                -3,
+                -2,
+                -2,
+                -1,
+                -1,
+                -3,
+                -4,
+                -8,
+                -10,
+                -9,
+                -6,
+                -7,
+                67,
+                null
+              ]
+            },
+            "heat_days_35": {
+              "values": [
+                0,
+                0,
+                5,
+                14,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                3,
+                1,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                null
+              ]
+            },
+            "frost_days": {
+              "values": [
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                8,
+                0,
+                2,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                6,
+                1,
+                2,
+                0,
+                null
+              ]
+            }
+          },
+          "normals_period": "2001-2020",
+          "basis": "Los 'normales' son la media del mismo mes del año entre 2001 y 2020 en esta celda.",
+          "source": "NASA POWER daily",
+          "headline": "En los últimos 3 meses llovió 375 % más de lo normal y el suelo está más húmedo que lo normal, y la primavera viene 2.5 °C más fría que lo normal."
+        },
+        "alerts": [],
+        "order": [
+          "frost",
+          "drought",
+          "fire",
+          "heat",
+          "enso",
+          "snow",
+          "hail"
+        ],
+        "extra": [
+          {
+            "id": "flood",
+            "hidden": true
+          }
+        ],
+        "accuracy": {
+          "temp_rmse_c": 4.5,
+          "temp_rmse_adjusted_c": 2.5,
+          "rain_bias_mm_month": 10.52,
+          "rain_rmse_mm_month": 32.14,
+          "rain_r": 0.463,
+          "stations": {
+            "temperature": 53,
+            "rain": 9
+          },
+          "elevation_correction_c": 9.3,
+          "note": "Qué tan bien le pegan los datos satelitales en mediciones de campo: temperatura con 53 estaciones Orin (Mendoza); lluvia regional (9 estaciones SIGA a menos de 200 km). Punto de referencia, no una garantía para este lote.",
+          "sources": [
+            "orin_validation",
+            "siga_rain_validation"
+          ]
+        },
+        "economics": {
+          "expected_yield_t_ha": 14,
+          "yield_source": "user",
+          "revenue_per_ha": 3080,
+          "cost_per_ha": 2800,
+          "margin_per_ha": 280,
+          "margin_total": 34552,
+          "break_even_yield_t_ha": 12.73,
+          "risk_adjusted_margin_per_ha": 280,
+          "basis": "Rinde declarado por el productor (14 t/ha). Margen ajustado con supuestos aproximados: sin factores de riesgo del ingreso. No es un pronóstico.",
+          "currency": "USD"
+        }
+      },
+      {
+        "id": "maiz",
+        "crop": "maiz",
+        "area_ha": 123.4,
+        "indicators": {
+          "fire": {
+            "pct": 3,
+            "level": "bajo",
+            "basis": "Probabilidad de fuego en los próximos 7 días según el modelo de la zona."
+          },
+          "water": {
+            "pct": 55,
+            "level": "humedo",
+            "basis": "Humedad de la raíz (NASA POWER GWETROOT), promedio de los últimos 30 días; está por encima del percentil 80 de noviembre en la historia de esta zona. Esta parcela comparte la celda de datos climáticos con otra parcela del lote."
+          },
+          "heat": {
+            "days_over_35": 8.5,
+            "basis": "Promedio anual de días por encima de 35 °C (serie diaria NASA POWER, con corrección por altura). Esta parcela comparte la celda de datos climáticos con otra parcela del lote."
+          },
+          "frost": {
+            "frost_free_days": 293,
+            "window": {
+              "start": "08-24",
+              "end": "06-13"
+            },
+            "basis": "Días del año entre la última helada de primavera y la primera de otoño (mediana de años completos, NASA POWER, con corrección por altura). Esta parcela comparte la celda de datos climáticos con otra parcela del lote."
+          },
+          "snow": {
+            "days_per_year": 21.2,
+            "pct_years_with_snow": 100,
+            "basis": "Días por año con nevada sobre 1 mm (NASA POWER PRECSNOLAND, 2001–hoy); nieva algunos años en esta zona. Esta parcela comparte la celda de datos climáticos con otra parcela del lote."
+          },
+          "hail": {
+            "available": false,
+            "basis": "No hay un dato satelital de granizo para tu zona en esta app; consultá el servicio meteorológico y tu aseguradora."
+          },
+          "enso": {
+            "phase_now": "el_nino",
+            "oni": 2.5,
+            "oni_period": "ASO 2026",
+            "rain_effect_pct": {
+              "el_nino": -4,
+              "la_nina": 0
+            },
+            "basis": "ENSO según el índice ONI de NOAA: ahora El Niño (+2.5 °C). En esta zona, los años El Niño llovieron -4 % y los La Niña +0 % respecto al promedio en octubre–marzo. Es una tendencia histórica, no un pronóstico."
+          },
+          "flood": {
+            "heavy_rain_days_yr": 0,
+            "low_slope": false,
+            "basis": "0 días por año con lluvia fuerte (sobre 20 mm) y terreno con pendiente: el agua escurre, riesgo de anegamiento menor. Esta parcela comparte la celda de datos climáticos con otra parcela del lote."
+          },
+          "evaporation": {
+            "mm_per_year": 1562,
+            "monthly_mm": [
+              202.1,
+              161.4,
+              146.3,
+              103.4,
+              78.5,
+              73.2,
+              76.7,
+              94.3,
+              112.2,
+              148.8,
+              175.8,
+              204.3
+            ],
+            "balance_mm": {
+              "1": -166.2,
+              "2": -129.1,
+              "3": -120.3,
+              "4": -86.9,
+              "5": -53.6,
+              "6": -45.7,
+              "7": -54.1,
+              "8": -73.3,
+              "9": -101.4,
+              "10": -121.7,
+              "11": -151.3,
+              "12": -176.7
+            },
+            "basis": "Estimación de referencia ET0 FAO-56 (Penman-Monteith donde hay datos, Hargreaves en el resto) — EVLAND no está disponible en esta celda; el balance mensual es lluvia menos ET0 en mm. Esta parcela comparte la celda de datos climáticos con otra parcela del lote. Agua de cultivo ≈ ET0 × Kc 1.2 (FAO-56) del catálogo.",
+            "crop_water_mm_day": 5.2
+          },
+          "infiltration": {
+            "class": "alta",
+            "score": 72,
+            "basis": "Puntaje 0-100 a partir de textura Franco-arenoso, MO 10.2 g/kg, pendiente 3.9 %, 0 días/año de suelo desnudo (grupos hidrológicos de suelo USDA; fórmula en knowledge/README). Ordena el riesgo relativo, no es una medición. Esta parcela comparte la celda de datos climáticos con otra parcela del lote."
+          }
+        },
+        "timeline": {
+          "months": [
+            "2024-11",
+            "2024-12",
+            "2025-01",
+            "2025-02",
+            "2025-03",
+            "2025-04",
+            "2025-05",
+            "2025-06",
+            "2025-07",
+            "2025-08",
+            "2025-09",
+            "2025-10",
+            "2025-11",
+            "2025-12",
+            "2026-01",
+            "2026-02",
+            "2026-03",
+            "2026-04",
+            "2026-05",
+            "2026-06",
+            "2026-07",
+            "2026-08",
+            "2026-09",
+            "2026-10",
+            "2026-11"
+          ],
+          "partial_last": true,
+          "series": {
+            "rain_mm": {
+              "values": [
+                1.18,
+                9.41,
+                25.51,
+                7.94,
+                22.76,
+                3.23,
+                21.02,
+                105.43,
+                2.03,
+                58.22,
+                3.76,
+                1.23,
+                17.74,
+                14.52,
+                60.13,
+                8.83,
+                25.69,
+                13.63,
+                2.15,
+                2.35,
+                39.04,
+                14.98,
+                11.44,
+                208.49,
+                null
+              ],
+              "normal": [
+                31.617,
+                33.575,
+                26.467,
+                18.875,
+                29.783,
+                28.721,
+                26.166,
+                21.155,
+                12.3,
+                16.009,
+                21.551,
+                20.363
+              ],
+              "anomaly_pct": [
+                -95,
+                -54,
+                -19,
+                -76,
+                -14,
+                -83,
+                -29,
+                267,
+                -92,
+                175,
+                -69,
+                -92,
+                -18,
+                -29,
+                90,
+                -74,
+                -3,
+                -28,
+                -93,
+                -92,
+                49,
+                -29,
+                -7,
+                1202,
+                null
+              ]
+            },
+            "tmax_c": {
+              "values": [
+                29.82,
+                30.77,
+                32.7,
+                35.1,
+                29.22,
+                25.14,
+                22.74,
+                15.7,
+                19.99,
+                17.91,
+                23.13,
+                26.3,
+                28.45,
+                30.58,
+                31.53,
+                31.69,
+                29.71,
+                25.46,
+                21.95,
+                18.98,
+                17.23,
+                17.73,
+                21.28,
+                17.92,
+                null
+              ],
+              "normal": [
+                31.805,
+                30.811,
+                28.989,
+                24.904,
+                20.406,
+                17.387,
+                16.505,
+                18.486,
+                21.203,
+                24.684,
+                28.028,
+                30.566
+              ],
+              "anomaly_c": [
+                1.8,
+                0.2,
+                0.9,
+                4.3,
+                0.2,
+                0.2,
+                2.3,
+                -1.7,
+                3.5,
+                -0.6,
+                1.9,
+                1.6,
+                0.4,
+                0,
+                -0.3,
+                0.9,
+                0.7,
+                0.6,
+                1.5,
+                1.6,
+                0.7,
+                -0.8,
+                0.1,
+                -6.8,
+                null
+              ]
+            },
+            "root_moisture": {
+              "values": [
+                0.28,
+                0.27,
+                0.28,
+                0.27,
+                0.28,
+                0.28,
+                0.28,
+                0.32,
+                0.33,
+                0.32,
+                0.33,
+                0.31,
+                0.3,
+                0.3,
+                0.3,
+                0.31,
+                0.3,
+                0.3,
+                0.29,
+                0.29,
+                0.29,
+                0.31,
+                0.3,
+                0.53,
+                null
+              ],
+              "normal": [
+                0.305,
+                0.308,
+                0.31,
+                0.311,
+                0.316,
+                0.323,
+                0.325,
+                0.329,
+                0.325,
+                0.317,
+                0.311,
+                0.304
+              ],
+              "anomaly_pct": [
+                -9,
+                -10,
+                -9,
+                -12,
+                -10,
+                -11,
+                -12,
+                0,
+                1,
+                -1,
+                3,
+                -3,
+                -2,
+                -2,
+                -1,
+                -1,
+                -3,
+                -4,
+                -8,
+                -10,
+                -9,
+                -6,
+                -7,
+                67,
+                null
+              ]
+            },
+            "heat_days_35": {
+              "values": [
+                0,
+                0,
+                6,
+                14,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                3,
+                1,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                null
+              ]
+            },
+            "frost_days": {
+              "values": [
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                8,
+                0,
+                2,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                6,
+                1,
+                1,
+                0,
+                null
+              ]
+            }
+          },
+          "normals_period": "2001-2020",
+          "basis": "Los 'normales' son la media del mismo mes del año entre 2001 y 2020 en esta celda.",
+          "source": "NASA POWER daily",
+          "headline": "En los últimos 3 meses llovió 375 % más de lo normal y el suelo está más húmedo que lo normal, y la primavera viene 2.5 °C más fría que lo normal."
+        },
+        "alerts": [],
+        "order": [
+          "frost",
+          "drought",
+          "fire",
+          "heat",
+          "enso",
+          "snow",
+          "hail"
+        ],
+        "extra": [
+          {
+            "id": "flood",
+            "hidden": true
+          }
+        ],
+        "accuracy": {
+          "temp_rmse_c": 4.5,
+          "temp_rmse_adjusted_c": 2.5,
+          "rain_bias_mm_month": 10.52,
+          "rain_rmse_mm_month": 32.14,
+          "rain_r": 0.463,
+          "stations": {
+            "temperature": 53,
+            "rain": 9
+          },
+          "elevation_correction_c": 9.4,
+          "note": "Qué tan bien le pegan los datos satelitales en mediciones de campo: temperatura con 53 estaciones Orin (Mendoza); lluvia regional (9 estaciones SIGA a menos de 200 km). Punto de referencia, no una garantía para este lote.",
+          "sources": [
+            "orin_validation",
+            "siga_rain_validation"
+          ]
+        },
+        "economics": {
+          "expected_yield_t_ha": 10,
+          "yield_source": "user",
+          "revenue_per_ha": 1880,
+          "cost_per_ha": 780,
+          "margin_per_ha": 1100,
+          "margin_total": 135738,
+          "break_even_yield_t_ha": 4.15,
+          "risk_adjusted_margin_per_ha": 1100,
+          "basis": "Rinde declarado por el productor (10 t/ha). Margen ajustado con supuestos aproximados: sin factores de riesgo del ingreso. No es un pronóstico.",
+          "currency": "USD"
+        }
+      },
+      {
+        "id": "monte",
+        "crop": "monte_nativo",
+        "area_ha": 123.5,
+        "indicators": {
+          "fire": {
+            "pct": 3,
+            "level": "bajo",
+            "basis": "Probabilidad de fuego en los próximos 7 días según el modelo de la zona."
+          },
+          "water": {
+            "pct": 55,
+            "level": "humedo",
+            "basis": "Humedad de la raíz (NASA POWER GWETROOT), promedio de los últimos 30 días; está por encima del percentil 80 de noviembre en la historia de esta zona. Esta parcela comparte la celda de datos climáticos con otra parcela del lote."
+          },
+          "heat": {
+            "days_over_35": 8.5,
+            "basis": "Promedio anual de días por encima de 35 °C (serie diaria NASA POWER, con corrección por altura). Esta parcela comparte la celda de datos climáticos con otra parcela del lote."
+          },
+          "frost": {
+            "frost_free_days": 293,
+            "window": {
+              "start": "08-24",
+              "end": "06-13"
+            },
+            "basis": "Días del año entre la última helada de primavera y la primera de otoño (mediana de años completos, NASA POWER, con corrección por altura). Esta parcela comparte la celda de datos climáticos con otra parcela del lote."
+          },
+          "snow": {
+            "days_per_year": 21.2,
+            "pct_years_with_snow": 100,
+            "basis": "Días por año con nevada sobre 1 mm (NASA POWER PRECSNOLAND, 2001–hoy); nieva algunos años en esta zona. Esta parcela comparte la celda de datos climáticos con otra parcela del lote."
+          },
+          "hail": {
+            "available": false,
+            "basis": "No hay un dato satelital de granizo para tu zona en esta app; consultá el servicio meteorológico y tu aseguradora."
+          },
+          "enso": {
+            "phase_now": "el_nino",
+            "oni": 2.5,
+            "oni_period": "ASO 2026",
+            "rain_effect_pct": {
+              "el_nino": -4,
+              "la_nina": 0
+            },
+            "basis": "ENSO según el índice ONI de NOAA: ahora El Niño (+2.5 °C). En esta zona, los años El Niño llovieron -4 % y los La Niña +0 % respecto al promedio en octubre–marzo. Es una tendencia histórica, no un pronóstico."
+          },
+          "flood": {
+            "heavy_rain_days_yr": 0,
+            "low_slope": false,
+            "basis": "0 días por año con lluvia fuerte (sobre 20 mm) y terreno con pendiente: el agua escurre, riesgo de anegamiento menor. Esta parcela comparte la celda de datos climáticos con otra parcela del lote."
+          },
+          "evaporation": {
+            "mm_per_year": 1562,
+            "monthly_mm": [
+              202.1,
+              161.4,
+              146.3,
+              103.4,
+              78.5,
+              73.2,
+              76.7,
+              94.3,
+              112.2,
+              148.8,
+              175.8,
+              204.3
+            ],
+            "balance_mm": {
+              "1": -166.2,
+              "2": -129.1,
+              "3": -120.3,
+              "4": -86.9,
+              "5": -53.6,
+              "6": -45.7,
+              "7": -54.1,
+              "8": -73.3,
+              "9": -101.4,
+              "10": -121.7,
+              "11": -151.3,
+              "12": -176.7
+            },
+            "basis": "Estimación de referencia ET0 FAO-56 (Penman-Monteith donde hay datos, Hargreaves en el resto) — EVLAND no está disponible en esta celda; el balance mensual es lluvia menos ET0 en mm. Esta parcela comparte la celda de datos climáticos con otra parcela del lote. Agua de cultivo ≈ ET0 × Kc 0.6 (FAO-56) del catálogo.",
+            "crop_water_mm_day": 2.6
+          },
+          "infiltration": {
+            "class": "alta",
+            "score": 72,
+            "basis": "Puntaje 0-100 a partir de textura Franco-arenoso, MO 10.2 g/kg, pendiente 5.7 %, 0 días/año de suelo desnudo (grupos hidrológicos de suelo USDA; fórmula en knowledge/README). Ordena el riesgo relativo, no es una medición. Esta parcela comparte la celda de datos climáticos con otra parcela del lote."
+          }
+        },
+        "timeline": {
+          "months": [
+            "2024-11",
+            "2024-12",
+            "2025-01",
+            "2025-02",
+            "2025-03",
+            "2025-04",
+            "2025-05",
+            "2025-06",
+            "2025-07",
+            "2025-08",
+            "2025-09",
+            "2025-10",
+            "2025-11",
+            "2025-12",
+            "2026-01",
+            "2026-02",
+            "2026-03",
+            "2026-04",
+            "2026-05",
+            "2026-06",
+            "2026-07",
+            "2026-08",
+            "2026-09",
+            "2026-10",
+            "2026-11"
+          ],
+          "partial_last": true,
+          "series": {
+            "rain_mm": {
+              "values": [
+                1.18,
+                9.41,
+                25.51,
+                7.94,
+                22.76,
+                3.23,
+                21.02,
+                105.43,
+                2.03,
+                58.22,
+                3.76,
+                1.23,
+                17.74,
+                14.52,
+                60.13,
+                8.83,
+                25.69,
+                13.63,
+                2.15,
+                2.35,
+                39.04,
+                14.98,
+                11.44,
+                208.49,
+                null
+              ],
+              "normal": [
+                31.617,
+                33.575,
+                26.467,
+                18.875,
+                29.783,
+                28.721,
+                26.166,
+                21.155,
+                12.3,
+                16.009,
+                21.551,
+                20.363
+              ],
+              "anomaly_pct": [
+                -95,
+                -54,
+                -19,
+                -76,
+                -14,
+                -83,
+                -29,
+                267,
+                -92,
+                175,
+                -69,
+                -92,
+                -18,
+                -29,
+                90,
+                -74,
+                -3,
+                -28,
+                -93,
+                -92,
+                49,
+                -29,
+                -7,
+                1202,
+                null
+              ]
+            },
+            "tmax_c": {
+              "values": [
+                29.82,
+                30.77,
+                32.7,
+                35.1,
+                29.22,
+                25.14,
+                22.74,
+                15.7,
+                19.99,
+                17.91,
+                23.13,
+                26.3,
+                28.45,
+                30.58,
+                31.53,
+                31.69,
+                29.71,
+                25.46,
+                21.95,
+                18.98,
+                17.23,
+                17.73,
+                21.28,
+                17.92,
+                null
+              ],
+              "normal": [
+                31.805,
+                30.811,
+                28.989,
+                24.904,
+                20.406,
+                17.387,
+                16.505,
+                18.486,
+                21.203,
+                24.684,
+                28.028,
+                30.566
+              ],
+              "anomaly_c": [
+                1.8,
+                0.2,
+                0.9,
+                4.3,
+                0.2,
+                0.2,
+                2.3,
+                -1.7,
+                3.5,
+                -0.6,
+                1.9,
+                1.6,
+                0.4,
+                0,
+                -0.3,
+                0.9,
+                0.7,
+                0.6,
+                1.5,
+                1.6,
+                0.7,
+                -0.8,
+                0.1,
+                -6.8,
+                null
+              ]
+            },
+            "root_moisture": {
+              "values": [
+                0.28,
+                0.27,
+                0.28,
+                0.27,
+                0.28,
+                0.28,
+                0.28,
+                0.32,
+                0.33,
+                0.32,
+                0.33,
+                0.31,
+                0.3,
+                0.3,
+                0.3,
+                0.31,
+                0.3,
+                0.3,
+                0.29,
+                0.29,
+                0.29,
+                0.31,
+                0.3,
+                0.53,
+                null
+              ],
+              "normal": [
+                0.305,
+                0.308,
+                0.31,
+                0.311,
+                0.316,
+                0.323,
+                0.325,
+                0.329,
+                0.325,
+                0.317,
+                0.311,
+                0.304
+              ],
+              "anomaly_pct": [
+                -9,
+                -10,
+                -9,
+                -12,
+                -10,
+                -11,
+                -12,
+                0,
+                1,
+                -1,
+                3,
+                -3,
+                -2,
+                -2,
+                -1,
+                -1,
+                -3,
+                -4,
+                -8,
+                -10,
+                -9,
+                -6,
+                -7,
+                67,
+                null
+              ]
+            },
+            "heat_days_35": {
+              "values": [
+                0,
+                0,
+                6,
+                14,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                3,
+                1,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                null
+              ]
+            },
+            "frost_days": {
+              "values": [
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                8,
+                0,
+                2,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                6,
+                1,
+                1,
+                0,
+                null
+              ]
+            }
+          },
+          "normals_period": "2001-2020",
+          "basis": "Los 'normales' son la media del mismo mes del año entre 2001 y 2020 en esta celda.",
+          "source": "NASA POWER daily",
+          "headline": "En los últimos 3 meses llovió 375 % más de lo normal y el suelo está más húmedo que lo normal, y la primavera viene 2.5 °C más fría que lo normal."
+        },
+        "alerts": [],
+        "order": [
+          "frost",
+          "drought",
+          "fire",
+          "heat",
+          "enso",
+          "snow",
+          "hail"
+        ],
+        "extra": [
+          {
+            "id": "flood",
+            "hidden": true
+          }
+        ],
+        "accuracy": {
+          "temp_rmse_c": 4.5,
+          "temp_rmse_adjusted_c": 2.5,
+          "rain_bias_mm_month": 10.52,
+          "rain_rmse_mm_month": 32.14,
+          "rain_r": 0.463,
+          "stations": {
+            "temperature": 53,
+            "rain": 9
+          },
+          "elevation_correction_c": 9.4,
+          "note": "Qué tan bien le pegan los datos satelitales en mediciones de campo: temperatura con 53 estaciones Orin (Mendoza); lluvia regional (9 estaciones SIGA a menos de 200 km). Punto de referencia, no una garantía para este lote.",
+          "sources": [
+            "orin_validation",
+            "siga_rain_validation"
+          ]
+        }
+      },
+      {
+        "id": "frutal",
+        "crop": "frutal_carozo",
+        "area_ha": 123.4,
+        "indicators": {
+          "fire": {
+            "pct": 3,
+            "level": "bajo",
+            "basis": "Probabilidad de fuego en los próximos 7 días según el modelo de la zona."
+          },
+          "water": {
+            "pct": 55,
+            "level": "humedo",
+            "basis": "Humedad de la raíz (NASA POWER GWETROOT), promedio de los últimos 30 días; está por encima del percentil 80 de noviembre en la historia de esta zona. Esta parcela comparte la celda de datos climáticos con otra parcela del lote."
+          },
+          "heat": {
+            "days_over_35": 8.5,
+            "basis": "Promedio anual de días por encima de 35 °C (serie diaria NASA POWER, con corrección por altura). Esta parcela comparte la celda de datos climáticos con otra parcela del lote."
+          },
+          "frost": {
+            "frost_free_days": 293,
+            "window": {
+              "start": "08-24",
+              "end": "06-13"
+            },
+            "basis": "Días del año entre la última helada de primavera y la primera de otoño (mediana de años completos, NASA POWER, con corrección por altura). Esta parcela comparte la celda de datos climáticos con otra parcela del lote."
+          },
+          "snow": {
+            "days_per_year": 21.2,
+            "pct_years_with_snow": 100,
+            "basis": "Días por año con nevada sobre 1 mm (NASA POWER PRECSNOLAND, 2001–hoy); nieva algunos años en esta zona. Esta parcela comparte la celda de datos climáticos con otra parcela del lote."
+          },
+          "hail": {
+            "available": false,
+            "basis": "No hay un dato satelital de granizo para tu zona en esta app; consultá el servicio meteorológico y tu aseguradora."
+          },
+          "enso": {
+            "phase_now": "el_nino",
+            "oni": 2.5,
+            "oni_period": "ASO 2026",
+            "rain_effect_pct": {
+              "el_nino": -4,
+              "la_nina": 0
+            },
+            "basis": "ENSO según el índice ONI de NOAA: ahora El Niño (+2.5 °C). En esta zona, los años El Niño llovieron -4 % y los La Niña +0 % respecto al promedio en octubre–marzo. Es una tendencia histórica, no un pronóstico."
+          },
+          "flood": {
+            "heavy_rain_days_yr": 0,
+            "low_slope": false,
+            "basis": "0 días por año con lluvia fuerte (sobre 20 mm) y terreno con pendiente: el agua escurre, riesgo de anegamiento menor. Esta parcela comparte la celda de datos climáticos con otra parcela del lote."
+          },
+          "evaporation": {
+            "mm_per_year": 1562,
+            "monthly_mm": [
+              202.1,
+              161.4,
+              146.3,
+              103.4,
+              78.5,
+              73.2,
+              76.7,
+              94.3,
+              112.2,
+              148.8,
+              175.8,
+              204.3
+            ],
+            "balance_mm": {
+              "1": -166.2,
+              "2": -129.1,
+              "3": -120.3,
+              "4": -86.9,
+              "5": -53.6,
+              "6": -45.7,
+              "7": -54.1,
+              "8": -73.3,
+              "9": -101.4,
+              "10": -121.7,
+              "11": -151.3,
+              "12": -176.7
+            },
+            "basis": "Estimación de referencia ET0 FAO-56 (Penman-Monteith donde hay datos, Hargreaves en el resto) — EVLAND no está disponible en esta celda; el balance mensual es lluvia menos ET0 en mm. Esta parcela comparte la celda de datos climáticos con otra parcela del lote. Agua de cultivo ≈ ET0 × Kc 0.9 (FAO-56) del catálogo.",
+            "crop_water_mm_day": 3.9
+          },
+          "infiltration": {
+            "class": "alta",
+            "score": 72,
+            "basis": "Puntaje 0-100 a partir de textura Franco-arenoso, MO 10.2 g/kg, pendiente 3.3 %, 0 días/año de suelo desnudo (grupos hidrológicos de suelo USDA; fórmula en knowledge/README). Ordena el riesgo relativo, no es una medición. Esta parcela comparte la celda de datos climáticos con otra parcela del lote."
           }
         },
         "timeline": {
@@ -398,9 +2574,9 @@
         },
         "alerts": [
           {
-            "kind": "fire",
-            "severity": "high",
-            "text": "Riesgo de fuego alto en esta parcela: no quemes rastrojos, revisá los guardafuegos y ante fuego o humo llamá al 100."
+            "kind": "frost",
+            "severity": "medium",
+            "text": "El/La Frutales de carozo (durazno, ciruela, cereza) pasa su etapa más sensible entre 08-15 y 10-31; la última helada típica de esta zona cae el 08-24 — unos 9 días sensibles quedan expuestos a heladas tardías."
           }
         ],
         "order": [
@@ -421,41 +2597,41 @@
         "accuracy": {
           "temp_rmse_c": 4.5,
           "temp_rmse_adjusted_c": 2.5,
-          "rain_bias_mm_month": 10.98,
-          "rain_rmse_mm_month": 31.35,
-          "rain_r": 0.42,
+          "rain_bias_mm_month": 10.52,
+          "rain_rmse_mm_month": 32.14,
+          "rain_r": 0.463,
           "stations": {
             "temperature": 53,
-            "rain": 10
+            "rain": 9
           },
           "elevation_correction_c": 9.4,
-          "note": "Qué tan bien le pegan los datos satelitales en mediciones de campo: temperatura con 53 estaciones Orin (Mendoza); lluvia regional (10 estaciones SIGA a menos de 200 km). Punto de referencia, no una garantía para este lote.",
+          "note": "Qué tan bien le pegan los datos satelitales en mediciones de campo: temperatura con 53 estaciones Orin (Mendoza); lluvia regional (9 estaciones SIGA a menos de 200 km). Punto de referencia, no una garantía para este lote.",
           "sources": [
             "orin_validation",
             "siga_rain_validation"
           ]
         },
         "economics": {
-          "expected_yield_t_ha": 14,
+          "expected_yield_t_ha": 22,
           "yield_source": "user",
-          "revenue_per_ha": 3080,
-          "cost_per_ha": 2800,
-          "margin_per_ha": 280,
-          "margin_total": 14460,
-          "break_even_yield_t_ha": 12.73,
-          "risk_adjusted_margin_per_ha": 126,
-          "basis": "Rinde declarado por el productor (14 t/ha). Margen ajustado con supuestos aproximados: alerta de fuego −5 % del ingreso. No es un pronóstico.",
+          "revenue_per_ha": 9900,
+          "cost_per_ha": 2600,
+          "margin_per_ha": 7300,
+          "margin_total": 900810,
+          "break_even_yield_t_ha": 5.78,
+          "risk_adjusted_margin_per_ha": 7300,
+          "basis": "Rinde declarado por el productor (22 t/ha). Margen ajustado con supuestos aproximados: sin factores de riesgo del ingreso. No es un pronóstico.",
           "currency": "USD"
         }
       },
       {
-        "id": "olivo",
-        "crop": "olivo",
-        "area_ha": 34.3,
+        "id": "maiz_sur",
+        "crop": "maiz",
+        "area_ha": 123.4,
         "indicators": {
           "fire": {
-            "pct": 15,
-            "level": "alto",
+            "pct": 3,
+            "level": "bajo",
             "basis": "Probabilidad de fuego en los próximos 7 días según el modelo de la zona."
           },
           "water": {
@@ -464,14 +2640,14 @@
             "basis": "Humedad de la raíz (NASA POWER GWETROOT), promedio de los últimos 30 días; está por encima del percentil 80 de noviembre en la historia de esta zona. Esta parcela comparte la celda de datos climáticos con otra parcela del lote."
           },
           "heat": {
-            "days_over_35": 17.8,
+            "days_over_35": 8.5,
             "basis": "Promedio anual de días por encima de 35 °C (serie diaria NASA POWER, con corrección por altura). Esta parcela comparte la celda de datos climáticos con otra parcela del lote."
           },
           "frost": {
-            "frost_free_days": 273,
+            "frost_free_days": 293,
             "window": {
-              "start": "08-31",
-              "end": "05-31"
+              "start": "08-24",
+              "end": "06-13"
             },
             "basis": "Días del año entre la última helada de primavera y la primera de otoño (mediana de años completos, NASA POWER, con corrección por altura). Esta parcela comparte la celda de datos climáticos con otra parcela del lote."
           },
@@ -495,47 +2671,47 @@
             "basis": "ENSO según el índice ONI de NOAA: ahora El Niño (+2.5 °C). En esta zona, los años El Niño llovieron -4 % y los La Niña +0 % respecto al promedio en octubre–marzo. Es una tendencia histórica, no un pronóstico."
           },
           "flood": {
-            "heavy_rain_days_yr": 0.4,
+            "heavy_rain_days_yr": 0,
             "low_slope": false,
-            "basis": "0.4 días por año con lluvia fuerte (sobre 20 mm) y terreno con pendiente: el agua escurre, riesgo de anegamiento menor. Esta parcela comparte la celda de datos climáticos con otra parcela del lote."
+            "basis": "0 días por año con lluvia fuerte (sobre 20 mm) y terreno con pendiente: el agua escurre, riesgo de anegamiento menor. Esta parcela comparte la celda de datos climáticos con otra parcela del lote."
           },
           "evaporation": {
-            "mm_per_year": 1564,
+            "mm_per_year": 1566,
             "monthly_mm": [
               202.6,
-              161.7,
-              146.5,
-              103.3,
-              78.3,
-              73,
-              76.5,
-              94.3,
-              112.4,
-              149.1,
+              161.8,
+              146.6,
+              103.7,
+              78.7,
+              73.4,
+              76.9,
+              94.6,
+              112.6,
+              149.2,
               176.2,
               204.8
             ],
             "balance_mm": {
               "1": -166.7,
-              "2": -129.4,
-              "3": -120.5,
-              "4": -86.8,
-              "5": -53.4,
-              "6": -45.5,
-              "7": -54,
-              "8": -73.3,
-              "9": -101.5,
-              "10": -122,
+              "2": -129.5,
+              "3": -120.6,
+              "4": -87.1,
+              "5": -53.8,
+              "6": -45.9,
+              "7": -54.4,
+              "8": -73.6,
+              "9": -101.7,
+              "10": -122.1,
               "11": -151.8,
               "12": -177.2
             },
-            "basis": "Estimación de referencia ET0 FAO-56 (Penman-Monteith donde hay datos, Hargreaves en el resto) — EVLAND no está disponible en esta celda; el balance mensual es lluvia menos ET0 en mm. Esta parcela comparte la celda de datos climáticos con otra parcela del lote. Agua de cultivo ≈ ET0 × Kc 0.65 (FAO-56) del catálogo.",
-            "crop_water_mm_day": 2.8
+            "basis": "Estimación de referencia ET0 FAO-56 (Penman-Monteith donde hay datos, Hargreaves en el resto) — EVLAND no está disponible en esta celda; el balance mensual es lluvia menos ET0 en mm. Esta parcela comparte la celda de datos climáticos con otra parcela del lote. Agua de cultivo ≈ ET0 × Kc 1.2 (FAO-56) del catálogo.",
+            "crop_water_mm_day": 5.2
           },
           "infiltration": {
-            "class": "media",
-            "score": 61,
-            "basis": "Puntaje 0-100 a partir de textura Franco-arenoso, MO 12 g/kg, pendiente 3.3 %, 122 días/año de suelo desnudo (grupos hidrológicos de suelo USDA; fórmula en knowledge/README). Ordena el riesgo relativo, no es una medición. Esta parcela comparte la celda de datos climáticos con otra parcela del lote."
+            "class": "alta",
+            "score": 72,
+            "basis": "Puntaje 0-100 a partir de textura Franco-arenoso, MO 10.2 g/kg, pendiente 5.7 %, 0 días/año de suelo desnudo (grupos hidrológicos de suelo USDA; fórmula en knowledge/README). Ordena el riesgo relativo, no es una medición. Esta parcela comparte la celda de datos climáticos con otra parcela del lote."
           }
         },
         "timeline": {
@@ -842,13 +3018,7 @@
           "source": "NASA POWER daily",
           "headline": "En los últimos 3 meses llovió 375 % más de lo normal y el suelo está más húmedo que lo normal, y la primavera viene 2.5 °C más fría que lo normal."
         },
-        "alerts": [
-          {
-            "kind": "fire",
-            "severity": "high",
-            "text": "Riesgo de fuego alto en esta parcela: no quemes rastrojos, revisá los guardafuegos y ante fuego o humo llamá al 100."
-          }
-        ],
+        "alerts": [],
         "order": [
           "frost",
           "drought",
@@ -867,15 +3037,455 @@
         "accuracy": {
           "temp_rmse_c": 4.5,
           "temp_rmse_adjusted_c": 2.5,
-          "rain_bias_mm_month": 10.98,
-          "rain_rmse_mm_month": 31.35,
-          "rain_r": 0.42,
+          "rain_bias_mm_month": 10.52,
+          "rain_rmse_mm_month": 32.14,
+          "rain_r": 0.463,
           "stations": {
             "temperature": 53,
-            "rain": 10
+            "rain": 9
           },
           "elevation_correction_c": 9.5,
-          "note": "Qué tan bien le pegan los datos satelitales en mediciones de campo: temperatura con 53 estaciones Orin (Mendoza); lluvia regional (10 estaciones SIGA a menos de 200 km). Punto de referencia, no una garantía para este lote.",
+          "note": "Qué tan bien le pegan los datos satelitales en mediciones de campo: temperatura con 53 estaciones Orin (Mendoza); lluvia regional (9 estaciones SIGA a menos de 200 km). Punto de referencia, no una garantía para este lote.",
+          "sources": [
+            "orin_validation",
+            "siga_rain_validation"
+          ]
+        },
+        "economics": {
+          "expected_yield_t_ha": 10,
+          "yield_source": "user",
+          "revenue_per_ha": 1880,
+          "cost_per_ha": 780,
+          "margin_per_ha": 1100,
+          "margin_total": 135738,
+          "break_even_yield_t_ha": 4.15,
+          "risk_adjusted_margin_per_ha": 1100,
+          "basis": "Rinde declarado por el productor (10 t/ha). Margen ajustado con supuestos aproximados: sin factores de riesgo del ingreso. No es un pronóstico.",
+          "currency": "USD"
+        }
+      },
+      {
+        "id": "olivo",
+        "crop": "olivo",
+        "area_ha": 123.5,
+        "indicators": {
+          "fire": {
+            "pct": 3,
+            "level": "bajo",
+            "basis": "Probabilidad de fuego en los próximos 7 días según el modelo de la zona."
+          },
+          "water": {
+            "pct": 55,
+            "level": "humedo",
+            "basis": "Humedad de la raíz (NASA POWER GWETROOT), promedio de los últimos 30 días; está por encima del percentil 80 de noviembre en la historia de esta zona. Esta parcela comparte la celda de datos climáticos con otra parcela del lote."
+          },
+          "heat": {
+            "days_over_35": 8.5,
+            "basis": "Promedio anual de días por encima de 35 °C (serie diaria NASA POWER, con corrección por altura). Esta parcela comparte la celda de datos climáticos con otra parcela del lote."
+          },
+          "frost": {
+            "frost_free_days": 293,
+            "window": {
+              "start": "08-24",
+              "end": "06-13"
+            },
+            "basis": "Días del año entre la última helada de primavera y la primera de otoño (mediana de años completos, NASA POWER, con corrección por altura). Esta parcela comparte la celda de datos climáticos con otra parcela del lote."
+          },
+          "snow": {
+            "days_per_year": 21.2,
+            "pct_years_with_snow": 100,
+            "basis": "Días por año con nevada sobre 1 mm (NASA POWER PRECSNOLAND, 2001–hoy); nieva algunos años en esta zona. Esta parcela comparte la celda de datos climáticos con otra parcela del lote."
+          },
+          "hail": {
+            "available": false,
+            "basis": "No hay un dato satelital de granizo para tu zona en esta app; consultá el servicio meteorológico y tu aseguradora."
+          },
+          "enso": {
+            "phase_now": "el_nino",
+            "oni": 2.5,
+            "oni_period": "ASO 2026",
+            "rain_effect_pct": {
+              "el_nino": -4,
+              "la_nina": 0
+            },
+            "basis": "ENSO según el índice ONI de NOAA: ahora El Niño (+2.5 °C). En esta zona, los años El Niño llovieron -4 % y los La Niña +0 % respecto al promedio en octubre–marzo. Es una tendencia histórica, no un pronóstico."
+          },
+          "flood": {
+            "heavy_rain_days_yr": 0,
+            "low_slope": false,
+            "basis": "0 días por año con lluvia fuerte (sobre 20 mm) y terreno con pendiente: el agua escurre, riesgo de anegamiento menor. Esta parcela comparte la celda de datos climáticos con otra parcela del lote."
+          },
+          "evaporation": {
+            "mm_per_year": 1566,
+            "monthly_mm": [
+              202.6,
+              161.8,
+              146.6,
+              103.7,
+              78.7,
+              73.4,
+              76.9,
+              94.6,
+              112.6,
+              149.2,
+              176.2,
+              204.8
+            ],
+            "balance_mm": {
+              "1": -166.7,
+              "2": -129.5,
+              "3": -120.6,
+              "4": -87.1,
+              "5": -53.8,
+              "6": -45.9,
+              "7": -54.4,
+              "8": -73.6,
+              "9": -101.7,
+              "10": -122.1,
+              "11": -151.8,
+              "12": -177.2
+            },
+            "basis": "Estimación de referencia ET0 FAO-56 (Penman-Monteith donde hay datos, Hargreaves en el resto) — EVLAND no está disponible en esta celda; el balance mensual es lluvia menos ET0 en mm. Esta parcela comparte la celda de datos climáticos con otra parcela del lote. Agua de cultivo ≈ ET0 × Kc 0.65 (FAO-56) del catálogo.",
+            "crop_water_mm_day": 2.8
+          },
+          "infiltration": {
+            "class": "alta",
+            "score": 72,
+            "basis": "Puntaje 0-100 a partir de textura Franco-arenoso, MO 10.2 g/kg, pendiente 3 %, 0 días/año de suelo desnudo (grupos hidrológicos de suelo USDA; fórmula en knowledge/README). Ordena el riesgo relativo, no es una medición. Esta parcela comparte la celda de datos climáticos con otra parcela del lote."
+          }
+        },
+        "timeline": {
+          "months": [
+            "2024-11",
+            "2024-12",
+            "2025-01",
+            "2025-02",
+            "2025-03",
+            "2025-04",
+            "2025-05",
+            "2025-06",
+            "2025-07",
+            "2025-08",
+            "2025-09",
+            "2025-10",
+            "2025-11",
+            "2025-12",
+            "2026-01",
+            "2026-02",
+            "2026-03",
+            "2026-04",
+            "2026-05",
+            "2026-06",
+            "2026-07",
+            "2026-08",
+            "2026-09",
+            "2026-10",
+            "2026-11"
+          ],
+          "partial_last": true,
+          "series": {
+            "rain_mm": {
+              "values": [
+                1.18,
+                9.41,
+                25.51,
+                7.94,
+                22.76,
+                3.23,
+                21.02,
+                105.43,
+                2.03,
+                58.22,
+                3.76,
+                1.23,
+                17.74,
+                14.52,
+                60.13,
+                8.83,
+                25.69,
+                13.63,
+                2.15,
+                2.35,
+                39.04,
+                14.98,
+                11.44,
+                208.49,
+                null
+              ],
+              "normal": [
+                31.617,
+                33.575,
+                26.467,
+                18.875,
+                29.783,
+                28.721,
+                26.166,
+                21.155,
+                12.3,
+                16.009,
+                21.551,
+                20.363
+              ],
+              "anomaly_pct": [
+                -95,
+                -54,
+                -19,
+                -76,
+                -14,
+                -83,
+                -29,
+                267,
+                -92,
+                175,
+                -69,
+                -92,
+                -18,
+                -29,
+                90,
+                -74,
+                -3,
+                -28,
+                -93,
+                -92,
+                49,
+                -29,
+                -7,
+                1202,
+                null
+              ]
+            },
+            "tmax_c": {
+              "values": [
+                29.92,
+                30.87,
+                32.8,
+                35.2,
+                29.32,
+                25.24,
+                22.84,
+                15.8,
+                20.09,
+                18.01,
+                23.23,
+                26.4,
+                28.55,
+                30.68,
+                31.63,
+                31.79,
+                29.81,
+                25.56,
+                22.05,
+                19.08,
+                17.33,
+                17.83,
+                21.38,
+                18.02,
+                null
+              ],
+              "normal": [
+                31.905,
+                30.911,
+                29.089,
+                25.004,
+                20.506,
+                17.487,
+                16.605,
+                18.586,
+                21.303,
+                24.784,
+                28.128,
+                30.666
+              ],
+              "anomaly_c": [
+                1.8,
+                0.2,
+                0.9,
+                4.3,
+                0.2,
+                0.2,
+                2.3,
+                -1.7,
+                3.5,
+                -0.6,
+                1.9,
+                1.6,
+                0.4,
+                0,
+                -0.3,
+                0.9,
+                0.7,
+                0.6,
+                1.5,
+                1.6,
+                0.7,
+                -0.8,
+                0.1,
+                -6.8,
+                null
+              ]
+            },
+            "root_moisture": {
+              "values": [
+                0.28,
+                0.27,
+                0.28,
+                0.27,
+                0.28,
+                0.28,
+                0.28,
+                0.32,
+                0.33,
+                0.32,
+                0.33,
+                0.31,
+                0.3,
+                0.3,
+                0.3,
+                0.31,
+                0.3,
+                0.3,
+                0.29,
+                0.29,
+                0.29,
+                0.31,
+                0.3,
+                0.53,
+                null
+              ],
+              "normal": [
+                0.305,
+                0.308,
+                0.31,
+                0.311,
+                0.316,
+                0.323,
+                0.325,
+                0.329,
+                0.325,
+                0.317,
+                0.311,
+                0.304
+              ],
+              "anomaly_pct": [
+                -9,
+                -10,
+                -9,
+                -12,
+                -10,
+                -11,
+                -12,
+                0,
+                1,
+                -1,
+                3,
+                -3,
+                -2,
+                -2,
+                -1,
+                -1,
+                -3,
+                -4,
+                -8,
+                -10,
+                -9,
+                -6,
+                -7,
+                67,
+                null
+              ]
+            },
+            "heat_days_35": {
+              "values": [
+                0,
+                0,
+                6,
+                14,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                4,
+                1,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                null
+              ]
+            },
+            "frost_days": {
+              "values": [
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                6,
+                0,
+                2,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                6,
+                1,
+                1,
+                0,
+                null
+              ]
+            }
+          },
+          "normals_period": "2001-2020",
+          "basis": "Los 'normales' son la media del mismo mes del año entre 2001 y 2020 en esta celda.",
+          "source": "NASA POWER daily",
+          "headline": "En los últimos 3 meses llovió 375 % más de lo normal y el suelo está más húmedo que lo normal, y la primavera viene 2.5 °C más fría que lo normal."
+        },
+        "alerts": [],
+        "order": [
+          "frost",
+          "drought",
+          "fire",
+          "heat",
+          "enso",
+          "snow",
+          "hail"
+        ],
+        "extra": [
+          {
+            "id": "flood",
+            "hidden": true
+          }
+        ],
+        "accuracy": {
+          "temp_rmse_c": 4.5,
+          "temp_rmse_adjusted_c": 2.5,
+          "rain_bias_mm_month": 10.52,
+          "rain_rmse_mm_month": 32.14,
+          "rain_r": 0.463,
+          "stations": {
+            "temperature": 53,
+            "rain": 9
+          },
+          "elevation_correction_c": 9.5,
+          "note": "Qué tan bien le pegan los datos satelitales en mediciones de campo: temperatura con 53 estaciones Orin (Mendoza); lluvia regional (9 estaciones SIGA a menos de 200 km). Punto de referencia, no una garantía para este lote.",
           "sources": [
             "orin_validation",
             "siga_rain_validation"
@@ -887,21 +3497,21 @@
           "revenue_per_ha": 3420,
           "cost_per_ha": 2400,
           "margin_per_ha": 1020,
-          "margin_total": 35027,
+          "margin_total": 125972,
           "break_even_yield_t_ha": 6.32,
-          "risk_adjusted_margin_per_ha": 849,
-          "basis": "Rinde declarado por el productor (9 t/ha). Margen ajustado con supuestos aproximados: alerta de fuego −5 % del ingreso. No es un pronóstico.",
+          "risk_adjusted_margin_per_ha": 1020,
+          "basis": "Rinde declarado por el productor (9 t/ha). Margen ajustado con supuestos aproximados: sin factores de riesgo del ingreso. No es un pronóstico.",
           "currency": "USD"
         }
       },
       {
-        "id": "ajo",
+        "id": "ajo_sur",
         "crop": "ajo",
-        "area_ha": 35.9,
+        "area_ha": 123.4,
         "indicators": {
           "fire": {
-            "pct": 15,
-            "level": "alto",
+            "pct": 3,
+            "level": "bajo",
             "basis": "Probabilidad de fuego en los próximos 7 días según el modelo de la zona."
           },
           "water": {
@@ -910,14 +3520,14 @@
             "basis": "Humedad de la raíz (NASA POWER GWETROOT), promedio de los últimos 30 días; está por encima del percentil 80 de noviembre en la historia de esta zona. Esta parcela comparte la celda de datos climáticos con otra parcela del lote."
           },
           "heat": {
-            "days_over_35": 17.8,
+            "days_over_35": 8.5,
             "basis": "Promedio anual de días por encima de 35 °C (serie diaria NASA POWER, con corrección por altura). Esta parcela comparte la celda de datos climáticos con otra parcela del lote."
           },
           "frost": {
-            "frost_free_days": 273,
+            "frost_free_days": 293,
             "window": {
-              "start": "08-31",
-              "end": "05-31"
+              "start": "08-24",
+              "end": "06-13"
             },
             "basis": "Días del año entre la última helada de primavera y la primera de otoño (mediana de años completos, NASA POWER, con corrección por altura). Esta parcela comparte la celda de datos climáticos con otra parcela del lote."
           },
@@ -941,37 +3551,37 @@
             "basis": "ENSO según el índice ONI de NOAA: ahora El Niño (+2.5 °C). En esta zona, los años El Niño llovieron -4 % y los La Niña +0 % respecto al promedio en octubre–marzo. Es una tendencia histórica, no un pronóstico."
           },
           "flood": {
-            "heavy_rain_days_yr": 0.4,
+            "heavy_rain_days_yr": 0,
             "low_slope": false,
-            "basis": "0.4 días por año con lluvia fuerte (sobre 20 mm) y terreno con pendiente: el agua escurre, riesgo de anegamiento menor. Esta parcela comparte la celda de datos climáticos con otra parcela del lote."
+            "basis": "0 días por año con lluvia fuerte (sobre 20 mm) y terreno con pendiente: el agua escurre, riesgo de anegamiento menor. Esta parcela comparte la celda de datos climáticos con otra parcela del lote."
           },
           "evaporation": {
-            "mm_per_year": 1564,
+            "mm_per_year": 1566,
             "monthly_mm": [
               202.6,
-              161.7,
-              146.5,
-              103.3,
-              78.3,
-              73,
-              76.5,
-              94.3,
-              112.4,
-              149.1,
+              161.8,
+              146.6,
+              103.7,
+              78.7,
+              73.4,
+              76.9,
+              94.6,
+              112.6,
+              149.2,
               176.2,
               204.8
             ],
             "balance_mm": {
               "1": -166.7,
-              "2": -129.4,
-              "3": -120.5,
-              "4": -86.8,
-              "5": -53.4,
-              "6": -45.5,
-              "7": -54,
-              "8": -73.3,
-              "9": -101.5,
-              "10": -122,
+              "2": -129.5,
+              "3": -120.6,
+              "4": -87.1,
+              "5": -53.8,
+              "6": -45.9,
+              "7": -54.4,
+              "8": -73.6,
+              "9": -101.7,
+              "10": -122.1,
               "11": -151.8,
               "12": -177.2
             },
@@ -980,8 +3590,8 @@
           },
           "infiltration": {
             "class": "alta",
-            "score": 67,
-            "basis": "Puntaje 0-100 a partir de textura Franco-arenoso, MO 12 g/kg, pendiente 2.9 %, 122 días/año de suelo desnudo (grupos hidrológicos de suelo USDA; fórmula en knowledge/README). Ordena el riesgo relativo, no es una medición. Esta parcela comparte la celda de datos climáticos con otra parcela del lote."
+            "score": 68,
+            "basis": "Puntaje 0-100 a partir de textura Franco-arenoso, MO 10.2 g/kg, pendiente 8 %, 0 días/año de suelo desnudo (grupos hidrológicos de suelo USDA; fórmula en knowledge/README). Ordena el riesgo relativo, no es una medición. Esta parcela comparte la celda de datos climáticos con otra parcela del lote."
           }
         },
         "timeline": {
@@ -1288,13 +3898,7 @@
           "source": "NASA POWER daily",
           "headline": "En los últimos 3 meses llovió 375 % más de lo normal y el suelo está más húmedo que lo normal, y la primavera viene 2.5 °C más fría que lo normal."
         },
-        "alerts": [
-          {
-            "kind": "fire",
-            "severity": "high",
-            "text": "Riesgo de fuego alto en esta parcela: no quemes rastrojos, revisá los guardafuegos y ante fuego o humo llamá al 100."
-          }
-        ],
+        "alerts": [],
         "order": [
           "frost",
           "drought",
@@ -1313,15 +3917,15 @@
         "accuracy": {
           "temp_rmse_c": 4.5,
           "temp_rmse_adjusted_c": 2.5,
-          "rain_bias_mm_month": 10.98,
-          "rain_rmse_mm_month": 31.35,
-          "rain_r": 0.42,
+          "rain_bias_mm_month": 10.52,
+          "rain_rmse_mm_month": 32.14,
+          "rain_r": 0.463,
           "stations": {
             "temperature": 53,
-            "rain": 10
+            "rain": 9
           },
           "elevation_correction_c": 9.5,
-          "note": "Qué tan bien le pegan los datos satelitales en mediciones de campo: temperatura con 53 estaciones Orin (Mendoza); lluvia regional (10 estaciones SIGA a menos de 200 km). Punto de referencia, no una garantía para este lote.",
+          "note": "Qué tan bien le pegan los datos satelitales en mediciones de campo: temperatura con 53 estaciones Orin (Mendoza); lluvia regional (9 estaciones SIGA a menos de 200 km). Punto de referencia, no una garantía para este lote.",
           "sources": [
             "orin_validation",
             "siga_rain_validation"
@@ -1333,60 +3937,2580 @@
           "revenue_per_ha": 7200,
           "cost_per_ha": 1800,
           "margin_per_ha": 5400,
-          "margin_total": 193865,
+          "margin_total": 666353,
           "break_even_yield_t_ha": 2,
-          "risk_adjusted_margin_per_ha": 5040,
-          "basis": "Rinde declarado por el productor (8 t/ha). Margen ajustado con supuestos aproximados: alerta de fuego −5 % del ingreso. No es un pronóstico.",
+          "risk_adjusted_margin_per_ha": 5400,
+          "basis": "Rinde declarado por el productor (8 t/ha). Margen ajustado con supuestos aproximados: sin factores de riesgo del ingreso. No es un pronóstico.",
           "currency": "USD"
         }
       }
     ],
     "zones": [
       {
-        "kind": "fire_risk",
+        "kind": "hotspot",
         "geometry": {
           "type": "Polygon",
           "coordinates": [
             [
               [
-                -69.085439,
-                -33.668797
+                -68.892542,
+                -33.31041
               ],
               [
-                -69.141776,
-                -33.739427
+                -68.89262,
+                -33.309752
               ],
               [
-                -69.097638,
-                -33.806917
+                -68.89285,
+                -33.309119
               ],
               [
-                -68.997188,
-                -33.803766
+                -68.893223,
+                -33.308535
               ],
               [
-                -68.940944,
-                -33.733167
+                -68.893725,
+                -33.308024
               ],
               [
-                -68.985056,
-                -33.665687
+                -68.894337,
+                -33.307604
               ],
               [
-                -69.085439,
-                -33.668797
+                -68.895035,
+                -33.307292
+              ],
+              [
+                -68.895792,
+                -33.3071
+              ],
+              [
+                -68.89658,
+                -33.307036
+              ],
+              [
+                -68.897368,
+                -33.3071
+              ],
+              [
+                -68.898125,
+                -33.307292
+              ],
+              [
+                -68.898823,
+                -33.307604
+              ],
+              [
+                -68.899435,
+                -33.308024
+              ],
+              [
+                -68.899937,
+                -33.308535
+              ],
+              [
+                -68.90031,
+                -33.309119
+              ],
+              [
+                -68.90054,
+                -33.309752
+              ],
+              [
+                -68.900618,
+                -33.31041
+              ],
+              [
+                -68.90054,
+                -33.311068
+              ],
+              [
+                -68.90031,
+                -33.311701
+              ],
+              [
+                -68.899937,
+                -33.312285
+              ],
+              [
+                -68.899435,
+                -33.312796
+              ],
+              [
+                -68.898823,
+                -33.313216
+              ],
+              [
+                -68.898125,
+                -33.313528
+              ],
+              [
+                -68.897368,
+                -33.31372
+              ],
+              [
+                -68.89658,
+                -33.313784
+              ],
+              [
+                -68.895792,
+                -33.31372
+              ],
+              [
+                -68.895035,
+                -33.313528
+              ],
+              [
+                -68.894337,
+                -33.313216
+              ],
+              [
+                -68.893725,
+                -33.312796
+              ],
+              [
+                -68.893223,
+                -33.312285
+              ],
+              [
+                -68.89285,
+                -33.311701
+              ],
+              [
+                -68.89262,
+                -33.311068
+              ],
+              [
+                -68.892542,
+                -33.31041
               ]
             ]
           ]
         },
         "center": [
-          -69.04132,
-          -33.73634
+          -68.89658,
+          -33.31041
         ],
-        "radius_m": null,
-        "pct": 15,
-        "label": "Zona de riesgo alto de fuego",
-        "source": "modelo ar-lgbm-0.1",
+        "radius_m": 375,
+        "pct": null,
+        "label": "Foco detectado por satélite",
+        "source": "VIIRS NOAA-21 NRT",
+        "date": "2026-11-15"
+      },
+      {
+        "kind": "hotspot",
+        "geometry": {
+          "type": "Polygon",
+          "coordinates": [
+            [
+              [
+                -68.893632,
+                -33.30658
+              ],
+              [
+                -68.89371,
+                -33.305922
+              ],
+              [
+                -68.89394,
+                -33.305289
+              ],
+              [
+                -68.894313,
+                -33.304705
+              ],
+              [
+                -68.894815,
+                -33.304194
+              ],
+              [
+                -68.895427,
+                -33.303774
+              ],
+              [
+                -68.896125,
+                -33.303462
+              ],
+              [
+                -68.896882,
+                -33.30327
+              ],
+              [
+                -68.89767,
+                -33.303206
+              ],
+              [
+                -68.898458,
+                -33.30327
+              ],
+              [
+                -68.899215,
+                -33.303462
+              ],
+              [
+                -68.899913,
+                -33.303774
+              ],
+              [
+                -68.900525,
+                -33.304194
+              ],
+              [
+                -68.901027,
+                -33.304705
+              ],
+              [
+                -68.9014,
+                -33.305289
+              ],
+              [
+                -68.90163,
+                -33.305922
+              ],
+              [
+                -68.901708,
+                -33.30658
+              ],
+              [
+                -68.90163,
+                -33.307238
+              ],
+              [
+                -68.9014,
+                -33.307871
+              ],
+              [
+                -68.901027,
+                -33.308455
+              ],
+              [
+                -68.900525,
+                -33.308966
+              ],
+              [
+                -68.899913,
+                -33.309386
+              ],
+              [
+                -68.899215,
+                -33.309698
+              ],
+              [
+                -68.898458,
+                -33.30989
+              ],
+              [
+                -68.89767,
+                -33.309954
+              ],
+              [
+                -68.896882,
+                -33.30989
+              ],
+              [
+                -68.896125,
+                -33.309698
+              ],
+              [
+                -68.895427,
+                -33.309386
+              ],
+              [
+                -68.894815,
+                -33.308966
+              ],
+              [
+                -68.894313,
+                -33.308455
+              ],
+              [
+                -68.89394,
+                -33.307871
+              ],
+              [
+                -68.89371,
+                -33.307238
+              ],
+              [
+                -68.893632,
+                -33.30658
+              ]
+            ]
+          ]
+        },
+        "center": [
+          -68.89767,
+          -33.30658
+        ],
+        "radius_m": 375,
+        "pct": null,
+        "label": "Foco detectado por satélite",
+        "source": "VIIRS NOAA-21 NRT",
+        "date": "2026-11-15"
+      },
+      {
+        "kind": "hotspot",
+        "geometry": {
+          "type": "Polygon",
+          "coordinates": [
+            [
+              [
+                -68.894733,
+                -33.30276
+              ],
+              [
+                -68.89481,
+                -33.302102
+              ],
+              [
+                -68.89504,
+                -33.301469
+              ],
+              [
+                -68.895413,
+                -33.300885
+              ],
+              [
+                -68.895915,
+                -33.300374
+              ],
+              [
+                -68.896527,
+                -33.299954
+              ],
+              [
+                -68.897225,
+                -33.299642
+              ],
+              [
+                -68.897982,
+                -33.29945
+              ],
+              [
+                -68.89877,
+                -33.299386
+              ],
+              [
+                -68.899558,
+                -33.29945
+              ],
+              [
+                -68.900315,
+                -33.299642
+              ],
+              [
+                -68.901013,
+                -33.299954
+              ],
+              [
+                -68.901625,
+                -33.300374
+              ],
+              [
+                -68.902127,
+                -33.300885
+              ],
+              [
+                -68.9025,
+                -33.301469
+              ],
+              [
+                -68.90273,
+                -33.302102
+              ],
+              [
+                -68.902807,
+                -33.30276
+              ],
+              [
+                -68.90273,
+                -33.303418
+              ],
+              [
+                -68.9025,
+                -33.304051
+              ],
+              [
+                -68.902127,
+                -33.304635
+              ],
+              [
+                -68.901625,
+                -33.305146
+              ],
+              [
+                -68.901013,
+                -33.305566
+              ],
+              [
+                -68.900315,
+                -33.305878
+              ],
+              [
+                -68.899558,
+                -33.30607
+              ],
+              [
+                -68.89877,
+                -33.306134
+              ],
+              [
+                -68.897982,
+                -33.30607
+              ],
+              [
+                -68.897225,
+                -33.305878
+              ],
+              [
+                -68.896527,
+                -33.305566
+              ],
+              [
+                -68.895915,
+                -33.305146
+              ],
+              [
+                -68.895413,
+                -33.304635
+              ],
+              [
+                -68.89504,
+                -33.304051
+              ],
+              [
+                -68.89481,
+                -33.303418
+              ],
+              [
+                -68.894733,
+                -33.30276
+              ]
+            ]
+          ]
+        },
+        "center": [
+          -68.89877,
+          -33.30276
+        ],
+        "radius_m": 375,
+        "pct": null,
+        "label": "Foco detectado por satélite",
+        "source": "VIIRS NOAA-21 NRT",
+        "date": "2026-11-15"
+      },
+      {
+        "kind": "hotspot",
+        "geometry": {
+          "type": "Polygon",
+          "coordinates": [
+            [
+              [
+                -68.882402,
+                -33.32459
+              ],
+              [
+                -68.882479,
+                -33.323932
+              ],
+              [
+                -68.882709,
+                -33.323299
+              ],
+              [
+                -68.883082,
+                -33.322715
+              ],
+              [
+                -68.883584,
+                -33.322204
+              ],
+              [
+                -68.884196,
+                -33.321784
+              ],
+              [
+                -68.884895,
+                -33.321472
+              ],
+              [
+                -68.885652,
+                -33.32128
+              ],
+              [
+                -68.88644,
+                -33.321216
+              ],
+              [
+                -68.887228,
+                -33.32128
+              ],
+              [
+                -68.887985,
+                -33.321472
+              ],
+              [
+                -68.888684,
+                -33.321784
+              ],
+              [
+                -68.889296,
+                -33.322204
+              ],
+              [
+                -68.889798,
+                -33.322715
+              ],
+              [
+                -68.890171,
+                -33.323299
+              ],
+              [
+                -68.890401,
+                -33.323932
+              ],
+              [
+                -68.890478,
+                -33.32459
+              ],
+              [
+                -68.890401,
+                -33.325248
+              ],
+              [
+                -68.890171,
+                -33.325881
+              ],
+              [
+                -68.889798,
+                -33.326465
+              ],
+              [
+                -68.889296,
+                -33.326976
+              ],
+              [
+                -68.888684,
+                -33.327396
+              ],
+              [
+                -68.887985,
+                -33.327708
+              ],
+              [
+                -68.887228,
+                -33.3279
+              ],
+              [
+                -68.88644,
+                -33.327964
+              ],
+              [
+                -68.885652,
+                -33.3279
+              ],
+              [
+                -68.884895,
+                -33.327708
+              ],
+              [
+                -68.884196,
+                -33.327396
+              ],
+              [
+                -68.883584,
+                -33.326976
+              ],
+              [
+                -68.883082,
+                -33.326465
+              ],
+              [
+                -68.882709,
+                -33.325881
+              ],
+              [
+                -68.882479,
+                -33.325248
+              ],
+              [
+                -68.882402,
+                -33.32459
+              ]
+            ]
+          ]
+        },
+        "center": [
+          -68.88644,
+          -33.32459
+        ],
+        "radius_m": 375,
+        "pct": null,
+        "label": "Foco detectado por satélite",
+        "source": "VIIRS NOAA-21 NRT",
+        "date": "2026-11-15"
+      },
+      {
+        "kind": "hotspot",
+        "geometry": {
+          "type": "Polygon",
+          "coordinates": [
+            [
+              [
+                -68.878981,
+                -33.32872
+              ],
+              [
+                -68.879059,
+                -33.328062
+              ],
+              [
+                -68.879289,
+                -33.327429
+              ],
+              [
+                -68.879662,
+                -33.326845
+              ],
+              [
+                -68.880164,
+                -33.326334
+              ],
+              [
+                -68.880776,
+                -33.325914
+              ],
+              [
+                -68.881475,
+                -33.325602
+              ],
+              [
+                -68.882232,
+                -33.32541
+              ],
+              [
+                -68.88302,
+                -33.325346
+              ],
+              [
+                -68.883808,
+                -33.32541
+              ],
+              [
+                -68.884565,
+                -33.325602
+              ],
+              [
+                -68.885264,
+                -33.325914
+              ],
+              [
+                -68.885876,
+                -33.326334
+              ],
+              [
+                -68.886378,
+                -33.326845
+              ],
+              [
+                -68.886751,
+                -33.327429
+              ],
+              [
+                -68.886981,
+                -33.328062
+              ],
+              [
+                -68.887059,
+                -33.32872
+              ],
+              [
+                -68.886981,
+                -33.329378
+              ],
+              [
+                -68.886751,
+                -33.330011
+              ],
+              [
+                -68.886378,
+                -33.330595
+              ],
+              [
+                -68.885876,
+                -33.331106
+              ],
+              [
+                -68.885264,
+                -33.331526
+              ],
+              [
+                -68.884565,
+                -33.331838
+              ],
+              [
+                -68.883808,
+                -33.33203
+              ],
+              [
+                -68.88302,
+                -33.332094
+              ],
+              [
+                -68.882232,
+                -33.33203
+              ],
+              [
+                -68.881475,
+                -33.331838
+              ],
+              [
+                -68.880776,
+                -33.331526
+              ],
+              [
+                -68.880164,
+                -33.331106
+              ],
+              [
+                -68.879662,
+                -33.330595
+              ],
+              [
+                -68.879289,
+                -33.330011
+              ],
+              [
+                -68.879059,
+                -33.329378
+              ],
+              [
+                -68.878981,
+                -33.32872
+              ]
+            ]
+          ]
+        },
+        "center": [
+          -68.88302,
+          -33.32872
+        ],
+        "radius_m": 375,
+        "pct": null,
+        "label": "Foco detectado por satélite",
+        "source": "VIIRS NOAA-21 NRT",
+        "date": "2026-11-15"
+      },
+      {
+        "kind": "hotspot",
+        "geometry": {
+          "type": "Polygon",
+          "coordinates": [
+            [
+              [
+                -68.880062,
+                -33.3249
+              ],
+              [
+                -68.880139,
+                -33.324242
+              ],
+              [
+                -68.880369,
+                -33.323609
+              ],
+              [
+                -68.880742,
+                -33.323025
+              ],
+              [
+                -68.881244,
+                -33.322514
+              ],
+              [
+                -68.881856,
+                -33.322094
+              ],
+              [
+                -68.882555,
+                -33.321782
+              ],
+              [
+                -68.883312,
+                -33.32159
+              ],
+              [
+                -68.8841,
+                -33.321526
+              ],
+              [
+                -68.884888,
+                -33.32159
+              ],
+              [
+                -68.885645,
+                -33.321782
+              ],
+              [
+                -68.886344,
+                -33.322094
+              ],
+              [
+                -68.886956,
+                -33.322514
+              ],
+              [
+                -68.887458,
+                -33.323025
+              ],
+              [
+                -68.887831,
+                -33.323609
+              ],
+              [
+                -68.888061,
+                -33.324242
+              ],
+              [
+                -68.888138,
+                -33.3249
+              ],
+              [
+                -68.888061,
+                -33.325558
+              ],
+              [
+                -68.887831,
+                -33.326191
+              ],
+              [
+                -68.887458,
+                -33.326775
+              ],
+              [
+                -68.886956,
+                -33.327286
+              ],
+              [
+                -68.886344,
+                -33.327706
+              ],
+              [
+                -68.885645,
+                -33.328018
+              ],
+              [
+                -68.884888,
+                -33.32821
+              ],
+              [
+                -68.8841,
+                -33.328274
+              ],
+              [
+                -68.883312,
+                -33.32821
+              ],
+              [
+                -68.882555,
+                -33.328018
+              ],
+              [
+                -68.881856,
+                -33.327706
+              ],
+              [
+                -68.881244,
+                -33.327286
+              ],
+              [
+                -68.880742,
+                -33.326775
+              ],
+              [
+                -68.880369,
+                -33.326191
+              ],
+              [
+                -68.880139,
+                -33.325558
+              ],
+              [
+                -68.880062,
+                -33.3249
+              ]
+            ]
+          ]
+        },
+        "center": [
+          -68.8841,
+          -33.3249
+        ],
+        "radius_m": 375,
+        "pct": null,
+        "label": "Foco detectado por satélite",
+        "source": "VIIRS NOAA-21 NRT",
+        "date": "2026-11-15"
+      },
+      {
+        "kind": "hotspot",
+        "geometry": {
+          "type": "Polygon",
+          "coordinates": [
+            [
+              [
+                -68.877881,
+                -33.33255
+              ],
+              [
+                -68.877959,
+                -33.331892
+              ],
+              [
+                -68.878189,
+                -33.331259
+              ],
+              [
+                -68.878562,
+                -33.330675
+              ],
+              [
+                -68.879064,
+                -33.330164
+              ],
+              [
+                -68.879676,
+                -33.329744
+              ],
+              [
+                -68.880374,
+                -33.329432
+              ],
+              [
+                -68.881132,
+                -33.32924
+              ],
+              [
+                -68.88192,
+                -33.329176
+              ],
+              [
+                -68.882708,
+                -33.32924
+              ],
+              [
+                -68.883466,
+                -33.329432
+              ],
+              [
+                -68.884164,
+                -33.329744
+              ],
+              [
+                -68.884776,
+                -33.330164
+              ],
+              [
+                -68.885278,
+                -33.330675
+              ],
+              [
+                -68.885651,
+                -33.331259
+              ],
+              [
+                -68.885881,
+                -33.331892
+              ],
+              [
+                -68.885959,
+                -33.33255
+              ],
+              [
+                -68.885881,
+                -33.333208
+              ],
+              [
+                -68.885651,
+                -33.333841
+              ],
+              [
+                -68.885278,
+                -33.334425
+              ],
+              [
+                -68.884776,
+                -33.334936
+              ],
+              [
+                -68.884164,
+                -33.335356
+              ],
+              [
+                -68.883466,
+                -33.335668
+              ],
+              [
+                -68.882708,
+                -33.33586
+              ],
+              [
+                -68.88192,
+                -33.335924
+              ],
+              [
+                -68.881132,
+                -33.33586
+              ],
+              [
+                -68.880374,
+                -33.335668
+              ],
+              [
+                -68.879676,
+                -33.335356
+              ],
+              [
+                -68.879064,
+                -33.334936
+              ],
+              [
+                -68.878562,
+                -33.334425
+              ],
+              [
+                -68.878189,
+                -33.333841
+              ],
+              [
+                -68.877959,
+                -33.333208
+              ],
+              [
+                -68.877881,
+                -33.33255
+              ]
+            ]
+          ]
+        },
+        "center": [
+          -68.88192,
+          -33.33255
+        ],
+        "radius_m": 375,
+        "pct": null,
+        "label": "Foco detectado por satélite",
+        "source": "VIIRS NOAA-21 NRT",
+        "date": "2026-11-15"
+      },
+      {
+        "kind": "hotspot",
+        "geometry": {
+          "type": "Polygon",
+          "coordinates": [
+            [
+              [
+                -68.875541,
+                -33.3273
+              ],
+              [
+                -68.875619,
+                -33.326642
+              ],
+              [
+                -68.875849,
+                -33.326009
+              ],
+              [
+                -68.876222,
+                -33.325425
+              ],
+              [
+                -68.876724,
+                -33.324914
+              ],
+              [
+                -68.877336,
+                -33.324494
+              ],
+              [
+                -68.878035,
+                -33.324182
+              ],
+              [
+                -68.878792,
+                -33.32399
+              ],
+              [
+                -68.87958,
+                -33.323926
+              ],
+              [
+                -68.880368,
+                -33.32399
+              ],
+              [
+                -68.881125,
+                -33.324182
+              ],
+              [
+                -68.881824,
+                -33.324494
+              ],
+              [
+                -68.882436,
+                -33.324914
+              ],
+              [
+                -68.882938,
+                -33.325425
+              ],
+              [
+                -68.883311,
+                -33.326009
+              ],
+              [
+                -68.883541,
+                -33.326642
+              ],
+              [
+                -68.883619,
+                -33.3273
+              ],
+              [
+                -68.883541,
+                -33.327958
+              ],
+              [
+                -68.883311,
+                -33.328591
+              ],
+              [
+                -68.882938,
+                -33.329175
+              ],
+              [
+                -68.882436,
+                -33.329686
+              ],
+              [
+                -68.881824,
+                -33.330106
+              ],
+              [
+                -68.881125,
+                -33.330418
+              ],
+              [
+                -68.880368,
+                -33.33061
+              ],
+              [
+                -68.87958,
+                -33.330674
+              ],
+              [
+                -68.878792,
+                -33.33061
+              ],
+              [
+                -68.878035,
+                -33.330418
+              ],
+              [
+                -68.877336,
+                -33.330106
+              ],
+              [
+                -68.876724,
+                -33.329686
+              ],
+              [
+                -68.876222,
+                -33.329175
+              ],
+              [
+                -68.875849,
+                -33.328591
+              ],
+              [
+                -68.875619,
+                -33.327958
+              ],
+              [
+                -68.875541,
+                -33.3273
+              ]
+            ]
+          ]
+        },
+        "center": [
+          -68.87958,
+          -33.3273
+        ],
+        "radius_m": 375,
+        "pct": null,
+        "label": "Foco detectado por satélite",
+        "source": "VIIRS NOAA-21 NRT",
+        "date": "2026-11-15"
+      },
+      {
+        "kind": "hotspot",
+        "geometry": {
+          "type": "Polygon",
+          "coordinates": [
+            [
+              [
+                -68.876642,
+                -33.32347
+              ],
+              [
+                -68.876719,
+                -33.322812
+              ],
+              [
+                -68.876949,
+                -33.322179
+              ],
+              [
+                -68.877322,
+                -33.321595
+              ],
+              [
+                -68.877824,
+                -33.321084
+              ],
+              [
+                -68.878436,
+                -33.320664
+              ],
+              [
+                -68.879135,
+                -33.320352
+              ],
+              [
+                -68.879892,
+                -33.32016
+              ],
+              [
+                -68.88068,
+                -33.320096
+              ],
+              [
+                -68.881468,
+                -33.32016
+              ],
+              [
+                -68.882225,
+                -33.320352
+              ],
+              [
+                -68.882924,
+                -33.320664
+              ],
+              [
+                -68.883536,
+                -33.321084
+              ],
+              [
+                -68.884038,
+                -33.321595
+              ],
+              [
+                -68.884411,
+                -33.322179
+              ],
+              [
+                -68.884641,
+                -33.322812
+              ],
+              [
+                -68.884718,
+                -33.32347
+              ],
+              [
+                -68.884641,
+                -33.324128
+              ],
+              [
+                -68.884411,
+                -33.324761
+              ],
+              [
+                -68.884038,
+                -33.325345
+              ],
+              [
+                -68.883536,
+                -33.325856
+              ],
+              [
+                -68.882924,
+                -33.326276
+              ],
+              [
+                -68.882225,
+                -33.326588
+              ],
+              [
+                -68.881468,
+                -33.32678
+              ],
+              [
+                -68.88068,
+                -33.326844
+              ],
+              [
+                -68.879892,
+                -33.32678
+              ],
+              [
+                -68.879135,
+                -33.326588
+              ],
+              [
+                -68.878436,
+                -33.326276
+              ],
+              [
+                -68.877824,
+                -33.325856
+              ],
+              [
+                -68.877322,
+                -33.325345
+              ],
+              [
+                -68.876949,
+                -33.324761
+              ],
+              [
+                -68.876719,
+                -33.324128
+              ],
+              [
+                -68.876642,
+                -33.32347
+              ]
+            ]
+          ]
+        },
+        "center": [
+          -68.88068,
+          -33.32347
+        ],
+        "radius_m": 375,
+        "pct": null,
+        "label": "Foco detectado por satélite",
+        "source": "VIIRS NOAA-21 NRT",
+        "date": "2026-11-15"
+      },
+      {
+        "kind": "hotspot",
+        "geometry": {
+          "type": "Polygon",
+          "coordinates": [
+            [
+              [
+                -68.882133,
+                -33.30433
+              ],
+              [
+                -68.88221,
+                -33.303672
+              ],
+              [
+                -68.88244,
+                -33.303039
+              ],
+              [
+                -68.882813,
+                -33.302455
+              ],
+              [
+                -68.883315,
+                -33.301944
+              ],
+              [
+                -68.883927,
+                -33.301524
+              ],
+              [
+                -68.884625,
+                -33.301212
+              ],
+              [
+                -68.885382,
+                -33.30102
+              ],
+              [
+                -68.88617,
+                -33.300956
+              ],
+              [
+                -68.886958,
+                -33.30102
+              ],
+              [
+                -68.887715,
+                -33.301212
+              ],
+              [
+                -68.888413,
+                -33.301524
+              ],
+              [
+                -68.889025,
+                -33.301944
+              ],
+              [
+                -68.889527,
+                -33.302455
+              ],
+              [
+                -68.8899,
+                -33.303039
+              ],
+              [
+                -68.89013,
+                -33.303672
+              ],
+              [
+                -68.890207,
+                -33.30433
+              ],
+              [
+                -68.89013,
+                -33.304988
+              ],
+              [
+                -68.8899,
+                -33.305621
+              ],
+              [
+                -68.889527,
+                -33.306205
+              ],
+              [
+                -68.889025,
+                -33.306716
+              ],
+              [
+                -68.888413,
+                -33.307136
+              ],
+              [
+                -68.887715,
+                -33.307448
+              ],
+              [
+                -68.886958,
+                -33.30764
+              ],
+              [
+                -68.88617,
+                -33.307704
+              ],
+              [
+                -68.885382,
+                -33.30764
+              ],
+              [
+                -68.884625,
+                -33.307448
+              ],
+              [
+                -68.883927,
+                -33.307136
+              ],
+              [
+                -68.883315,
+                -33.306716
+              ],
+              [
+                -68.882813,
+                -33.306205
+              ],
+              [
+                -68.88244,
+                -33.305621
+              ],
+              [
+                -68.88221,
+                -33.304988
+              ],
+              [
+                -68.882133,
+                -33.30433
+              ]
+            ]
+          ]
+        },
+        "center": [
+          -68.88617,
+          -33.30433
+        ],
+        "radius_m": 375,
+        "pct": null,
+        "label": "Foco detectado por satélite",
+        "source": "VIIRS NOAA-21 NRT",
+        "date": "2026-11-15"
+      },
+      {
+        "kind": "hotspot",
+        "geometry": {
+          "type": "Polygon",
+          "coordinates": [
+            [
+              [
+                -68.873231,
+                -33.32757
+              ],
+              [
+                -68.873309,
+                -33.326912
+              ],
+              [
+                -68.873539,
+                -33.326279
+              ],
+              [
+                -68.873912,
+                -33.325695
+              ],
+              [
+                -68.874414,
+                -33.325184
+              ],
+              [
+                -68.875026,
+                -33.324764
+              ],
+              [
+                -68.875725,
+                -33.324452
+              ],
+              [
+                -68.876482,
+                -33.32426
+              ],
+              [
+                -68.87727,
+                -33.324196
+              ],
+              [
+                -68.878058,
+                -33.32426
+              ],
+              [
+                -68.878815,
+                -33.324452
+              ],
+              [
+                -68.879514,
+                -33.324764
+              ],
+              [
+                -68.880126,
+                -33.325184
+              ],
+              [
+                -68.880628,
+                -33.325695
+              ],
+              [
+                -68.881001,
+                -33.326279
+              ],
+              [
+                -68.881231,
+                -33.326912
+              ],
+              [
+                -68.881309,
+                -33.32757
+              ],
+              [
+                -68.881231,
+                -33.328228
+              ],
+              [
+                -68.881001,
+                -33.328861
+              ],
+              [
+                -68.880628,
+                -33.329445
+              ],
+              [
+                -68.880126,
+                -33.329956
+              ],
+              [
+                -68.879514,
+                -33.330376
+              ],
+              [
+                -68.878815,
+                -33.330688
+              ],
+              [
+                -68.878058,
+                -33.33088
+              ],
+              [
+                -68.87727,
+                -33.330944
+              ],
+              [
+                -68.876482,
+                -33.33088
+              ],
+              [
+                -68.875725,
+                -33.330688
+              ],
+              [
+                -68.875026,
+                -33.330376
+              ],
+              [
+                -68.874414,
+                -33.329956
+              ],
+              [
+                -68.873912,
+                -33.329445
+              ],
+              [
+                -68.873539,
+                -33.328861
+              ],
+              [
+                -68.873309,
+                -33.328228
+              ],
+              [
+                -68.873231,
+                -33.32757
+              ]
+            ]
+          ]
+        },
+        "center": [
+          -68.87727,
+          -33.32757
+        ],
+        "radius_m": 375,
+        "pct": null,
+        "label": "Foco detectado por satélite",
+        "source": "VIIRS NOAA-21 NRT",
+        "date": "2026-11-15"
+      },
+      {
+        "kind": "hotspot",
+        "geometry": {
+          "type": "Polygon",
+          "coordinates": [
+            [
+              [
+                -68.874322,
+                -33.32375
+              ],
+              [
+                -68.874399,
+                -33.323092
+              ],
+              [
+                -68.874629,
+                -33.322459
+              ],
+              [
+                -68.875002,
+                -33.321875
+              ],
+              [
+                -68.875504,
+                -33.321364
+              ],
+              [
+                -68.876116,
+                -33.320944
+              ],
+              [
+                -68.876815,
+                -33.320632
+              ],
+              [
+                -68.877572,
+                -33.32044
+              ],
+              [
+                -68.87836,
+                -33.320376
+              ],
+              [
+                -68.879148,
+                -33.32044
+              ],
+              [
+                -68.879905,
+                -33.320632
+              ],
+              [
+                -68.880604,
+                -33.320944
+              ],
+              [
+                -68.881216,
+                -33.321364
+              ],
+              [
+                -68.881718,
+                -33.321875
+              ],
+              [
+                -68.882091,
+                -33.322459
+              ],
+              [
+                -68.882321,
+                -33.323092
+              ],
+              [
+                -68.882398,
+                -33.32375
+              ],
+              [
+                -68.882321,
+                -33.324408
+              ],
+              [
+                -68.882091,
+                -33.325041
+              ],
+              [
+                -68.881718,
+                -33.325625
+              ],
+              [
+                -68.881216,
+                -33.326136
+              ],
+              [
+                -68.880604,
+                -33.326556
+              ],
+              [
+                -68.879905,
+                -33.326868
+              ],
+              [
+                -68.879148,
+                -33.32706
+              ],
+              [
+                -68.87836,
+                -33.327124
+              ],
+              [
+                -68.877572,
+                -33.32706
+              ],
+              [
+                -68.876815,
+                -33.326868
+              ],
+              [
+                -68.876116,
+                -33.326556
+              ],
+              [
+                -68.875504,
+                -33.326136
+              ],
+              [
+                -68.875002,
+                -33.325625
+              ],
+              [
+                -68.874629,
+                -33.325041
+              ],
+              [
+                -68.874399,
+                -33.324408
+              ],
+              [
+                -68.874322,
+                -33.32375
+              ]
+            ]
+          ]
+        },
+        "center": [
+          -68.87836,
+          -33.32375
+        ],
+        "radius_m": 375,
+        "pct": null,
+        "label": "Foco detectado por satélite",
+        "source": "VIIRS NOAA-21 NRT",
+        "date": "2026-11-15"
+      },
+      {
+        "kind": "hotspot",
+        "geometry": {
+          "type": "Polygon",
+          "coordinates": [
+            [
+              [
+                -68.871041,
+                -33.33523
+              ],
+              [
+                -68.871119,
+                -33.334572
+              ],
+              [
+                -68.871349,
+                -33.333939
+              ],
+              [
+                -68.871722,
+                -33.333355
+              ],
+              [
+                -68.872224,
+                -33.332844
+              ],
+              [
+                -68.872836,
+                -33.332424
+              ],
+              [
+                -68.873534,
+                -33.332112
+              ],
+              [
+                -68.874292,
+                -33.33192
+              ],
+              [
+                -68.87508,
+                -33.331856
+              ],
+              [
+                -68.875868,
+                -33.33192
+              ],
+              [
+                -68.876626,
+                -33.332112
+              ],
+              [
+                -68.877324,
+                -33.332424
+              ],
+              [
+                -68.877936,
+                -33.332844
+              ],
+              [
+                -68.878438,
+                -33.333355
+              ],
+              [
+                -68.878811,
+                -33.333939
+              ],
+              [
+                -68.879041,
+                -33.334572
+              ],
+              [
+                -68.879119,
+                -33.33523
+              ],
+              [
+                -68.879041,
+                -33.335888
+              ],
+              [
+                -68.878811,
+                -33.336521
+              ],
+              [
+                -68.878438,
+                -33.337105
+              ],
+              [
+                -68.877936,
+                -33.337616
+              ],
+              [
+                -68.877324,
+                -33.338036
+              ],
+              [
+                -68.876626,
+                -33.338348
+              ],
+              [
+                -68.875868,
+                -33.33854
+              ],
+              [
+                -68.87508,
+                -33.338604
+              ],
+              [
+                -68.874292,
+                -33.33854
+              ],
+              [
+                -68.873534,
+                -33.338348
+              ],
+              [
+                -68.872836,
+                -33.338036
+              ],
+              [
+                -68.872224,
+                -33.337616
+              ],
+              [
+                -68.871722,
+                -33.337105
+              ],
+              [
+                -68.871349,
+                -33.336521
+              ],
+              [
+                -68.871119,
+                -33.335888
+              ],
+              [
+                -68.871041,
+                -33.33523
+              ]
+            ]
+          ]
+        },
+        "center": [
+          -68.87508,
+          -33.33523
+        ],
+        "radius_m": 375,
+        "pct": null,
+        "label": "Foco detectado por satélite",
+        "source": "VIIRS NOAA-21 NRT",
+        "date": "2026-11-15"
+      },
+      {
+        "kind": "hotspot",
+        "geometry": {
+          "type": "Polygon",
+          "coordinates": [
+            [
+              [
+                -68.869792,
+                -33.32617
+              ],
+              [
+                -68.869869,
+                -33.325512
+              ],
+              [
+                -68.870099,
+                -33.324879
+              ],
+              [
+                -68.870472,
+                -33.324295
+              ],
+              [
+                -68.870974,
+                -33.323784
+              ],
+              [
+                -68.871586,
+                -33.323364
+              ],
+              [
+                -68.872285,
+                -33.323052
+              ],
+              [
+                -68.873042,
+                -33.32286
+              ],
+              [
+                -68.87383,
+                -33.322796
+              ],
+              [
+                -68.874618,
+                -33.32286
+              ],
+              [
+                -68.875375,
+                -33.323052
+              ],
+              [
+                -68.876074,
+                -33.323364
+              ],
+              [
+                -68.876686,
+                -33.323784
+              ],
+              [
+                -68.877188,
+                -33.324295
+              ],
+              [
+                -68.877561,
+                -33.324879
+              ],
+              [
+                -68.877791,
+                -33.325512
+              ],
+              [
+                -68.877868,
+                -33.32617
+              ],
+              [
+                -68.877791,
+                -33.326828
+              ],
+              [
+                -68.877561,
+                -33.327461
+              ],
+              [
+                -68.877188,
+                -33.328045
+              ],
+              [
+                -68.876686,
+                -33.328556
+              ],
+              [
+                -68.876074,
+                -33.328976
+              ],
+              [
+                -68.875375,
+                -33.329288
+              ],
+              [
+                -68.874618,
+                -33.32948
+              ],
+              [
+                -68.87383,
+                -33.329544
+              ],
+              [
+                -68.873042,
+                -33.32948
+              ],
+              [
+                -68.872285,
+                -33.329288
+              ],
+              [
+                -68.871586,
+                -33.328976
+              ],
+              [
+                -68.870974,
+                -33.328556
+              ],
+              [
+                -68.870472,
+                -33.328045
+              ],
+              [
+                -68.870099,
+                -33.327461
+              ],
+              [
+                -68.869869,
+                -33.326828
+              ],
+              [
+                -68.869792,
+                -33.32617
+              ]
+            ]
+          ]
+        },
+        "center": [
+          -68.87383,
+          -33.32617
+        ],
+        "radius_m": 375,
+        "pct": null,
+        "label": "Foco detectado por satélite",
+        "source": "VIIRS NOAA-21 NRT",
+        "date": "2026-11-15"
+      },
+      {
+        "kind": "hotspot",
+        "geometry": {
+          "type": "Polygon",
+          "coordinates": [
+            [
+              [
+                -68.868572,
+                -33.32259
+              ],
+              [
+                -68.868649,
+                -33.321932
+              ],
+              [
+                -68.868879,
+                -33.321299
+              ],
+              [
+                -68.869252,
+                -33.320715
+              ],
+              [
+                -68.869754,
+                -33.320204
+              ],
+              [
+                -68.870366,
+                -33.319784
+              ],
+              [
+                -68.871065,
+                -33.319472
+              ],
+              [
+                -68.871822,
+                -33.31928
+              ],
+              [
+                -68.87261,
+                -33.319216
+              ],
+              [
+                -68.873398,
+                -33.31928
+              ],
+              [
+                -68.874155,
+                -33.319472
+              ],
+              [
+                -68.874854,
+                -33.319784
+              ],
+              [
+                -68.875466,
+                -33.320204
+              ],
+              [
+                -68.875968,
+                -33.320715
+              ],
+              [
+                -68.876341,
+                -33.321299
+              ],
+              [
+                -68.876571,
+                -33.321932
+              ],
+              [
+                -68.876648,
+                -33.32259
+              ],
+              [
+                -68.876571,
+                -33.323248
+              ],
+              [
+                -68.876341,
+                -33.323881
+              ],
+              [
+                -68.875968,
+                -33.324465
+              ],
+              [
+                -68.875466,
+                -33.324976
+              ],
+              [
+                -68.874854,
+                -33.325396
+              ],
+              [
+                -68.874155,
+                -33.325708
+              ],
+              [
+                -68.873398,
+                -33.3259
+              ],
+              [
+                -68.87261,
+                -33.325964
+              ],
+              [
+                -68.871822,
+                -33.3259
+              ],
+              [
+                -68.871065,
+                -33.325708
+              ],
+              [
+                -68.870366,
+                -33.325396
+              ],
+              [
+                -68.869754,
+                -33.324976
+              ],
+              [
+                -68.869252,
+                -33.324465
+              ],
+              [
+                -68.868879,
+                -33.323881
+              ],
+              [
+                -68.868649,
+                -33.323248
+              ],
+              [
+                -68.868572,
+                -33.32259
+              ]
+            ]
+          ]
+        },
+        "center": [
+          -68.87261,
+          -33.32259
+        ],
+        "radius_m": 375,
+        "pct": null,
+        "label": "Foco detectado por satélite",
+        "source": "VIIRS NOAA-21 NRT",
+        "date": "2026-11-15"
+      },
+      {
+        "kind": "hotspot",
+        "geometry": {
+          "type": "Polygon",
+          "coordinates": [
+            [
+              [
+                -68.865311,
+                -33.33408
+              ],
+              [
+                -68.865389,
+                -33.333422
+              ],
+              [
+                -68.865619,
+                -33.332789
+              ],
+              [
+                -68.865992,
+                -33.332205
+              ],
+              [
+                -68.866494,
+                -33.331694
+              ],
+              [
+                -68.867106,
+                -33.331274
+              ],
+              [
+                -68.867804,
+                -33.330962
+              ],
+              [
+                -68.868562,
+                -33.33077
+              ],
+              [
+                -68.86935,
+                -33.330706
+              ],
+              [
+                -68.870138,
+                -33.33077
+              ],
+              [
+                -68.870896,
+                -33.330962
+              ],
+              [
+                -68.871594,
+                -33.331274
+              ],
+              [
+                -68.872206,
+                -33.331694
+              ],
+              [
+                -68.872708,
+                -33.332205
+              ],
+              [
+                -68.873081,
+                -33.332789
+              ],
+              [
+                -68.873311,
+                -33.333422
+              ],
+              [
+                -68.873389,
+                -33.33408
+              ],
+              [
+                -68.873311,
+                -33.334738
+              ],
+              [
+                -68.873081,
+                -33.335371
+              ],
+              [
+                -68.872708,
+                -33.335955
+              ],
+              [
+                -68.872206,
+                -33.336466
+              ],
+              [
+                -68.871594,
+                -33.336886
+              ],
+              [
+                -68.870896,
+                -33.337198
+              ],
+              [
+                -68.870138,
+                -33.33739
+              ],
+              [
+                -68.86935,
+                -33.337454
+              ],
+              [
+                -68.868562,
+                -33.33739
+              ],
+              [
+                -68.867804,
+                -33.337198
+              ],
+              [
+                -68.867106,
+                -33.336886
+              ],
+              [
+                -68.866494,
+                -33.336466
+              ],
+              [
+                -68.865992,
+                -33.335955
+              ],
+              [
+                -68.865619,
+                -33.335371
+              ],
+              [
+                -68.865389,
+                -33.334738
+              ],
+              [
+                -68.865311,
+                -33.33408
+              ]
+            ]
+          ]
+        },
+        "center": [
+          -68.86935,
+          -33.33408
+        ],
+        "radius_m": 375,
+        "pct": null,
+        "label": "Foco detectado por satélite",
+        "source": "VIIRS NOAA-21 NRT",
+        "date": "2026-11-15"
+      },
+      {
+        "kind": "hotspot",
+        "geometry": {
+          "type": "Polygon",
+          "coordinates": [
+            [
+              [
+                -68.864022,
+                -33.32506
+              ],
+              [
+                -68.864099,
+                -33.324402
+              ],
+              [
+                -68.864329,
+                -33.323769
+              ],
+              [
+                -68.864702,
+                -33.323185
+              ],
+              [
+                -68.865204,
+                -33.322674
+              ],
+              [
+                -68.865816,
+                -33.322254
+              ],
+              [
+                -68.866515,
+                -33.321942
+              ],
+              [
+                -68.867272,
+                -33.32175
+              ],
+              [
+                -68.86806,
+                -33.321686
+              ],
+              [
+                -68.868848,
+                -33.32175
+              ],
+              [
+                -68.869605,
+                -33.321942
+              ],
+              [
+                -68.870304,
+                -33.322254
+              ],
+              [
+                -68.870916,
+                -33.322674
+              ],
+              [
+                -68.871418,
+                -33.323185
+              ],
+              [
+                -68.871791,
+                -33.323769
+              ],
+              [
+                -68.872021,
+                -33.324402
+              ],
+              [
+                -68.872098,
+                -33.32506
+              ],
+              [
+                -68.872021,
+                -33.325718
+              ],
+              [
+                -68.871791,
+                -33.326351
+              ],
+              [
+                -68.871418,
+                -33.326935
+              ],
+              [
+                -68.870916,
+                -33.327446
+              ],
+              [
+                -68.870304,
+                -33.327866
+              ],
+              [
+                -68.869605,
+                -33.328178
+              ],
+              [
+                -68.868848,
+                -33.32837
+              ],
+              [
+                -68.86806,
+                -33.328434
+              ],
+              [
+                -68.867272,
+                -33.32837
+              ],
+              [
+                -68.866515,
+                -33.328178
+              ],
+              [
+                -68.865816,
+                -33.327866
+              ],
+              [
+                -68.865204,
+                -33.327446
+              ],
+              [
+                -68.864702,
+                -33.326935
+              ],
+              [
+                -68.864329,
+                -33.326351
+              ],
+              [
+                -68.864099,
+                -33.325718
+              ],
+              [
+                -68.864022,
+                -33.32506
+              ]
+            ]
+          ]
+        },
+        "center": [
+          -68.86806,
+          -33.32506
+        ],
+        "radius_m": 375,
+        "pct": null,
+        "label": "Foco detectado por satélite",
+        "source": "VIIRS NOAA-21 NRT",
         "date": "2026-11-15"
       }
     ],
@@ -1398,13 +6522,9 @@
       "degraded": true
     },
     "summary": {
-      "headline": "Tenés que estar atento a las heladas en tus cultivos.",
-      "bullets": [
-        "Hay riesgo alto de fuego en vid, olivo y ajo: no quemes rastrojos y revisá los guardafuegos.",
-        "El suelo está húmedo con un 55% de humedad, bajo fase El Niño.",
-        "Esperamos márgenes de 280, 1020 y 5400 dólares por hectárea respectivamente."
-      ],
-      "source": "gemini"
+      "headline": "El riesgo de fuego está bajo; lo que más conviene mirar es el agua.",
+      "bullets": [],
+      "source": "template"
     },
     "sources": [
       {

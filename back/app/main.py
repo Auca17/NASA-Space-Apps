@@ -5,7 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from .config import MissingEnv, front_origin
-from .routers import field, geocode, live, parcels, risk
+from .routers import alerts, field, geocode, live, parcels, risk
 
 app = FastAPI(title="NASA Space Apps backend")
 
@@ -30,6 +30,7 @@ app.include_router(risk.router)
 app.include_router(field.router)
 app.include_router(parcels.router)
 app.include_router(geocode.router)
+app.include_router(alerts.router)
 
 
 @app.get("/api/health")

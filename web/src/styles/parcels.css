@@ -282,3 +282,17 @@
 @media (prefers-reduced-motion: reduce) {
   .tour-hint { transition: none; animation: none; }
 }
+
+/* the result layer never grows the page: badges and far detections
+ * outside the map are clipped (it caused a second page scroll) */
+.parcel-map { overflow: hidden; }
+/* zones already carry their name on the map: the badge sits under it */
+.parcel-badge.under-label { transform: translate(-50%, 12px); }
+.parcel-legend {
+  position: absolute; left: 10px; bottom: 34px;
+  display: grid; gap: 2px; max-width: min(280px, calc(100% - 20px));
+  padding: 6px 9px; font-size: 11px; line-height: 1.35;
+  color: #f4f6f8; background: rgba(12, 16, 22, 0.82);
+  border: 1px solid rgba(255, 255, 255, 0.3); border-radius: 10px;
+}
+.parcel-legend span { display: flex; align-items: center; gap: 5px; }

@@ -1,7 +1,7 @@
 /** Parcels wizard: after the field boundary is confirmed, the user
  * divides it into crop parcels (draw each one inside the boundary —
  * clipped to it — or cut the field with a line), gives each a name and
- * a crop, then answers the short needs step. Zero parcels is allowed:
+ * a crop, and the analysis starts. Zero parcels is allowed:
  * the whole field is analysed as a single parcel. */
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { useT } from "../../i18n";
@@ -18,12 +18,10 @@ import type { GlobeHandle, Shape } from "../globe/GlobeView";
 import { DrawSession } from "../field/drawEdit";
 import { DrawLayer } from "../field/DrawLayer";
 import { FreehandLayer } from "../field/FreehandLayer";
-import { NeedsForm } from "./NeedsForm";
 import { CropIcon } from "./CropIcon";
 import { detectParcelCrop, type ParcelDetection } from "./cropDetect";
 
 type DrawTool = "points" | "free" | "split";
-type Step = "parcels" | "needs";
 
 /** Half-width (m) of the corridor a split line removes. */
 const SPLIT_HALF_WIDTH = 10;
@@ -38,7 +36,6 @@ export function ParcelsWizard({ geom, globe, onDone, onCancel }: {
   onCancel: () => void;
 }) {
   const { t, lang } = useT();
-  const [step, setStep] = useState<Step>("parcels");
   const [parcels, setParcels] = useState<ParcelInput[]>([]);
   const [tool, setTool] = useState<DrawTool | null>(null);
   const [pending, setPending] = useState<Poly[] | null>(null);
@@ -241,23 +238,6 @@ export function ParcelsWizard({ geom, globe, onDone, onCancel }: {
       </>);
   }
 
-  /* ------------------------------------------------ needs step ------ */
-  if (step === "needs") {
-    return (
-      <div className="controls picker parcels-wizard" role="region"
-           aria-label={t("parcels.needs.title")}>
-        <strong className="picker-mode">{t("parcels.needs.title")}</strong>
-        <p className="picker-how">{t("parcels.needs.how")}</p>
-        <NeedsForm
-          onDone={(n) => onDone(parcels, n)}
-          onSkip={() => onDone(parcels, null)} />
-        <div className="row">
-          <button onClick={() => setStep("parcels")}>
-            {t("parcels.back")}</button>
-        </div>
-      </div>);
-  }
-
   /* ------------------------------------------------ list step ------- */
   return (
     <div className="controls picker parcels-wizard" role="region"
@@ -331,7 +311,7 @@ export function ParcelsWizard({ geom, globe, onDone, onCancel }: {
 
       <div className="row">
         <button className="primary" disabled={!!pending || !!editing}
-                onClick={() => setStep("needs")}>
+                onClick={() => onDone(parcels, null)}>
           {t("parcels.continue")}</button>
         <button onClick={onCancel}>{t("field.cancel")}</button>
       </div>

@@ -1,28 +1,23 @@
-/** Captures a REAL parcels response for an example field so the
+/** Captures a REAL parcels response for the Mendoza demo so the
  * offline fallback is honest "saved" data, not hand-written numbers.
- * Builds the exact request the app sends (parcelsBody + profileBody
- * over the farm's boundary, parcels, needs, profile and economics),
- * POSTs it to the live API and writes the verbatim response to
- * src/features/demo/<farm>Cached.json.
- * Run: npx vite-node scripts/capture-demo.mjs mendoza
- *      npx vite-node scripts/capture-demo.mjs pampa
- *      DEMO_API=http://host:port npx vite-node scripts/capture-demo.mjs pampa */
+ * Builds the exact request the app sends — parcelsBody + profileBody
+ * over MENDOZA_* — POSTs it to the live API and writes the verbatim
+ * response to src/features/demo/mendozaCached.json.
+ * Run: npx vite-node scripts/capture-demo.mjs
+ *      DEMO_API=http://host:port npx vite-node scripts/capture-demo.mjs */
 import { writeFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { parcelsBody } from "../src/domain/parcels.ts";
 import { profileBody } from "../src/domain/parcelsProfile.ts";
-import { DEMO_FARMS } from "../src/features/demo/demoFarms.ts";
+import {
+  MENDOZA_BOUNDARY, MENDOZA_PARCELS, MENDOZA_NEEDS,
+  MENDOZA_PROFILE, MENDOZA_ECON,
+} from "../src/features/demo/mendozaFarm.ts";
 
-const id = process.argv[2] ?? "mendoza";
-const farm = DEMO_FARMS[id];
-if (!farm) {
-  console.error(`unknown farm "${id}"; use: ${Object.keys(DEMO_FARMS).join(", ")}`);
-  process.exit(1);
-}
 const API = process.env.DEMO_API ?? "http://localhost:8000";
 const body = parcelsBody(
-  farm.boundary, farm.parcels, farm.needs, "es",
-  profileBody(farm.profile, farm.econ));
+  MENDOZA_BOUNDARY, MENDOZA_PARCELS, MENDOZA_NEEDS, "es",
+  profileBody(MENDOZA_PROFILE, MENDOZA_ECON));
 
 const r = await fetch(`${API}/api/field/parcels`, {
   method: "POST",
@@ -36,9 +31,8 @@ if (!r.ok) {
 const response = await r.json();
 const out = { captured_at: new Date().toISOString().slice(0, 10), response };
 const dest = fileURLToPath(
-  new URL(`../src/features/demo/${id}Cached.json`, import.meta.url));
+  new URL("../src/features/demo/mendozaCached.json", import.meta.url));
 writeFileSync(dest, JSON.stringify(out, null, 2) + "\n");
 console.log("saved", dest);
 console.log("captured_at", out.captured_at,
-  "| parcels:", (response.parcels ?? []).map((p) => p.id).join(", "),
-  "| degraded:", response.degraded ?? false);
+  "| parcels:", (response.parcels ?? []).map((p) => p.id).join(", "));

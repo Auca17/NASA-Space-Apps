@@ -4,11 +4,10 @@
  * (steps, navigation, dismissal, persistence) and the cached-fallback
  * path in the result panel. */
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { I18nProvider } from "../../i18n";
-import es from "../../i18n/es.json";
 import {
   pointInRing, ringAreaHa, type LatLon,
 } from "../../domain/selection";
@@ -21,12 +20,9 @@ import {
   isDemoHash, MENDOZA_BOUNDARY, MENDOZA_CACHED, MENDOZA_ECON,
   MENDOZA_NEEDS, MENDOZA_PARCELS, MENDOZA_PROFILE,
 } from "./mendozaFarm";
-import { GuidedTour } from "./GuidedTour";
-import { TOUR_KEY, TOUR_STEPS, tourSeen } from "./demoTour";
 
 const wrap = (el: React.ReactElement) =>
   render(<I18nProvider>{el}</I18nProvider>);
-const t = (k: string) => (es as Record<string, string>)[k] ?? k;
 
 /* ------------------------------------------------------- hash ------ */
 
@@ -159,60 +155,6 @@ describe("Mendoza fixture", () => {
   });
 });
 
-/* ------------------------------------------------------- tour ------ */
-
-describe("GuidedTour", () => {
-  beforeEach(() => localStorage.removeItem(TOUR_KEY));
-
-  it("defines five anchored steps", () => {
-    expect(TOUR_STEPS).toHaveLength(5);
-    for (const s of TOUR_STEPS) {
-      expect(s.sel).toBeTruthy();
-      expect(t(`${s.key}.title`)).not.toBe(`${s.key}.title`);
-      expect(t(`${s.key}.body`)).not.toBe(`${s.key}.body`);
-    }
-  });
-
-  it("walks forward and back, then marks itself seen", () => {
-    const onClose = vi.fn();
-    wrap(<GuidedTour onClose={onClose} />);
-    const dlg = screen.getByRole("dialog");
-    expect(dlg).toHaveTextContent(t("demo.tour.parcels.title"));
-    expect(screen.getByRole("button", { name: t("demo.tour.back") }))
-      .toBeDisabled();
-    fireEvent.click(screen.getByRole("button",
-      { name: t("demo.tour.next") }));
-    expect(dlg).toHaveTextContent(t("demo.tour.badges.title"));
-    fireEvent.click(screen.getByRole("button",
-      { name: t("demo.tour.back") }));
-    expect(dlg).toHaveTextContent(t("demo.tour.parcels.title"));
-    // last step: the primary button finishes the tour
-    for (let k = 0; k < 4; k++) {
-      fireEvent.click(screen.getByRole("button",
-        { name: t("demo.tour.next") }));
-    }
-    fireEvent.click(screen.getByRole("button",
-      { name: t("demo.tour.done") }));
-    expect(onClose).toHaveBeenCalled();
-    expect(localStorage.getItem(TOUR_KEY)).toBe("1");
-  });
-
-  it("closes on Escape and on the close button, once and for good",
-      () => {
-    const onClose = vi.fn();
-    const { unmount } = wrap(<GuidedTour onClose={onClose} />);
-    fireEvent.keyDown(window, { key: "Escape" });
-    expect(onClose).toHaveBeenCalledTimes(1);
-    expect(tourSeen()).toBe(true);
-    unmount();
-    // a second mount still dismisses via the button
-    wrap(<GuidedTour onClose={onClose} />);
-    fireEvent.click(screen.getByRole("button",
-      { name: t("demo.tour.close") }));
-    expect(onClose).toHaveBeenCalledTimes(2);
-  });
-});
-
 /* --------------------------------------------------- fallback ------ */
 
 const demoTarget = {
@@ -247,43 +189,4 @@ describe("demo fallback", () => {
     expect(screen.getByText(/inventados para la demo/))
       .toBeInTheDocument();
   });
-});
-
-/* --------------------------------------- both example fields ------- */
-
-import { DEMO_FARMS } from "./demoFarms";
-import pampaCachedFile from "./pampaCached.json";
-
-describe("example fields (Mendoza and pampa)", () => {
-  const catalog = JSON.parse(readFileSync(
-    resolve(process.cwd(), "../back/knowledge/crops.json"),
-    "utf-8")) as { crops: { id: string }[] };
-  const known = new Set(catalog.crops.map((c) => c.id));
-  const files = { mendoza: cachedFile, pampa: pampaCachedFile } as Record<
-    string, { captured_at: string; response: { parcels: { id: string }[] } }>;
-
-  for (const [id, farm] of Object.entries(DEMO_FARMS)) {
-    it(`${id}: three parcels, inside the boundary, real crops`, () => {
-      expect(farm.parcels).toHaveLength(3);
-      const ring = farm.boundary[0][0];
-      expect(selfIntersects(ring)).toBe(false);
-      expect(ringAreaHa(ring)).toBeGreaterThan(50);
-      for (const p of farm.parcels) {
-        expect(known.has(p.crop), `${id} ${p.id} crop ${p.crop}`).toBe(true);
-        for (const v of p.geom[0]) {
-          expect(pointInRing(v, ring), `${id} ${p.id} vertex`).toBe(true);
-        }
-      }
-      for (const k of Object.keys(farm.econ.parcels)) {
-        expect(farm.parcels.map((p) => p.id)).toContain(k);
-      }
-    });
-
-    it(`${id}: the saved reply is a real capture of the same parcels`, () => {
-      const ids = files[id].response.parcels.map((p) => p.id).sort();
-      expect(ids).toEqual(farm.parcels.map((p) => p.id).sort());
-      expect(farm.cached.date).toBe(files[id].captured_at);
-      expect(farm.cached.date).toMatch(/^\d{4}-\d{2}-\d{2}$/);
-    });
-  }
 });

@@ -124,7 +124,7 @@ export function prioWeights(selected: string[]): Record<string, number> {
 export const DIAG_GROUPS: { id: string; cards: string[] }[] = [
   { id: "water", cards: ["rain", "heavy_rain", "soil_moisture",
                         "water_trend", "crop_water", "recent_weather"] },
-  { id: "temp", cards: ["frost", "heat"] },
+  { id: "temp", cards: ["temp_mean", "frost", "heat"] },
   { id: "soil", cards: ["soil", "vigor_bare_soil", "slope"] },
   { id: "fire", cards: ["fire", "fire_weather"] },
 ];

@@ -1,0 +1,24 @@
+{
+  "_doc": "Reference economics per crop for the rotation cost-benefit estimate. APPROXIMATE values for rainfed Pampa húmeda, owned land, average yields. They are NOT a budget: the app shows them as an estimate scaled by the field's hectares. Prices: order of magnitude of MAGyP 'Márgenes y Resultados' reports (Dec 2025 - Mar 2026: soja 320-338 USD/t, maíz 182-193 USD/t); other prices and every cost line are team estimates pending validation with a local agronomist or the producer's own numbers.",
+  "currency": "USD",
+  "harvest_and_sale_share": 0.15,
+  "cost_includes": ["semilla", "fertilizantes", "herbicidas, insecticidas y fungicidas", "labores de siembra y pulverización", "cosecha, flete y comercialización (15 % del ingreso)"],
+  "cost_excludes": ["arrendamiento", "impuestos y retenciones", "estructura y gastos fijos del campo", "riego"],
+  "sources": [
+    "MAGyP, Informes de Márgenes y Resultados (diciembre 2025 y marzo 2026): precios de soja y maíz",
+    "Estimación del equipo para costos por rubro y precios de los demás cultivos, pendiente de validación local"
+  ],
+  "crops": {
+    "soja":     {"yield_t_ha": 3.2, "price_usd_t": 330, "cost": {"semilla": 70,  "fertilizantes": 40,  "protección": 110, "labores": 90}},
+    "maiz":     {"yield_t_ha": 8.5, "price_usd_t": 188, "cost": {"semilla": 190, "fertilizantes": 180, "protección": 70,  "labores": 90}},
+    "trigo":    {"yield_t_ha": 3.5, "price_usd_t": 210, "cost": {"semilla": 60,  "fertilizantes": 160, "protección": 50,  "labores": 70}},
+    "girasol":  {"yield_t_ha": 2.3, "price_usd_t": 350, "cost": {"semilla": 110, "fertilizantes": 60,  "protección": 60,  "labores": 80}},
+    "sorgo":    {"yield_t_ha": 6.0, "price_usd_t": 165, "cost": {"semilla": 50,  "fertilizantes": 120, "protección": 50,  "labores": 80}},
+    "cebada":   {"yield_t_ha": 4.0, "price_usd_t": 200, "cost": {"semilla": 60,  "fertilizantes": 140, "protección": 45,  "labores": 70}},
+    "garbanzo": {"yield_t_ha": 1.5, "price_usd_t": 550, "cost": {"semilla": 150, "fertilizantes": 30,  "protección": 60,  "labores": 80}},
+    "centeno":  {"yield_t_ha": null, "price_usd_t": null, "cost": {"semilla": 40, "labores": 25, "secado de la cobertura": 25}},
+    "vicia":    {"yield_t_ha": null, "price_usd_t": null, "cost": {"semilla": 60, "labores": 25, "secado de la cobertura": 25}},
+    "avena":    {"yield_t_ha": null, "price_usd_t": null, "cost": {"semilla": 35, "labores": 25, "secado de la cobertura": 25}},
+    "alfalfa":  {"yield_t_ha": null, "price_usd_t": null, "cost": {"implantación repartida por año": 110, "fertilizantes": 40, "labores": 40}}
+  }
+}

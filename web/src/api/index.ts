@@ -41,7 +41,11 @@ export async function apiDiagnose(body: unknown, signal?: AbortSignal):
       method: "POST", body: JSON.stringify(body), signal,
       headers: { "Content-Type": "application/json" },
     });
-    if (response.ok) return { diagnosis: await response.json() as DiagnoseResponse };
+    if (response.ok) {
+      const data = await response.json() as DiagnoseResponse;
+      // a body without cards is not a diagnosis: treat it as a failure
+      return { diagnosis: Array.isArray(data?.cards) ? data : null };
+    }
     if (response.status === 400) {
       const error = await response.json() as { error?: string; detail?: string };
       return { diagnosis: null, problem: error.detail?.includes("area must") ? "area"

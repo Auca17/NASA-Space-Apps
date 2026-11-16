@@ -41,7 +41,7 @@ async function run(width, height, tag) {
   await page.waitForSelector(".parcel-res-row", { timeout: 60000 });
   const names = await page.locator(".parcel-res-row .parcel-name")
     .allTextContents();
-  for (const n of ["La Vid", "Los Olivos", "El Ajal"]) {
+  for (const n of ["La Alfalfa", "El Ajal", "La Vid", "El Maizal", "El Monte", "Los Duraznos", "Maizal del Sur", "Los Olivos", "Ajal del Sur"]) {
     ok(names.some((x) => x.includes(n)), `${tag} parcel row "${n}"`);
   }
   const saved = await page.locator(".notice").allTextContents();
@@ -50,7 +50,7 @@ async function run(width, height, tag) {
 
   // map badges over the parcels
   const badges = await page.locator(".parcel-badge").count();
-  ok(badges >= 3, `${tag} map badges (${badges})`);
+  ok(badges >= 4, `${tag} map badges (${badges})`);
 
   // tour: step 1 visible, walk to the end, dismiss -> gone for good
   const hint = page.locator(".tour-hint");

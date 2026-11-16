@@ -1,13 +1,14 @@
 import { useEffect, useState } from "react";
 import { apiCropRecommendations } from "../../api";
 import type { CropEntry, CropRecommendations as Result, CurrentCrop, DiagnoseResponse } from "../../api/types";
-import { PRIORITY_IDS, prioWeights } from "../../domain/rotations";
+import { prioWeights } from "../../domain/rotations";
 import { useT } from "../../i18n";
 import { detailSections, phRange } from "../../domain/cropDetail";
 import { outlookLine } from "../../domain/cropReasons";
 import { DecisionDetail } from "./DecisionDetail";
 
-const RESOURCES = ["irrigation", "livestock", "markets"] as const;
+// Market and machinery do not change the result, so they are not asked.
+const RESOURCES = ["irrigation", "livestock"] as const;
 const OBSERVED_CROPS: Partial<Record<string, string>> = {
   winter_cereal: "winter_cereal", summer_early: "maiz", fallow: "fallow", perennial: "perennial",
 };
@@ -30,12 +31,11 @@ function optionConditions(option: Result["options"][number]) {
   return conditions;
 }
 
-export function CropRecommendations({ diagnosis, crops, declared, observation, priorities, resources,
-  onPriority, onResources }: {
+export function CropRecommendations({ diagnosis, crops, declared, observation, resources,
+  onResources }: {
   diagnosis: DiagnoseResponse; crops: CropEntry[]; declared?: string;
   observation?: CurrentCrop | null;
-  priorities: string[]; resources: Record<string, boolean>;
-  onPriority: (id: string) => void;
+  resources: Record<string, boolean>;
   onResources: (next: Record<string, boolean>) => void;
 }) {
   const { t, lang } = useT();
@@ -51,16 +51,15 @@ export function CropRecommendations({ diagnosis, crops, declared, observation, p
     const controller = new AbortController();
     setResult(undefined);
     apiCropRecommendations({
-      diagnosis, current, priorities: prioWeights(priorities), rank_with_gemini: true, lang,
+      diagnosis, current, priorities: prioWeights([]), rank_with_gemini: true, lang,
       constraints: {
         irrigation: resources.irrigation, livestock: resources.livestock,
-        limited_market: resources.markets === false,
       },
     }, controller.signal).then((data) => {
       if (!controller.signal.aborted) setResult(data);
     });
     return () => controller.abort();
-  }, [diagnosis, current, detecting, priorities, resources, retry, lang]);
+  }, [diagnosis, current, detecting, resources, retry, lang]);
 
   const afterCrop = current !== "unknown" && current !== "fallow" && current !== "perennial";
   const name = crops.find((row) => row.id === current)?.name;
@@ -148,12 +147,6 @@ export function CropRecommendations({ diagnosis, crops, declared, observation, p
     </details>}
     <details className="card rec-filters">
       <summary>{t("recs.filters")}</summary>
-      <fieldset className="prio-set">
-        <legend>{t("prio.choose")}</legend>
-        <div className="prio-chips">{PRIORITY_IDS.map((id) =>
-          <button key={id} type="button" className="chip" aria-pressed={priorities.includes(id)}
-                  onClick={() => onPriority(id)}>{t("prio." + id)}</button>)}</div>
-      </fieldset>
       <fieldset className="cons-set">
         <legend>{t("field.form.constraints")}</legend>
         <div className="cons-grid">{RESOURCES.map((key) =>

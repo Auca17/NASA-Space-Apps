@@ -1,4 +1,4 @@
-import { Suspense, lazy, useRef, useState, useCallback, useEffect, useMemo } from "react";
+import { Suspense, lazy, useRef, useState, useCallback, useEffect } from "react";
 import { DrawSession, activateDrawSession, deactivateDrawSession }
   from "./features/field/drawEdit";
 import { useT } from "./i18n";
@@ -33,14 +33,11 @@ import {
 import { splitSelection, clipZone, detectParcels, ROAD_HALF_WIDTH } from "./domain/split";
 import { nearestMidpoint, nearestVertex } from "./domain/parcelsGeo";
 import {
-  isDemoHash,
+  isDemoHash, MENDOZA_BOUNDARY, MENDOZA_CACHED, MENDOZA_ECON, MENDOZA_NEEDS,
+  MENDOZA_PARCELS, MENDOZA_PROFILE,
 } from "./features/demo/mendozaFarm";
-import { DEMO_FARMS, type DemoFarmId } from "./features/demo/demoFarms";
-import { GuidedTour } from "./features/demo/GuidedTour";
-import { tourSeen } from "./features/demo/demoTour";
-import { testFields } from "./features/demo/testFields";
 import {
-  loadFields, saveField, saveExampleFields, renameField, deleteField, addZone, updateZone,
+  loadFields, saveField, renameField, deleteField, addZone, updateZone,
   addZones, setFieldCrop, markCropSplit,
   fieldHa, acceptDetection, discardParcel, replaceParcel, zoneHa,
   type Field, type Zone,
@@ -111,6 +108,8 @@ export default function App() {
   const locationRequest = useRef(0);
   const pendingFieldLocation = useRef<{ lat: number; lon: number } | null>(null);
   const [recommendationArea, setRecommendationArea] = useState<Multi | null>(null);
+  /** analysis shapes kept under the parcel results layer */
+  const [parcelBase, setParcelBase] = useState<Shape[]>([]);
   const [nearbyLandUse, setNearbyLandUse] = useState<{
     geom: Multi; status: "urban" | "checked" | "unavailable";
   } | null>(null);
@@ -181,13 +180,9 @@ export default function App() {
   /** Last parcels analysis: zones + per-parcel badges on the map. */
   const [parcelRes, setParcelRes] = useState<{
     res: ParcelsResponse; parcels: ParcelInput[] } | null>(null);
-  /** Guided demo tour: opens once the demo result is on the screen. */
-  const [demoTour, setDemoTour] = useState(false);
   /** #demo can fire before the map exists: the farm frame is queued
    * here and applied once the globe reports ready. */
   const demoFitPending = useRef(false);
-  const examples = useMemo(() => testFields(lang), [lang]);
-  const hasMissingExamples = examples.some((example) => !fields.some((f) => f.id === example.id));
   const [methodsOpen, setMethodsOpen] = useState(false);
   const [emergOpen, setEmergOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -530,8 +525,9 @@ export default function App() {
     const g = globeRef.current;
     if (!g) return;
     const sh: Shape[] = [];
-    // the parcels wizard and the result layer own the map shapes
-    if (mode === "field" && !parcelsWizard && !parcelRes) {
+    // the parcels wizard owns the map; with parcel results the analysis
+    // shapes (outline, selected zone in yellow) go under their layer
+    if (mode === "field" && !parcelsWizard) {
       if (locationAccuracy && !fieldOpen) {
         const { lat, lon, metres } = locationAccuracy;
         sh.push({ kind: "field", geom: [circleRing(lat, lon, metres / 1_000)] });
@@ -573,7 +569,8 @@ export default function App() {
         pendingZone?.geom.forEach((p) => sh.push({ geom: p, kind: "piece-on" }));
       }
     }
-    if (!parcelsWizard && !parcelRes) g.setShapes(sh);
+    if (parcelRes) setParcelBase(sh);
+    else if (!parcelsWizard) g.setShapes(sh);
     if (mode !== "field") {
       g.setDraft(null); g.setMarker(null);
       if (parcelRes) setParcelRes(null);
@@ -924,24 +921,22 @@ export default function App() {
    * Valle de Uco location — parcels, producer profile and a cached
    * fallback all come from features/demo/mendozaFarm. The analysis
    * itself is the live /api/field/parcels call. */
-  const startDemo = (id: DemoFarmId = "mendoza") => {
-    const farm = DEMO_FARMS[id];
+  const startDemo = () => {
     setMode("field"); setDraw("none"); setSelection(null); setAdjust(null);
     setFieldsView(null); setShownField(null); setPendingZone(null);
     setParcelRes(null); setParcelsWizard(false);
     demoFitPending.current = true;
     setEmergencyCountry("AR");
     analyze({
-      geom: farm.boundary,
-      areaLabel: t(farm.keys.area),
-      fieldName: t(farm.keys.name),
-      parcels: farm.parcels,
-      needs: farm.needs,
-      profile: farm.profile,
-      econ: farm.econ,
-      demo: { cached: farm.cached.res,
-              cachedDate: farm.cached.date,
-              producer: t(farm.keys.producer) },
+      geom: MENDOZA_BOUNDARY,
+      areaLabel: t("demo.farmArea"),
+      fieldName: t("demo.farmName"),
+      parcels: MENDOZA_PARCELS,
+      needs: MENDOZA_NEEDS,
+      profile: MENDOZA_PROFILE,
+      econ: MENDOZA_ECON,
+      demo: { cached: MENDOZA_CACHED.res,
+              cachedDate: MENDOZA_CACHED.date },
     });
   };
 
@@ -1133,11 +1128,6 @@ export default function App() {
             </details>
             <button type="button" disabled={locationState === "loading"}
                     onClick={() => requestLocationFor("nearby")}>{t("fields.nearby")}</button>
-            {hasMissingExamples && <button type="button"
-                    onClick={() => storeChange(() => saveExampleFields(examples))}>
-              {t("fields.loadExamples")}
-            </button>}
-            {!hasMissingExamples && <p className="muted">{t("fields.examplesNote")}</p>}
             {locationState === "loading" && <p role="status">{t("place.locating")}</p>}
             {locationState === "denied" && <p role="status">{t("fields.locationDenied")}{" "}
               {globe && <button onClick={() => {
@@ -1204,10 +1194,8 @@ export default function App() {
         {mode === "field" && parcelRes && globe && (
           <Suspense fallback={null}>
             <ParcelsMapLayer globe={globe} parcels={parcelRes.parcels}
-                             res={parcelRes.res} />
+                             res={parcelRes.res} base={parcelBase} />
           </Suspense>)}
-        {demoTour && parcelRes && (
-          <GuidedTour onClose={() => setDemoTour(false)} />)}
         {mode === "field" && !fieldOpen && !selection && draw !== "none" && (
           <FieldPicker draw={draw} points={draft.length}
                        onFinish={finishDraw} onUndo={undoPoint}
@@ -1231,7 +1219,6 @@ export default function App() {
                       onClose={changePlot} onChangePlot={changePlot}
                       onResult={(res, parcels) => {
                         setParcelRes({ res, parcels });
-                        if (target?.demo && !tourSeen()) setDemoTour(true);
                       }}
                       onEmergency={() => setEmergOpen(true)}
                       moistureSelection={selectedMoisture} onMoistureZones={showMoisture}

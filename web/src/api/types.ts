@@ -169,11 +169,31 @@ export interface Strategy {
   benefits: Record<string, unknown>;
   gaps: string[];
   risks: string[];
-  sequence: { crop: string; start: string; end: string; cover?: boolean }[];
-  crops_info?: CropInfo[];
+  sequence: { crop: string; name?: string; start: string; end: string;
+              cover?: boolean }[];
   measures?: Measure[];
   measures_gaps?: string[];
+  crops_info?: CropInfo[];
   decision?: RankedDecision;
+  /** Cost-benefit estimate for one average campaign (reference values
+   * scaled by the analysed hectares). */
+  economics?: StrategyEconomics | null;
+}
+
+export interface StrategyEconomics {
+  currency: string;
+  years: number;
+  per_ha: { cost: number; revenue: number; margin: number };
+  total?: { cost: number; revenue: number; margin: number };
+  area_ha: number | null;
+  harvest_t_total?: { crop: string; name: string; t: number }[];
+  crops: { crop: string; name: string; cost_ha: number;
+           yield_t_ha: number | null; yield_source: string | null;
+           price_usd_t: number | null; revenue_ha: number;
+           harvest: boolean }[];
+  cost_includes: string[];
+  cost_excludes: string[];
+  sources: string[];
 }
 
 export interface RotationsResponse {

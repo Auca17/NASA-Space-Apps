@@ -296,16 +296,15 @@ describe("ParcelsWizard", () => {
     expect(legend).toHaveTextContent("Soja");
   });
 
-  it("skips to needs and calls onDone with the parcels", async () => {
+  it("continue analyses straight away, with no needs form", async () => {
     const g = globeMock();
     const onDone = vi.fn();
     wrap(<ParcelsWizard geom={fieldGeom} globe={g}
                         onDone={onDone} onCancel={() => {}} />);
     fireEvent.click(screen.getByRole("button",
       { name: es["parcels.continue"] }));
-    fireEvent.click(await screen.findByRole("button",
-      { name: es["parcels.needs.skip"] }));
     expect(onDone).toHaveBeenCalledWith([], null);
+    expect(screen.queryByText(es["parcels.needs.title"])).not.toBeInTheDocument();
   });
 });
 
@@ -324,57 +323,64 @@ describe("FieldPanel parcels flow", () => {
   };
   afterEach(() => { globalThis.fetch = realFetch; });
 
-  it("asks needs first, then shows parcels results", async () => {
+  it("analyses right away, with no form first, and opens on rotations",
+      async () => {
     parcelsFetch();
     wrap(<FieldPanel
       target={{ geom: fieldGeom, areaLabel: "Campo Sur",
                 parcels: parcelsIn }}
       open onClose={() => {}} onChangePlot={() => {}} />);
-    // needs step blocks the analysis
-    expect(screen.getByText(es["parcels.needs.title"]))
-      .toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button",
-      { name: es["parcels.needs.skip"] }));
+    // no needs form, no priorities or numbers to fill in
+    expect(screen.queryByText(es["parcels.needs.title"])).not.toBeInTheDocument();
+    expect(screen.queryByRole("tab", { name: es["parcels.tab.priorities"] }))
+      .not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: es["recs.tab"] }))
+      .toHaveAttribute("aria-pressed", "true");
+    fireEvent.click(screen.getByRole("button", { name: es["recs.details"] }));
     // fire alert lands on top, prominent
     expect(await screen.findByRole("alert"))
       .toHaveClass("parcel-alert", "fire");
     expect(screen.getByText(/foco de fuego detectado/))
       .toBeInTheDocument();
     expect(screen.getByText("Lote norte")).toBeInTheDocument();
+    // the test alert e-mail is offered once the analysis is in
+    expect(screen.getByRole("button", { name: es["alerts.send"] }))
+      .toBeDisabled();
   });
 
   it("sends the whole field as one parcel when there are none",
       async () => {
-    const spy = vi.fn(async () =>
-      new Response(JSON.stringify(res), { status: 200 }));
+    const spy = vi.fn(async (url: RequestInfo | URL) =>
+      String(url).includes("/api/field/parcels")
+        ? new Response(JSON.stringify(res), { status: 200 })
+        : new Response("{}", { status: 404 }));
     globalThis.fetch = spy as unknown as typeof fetch;
     wrap(<FieldPanel
       target={{ geom: fieldGeom, areaLabel: "Campo Sur", needs: null }}
       open onClose={() => {}} onChangePlot={() => {}} />);
+    fireEvent.click(screen.getByRole("button", { name: es["recs.details"] }));
     await screen.findByRole("alert");
-    const [, init] = spy.mock.calls[0] as unknown as [string, RequestInit];
-    const body = JSON.parse(String(init.body));
+    const call = spy.mock.calls.find(([u]) =>
+      String(u).includes("/api/field/parcels")) as unknown as [string, RequestInit];
+    const body = JSON.parse(String(call[1].body));
     expect(body.parcels).toHaveLength(1);
     expect(body.parcels[0].name).toBe(es["parcels.wholeField"]);
     expect(body.parcels[0].crop).toBe("otro");
   });
 
-  it("keeps the detailed diagnosis behind Más información", async () => {
+  it("shows the state of the land before the parcels in the details",
+      async () => {
     parcelsFetch();
     wrap(<FieldPanel
       target={{ geom: fieldGeom, areaLabel: "Campo Sur",
                 parcels: parcelsIn, needs: null }}
       open onClose={() => {}} onChangePlot={() => {}} />);
+    fireEvent.click(screen.getByRole("button", { name: es["recs.details"] }));
     await screen.findByRole("alert");
-    // diagnosis cards hidden until the tab opens
-    expect(screen.queryByText(es["field.plain.title"]))
-      .not.toBeInTheDocument();
-    fireEvent.click(screen.getByRole("tab",
-      { name: es["parcels.tab.more"] }));
-    // the lazy diagnose call fired and failed (404) -> retry card
+    // the diagnose call fired and failed (404) -> retry card, no crash
     await waitFor(() =>
-      expect(screen.getByText(es["field.diagnosis.failed"]))
-        .toBeInTheDocument());
+      expect(screen.getAllByText(es["field.diagnosis.failed"]).length)
+        .toBeGreaterThan(0));
   });
 });
 

@@ -11,7 +11,6 @@ import { useT } from "../../i18n";
 import { Card, Tooltip } from "../../components/ui";
 import { GlossDefs } from "../../components/Glossary";
 import { DiagTile } from "./DiagTile";
-import { Calendar, calendarCrops, type CatalogCrop } from "./Calendar";
 import { Timeline, TimelinePeek } from "./Timeline";
 import { SatelliteAccuracy } from "./SatelliteAccuracy";
 import {
@@ -20,7 +19,7 @@ import {
 } from "../../api";
 import type {
   CaseEntry, CropEntry, DiagnoseResponse, Measure, OrinValidation,
-  RotationEntry, RotationsResponse, Strategy,
+  RotationEntry, RotationsResponse, Strategy, StrategyEconomics,
 } from "../../api/types";
 import type { EcostressDemo } from "../../api";
 import { OrinCard, SyntheticBanner } from "./OrinCard";
@@ -40,16 +39,13 @@ import {
   type Needs, type ParcelInput, type ParcelsResponse,
 } from "../../domain/parcels";
 import { apiParcels } from "../parcels/api";
-import { NeedsForm } from "../parcels/NeedsForm";
-import { PrioritiesEditor } from "../parcels/PrioritiesEditor";
-import { EconomicsForm } from "../parcels/EconomicsForm";
+import { AlertSignup } from "./AlertSignup";
 import { Tabs } from "../parcels/Tabs";
 import { HazardChip, ensoRainText } from "../parcels/HazardInd";
 import { Icon } from "../parcels/CropIcon";
 import {
-  hiddenHazards, loadEconomics, loadProfile, profileBody,
-  saveEconomics, saveProfile, visibleHazards,
-  type Economics, type Profile,
+  DEFAULT_ECONOMICS, DEFAULT_PROFILE, hiddenHazards, profileBody,
+  visibleHazards, type Economics, type Profile,
 } from "../../domain/parcelsProfile";
 import "../../styles/parcels.css";
 
@@ -89,6 +85,8 @@ export type AnalysisTarget = {
 };
 
 const LS_PLOTS = "fs_plots";
+/** Card groups shown first in the data view, in this order. */
+const LAND_GROUPS = ["soil", "water", "temp"];
 
 function savePlot(name: string, body: PlotBody) {
   try {
@@ -114,6 +112,64 @@ function Afinity({ score, t }: {
         <div className="aff-fill" style={{ width: `${pct}%` }} />
       </div>
     </div>);
+}
+
+/** The card shows the first sentence of the "why" (what improves and
+ * what gets worse); the sequence is already drawn below it. */
+const shortWhy = (why: string) => {
+  const cut = why.indexOf(" Secuencia:");
+  return cut > 0 ? why.slice(0, cut) : why;
+};
+
+/** Cost-benefit block of a rotation card: an estimate scaled by the
+ * hectares, with what the cost includes and the expected harvest. */
+function CostBenefit({ e, t }: {
+    e: StrategyEconomics;
+    t: (k: string, v?: Record<string, string | number>) => string }) {
+  const { lang } = useT();
+  // "always": Spanish CLDR leaves 4-digit numbers ungrouped (5338)
+  const money = new Intl.NumberFormat(lang === "en" ? "en" : "es-AR",
+    { maximumFractionDigits: 0,
+      useGrouping: "always" } as unknown as Intl.NumberFormatOptions);
+  const usd = (v: number) => `US$ ${money.format(v)}`;
+  const tot = e.total;
+  return (
+    <section className="cost-benefit" aria-label={t("econ.title")}>
+      <h4>{t("econ.title")}</h4>
+      <dl className="econ-grid">
+        <div><dt>{t("econ.cost")}</dt>
+          <dd>{usd(e.per_ha.cost)} {t("econ.perHa")}
+            {tot && <small>{t("econ.totalFor", { v: usd(tot.cost), ha: money.format(e.area_ha ?? 0) })}</small>}</dd></div>
+        <div><dt>{t("econ.revenue")}</dt>
+          <dd>{usd(e.per_ha.revenue)} {t("econ.perHa")}
+            {tot && <small>{t("econ.totalFor", { v: usd(tot.revenue), ha: money.format(e.area_ha ?? 0) })}</small>}</dd></div>
+        <div><dt>{t("econ.margin")}</dt>
+          <dd className={e.per_ha.margin < 0 ? "econ-neg" : undefined}>
+            {usd(e.per_ha.margin)} {t("econ.perHa")}
+            {tot && <small>{t("econ.totalFor", { v: usd(tot.margin), ha: money.format(e.area_ha ?? 0) })}</small>}</dd></div>
+        {e.harvest_t_total && e.harvest_t_total.length > 0 && (
+          <div><dt>{t("econ.harvest")}</dt>
+            <dd>{e.harvest_t_total.map((h) =>
+              `${h.name}: ${money.format(h.t)} t`).join(" · ")}</dd></div>)}
+      </dl>
+      <p className="muted econ-note">
+        {t(e.years > 1 ? "econ.disclaimerYears" : "econ.disclaimer", { n: e.years })}</p>
+      <details className="econ-more">
+        <summary>{t("econ.what")}</summary>
+        <p><strong>{t("econ.includes")}</strong> {e.cost_includes.join(", ")}.</p>
+        <p><strong>{t("econ.excludes")}</strong> {e.cost_excludes.join(", ")}.</p>
+        <ul>{e.crops.map((c, i) => (
+          <li key={i}>{c.name}: {usd(c.cost_ha)} {t("econ.perHa")}
+            {c.harvest && c.yield_t_ha != null && c.price_usd_t != null
+              ? ` · ${t("econ.cropYield", {
+                  y: new Intl.NumberFormat(lang === "en" ? "en" : "es",
+                    { maximumFractionDigits: 1 }).format(c.yield_t_ha),
+                  p: usd(c.price_usd_t),
+                  src: c.yield_source ?? "" })}`
+              : ` · ${t("econ.noHarvest")}`}</li>))}</ul>
+        <p className="muted">{e.sources.join(" · ")}</p>
+      </details>
+    </section>);
 }
 
 /** Month-by-month calendar of the rotation: one row per crop, green
@@ -329,60 +385,65 @@ function StrategyCard({ s, t, current, variants, explain,
             {" "}{t("rot.variante")}: {v.name}</span>))}
       </h3>
       <p className="verdict">{verdict}</p>
-      {!s.is_current && s.sequence.length > 0 && <dl className="plain-list">
-        <div className="plain-row">
-          <dt>{t("rot.work")}</dt>
-          <dd>{t("rot.workHint", { n: s.sequence.filter((step) => step.cover !== false).length })}</dd>
-        </div>
-        {s.risks[0] && <div className="plain-row">
-          <dt>{t("rot.checkFirst")}</dt>
-          <dd>{s.risks[0]}</dd>
-        </div>}
-      </dl>}
       {rank && <p className="rank-note">{t(rank.key, { n: rank.n ?? "" })}</p>}
       <Afinity score={s.score} t={t} />
-      {explainText && !s.decision && <p className="muted">{explainText}</p>}
+      {/* at a glance: why, the sequence and the money; the rest folds */}
+      <p className="strategy-why"><strong>{t("rot.why")}:</strong> {shortWhy(why)}</p>
+      {explainText && !s.decision && <p className="muted strategy-ai">{explainText}</p>}
       <DecisionDetail decision={s.decision} fallback={why} facts={Object.fromEntries(
         ["water_balance_mm", "bare_soil_days", "soil_cover_fit"].flatMap((key) =>
           typeof s.indicators[key] === "number" ? [[key, s.indicators[key] as number]] : []),
       )} />
-      {/* changes versus the baseline; the baseline itself has none */}
-      {!s.is_current &&
-        (s.benefits && Object.keys(s.benefits).length > 0 || irr != null) && (
-        <Section title={t(reference ? "rot.benefitsRef" : "rot.benefits")} open>
-          <ul>
-            {benefitRows(s.benefits ?? {}).map((b) => (
-              <li key={b.id}>{t(b.key)}: {b.value.startsWith("field.")
-                ? t(b.value) : b.value}</li>))}
-            {irr != null && <li>{t("rot.irrigated", { mm: irr })}</li>}
+      {/* the rotation calendar stays visible */}
+      {s.sequence.length > 0 && <SeqBar s={s} t={t} soilPh={soilPh} />}
+      {s.economics && <CostBenefit e={s.economics} t={t} />}
+      <details className="strategy-more">
+        <summary>{t("rot.more")}</summary>
+        {shortWhy(why) !== why && <p className="muted">{why}</p>}
+        {s.sequence.length > 0 && (
+          <Section title={t("rot.plan.title")} open>
+            <RotationPlan s={s} soilPh={soilPh} t={t} />
+          </Section>)}
+        {!s.is_current && s.sequence.length > 0 && <dl className="plain-list">
+          <div className="plain-row">
+            <dt>{t("rot.work")}</dt>
+            <dd>{t("rot.workHint", { n: s.sequence.filter((step) => step.cover !== false).length })}</dd>
+          </div>
+          {s.risks[0] && <div className="plain-row">
+            <dt>{t("rot.checkFirst")}</dt>
+            <dd>{s.risks[0]}</dd>
+          </div>}
+        </dl>}
+        {/* changes versus the baseline; the baseline itself has none */}
+        {!s.is_current &&
+          (s.benefits && Object.keys(s.benefits).length > 0 || irr != null) && (
+          <Section title={t(reference ? "rot.benefitsRef" : "rot.benefits")} open>
+            <ul>
+              {benefitRows(s.benefits ?? {}).map((b) => (
+                <li key={b.id}>{t(b.key)}: {b.value.startsWith("field.")
+                  ? t(b.value) : b.value}</li>))}
+              {irr != null && <li>{t("rot.irrigated", { mm: irr })}</li>}
+            </ul>
+          </Section>)}
+        <Section title={t("rot.evidence")} count={s.evidence.length}>
+          <ul>{s.evidence.map((e, i) => <li key={i}>{e.text}
+            {e.source && <span className="muted"> — {e.source}</span>}</li>)}
           </ul>
-        </Section>)}
-      {s.sequence.length > 0 && (
-        <Section title={t("rot.plan.title")} open>
-          <RotationPlan s={s} soilPh={soilPh} t={t} />
-        </Section>)}
-      {s.sequence.length > 0 && (
-        <Section title={t("rot.seq.title")} open>
-          <SeqBar s={s} t={t} soilPh={soilPh} />
-        </Section>)}
-      <Section title={t("rot.evidence")} count={s.evidence.length}>
-        <ul>{s.evidence.map((e, i) => <li key={i}>{e.text}
-          {e.source && <span className="muted"> — {e.source}</span>}</li>)}
-        </ul>
-      </Section>
-      <Section title={t("rot.gaps")} count={s.gaps.length}>
-        <ul>{s.gaps.map((g) => <li key={g}>{humanizeGap(g, t)}</li>)}</ul>
-      </Section>
-      <Section title={t("rot.risks")} count={s.risks.length}>
-        <ul>{s.risks.map((r) => <li key={r}>{r}</li>)}</ul>
-      </Section>
-      {!!s.measures?.length && <Section title={t("rot.measures")} count={s.measures.length}>
-        <ul>{(s.measures ?? []).map((m) => (
-          <li key={m.id}><strong>{m.name}</strong>
-            {m.why && <> — {m.why}</>}
-            <MeasureMeta m={m} t={t} />
-          </li>))}</ul>
-      </Section>}
+        </Section>
+        <Section title={t("rot.gaps")} count={s.gaps.length}>
+          <ul>{s.gaps.map((g) => <li key={g}>{humanizeGap(g, t)}</li>)}</ul>
+        </Section>
+        <Section title={t("rot.risks")} count={s.risks.length}>
+          <ul>{s.risks.map((r) => <li key={r}>{r}</li>)}</ul>
+        </Section>
+        <Section title={t("rot.measures")} count={s.measures?.length ?? 0}>
+          <ul>{(s.measures ?? []).map((m) => (
+            <li key={m.id}><strong>{m.name}</strong>
+              {m.why && <> — {m.why}</>}
+              <MeasureMeta m={m} t={t} />
+            </li>))}</ul>
+        </Section>
+      </details>
     </article>
   );
 }
@@ -573,10 +634,10 @@ export function FieldPanel({ target, open, onClose, onChangePlot, onMethods, onR
   const [sc, setSc] = useState<Scenario | null>(null);
   const [scenario, applyScenario] = useState<Scenario | null>(null);
   const [eco, setEco] = useState<EcostressDemo | null>(null);
-  const [prioSel, setPrioSel] = useState<string[]>([]);
   const [cons, setCons] = useState<Record<string, boolean>>({});
-  const parcelFlow = !!target?.demo || !!target?.parcels?.length || target?.needs !== undefined;
-  const [tab, setTab] = useState<"recommendations" | "details">(parcelFlow ? "details" : "recommendations");
+  // Rotations are the point of the challenge: the analysis always
+  // opens on them; the field data lives in the second tab.
+  const [tab, setTab] = useState<"recommendations" | "details">("recommendations");
   const [autoSections, setAutoSections] = useState<NonNullable<AnalysisTarget["sections"]> | null>(null);
   const [zoneDetectionFailed, setZoneDetectionFailed] = useState(false);
   const [areaIndex, setAreaIndex] = useState(0);
@@ -585,22 +646,17 @@ export function FieldPanel({ target, open, onClose, onChangePlot, onMethods, onR
   const [detected, setDetected] = useState<{ geometry: Multi; data: CurrentCrop | null } | null>(null);
   const [reading, setReading] = useState(false);
   const [retry, setRetry] = useState(0);
-  // parcels flow (task 34): needs -> POST /api/field/parcels -> panel
-  const [needs, setNeeds] = useState<Needs | null | undefined>(undefined);
+  // parcels flow (task 34): POST /api/field/parcels -> panel
   const [pres, setPres] = useState<
     import("../parcels/api").ParcelsResult | null>(null);
   const [pReading, setPReading] = useState(false);
   const [pRetry, setPRetry] = useState(0);
-  // farmer profile (task 37): hazard order/visibility + economics,
-  // kept in localStorage and sent inside the parcels request
-  const [profile, setProfile] = useState<Profile>(loadProfile);
-  const [econ, setEcon] = useState<Economics>(loadEconomics);
-  const [parcelTab, setParcelTab] = useState<"resumen" | "prioridades" | "mas">(
-    "resumen");
-  const showDiagnosis = !parcelFlow || parcelTab === "mas";
-  const needDiagnosis = tab === "recommendations" || showDiagnosis;
-  const updateProfile = (p: Profile) => { setProfile(p); saveProfile(p); };
-  const updateEcon = (e: Economics) => { setEcon(e); saveEconomics(e); };
+  // The panel only shows data: no priorities or economics to edit.
+  // A guided demo still seeds its own fictional profile/economics.
+  const [profile, setProfile] = useState<Profile>(target?.profile ?? DEFAULT_PROFILE);
+  const [econ, setEcon] = useState<Economics>(target?.econ ?? DEFAULT_ECONOMICS);
+  const [parcelTab, setParcelTab] = useState<"resumen" | "mas">("resumen");
+  const needDiagnosis = true;
   const [diagnosisProblem, setDiagnosisProblem] = useState<string>();
   const [comparing, setComparing] = useState(false);
   const [compareFailed, setCompareFailed] = useState(false);
@@ -631,7 +687,9 @@ export function FieldPanel({ target, open, onClose, onChangePlot, onMethods, onR
   useEffect(() => {
     setAutoSections(null);
     setZoneDetectionFailed(false);
-    if (!open || !body || tab !== "recommendations" || !autoPartition) return;
+    // the division feeds both tabs (zone badges in the details): it does
+    // not depend on the open tab, or switching would reset it
+    if (!open || !body || !autoPartition) return;
     const controller = new AbortController();
     apiRecommendationZones(body, controller.signal).then((data) => {
       if (controller.signal.aborted) return;
@@ -641,7 +699,7 @@ export function FieldPanel({ target, open, onClose, onChangePlot, onMethods, onR
       })));
     });
     return () => controller.abort();
-  }, [body, open, tab, autoPartition]);
+  }, [body, open, autoPartition]);
 
   const sections = definedSections?.length ? definedSections : autoSections;
   const section = sections?.[areaIndex];
@@ -680,12 +738,62 @@ export function FieldPanel({ target, open, onClose, onChangePlot, onMethods, onR
   const effParcels = useMemo<ParcelInput[]>(() => {
     if (!target) return [];
     if (target.parcels?.length) return target.parcels;
+    // the field's division into zones: one badge (fire / soil water)
+    // per zone, matching the "Zona 1 · 12 ha" selector
+    if (sections?.length) {
+      return sections.map((sec, i) => ({
+        id: `z${i + 1}`, name: sec.name || t("recs.sector", { n: i + 1 }),
+        crop: normalizeCropLabel(sec.crop), geom: largestPoly(sec.geom),
+        zone: true }));
+    }
+    // the division is still being detected: wait for it
+    if (autoPartition && autoSections === null && !zoneDetectionFailed) return [];
     return [{ id: "p1", name: t("parcels.wholeField"),
               crop: normalizeCropLabel(lot?.crop_label),
               geom: largestPoly(target.geom), wholeField: true }];
-  }, [target, lot, t]);
-  /** undefined = the needs step still has to be answered/skipped. */
-  const effNeeds = target?.needs !== undefined ? target.needs : needs;
+  }, [target, lot, t, sections, autoPartition, autoSections, zoneDetectionFailed]);
+  /** Needs answered in the parcels wizard, if any; the analysis never
+   * waits for a form. */
+  const effNeeds = target?.needs ?? null;
+
+  // Zones of the automatic division are named after what Sentinel-2
+  // sees on them now ("Barbecho", "Pastura/monte"...), as they arrive;
+  // until then, and when the image is mixed, they stay "Zona N".
+  const [zoneLabels, setZoneLabels] = useState<Record<number, string>>({});
+  useEffect(() => {
+    setZoneLabels({});
+    if (!open || !autoSections?.length) return;
+    let live = true;
+    autoSections.forEach((sec, i) => {
+      if (sec.name) return;
+      apiCurrentCrop(plotBody(sec.geom)).then((r) => {
+        if (!live || r?.status !== "available" || !r.zones.length) return;
+        const top = [...r.zones].sort((a, b) => b.share - a.share)[0];
+        if (top.share < 0.6) return;
+        setZoneLabels((m) => ({ ...m,
+          [i]: lang === "en" ? top.class.short_en : top.class.short_es }));
+      });
+    });
+    return () => { live = false; };
+  }, [open, autoSections, lang]);
+  /** Name shown for section i: its own, the detected crop (numbered
+   * when two zones share it) or "Zona N". */
+  const sectionLabel = (i: number) => {
+    const own = sections?.[i]?.name;
+    if (own) return own;
+    const label = zoneLabels[i];
+    if (!label) return t("recs.sector", { n: i + 1 });
+    const same = Object.entries(zoneLabels)
+      .filter(([, v]) => v === label).map(([k]) => Number(k)).sort((a, b) => a - b);
+    return same.length > 1 ? `${label} ${same.indexOf(i) + 1}` : label;
+  };
+  /** effParcels with the display names (never re-requests the analysis). */
+  const shownParcels = useMemo(() => effParcels.map((p) => p.zone
+    ? { ...p, name: sectionLabel(Number(p.id.slice(1)) - 1) } : p),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [effParcels, zoneLabels, sections, t]);
+  const shownParcelsRef = useRef(shownParcels);
+  shownParcelsRef.current = shownParcels;
 
   /** Set when the shown result is the demo's cached response, not a
    * live call — the panel says "resultado guardado del …". */
@@ -693,18 +801,18 @@ export function FieldPanel({ target, open, onClose, onChangePlot, onMethods, onR
 
   // New target: reset the whole flow.
   useEffect(() => {
-    setNeeds(undefined); setPres(null); setParcelTab("resumen");
-    setTab(parcelFlow ? "details" : "recommendations");
+    setPres(null); setParcelTab("resumen");
+    setTab("recommendations");
     setDiag(null); setRots(null); setCachedDate(null);
     setDiagnosisProblem(undefined);
     // a demo target carries its own fictional profile/economics
-    setProfile(target?.profile ?? loadProfile());
-    setEcon(target?.econ ?? loadEconomics());
-  }, [target, parcelFlow]);
+    setProfile(target?.profile ?? DEFAULT_PROFILE);
+    setEcon(target?.econ ?? DEFAULT_ECONOMICS);
+  }, [target]);
 
   // POST /api/field/parcels — the main analysis.
   useEffect(() => {
-    if (!open || !target || !effParcels.length || effNeeds === undefined) {
+    if (!open || !target || !effParcels.length) {
       return;
     }
     let active = true;
@@ -722,12 +830,17 @@ export function FieldPanel({ target, open, onClose, onChangePlot, onMethods, onR
       setPres(out); setPReading(false);
       if (out.ok) {
         if (body) savePlot(lot?.name ?? "lote", body);
-        onResult?.(out.res, effParcels, out.fixture);
+        onResult?.(out.res, shownParcelsRef.current, out.fixture);
       }
     });
     return () => { active = false; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, target, effNeeds, effParcels, lang, pRetry, profile, econ]);
+
+  useEffect(() => {
+    if (pres?.ok) onResult?.(pres.res, shownParcels, pres.fixture);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [shownParcels]);
 
   // Crop recommendations use the lighter diagnosis. The guided flow also
   // fetches it when the user opens its detailed information.
@@ -739,7 +852,6 @@ export function FieldPanel({ target, open, onClose, onChangePlot, onMethods, onR
     if (changed) {
       lastDiagnosisBody.current = body;
       setDiag(null);
-      setPrioSel([]);
       setCons({});
       setAreaIndex(0);
       setSectionResult(null);
@@ -785,10 +897,6 @@ export function FieldPanel({ target, open, onClose, onChangePlot, onMethods, onR
     return null;
   })();
 
-  const togglePrio = (p: string) => setPrioSel((sel) => {
-    if (sel.includes(p)) return sel.filter((x) => x !== p);
-    return sel.length < 3 ? [...sel, p] : sel;
-  });
 
   const runRotations = async () => {
     const local = section ? (
@@ -805,11 +913,11 @@ export function FieldPanel({ target, open, onClose, onChangePlot, onMethods, onR
       current: null,
       rank_with_gemini: true,
       lang,
-      priorities: prioWeights(prioSel),
+      // no priority picker: every goal weighs the same
+      priorities: prioWeights([]),
       constraints: {
         irrigation: cons.irrigation,
         livestock: cons.livestock,
-        limited_market: cons.markets === false,
       },
     });
     if (version !== requests.latest) return;
@@ -843,7 +951,22 @@ export function FieldPanel({ target, open, onClose, onChangePlot, onMethods, onR
     sectionResult?.geom === section.geom ? sectionResult.data : null
   ) : base;
   const currentImage = detected?.geometry === recGeometry ? detected?.data : undefined;
-  const sectionName = section && (section.name || t("recs.sector", { n: areaIndex + 1 }));
+  const sectionName = section && sectionLabel(areaIndex);
+  const canRotate = !!recommendationData && (!target?.nearby || nearbyUse === "checked") &&
+    !lot && recommendationData.coverage?.comparable !== false &&
+    !zoneDetectionFailed && (!autoPartition || sections != null);
+
+  // Rotations run by themselves as soon as the area's data is ready,
+  // and again when the farmer says whether there is irrigation/livestock.
+  useEffect(() => {
+    comparisonRequests.current.latest++;
+    setRots(null); setComparing(false); setCompareFailed(false);
+  }, [cons.irrigation, cons.livestock]);
+  useEffect(() => {
+    if (!open || !canRotate || rots || comparing || compareFailed) return;
+    runRotations();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, canRotate, recommendationData, rots, comparing, compareFailed]);
 
   return (
     <div className="field-analysis-results" hidden={!open}>
@@ -864,7 +987,7 @@ export function FieldPanel({ target, open, onClose, onChangePlot, onMethods, onR
             setAreaIndex(Number(e.target.value));
           }}>
             {sections.map((part, i) => <option key={i} value={i}>
-              {part.name || t("recs.sector", { n: i + 1 })}
+              {sectionLabel(i)}
               {" · "}{fmtHa(multiHa(part.geom))} ha
             </option>)}
           </select>
@@ -902,26 +1025,42 @@ export function FieldPanel({ target, open, onClose, onChangePlot, onMethods, onR
       {lot?.synthetic && <SyntheticBanner t={t} />}
 
       <div hidden={tab !== "details"}>
-      {/* needs step: short and skippable, before the analysis runs;
-          priorities and numbers live in optional disclosures */}
-      {target && effNeeds === undefined && (
-        <section className="card" aria-labelledby="needs-h">
-          <h4 id="needs-h" style={{ marginTop: 0 }}>
-            {t("parcels.needs.title")}</h4>
-          <NeedsForm compact
-                     onDone={(n) => setNeeds(n)}
-                     onSkip={() => setNeeds(null)} />
-          <details className="prio-details">
-            <summary>{t("parcels.prio.title")}</summary>
-            <p className="muted">{t("parcels.prio.how")}</p>
-            <PrioritiesEditor value={profile} onChange={updateProfile} />
-          </details>
-          <details className="prio-details">
-            <summary>{t("parcels.econ.title")}</summary>
-            <p className="muted">{t("parcels.econ.how")}</p>
-            <EconomicsForm parcels={effParcels} value={econ}
-                           onChange={updateEcon} />
-          </details>
+      {reading && <p role="status">{t("field.diagnosing")}</p>}
+      {!diag && !reading && target && (
+        <div className="card">
+          <p role="status">{t(diagnosisProblem ? "field.diagnosis." + diagnosisProblem :
+            "field.diagnosis.failed")}</p>
+          {diagnosisProblem ? <button type="button" onClick={onChangePlot}>
+            {t("field.changePlot")}
+          </button> : <button type="button" onClick={() => setRetry((n) => n + 1)}>
+            {t("field.diagnosis.retry")}
+          </button>}
+        </div>)}
+      {diag?.degraded && (
+        <div className="card diag-degraded" role="alert">
+          <p><strong>{t("field.degraded.title")}</strong>{" "}
+            {diag.degraded_reason ?? t("field.degraded.unknown")}</p>
+          <button type="button" onClick={() => setRetry((n) => n + 1)}>
+            {t("field.diagnosis.retry")}
+          </button>
+        </div>)}
+
+      {/* first what the land is like today: soil, water, temperature */}
+      {diag && view && (
+        <section className="card land-state" aria-labelledby="land-h"
+                 data-tour="land">
+          <h3 id="land-h" style={{ marginTop: 0 }}>{t("land.title")}</h3>
+          <p className="muted">{t("land.intro")}</p>
+          {LAND_GROUPS.map((id) => groupedCards(view.cards)
+            .find((g) => g.group === id)).filter((g) => g != null).map((g) => (
+            <section key={g.group} className="diag-group">
+              <h4>{t(`field.group.${g.group}`)}</h4>
+              <div className="diag-grid">
+                {g.cards.map((c) => (
+                  <DiagTile key={c.id} c={c} t={t} fmt={fmt} />))}
+              </div>
+            </section>))}
+          <p className="muted land-note">{t("land.nutrients")}</p>
         </section>)}
 
       {pReading && (
@@ -954,119 +1093,16 @@ export function FieldPanel({ target, open, onClose, onChangePlot, onMethods, onR
 
       {pres?.ok && (
         <>
-          {/* alerts stay above the tabs, whatever the priorities */}
+          {/* alerts stay above the tabs */}
           <div data-tour="alerts">
-            <ParcelAlerts res={pres.res} parcels={effParcels} t={t}
+            <ParcelAlerts res={pres.res} parcels={shownParcels} t={t}
                           onEmergency={onEmergency} />
-          </div>
-          <Tabs active={parcelTab} onSelect={(id) =>
-                  setParcelTab(id as typeof parcelTab)}
-                tabs={[
-                  { id: "resumen", label: t("parcels.tab.summary") },
-                  { id: "prioridades",
-                    label: t("parcels.tab.priorities") },
-                  { id: "mas", label: t("parcels.tab.more") },
-                ]} />
-          <div role="tabpanel" id={`panel-${parcelTab}`}
-               aria-labelledby={`tab-${parcelTab}`}>
-          {parcelTab === "resumen" && (
-            <ParcelsResult res={pres.res} parcels={effParcels}
-                           profile={profile} t={t} fmt={fmt}
-                           onRetry={() => setPRetry((n) => n + 1)} />)}
-          {parcelTab === "prioridades" && (
-            <section className="card prio-card">
-              <h4 style={{ marginTop: 0 }}>{t("parcels.prio.title")}</h4>
-              <p className="muted">{t("parcels.prio.how")}</p>
-              <PrioritiesEditor value={profile} onChange={updateProfile} />
-              <h4>{t("parcels.econ.title")}</h4>
-              <p className="muted">{t("parcels.econ.how")}</p>
-              <EconomicsForm parcels={effParcels} value={econ}
-                             onChange={updateEcon} />
-              <button type="button" className="primary"
-                      onClick={() => { setPRetry((n) => n + 1);
-                                       setParcelTab("resumen"); }}>
-                {t("parcels.rerun")}</button>
-            </section>)}
-          {parcelTab === "mas" && (
-            <>
-            <HiddenHazards res={pres.res} parcels={effParcels}
-                           profile={profile} t={t} fmt={fmt} />
-            {pres.res.parcels.some((p) => p.timeline) && (
-              <section className="card tl-block"
-                       aria-label={t("field.timeline.title")}>
-                <h4 style={{ marginTop: 0 }}>{t("field.timeline.title")}</h4>
-                {pres.res.parcels.filter((p) => p.timeline).map((p) => (
-                  <Timeline key={`tl-${p.id}`} timeline={p.timeline!}
-                    label={pres.res.parcels.filter((x) => x.timeline)
-                           .length > 1
-                           ? parcelName(effParcels, p.id) : undefined} />))}
-              </section>)}
-            <SourcesBlock res={pres.res} t={t} />
-            </>
-          )}
           </div>
         </>
       )}
-      {showDiagnosis && <>
-      {reading && <p role="status">{t("field.diagnosing")}</p>}
-      {!diag && !reading && target && (
-        <div className="card">
-          <p role="status">{t(diagnosisProblem ? "field.diagnosis." + diagnosisProblem :
-            "field.diagnosis.failed")}</p>
-          {diagnosisProblem ? <button type="button" onClick={onChangePlot}>
-            {t("field.changePlot")}
-          </button> : <button type="button" onClick={() => setRetry((n) => n + 1)}>
-            {t("field.diagnosis.retry")}
-          </button>}
-        </div>)}
 
-      {open && tab === "details" && body && onMoistureZones && onMoistureSelect &&
-        <MoisturePanel key={JSON.stringify(body)} body={body}
-          selected={moistureSelection ?? null}
-          onZones={onMoistureZones} onSelect={onMoistureSelect} />}
-      {tab === "details" && diag?.degraded && (
-        <div className="card diag-degraded" role="alert">
-          <p><strong>{t("field.degraded.title")}</strong>{" "}
-            {diag.degraded_reason ?? t("field.degraded.unknown")}</p>
-          <button type="button" onClick={() => setRetry((n) => n + 1)}>
-            {t("field.diagnosis.retry")}
-          </button>
-        </div>)}
-      {tab === "details" && diag && (
-        <>
-          <section className="card plain-summary"
-                   aria-labelledby="plain-summary-h">
-            <h3 id="plain-summary-h">{t("field.plain.title")}</h3>
-            <p className="diag-summary">
-              {diag.zone
-                ? t("field.sum.l1z",
-                    { zone: t(`zone.${diag.zone}`),
-                      ha: fmt.format(diag.area_ha) })
-                : t("field.sum.l1", { ha: fmt.format(diag.area_ha) })}
-            </p>
-            {summary.length > 0 ? (
-              <dl className="plain-list">
-                {summary.map((g) => (
-                  <div key={g.group} className="plain-row">
-                    <dt>{t(g.group === "soil" ? "field.plain.soil.title"
-                      : `field.plain.${g.group}`)}</dt>
-                    <dd>{g.facts.map((f) => t(f.key, tv(f.vars))).join(" ")}</dd>
-                  </div>))}
-              </dl>
-            ) : <p className="muted">{t("field.noData")}</p>}
-            {diag.coverage && diag.coverage.available_cards < diag.coverage.total_cards &&
-              <p role="status">{t(diag.coverage.available_cards > 0 ? "field.coverage.partial" : "field.coverage.empty",
-                { n: diag.coverage.available_cards, total: diag.coverage.total_cards })}</p>}
-            {!canCompare && <p className="muted">{t("field.coverage.noCompare")}</p>}
-            {riskDate && riskEnd && <p className="muted">{t("risk.period", {
-              start: dateLabel(riskDate), end: dateLabel(riskEnd),
-            })}</p>}
-            {diag.terrain_coverage != null && diag.terrain_coverage < 0.95 &&
-              <p className="muted">{t("field.coverage.terrain",
-                { n: fmt.format(diag.terrain_coverage * 100) })}</p>}
-            <p className="muted plain-scale">{t("field.plain.scale")}</p>
-          </section>
-
+      {/* the only interactive part of the data view */}
+      {diag && (<>
           <Card title={t("scen.title")} className="scen">
             <p className="muted">{t("scen.honest")}</p>
             <div className="scen-presets">
@@ -1119,6 +1155,47 @@ export function FieldPanel({ target, open, onClose, onChangePlot, onMethods, onR
                 <DiagTile key={card.id} c={card} t={t} fmt={fmt} />)}
             </div>}
           </Card>
+      </>)}
+
+
+      {diag && (
+        <>
+          <section className="card plain-summary"
+                   aria-labelledby="plain-summary-h">
+            <h3 id="plain-summary-h">{t("field.plain.title")}</h3>
+            <p className="diag-summary">
+              {diag.zone
+                ? t("field.sum.l1z",
+                    { zone: t(`zone.${diag.zone}`),
+                      ha: fmt.format(diag.area_ha) })
+                : t("field.sum.l1", { ha: fmt.format(diag.area_ha) })}
+            </p>
+            {summary.length > 0 ? (
+              <dl className="plain-list">
+                {summary.map((g) => (
+                  <div key={g.group} className="plain-row">
+                    <dt>{t(g.group === "soil" ? "field.plain.soil.title"
+                      : `field.plain.${g.group}`)}</dt>
+                    <dd>{g.facts.map((f) => t(f.key, tv(f.vars))).join(" ")}</dd>
+                  </div>))}
+              </dl>
+            ) : <p className="muted">{t("field.noData")}</p>}
+            {diag.coverage && diag.coverage.available_cards < diag.coverage.total_cards &&
+              <p role="status">{t(diag.coverage.available_cards > 0 ? "field.coverage.partial" : "field.coverage.empty",
+                { n: diag.coverage.available_cards, total: diag.coverage.total_cards })}</p>}
+            {!canCompare && <p className="muted">{t("field.coverage.noCompare")}</p>}
+            {riskDate && riskEnd && <p className="muted">{t("risk.period", {
+              start: dateLabel(riskDate), end: dateLabel(riskEnd),
+            })}</p>}
+            {diag.terrain_coverage != null && diag.terrain_coverage < 0.95 &&
+              <p className="muted">{t("field.coverage.terrain",
+                { n: fmt.format(diag.terrain_coverage * 100) })}</p>}
+            <p className="muted plain-scale">{t("field.plain.scale")}</p>
+          </section>
+          {open && tab === "details" && body && onMoistureZones && onMoistureSelect &&
+        <MoisturePanel key={JSON.stringify(body)} body={body}
+          selected={moistureSelection ?? null}
+          onZones={onMoistureZones} onSelect={onMoistureSelect} />}
 
           <OrinCard data={orin} t={t} fmt={fmt} />
 
@@ -1144,9 +1221,52 @@ export function FieldPanel({ target, open, onClose, onChangePlot, onMethods, onR
           {view?.measures && view.measures.length > 0 && (
             <MeasuresCard measures={view.measures} cases={cases} t={t} />)}
 
+        </>)}
+      {/* parcel by parcel, after the state of the land and the data */}
+      {pres?.ok && (
+        <>
+          <Tabs active={parcelTab} onSelect={(id) =>
+                  setParcelTab(id as typeof parcelTab)}
+                tabs={[
+                  { id: "resumen", label: t("parcels.tab.summary") },
+                  { id: "mas", label: t("parcels.tab.more") },
+                ]} />
+          <div role="tabpanel" id={`panel-${parcelTab}`}
+               aria-labelledby={`tab-${parcelTab}`}>
+          {parcelTab === "resumen" && (
+            <ParcelsResult res={pres.res} parcels={shownParcels}
+                           profile={profile} t={t} fmt={fmt}
+                           onRetry={() => setPRetry((n) => n + 1)} />)}
+          {parcelTab === "mas" && (
+            <>
+            <HiddenHazards res={pres.res} parcels={shownParcels}
+                           profile={profile} t={t} fmt={fmt} />
+            {pres.res.parcels.some((p) => p.timeline) && (
+              <section className="card tl-block"
+                       aria-label={t("field.timeline.title")}>
+                <h4 style={{ marginTop: 0 }}>{t("field.timeline.title")}</h4>
+                {pres.res.parcels.filter((p) => p.timeline).map((p) => (
+                  <Timeline key={`tl-${p.id}`} timeline={p.timeline!}
+                    label={pres.res.parcels.filter((x) => x.timeline)
+                           .length > 1
+                           ? parcelName(shownParcels, p.id) : undefined} />))}
+              </section>)}
+            <SourcesBlock res={pres.res} t={t} />
+            </>
+          )}
+          </div>
+        </>
+      )}
+      {pres?.ok && (
+        <AlertSignup parcels={pres.res.parcels.map((p) => ({
+            name: parcelName(shownParcels, p.id),
+            indicators: p.indicators, alerts: p.alerts }))}
+          fieldName={target?.fieldName ?? lot?.name} />)}
+      {diag && (<>
           <details className="sec more">
             <summary>{t("field.details")}</summary>
-            {groupedCards(view?.cards ?? []).map((g) => (
+            {groupedCards(view?.cards ?? []).filter((g) =>
+              !LAND_GROUPS.includes(g.group)).map((g) => (
               <section key={g.group} className="diag-group">
                 <h4>{t(`field.group.${g.group}`)}</h4>
                 <div className="diag-grid">
@@ -1171,25 +1291,8 @@ export function FieldPanel({ target, open, onClose, onChangePlot, onMethods, onR
             </details>
           </details>
 
-          <details className="sec more">
-            <summary>{t("field.calendarMore")}</summary>
-            <Calendar
-              months={(view ?? diag).calendar.months}
-              rows={(base ?? diag).calendar.rows}
-              crops={calendarCrops({
-                sequence: rots?.strategies.find((s) => s.is_current)
-                  ?.sequence,
-                parcelCrops: effParcels.map((p) => p.crop),
-                catalog: catalog?.crops as CatalogCrop[] | undefined,
-                zone: diag.zone,
-                lang,
-              })} />
-          </details>
-
         </>
       )}
-
-      </>}
       </div>
 
       <div hidden={tab !== "recommendations"}>
@@ -1214,28 +1317,35 @@ export function FieldPanel({ target, open, onClose, onChangePlot, onMethods, onR
             </button>
           </p>}
         {zoneDetectionFailed && <p role="status">{t("recs.noSectors")}</p>}
+
+        {/* 1. rotations, computed on their own: the core of the tool */}
+        {canRotate && (comparing || compareFailed || !rotsView) && (
+          <section className="card rot-auto" aria-labelledby="rot-h">
+            <h3 id="rot-h" style={{ marginTop: 0 }}>{t("rot.autoTitle")}</h3>
+            <p className="muted">{t("field.form.rotationReference")}</p>
+            {comparing && <p role="status">{t("field.form.comparing")}</p>}
+            {compareFailed && <p role="status">{t("field.form.failed")}{" "}
+              <button type="button" onClick={() => setCompareFailed(false)}>
+                {t("field.diagnosis.retry")}</button></p>}
+          </section>)}
+        {rotsView && (!target?.nearby || nearbyUse === "checked") && (
+          <div data-tour="rotations">
+            <h3 className="rot-heading">{t("rot.autoTitle")}</h3>
+            <RotationResults rots={rotsView} diag={recommendationData}
+                             t={t} reference
+                             onMethods={onMethods} />
+          </div>)}
+
+        {/* 2. what to plant next on each parcel */}
         {recommendationData && (!target?.nearby || nearbyUse === "checked") &&
           !zoneDetectionFailed && (!autoPartition || sections != null) &&
           <CropRecommendations key={JSON.stringify(section?.geom ?? body)}
             diagnosis={recommendationData} crops={catalog?.crops ?? []} declared={declaredCrop}
             observation={currentImage}
-            priorities={prioSel} resources={cons} onPriority={togglePrio} onResources={setCons} />}
+            resources={cons} onResources={setCons} />}
         {catalogFailed && <p role="status">{t("field.form.catalogFailed")}{" "}
           <button onClick={() => setCatalogRetry((n) => n + 1)}>{t("field.diagnosis.retry")}</button>
         </p>}
-        {recommendationData && (!target?.nearby || nearbyUse === "checked") && !lot && recommendationData.coverage?.comparable !== false &&
-          !zoneDetectionFailed && (!autoPartition || sections != null) && <details className="card rec-filters">
-          <summary>{t("field.form.plan")}</summary>
-          <p className="muted">{t("field.form.rotationReference")}</p>
-          {comparing && <p role="status">{t("field.form.comparing")}</p>}
-          {compareFailed && <p role="status">{t("field.form.failed")}</p>}
-          <button className="primary" onClick={runRotations} disabled={(!section && reading) || comparing}>
-            {t("field.form.run")}
-          </button>
-        </details>}
-      {rotsView && (!target?.nearby || nearbyUse === "checked") && <RotationResults rots={rotsView} diag={recommendationData}
-                                t={t} reference
-                                onMethods={onMethods} />}
       {!rots && diag && <p className="notice">{t("rot.disclaimer")}</p>}
       </div>
     </div>
@@ -1256,32 +1366,55 @@ export function ParcelAlerts({ res, parcels, t, onEmergency }: {
   const highFire = parcelsWithHighFire(res);
   const dry = parcelsWithDry(res).filter((p) => !hasHighFireAlert(p));
   const name = (id: string) => parcelName(parcels, id);
+  // one message per alert, naming every parcel it applies to (the same
+  // risk repeated parcel by parcel read as noise)
+  const group = (list: typeof highFire, keep: (a: { kind: string;
+      severity: string }) => boolean) => {
+    const by = new Map<string, string[]>();
+    for (const p of list) {
+      for (const a of p.alerts.filter(keep)) {
+        const ids = by.get(a.text) ?? [];
+        if (!ids.includes(p.id)) ids.push(p.id);
+        by.set(a.text, ids);
+      }
+    }
+    return [...by.entries()].map(([text, ids]) => {
+      const all = ids.length > 1 && ids.length === res.parcels.length;
+      const names = ids.map(name);
+      const who = all ? t("parcels.alert.all")
+        : names.length > 1
+          ? `${names.slice(0, -1).join(", ")} ${t("ui.and")} ${names.at(-1)}`
+          : names[0];
+      const plural = ids.length > 1;
+      return { key: ids.join("|") + text, who,
+               text: plural ? text.replace(/en esta parcela/g, "en estas parcelas")
+                 .replace(/in this parcel/g, "in these parcels") : text };
+    });
+  };
+  const fires = group(highFire, (a) => a.kind === "fire" && a.severity === "high");
+  const drys = group(dry, (a) => a.kind === "dry");
   return (
     <>
-      {highFire.map((p) =>
-        p.alerts.filter((a) => a.kind === "fire" && a.severity === "high")
-          .map((a, i) => (
-            <div key={`${p.id}-${i}`} className="parcel-alert fire"
-                 role="alert">
-              <Icon kind="flame" size={18} />
-              <div>
-                <p><strong>{name(p.id)}:</strong> {a.text}</p>
-                {onEmergency
-                  ? <button type="button" className="chip"
-                            onClick={onEmergency}>
-                      {t("parcels.alert.emergency")}</button>
-                  : <a href="#parcels-emergency">
-                      {t("parcels.alert.emergency")}</a>}
-              </div>
-            </div>)))}
-      {dry.map((p) =>
-        p.alerts.filter((a) => a.kind === "dry").map((a, i) => (
-          <div key={`${p.id}-${i}`} className="parcel-alert dry" role="status">
-            <Icon kind="drop" size={16} />
-            <div>
-              <p><strong>{name(p.id)}:</strong> {a.text}</p>
-            </div>
-          </div>)))}
+      {fires.map((g) => (
+        <div key={g.key} className="parcel-alert fire" role="alert">
+          <Icon kind="flame" size={18} />
+          <div>
+            <p><strong>{g.who}:</strong> {g.text}</p>
+            {onEmergency
+              ? <button type="button" className="chip"
+                        onClick={onEmergency}>
+                  {t("parcels.alert.emergency")}</button>
+              : <a href="#parcels-emergency">
+                  {t("parcels.alert.emergency")}</a>}
+          </div>
+        </div>))}
+      {drys.map((g) => (
+        <div key={g.key} className="parcel-alert dry" role="status">
+          <Icon kind="drop" size={16} />
+          <div>
+            <p><strong>{g.who}:</strong> {g.text}</p>
+          </div>
+        </div>))}
     </>);
 }
 

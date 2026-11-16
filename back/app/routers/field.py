@@ -280,6 +280,34 @@ def days_per_year(series: dict, cond, years=None):
         sum(1 for v in vs if cond(v)) for vs in by.values()), 1)
 
 
+_MES = ("enero", "febrero", "marzo", "abril", "mayo", "junio", "julio",
+        "agosto", "septiembre", "octubre", "noviembre", "diciembre")
+_MONTH_EN = ("January", "February", "March", "April", "May", "June", "July",
+             "August", "September", "October", "November", "December")
+
+
+def temp_stats(tmax: dict, tmin: dict):
+    """Mean annual temperature plus the mean max of the warmest month
+    and the mean min of the coldest one, from daily POWER T2M_MAX/MIN.
+    -> (mean, (warm_month, mean_max), (cold_month, mean_min)) or None."""
+    mx: dict[int, list[float]] = {}
+    mn: dict[int, list[float]] = {}
+    for d, tx in (tmax or {}).items():
+        tn = (tmin or {}).get(d)
+        if tx is None or tn is None:
+            continue
+        mx.setdefault(d.month, []).append(tx)
+        mn.setdefault(d.month, []).append(tn)
+    if len(mx) < 12:
+        return None
+    mmax = {m: statistics.fmean(v) for m, v in mx.items()}
+    mmin = {m: statistics.fmean(v) for m, v in mn.items()}
+    mean = statistics.fmean((mmax[m] + mmin[m]) / 2 for m in mmax)
+    warm = max(mmax, key=mmax.get)
+    cold = min(mmin, key=mmin.get)
+    return round(mean, 1), (warm, round(mmax[warm], 1)), (cold, round(mmin[cold], 1))
+
+
 def gdd_per_year(tmax: dict, tmin: dict):
     """Mean annual growing degree days, base 10 °C capped at 30 °C
     (FAO/Ecocrop convention): per day
@@ -499,7 +527,8 @@ def _fmt_es(v, dec=1):
     """Locale-ish number: 1150 -> '1.150', 8.7 -> '8,7'."""
     if v is None:
         return "?"
-    s = f"{v:,.{dec}f}" if dec else f"{v:,}"
+    # dec=0 must still round: "921.4000000000001" -> "921"
+    s = f"{v:,.{dec}f}"
     return s.replace(",", "X").replace(".", ",").replace("X", ".")
 
 
@@ -526,9 +555,11 @@ def build_cards(power, soilg, slope, ndvi, grid_cell, fire_cal,
         cards.append(rain_card)
     elif rs:
         rain_card = _card("rain", rs[0], "mm/año",
-                          f"{rs[0]} mm/año; 1 de cada 4 años < {rs[2]} mm",
+                          f"{_fmt_es(rs[0], 0)} mm/año; 1 de cada 4 años "
+                          f"< {_fmt_es(rs[2], 0)} mm",
                           "NASA POWER", POWER_RES, "high",
-                          f"{rs[0]} mm/yr; 1 year in 4 below {rs[2]} mm")
+                          f"{rs[0]:,.0f} mm/yr; 1 year in 4 below "
+                          f"{rs[2]:,.0f} mm")
         rm = rain_monthly_mm(P("PRECTOTCORR") or {})
         if rm:
             rain_card["rain_monthly_mm"] = rm
@@ -562,6 +593,22 @@ def build_cards(power, soilg, slope, ndvi, grid_cell, fire_cal,
               "high" if P("T2M_MIN") else "low",
               "No frost recorded in the series"
               if P("T2M_MIN") else "No data available"))
+
+    ts = temp_stats(P("T2M_MAX") or {}, P("T2M_MIN") or {})
+    if ts:
+        mean, (wm, wmax), (cm, cmin) = ts
+        cards.append(_card(
+            "temp_mean", mean, "°C",
+            f"Media anual {_fmt_es(mean)} °C; en {_MES[wm - 1]}, el mes más "
+            f"cálido, la máxima media es {_fmt_es(wmax)} °C; en "
+            f"{_MES[cm - 1]}, el más frío, la mínima media es {_fmt_es(cmin)} °C",
+            # validated against 53 Mendoza stations: 2-3 °C error after
+            # the elevation correction -> medium, never high
+            "NASA POWER (T2M_MAX, T2M_MIN)", POWER_RES, "medium",
+            f"Annual mean {mean} °C; {_MONTH_EN[wm - 1]} (warmest) mean max "
+            f"{wmax} °C; {_MONTH_EN[cm - 1]} (coldest) mean min {cmin} °C"))
+    else:
+        cards.append(_null_card("temp_mean", "NASA POWER", POWER_RES))
 
     hot = days_per_year(P("T2M_MAX") or {}, lambda v: v > 35)
     cards.append(
@@ -897,8 +944,8 @@ def degraded_cards(grid_cell, terr, soilg, fire_cal, risk_cell, r5):
                 "no respondió" if imerg else DEGRADED_SRC)
     cards.append(
         _card("rain", rain, "mm/año",
-              f"{rain} mm/año"
-              + (f"; 1 de cada 4 años < {p25} mm" if p25 else ""),
+              f"{_fmt_es(rain, 0)} mm/año"
+              + (f"; 1 de cada 4 años < {_fmt_es(p25, 0)} mm" if p25 else ""),
               rain_src, POWER_RES, "medium")
         if rain is not None else _unavailable("rain"))
 
