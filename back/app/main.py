@@ -47,6 +47,13 @@ for _module in ROUTERS:
 
 @app.get("/api/health")
 async def health():
+    out = {"ok": not ROUTER_ERRORS}
     if ROUTER_ERRORS:
-        return {"ok": False, "router_errors": ROUTER_ERRORS}
-    return {"ok": True}
+        out["router_errors"] = ROUTER_ERRORS
+    try:
+        from .routers.field import SATELLITE_ERROR
+        if SATELLITE_ERROR:
+            out["satellite_errors"] = SATELLITE_ERROR
+    except Exception:  # noqa: BLE001
+        pass
+    return out

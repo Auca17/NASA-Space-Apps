@@ -36,35 +36,58 @@ log = logging.getLogger("field")
 
 # Satellite modules (rasterio, numpy, Pillow) load on first use, not at
 # startup: if a native library fails in the serverless runtime only these
-# features fail, instead of the whole API (FUNCTION_INVOCATION_FAILED).
+# features fail, instead of the whole API (FUNCTION_INVOCATION_FAILED),
+# and they answer "unavailable" (the front already shows that state).
+SATELLITE_ERROR: dict[str, str] = {}
+
+
+def _satellite(module: str, name: str):
+    import importlib
+    try:
+        return getattr(importlib.import_module(f"..services.{module}",
+                                               __package__), name)
+    except Exception as exc:  # noqa: BLE001 - native library missing
+        SATELLITE_ERROR[module] = f"{type(exc).__name__}: {exc}"[:300]
+        log.warning("satellite module %s unavailable: %s", module,
+                    SATELLITE_ERROR[module])
+        return None
+
+
+def _unavailable_sat(module: str) -> dict:
+    return {"status": "unavailable", "zones": [], "seasons": [],
+            "reason": SATELLITE_ERROR.get(module, "unavailable")}
+
+
 async def moisture_zones(geom):
-    from ..services.field_moisture import moisture_zones as run
-    return await run(geom)
+    run = _satellite("field_moisture", "moisture_zones")
+    return await run(geom) if run else _unavailable_sat("field_moisture")
 
 
 async def detect_crop(geom):
-    from ..services.crop_map import detect_crop as run
-    return await run(geom)
+    run = _satellite("crop_map", "detect_crop")
+    return await run(geom) if run else _unavailable_sat("crop_map")
 
 
 async def crop_zones(geom):
-    from ..services.crop_map import crop_zones as run
-    return await run(geom)
+    run = _satellite("crop_map", "crop_zones")
+    return await run(geom) if run else _unavailable_sat("crop_map")
 
 
 async def current_crop_now(geom):
-    from ..services.current_crop import current_crop as run
-    return await run(geom)
+    run = _satellite("current_crop", "current_crop")
+    return await run(geom) if run else _unavailable_sat("current_crop")
 
 
 async def bare_soil_estimate(*args, **kwargs):
-    from ..services.bare_soil_s2 import bare_soil_estimate as run
+    run = _satellite("bare_soil_s2", "bare_soil_estimate")
+    if run is None:
+        return {"days": None, "reason": "unavailable"}
     return await run(*args, **kwargs)
 
 
 def s2_reason_text(*args, **kwargs):
-    from ..services.bare_soil_s2 import reason_text as run
-    return run(*args, **kwargs)
+    run = _satellite("bare_soil_s2", "reason_text")
+    return run(*args, **kwargs) if run else "Sin datos satelitales disponibles"
 
 router = APIRouter()
 
