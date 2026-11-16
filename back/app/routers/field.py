@@ -41,8 +41,32 @@ log = logging.getLogger("field")
 SATELLITE_ERROR: dict[str, str] = {}
 
 
+_NATIVE_READY = False
+
+
+def _preload_native() -> None:
+    """Vercel's Python runtime has no system libexpat, which the rasterio
+    wheel's GDAL needs: load the bundled copy (back/lib) globally first, so
+    the dynamic loader finds it by soname. No-op where the system has it."""
+    global _NATIVE_READY
+    if _NATIVE_READY:
+        return
+    _NATIVE_READY = True
+    import ctypes
+    import ctypes.util
+    from pathlib import Path
+    if ctypes.util.find_library("expat"):
+        return
+    bundled = Path(__file__).resolve().parents[2] / "lib" / "libexpat.so.1"
+    try:
+        ctypes.CDLL(str(bundled), mode=ctypes.RTLD_GLOBAL)
+    except OSError as exc:
+        log.warning("bundled libexpat not loaded: %s", exc)
+
+
 def _satellite(module: str, name: str):
     import importlib
+    _preload_native()
     try:
         return getattr(importlib.import_module(f"..services.{module}",
                                                __package__), name)
