@@ -93,5 +93,5 @@ def test_risks_name_the_shared_pests():
     rot = _rot(["maiz", "maiz"])
     risks = _risks(rot, True, [])
     joined = " ".join(risks)
-    assert "maiz seguido de maiz mantiene" in joined
+    assert "Maíz seguido de Maíz mantiene" in joined
     assert "Fusarium" in joined or "Chicharrita" in joined

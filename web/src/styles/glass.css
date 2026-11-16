@@ -399,3 +399,27 @@ body:has(.app) { background: #0f110e; }
     animation: none !important; transition: none !important; }
   .app button:active:not(:disabled) { transform: none; }
 }
+
+/* map warnings sit below the floating top bar, like the map controls */
+.app .map-warning, .app .storage-warning { top: var(--top-safe); }
+.app .map-wrap { overflow: hidden; }
+
+/* rotation card: short summary, details folded */
+.strategy-why { margin: 8px 0 4px; }
+.strategy-ai { margin: 0 0 8px; }
+.strategy-more { margin-top: 10px; border-top: 1px solid var(--border); }
+.strategy-more > summary { cursor: pointer; font-weight: 650; padding: 10px 0;
+  min-height: var(--touch); }
+.rot-heading { margin: 14px 0 6px; }
+.cost-benefit { margin-top: 12px; padding: 10px 12px; border-radius: 10px;
+  border: 1px solid var(--border); background: var(--surface); }
+.cost-benefit h4 { margin: 0 0 6px; }
+.econ-grid { display: grid; gap: 6px; margin: 0;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); }
+.econ-grid dt { font-size: .8rem; color: var(--muted); }
+.econ-grid dd { margin: 0; font-weight: 650; }
+.econ-grid dd small { display: block; font-weight: 400; color: var(--muted); }
+.econ-neg { color: var(--warn); }
+.econ-note { margin: 8px 0 4px; font-size: .85rem; }
+.econ-more > summary { cursor: pointer; font-size: .9rem; padding: 6px 0; }
+.econ-more p, .econ-more ul { font-size: .88rem; margin: 4px 0; }

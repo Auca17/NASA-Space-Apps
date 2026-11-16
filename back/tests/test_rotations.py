@@ -436,7 +436,7 @@ def test_alfalfa_root_carbon_gap():
     gaps = [g for s in out["strategies"] for g in s["gaps"]
             if "raíz" in g or "corona" in g]
     assert gaps, "root-carbon gap missing"
-    assert any("alfalfa" in g for g in gaps)
+    assert any("Alfalfa" in g for g in gaps)
 
 
 def test_nea_noa_default_rotation_unvalidated_gap():

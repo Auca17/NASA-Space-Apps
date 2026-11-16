@@ -110,6 +110,8 @@ export default function App() {
   const locationRequest = useRef(0);
   const pendingFieldLocation = useRef<{ lat: number; lon: number } | null>(null);
   const [recommendationArea, setRecommendationArea] = useState<Multi | null>(null);
+  /** analysis shapes kept under the parcel results layer */
+  const [parcelBase, setParcelBase] = useState<Shape[]>([]);
   const [nearbyLandUse, setNearbyLandUse] = useState<{
     geom: Multi; status: "urban" | "checked" | "unavailable";
   } | null>(null);
@@ -528,8 +530,9 @@ export default function App() {
     const g = globeRef.current;
     if (!g) return;
     const sh: Shape[] = [];
-    // the parcels wizard and the result layer own the map shapes
-    if (mode === "field" && !parcelsWizard && !parcelRes) {
+    // the parcels wizard owns the map; with parcel results the analysis
+    // shapes (outline, selected zone in yellow) go under their layer
+    if (mode === "field" && !parcelsWizard) {
       if (locationAccuracy && !fieldOpen) {
         const { lat, lon, metres } = locationAccuracy;
         sh.push({ kind: "field", geom: [circleRing(lat, lon, metres / 1_000)] });
@@ -571,7 +574,8 @@ export default function App() {
         pendingZone?.geom.forEach((p) => sh.push({ geom: p, kind: "piece-on" }));
       }
     }
-    if (!parcelsWizard && !parcelRes) g.setShapes(sh);
+    if (parcelRes) setParcelBase(sh);
+    else if (!parcelsWizard) g.setShapes(sh);
     if (mode !== "field") {
       g.setDraft(null); g.setMarker(null);
       if (parcelRes) setParcelRes(null);
@@ -1215,7 +1219,7 @@ export default function App() {
         {mode === "field" && parcelRes && globe && (
           <Suspense fallback={null}>
             <ParcelsMapLayer globe={globe} parcels={parcelRes.parcels}
-                             res={parcelRes.res} />
+                             res={parcelRes.res} base={parcelBase} />
           </Suspense>)}
         {demoTour && parcelRes && (
           <GuidedTour onClose={() => setDemoTour(false)} />)}

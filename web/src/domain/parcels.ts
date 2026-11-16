@@ -19,6 +19,9 @@ export interface ParcelInput {
   /** synthesized whole-field parcel (no user split, no crop picked):
    * the UI labels it "Todo el campo" and hides the crop. */
   wholeField?: boolean;
+  /** a zone of the automatic division of the field (not drawn by the
+   * user): the map keeps the division outline instead of a crop fill. */
+  zone?: boolean;
 }
 
 export type WaterAccess = "none" | "well" | "channel" | "irrigation" | "unknown";

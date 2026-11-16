@@ -15,6 +15,7 @@ Los flujos `01`–`03` (WhatsApp por Twilio) quedan para cuando haya cuenta paga
 |---|---|---|
 | `11-email-smoke.json` | Botón → manda un email de prueba | Credencial Gmail; tu email en *To* |
 | `12-alerta-fuego-email.json` | Cada 3 h (o «Probar ahora»): focos nuevos de `/api/live` dentro del radio de cada campo → email | En **Suscripciones**: `API_BASE`, el email y el campo; credencial Gmail |
+| `14-aviso-campo-email.json` | Webhook `POST /aviso-campo` con `{ to, subject, html, text }` que arma el back end (`POST /api/alerts/test`, botón «Mandarme un mail de prueba» de la app) → email por Gmail. Cubre todos los fenómenos: fuego, sequía, heladas, calor, nieve, granizo, El Niño / La Niña y anegamiento | Credencial **Header Auth** (`X-Ashfield-Secret`) y credencial Gmail. En el back end: `ALERT_WEBHOOK_URL` = URL de producción del webhook y `ALERT_WEBHOOK_SECRET` = el mismo secreto |
 | `13-enviar-codigo-email.json` | Webhook `POST /send-code` con `{ "email": "…", "code": "123456" }` → manda el código por email | Credencial **Header Auth** (`X-Ashfield-Secret`) en el webhook; credencial Gmail. URL de producción → `.env` como `N8N_WEBHOOK_URL` |
 | `01-whatsapp-smoke.json` | Botón → manda un WhatsApp de prueba | Credencial Twilio en el nodo; tu celular en *To* |
 | `02-alerta-fuego-demo.json` | Cada 3 h (o con «Probar ahora»): lee `/api/live` alrededor de cada campo, busca focos nuevos dentro del radio y manda el aviso | En **Suscripciones**: `API_BASE` (URL del deploy), el celular y el campo; credencial Twilio |

@@ -67,6 +67,14 @@ PRIORITY_LABEL = {"water": "cuidar el agua", "soil": "mejorar el suelo",
                   "erosion": "reducir la erosión", "income": "el ingreso",
                   "forage": "producir forraje", "nitrogen": "el nitrógeno",
                   "pests": "cortar plagas", "avoid_burning": "evitar quemas"}
+# Nouns for "mejora en ... / queda peor en ..." in the why sentence.
+MOVE_LABEL = {"water": "uso del agua", "soil": "materia orgánica",
+              "erosion": "erosión", "income": "ingreso",
+              "forage": "forraje", "nitrogen": "nitrógeno",
+              "pests": "corte de plagas", "avoid_burning": "quemas evitadas"}
+# Winter covers are rolled or desiccated in place: they protect the
+# soil without animals, so "no livestock" must not discard them.
+COVER_CROPS = {"centeno", "vicia", "avena"}
 PRIORITY_MAP = {"water": "water_balance_mm", "soil": "residue_t_ha_yr",
                 "erosion": "erosion_risk", "income": "income",
                 "forage": "forage", "nitrogen": "nitrogen",
@@ -81,7 +89,7 @@ INDICATOR_LABEL = {
     "bare_soil_days": "días sin cultivo vivo",
     "erosion_risk": "riesgo de erosión",
     "infiltration": "infiltración estimada (relativa)",
-    "pest_break": "pares consecutivos que comparten plaga",
+    "pest_break": "campañas seguidas con la misma plaga",
     "families": "familias en el ciclo",
     "income": "ingreso",
     "forage": "forraje",
@@ -339,7 +347,8 @@ def crop_viable(crop: Crop, diag: dict, constraints: dict,
                 reasons.append("necesitaría riego para cubrir su demanda")
         elif crop.water_mm_cycle >= 500:
             reasons.append("demanda hídrica alta sin dato de lluvia")
-    if constraints.get("livestock") is False and crop.forage:
+    if constraints.get("livestock") is False and crop.forage and \
+            crop.id not in COVER_CROPS:
         reasons.append("cultivo exclusivamente forrajero")
     markets = constraints.get("markets") or []
     if crop.market_ar == "low" and (constraints.get("limited_market") is True
@@ -605,26 +614,46 @@ def _card_title(c: dict) -> str:
     return _CARD_TITLES.get(c.get("id") or "", c.get("id") or "la tarjeta")
 
 
+def _join_es(items: list[str]) -> str:
+    return items[0] if len(items) == 1 else \
+        ", ".join(items[:-1]) + " y " + items[-1]
+
+
 def _gaps(diag: dict, analog_missing: bool = False,
           extra: list[str] | None = None) -> list[str]:
-    out = list(extra or [])
+    """Information gaps, most useful first: missing data, then coarse
+    resolution (one sentence per resolution, not one per card), then
+    low confidence and the remaining notes."""
+    missing, low, coarse = [], [], {}
+    for c in diag.get("cards", []):
+        title = _card_title(c)
+        if c.get("value") is None:
+            missing.append(f"Sin dato de {title} ({c.get('source')})")
+            continue
+        if c.get("confidence") == "low":
+            low.append(title)
+        if c.get("resolution") in ("9 km", "0.5°×0.625°"):
+            coarse.setdefault(c["resolution"], []).append(title)
+    res_txt = []
+    for res in ("9 km", "0.5°×0.625°"):
+        titles = coarse.get(res)
+        if not titles:
+            continue
+        verb = "tiene" if len(titles) == 1 else "tienen"
+        nota = " (~55 km)" if res == "0.5°×0.625°" else ""
+        res_txt.append(f"{_join_es(titles)} {verb} resolución {res}{nota}: "
+                       "no distingue diferencias dentro del lote")
+    out = list(extra or []) + missing + res_txt
+    if low:
+        out.append(f"Confianza baja en: {_join_es(low)}")
     rain = _card(diag, "rain") or {}
     if rain.get("value") is not None and \
             not isinstance(rain.get("rain_monthly_mm"), list):
         out.append("Sin climatología mensual de lluvia: el balance "
                    "hídrico usa el promedio anual")
-    for c in diag.get("cards", []):
-        title = _card_title(c)
-        if c.get("value") is None:
-            out.append(f"Sin dato de {title} ({c.get('source')})")
-        elif c.get("confidence") == "low":
-            out.append(f"{title} con confianza baja")
-        if c.get("resolution") in ("9 km", "0.5°×0.625°"):
-            out.append(f"{title} tiene resolución {c['resolution']}: "
-                       "no distingue diferencias dentro del lote")
     if analog_missing:
-        return out[:3] + ["Sin datos de zonas análogas (field/analogs)"]
-    return out[:4]
+        return out[:4] + ["Sin datos de zonas análogas (field/analogs)"]
+    return out[:5]
 
 
 def _risks(rot: Rotation, viable: bool, reasons: list[str]) -> list[str]:
@@ -636,7 +665,7 @@ def _risks(rot: Rotation, viable: bool, reasons: list[str]) -> list[str]:
         names = ", ".join(p.name_es.split(" (")[0] for p in pests[:3])
         how = pests[0].survival.split(":")[0]
         risks.append(
-            f"{a} seguido de {b} mantiene {names} "
+            f"{_crop_name(a)} seguido de {_crop_name(b)} mantiene {names} "
             f"(inóculo: {how}).")
     risks += CAUTIONS.get("generic", [])
     if not viable:
@@ -677,22 +706,113 @@ def _seq_text(rot: Rotation) -> tuple[str, list[str]]:
     return " → ".join(parts), winter
 
 
+def _priority_moves(ind: dict, cur_ind: dict,
+                    priorities: dict) -> tuple[list[str], list[str]]:
+    """Priorities this strategy improves / worsens against the current
+    one, heaviest first (same direction rules as score())."""
+    better, worse = [], []
+    for p, w in sorted(priorities.items(), key=lambda kv: -kv[1]):
+        if not w or p not in PRIORITY_MAP:
+            continue
+        key = PRIORITY_MAP[p]
+        a, b = _metric_value(ind, key), _metric_value(cur_ind, key)
+        if a is None or b is None or a == b:
+            continue
+        invert = key in ("water_balance_mm", "erosion_risk", "pest_break")
+        good = (a < b) if invert else (a > b)
+        (better if good else worse).append(MOVE_LABEL.get(p, p))
+    return better, worse
+
+
 def _why(rot: Rotation, is_current: bool, priorities: dict,
-         diag: dict, constraints: dict) -> str:
-    """Explanation built from the scenario itself: its crops and dates,
-    whether it has a winter crop, and its days without a living crop."""
+         diag: dict, constraints: dict, ind: dict | None = None,
+         cur_ind: dict | None = None) -> str:
+    """Explanation built from the scenario itself: what it improves
+    against the current rotation (never a goal it makes worse), its
+    crops and dates, winter crop and days without a living crop."""
     if is_current:
         return "Es tu rotación actual; sirve de referencia."
-    top = sorted(priorities.items(), key=lambda kv: -kv[1])[:2]
-    goals = " y ".join(PRIORITY_LABEL.get(p, p) for p, _ in top)         or "diversificar"
     seq, winter = _seq_text(rot)
-    bare = indicators(rot, diag, None, constraints).get("bare_soil_days")
+    ind = ind if ind is not None else indicators(rot, diag, None,
+                                                 constraints)
+    bare = ind.get("bare_soil_days")
     winter_txt = ("incluye cultivo de invierno: " + ", ".join(winter)
                   if winter else "sin cultivo de invierno")
     bare_txt = (f"; deja el suelo sin cultivo vivo unos {bare} días por año"
                 if bare is not None else "")
-    return (f"Atiende tus prioridades de {goals}. Secuencia: {seq}; "
-            f"{winter_txt}{bare_txt}.")
+    lead = ""
+    if cur_ind:
+        better, worse = _priority_moves(ind, cur_ind, priorities)
+        if better:
+            lead = "Frente a tu rotación actual mejora en " + \
+                ", ".join(better[:3])
+            lead += (f"; queda peor en {', '.join(worse[:2])}. "
+                     if worse else ". ")
+        elif worse:
+            lead = ("No mejora tu rotación actual en lo que se mide acá; "
+                    "se muestra para comparar. ")
+    return f"{lead}Secuencia: {seq}; {winter_txt}{bare_txt}."
+
+
+_ECON_PATH = Path(__file__).resolve().parents[2] / "knowledge" / "economics.json"
+try:
+    ECON = json.loads(_ECON_PATH.read_text())
+except (OSError, ValueError):  # missing file: no cost-benefit block
+    ECON = {"crops": {}}
+
+
+def _crop_name(crop_id: str) -> str:
+    c = KNOWLEDGE.crops.get(crop_id)
+    return (c.name.get("es") if c else None) or crop_id.capitalize()
+
+
+def economics(rot: Rotation, area_ha, analog: dict | None = None) -> dict | None:
+    """Cost-benefit estimate for one campaign of the rotation (the
+    sequence total divided by its years), per hectare and for the
+    analysed area. Reference values from knowledge/economics.json;
+    MAGyP analog-zone yields replace the reference yield when present."""
+    table = ECON.get("crops") or {}
+    if not table or not all(s.crop in table for s in rot.sequence):
+        return None
+    share = float(ECON.get("harvest_and_sale_share") or 0)
+    analog_yield = {c.get("crop"): c.get("yield_kg_ha")
+                    for c in (analog or {}).get("ar_crops") or []}
+    years = max(1, rot.years)
+    crops, cost_sum, rev_sum = [], 0.0, 0.0
+    for item in rot.sequence:
+        ref = table[item.crop]
+        direct = float(sum(ref.get("cost", {}).values()))
+        y, src = ref.get("yield_t_ha"), "referencia"
+        if isinstance(analog_yield.get(item.crop), (int, float)):
+            y, src = round(analog_yield[item.crop] / 1000, 1), "MAGyP zonas análogas"
+        price = ref.get("price_usd_t")
+        revenue = y * price if y and price else 0.0
+        cost = direct + revenue * share
+        cost_sum += cost
+        rev_sum += revenue
+        crops.append({"crop": item.crop, "name": _crop_name(item.crop),
+                      "cost_ha": round(cost), "cost_lines": ref.get("cost", {}),
+                      "yield_t_ha": y, "yield_source": src if y else None,
+                      "price_usd_t": price, "revenue_ha": round(revenue),
+                      "harvest": bool(y)})
+    per_ha = {"cost": round(cost_sum / years),
+              "revenue": round(rev_sum / years),
+              "margin": round((rev_sum - cost_sum) / years)}
+    ha = float(area_ha) if isinstance(area_ha, (int, float)) and area_ha > 0 \
+        else None
+    out = {"currency": ECON.get("currency", "USD"), "years": years,
+           "per_ha": per_ha, "area_ha": round(ha, 1) if ha else None,
+           "crops": crops,
+           "cost_includes": ECON.get("cost_includes", []),
+           "cost_excludes": ECON.get("cost_excludes", []),
+           "sources": ECON.get("sources", [])}
+    if ha:
+        out["total"] = {k: round(v * ha) for k, v in per_ha.items()}
+        out["harvest_t_total"] = [
+            {"crop": c["crop"], "name": c["name"],
+             "t": round(c["yield_t_ha"] * ha / years)}
+            for c in crops if c["harvest"]]
+    return out
 
 
 def _sections(rot: Rotation, ind: dict, cur_ind: dict,
@@ -718,7 +838,7 @@ def _sections(rot: Rotation, ind: dict, cur_ind: dict,
     for c in crops_unique(rot):
         if c.water_mm_observed is not None:
             water_ev.append({
-                "text": f"{c.id}: consumo observado en "
+                "text": f"{_crop_name(c.id)}: consumo observado en "
                         f"{c.water_observed_note or 'ensayos locales'}: "
                         f"{c.water_mm_observed:g} mm (referencia FAO: "
                         f"{c.water_mm_cycle} mm)",
@@ -744,17 +864,36 @@ def _sections(rot: Rotation, ind: dict, cur_ind: dict,
                 "source": "gdd_base10 del catálogo (FAO/INTA, "
                           "pendiente de validación local)"})
     # root/crown carbon of pastures is a declared knowledge gap
-    root_gaps = [f"{c.id}: {c.root_carbon_note}"
+    root_gaps = [f"{_crop_name(c.id)}: {c.root_carbon_note}"
                  for c in crops_unique(rot) if c.root_carbon_note]
+    own_ev = []
+    if not is_current:
+        parts = []
+        if isinstance(ind.get("water_balance_mm"), (int, float)):
+            parts.append(f"toma ~{ind['water_balance_mm']:.0f} mm de agua "
+                         "por año")
+        if isinstance(ind.get("bare_soil_days"), (int, float)):
+            parts.append(f"deja ~{ind['bare_soil_days']:.0f} días por año "
+                         "sin cultivo vivo")
+        if isinstance(ind.get("residue_t_ha_yr"), (int, float)):
+            parts.append(f"aporta ~{ind['residue_t_ha_yr']:g} t/ha de "
+                         "rastrojo por año")
+        if parts:
+            own_ev.append({"text": "Esta secuencia " + ", ".join(parts)
+                           + " (motor de rotaciones con el clima del lote).",
+                           "indicator": "water_balance",
+                           "source": "Motor de rotaciones + NASA POWER"})
     return {
-        "why": _why(rot, is_current, priorities, diag, constraints or {}),
-        "evidence": evidence[:4] + water_ev + gdd_ev,
+        "why": _why(rot, is_current, priorities, diag, constraints or {},
+                    ind, cur_ind),
+        "evidence": own_ev + water_ev + gdd_ev + evidence[:4],
         "benefits": benefits,
         "gaps": _gaps(diag, analog is None,
                       (extra_gaps or []) + root_gaps)
         or ["Sin vacíos relevantes en el diagnóstico"],
         "risks": _risks(rot, viable, reasons),
-        "sequence": [{"crop": s.crop, "start": s.start, "end": s.end,
+        "sequence": [{"crop": s.crop, "name": _crop_name(s.crop),
+                      "start": s.start, "end": s.end,
                       "cover": s.cover} for s in rot.sequence],
     }
 
@@ -933,6 +1072,7 @@ def run(diagnosis: dict, current: dict | None, priorities: dict,
                         constraints,
                         zone_gaps + cur_notes),
             **_measures(cur_rot),
+            "economics": economics(cur_rot, diagnosis.get("area_ha"), analog),
         })
     for c in top:
         reasons = [r for v in c["bad"].values() for r in v]
@@ -948,6 +1088,8 @@ def run(diagnosis: dict, current: dict | None, priorities: dict,
                         diagnosis, c["viable"], reasons, analog,
                         constraints, zone_gaps + c["notes"]),
             **_measures(c["rot"]),
+            "economics": economics(c["rot"], diagnosis.get("area_ha"),
+                                   analog),
         })
     out = {"diagnosis_id": diagnosis.get("diagnosis_id"),
            "strategies": strategies, "disclaimer": DISCLAIMER,

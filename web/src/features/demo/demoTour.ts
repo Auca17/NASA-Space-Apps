@@ -14,11 +14,14 @@ export function markTourSeen() {
   try { localStorage.setItem(TOUR_KEY, "1"); } catch { /* full/blocked */ }
 }
 
-/** Anchors are real DOM nodes; each step lists a CSS selector. */
-export const TOUR_STEPS = [
-  { sel: '[data-tour="parcels"]', key: "demo.tour.parcels" },
+/** Anchors are real DOM nodes; each step lists a CSS selector and the
+ * field-panel tab it lives in (the tour switches tabs for the farmer). */
+export type TourTab = "recommendations" | "details";
+export const TOUR_STEPS: readonly { sel: string; key: string; tab?: TourTab }[] = [
+  { sel: '[data-tour="rotations"]', key: "demo.tour.rotations", tab: "recommendations" },
+  { sel: '[data-tour="land"]', key: "demo.tour.land", tab: "details" },
   { sel: '[data-tour="badges"]', key: "demo.tour.badges" },
-  { sel: '[data-tour="alerts"]', key: "demo.tour.alerts" },
-  { sel: "#tab-prioridades", key: "demo.tour.priorities" },
-  { sel: "#tab-mas", key: "demo.tour.more" },
-] as const;
+  { sel: '[data-tour="alerts"]', key: "demo.tour.alerts", tab: "details" },
+  { sel: '[data-tour="parcels"]', key: "demo.tour.parcels", tab: "details" },
+  { sel: "#tab-mas", key: "demo.tour.more", tab: "details" },
+];

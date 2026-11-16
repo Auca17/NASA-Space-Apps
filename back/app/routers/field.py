@@ -499,7 +499,8 @@ def _fmt_es(v, dec=1):
     """Locale-ish number: 1150 -> '1.150', 8.7 -> '8,7'."""
     if v is None:
         return "?"
-    s = f"{v:,.{dec}f}" if dec else f"{v:,}"
+    # dec=0 must still round: "921.4000000000001" -> "921"
+    s = f"{v:,.{dec}f}"
     return s.replace(",", "X").replace(".", ",").replace("X", ".")
 
 
@@ -526,9 +527,11 @@ def build_cards(power, soilg, slope, ndvi, grid_cell, fire_cal,
         cards.append(rain_card)
     elif rs:
         rain_card = _card("rain", rs[0], "mm/año",
-                          f"{rs[0]} mm/año; 1 de cada 4 años < {rs[2]} mm",
+                          f"{_fmt_es(rs[0], 0)} mm/año; 1 de cada 4 años "
+                          f"< {_fmt_es(rs[2], 0)} mm",
                           "NASA POWER", POWER_RES, "high",
-                          f"{rs[0]} mm/yr; 1 year in 4 below {rs[2]} mm")
+                          f"{rs[0]:,.0f} mm/yr; 1 year in 4 below "
+                          f"{rs[2]:,.0f} mm")
         rm = rain_monthly_mm(P("PRECTOTCORR") or {})
         if rm:
             rain_card["rain_monthly_mm"] = rm
@@ -891,8 +894,8 @@ def degraded_cards(grid_cell, terr, soilg, fire_cal, risk_cell, r5):
                 "no respondió" if imerg else DEGRADED_SRC)
     cards.append(
         _card("rain", rain, "mm/año",
-              f"{rain} mm/año"
-              + (f"; 1 de cada 4 años < {p25} mm" if p25 else ""),
+              f"{_fmt_es(rain, 0)} mm/año"
+              + (f"; 1 de cada 4 años < {_fmt_es(p25, 0)} mm" if p25 else ""),
               rain_src, POWER_RES, "medium")
         if rain is not None else _unavailable("rain"))
 

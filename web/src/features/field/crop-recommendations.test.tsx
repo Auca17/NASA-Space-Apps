@@ -9,7 +9,7 @@ const { CropRecommendations } = await import("./CropRecommendations");
 
 const props = {
   diagnosis: { zone: "pampa_humeda", cards: [] } as unknown as DiagnoseResponse,
-  crops: [], priorities: [], resources: {}, onPriority: vi.fn(), onResources: vi.fn(),
+  crops: [], resources: {}, onResources: vi.fn(),
 };
 const imagery = (id: string, share: number): CurrentCrop => ({
   status: "available", source: "Sentinel-2", resolution_m: 20, season: "2026-2027",
@@ -42,7 +42,7 @@ it("shows no crop when the image supports it and limits the main recommendations
   ] });
   render(<I18nProvider><CropRecommendations {...props} observation={imagery("fallow", .9)} /></I18nProvider>);
   expect(screen.getByText(/sin cultivo visible/i)).toBeInTheDocument();
-  expect(await screen.findByRole("heading", { name: "Recomendaciones principales" })).toBeInTheDocument();
+  expect(await screen.findByRole("heading", { name: "Qué sembrar en la próxima campaña" })).toBeInTheDocument();
   expect(within(screen.getAllByRole("list")[0]).getAllByRole("listitem")).toHaveLength(3);
   expect(screen.getByText(/434 mm por debajo/i)).toBeInTheDocument();
   const more = screen.getByText("Ver más cultivos (1)");
@@ -61,7 +61,7 @@ it("renders options returned by an API without the conditions array", async () =
       rain_mm: 650, needs_irrigation: false, fits_frost: true },
   ] });
   render(<I18nProvider><CropRecommendations {...props} observation={null} /></I18nProvider>);
-  expect(await screen.findByRole("heading", { name: "Recomendaciones principales" })).toBeInTheDocument();
+  expect(await screen.findByRole("heading", { name: "Qué sembrar en la próxima campaña" })).toBeInTheDocument();
   expect(screen.getAllByRole("heading", { level: 4 }).map((heading) => heading.textContent)).toEqual(["Soja", "Maíz"]);
   expect(screen.getByText(/434 mm por debajo/i)).toBeInTheDocument();
   expect(screen.getByText(/expuesta a heladas/i)).toBeInTheDocument();

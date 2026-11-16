@@ -165,8 +165,10 @@ describe("Mendoza fixture", () => {
 describe("GuidedTour", () => {
   beforeEach(() => localStorage.removeItem(TOUR_KEY));
 
-  it("defines five anchored steps", () => {
-    expect(TOUR_STEPS).toHaveLength(5);
+  it("defines six anchored steps, rotations first", () => {
+    expect(TOUR_STEPS).toHaveLength(6);
+    expect(TOUR_STEPS[0].key).toBe("demo.tour.rotations");
+    expect(TOUR_STEPS[0].tab).toBe("recommendations");
     for (const s of TOUR_STEPS) {
       expect(s.sel).toBeTruthy();
       expect(t(`${s.key}.title`)).not.toBe(`${s.key}.title`);
@@ -178,17 +180,17 @@ describe("GuidedTour", () => {
     const onClose = vi.fn();
     wrap(<GuidedTour onClose={onClose} />);
     const dlg = screen.getByRole("dialog");
-    expect(dlg).toHaveTextContent(t("demo.tour.parcels.title"));
+    expect(dlg).toHaveTextContent(t("demo.tour.rotations.title"));
     expect(screen.getByRole("button", { name: t("demo.tour.back") }))
       .toBeDisabled();
     fireEvent.click(screen.getByRole("button",
       { name: t("demo.tour.next") }));
-    expect(dlg).toHaveTextContent(t("demo.tour.badges.title"));
+    expect(dlg).toHaveTextContent(t("demo.tour.land.title"));
     fireEvent.click(screen.getByRole("button",
       { name: t("demo.tour.back") }));
-    expect(dlg).toHaveTextContent(t("demo.tour.parcels.title"));
+    expect(dlg).toHaveTextContent(t("demo.tour.rotations.title"));
     // last step: the primary button finishes the tour
-    for (let k = 0; k < 4; k++) {
+    for (let k = 0; k < 5; k++) {
       fireEvent.click(screen.getByRole("button",
         { name: t("demo.tour.next") }));
     }

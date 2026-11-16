@@ -1,6 +1,6 @@
-/** Guided demo tour (task 40): five small hints anchored to real
- * elements — the parcels, the fire/water badges, an alert, the
- * priorities tab and "Más información". It never blocks the map: only
+/** Guided demo tour (task 40): six small hints anchored to real
+ * elements — the rotations, the state of the land, the fire/water
+ * badges, an alert, the parcels and "Más información". It never blocks the map: only
  * the hint card itself takes pointer events. Escape or "Cerrar"
  * dismiss it for good (localStorage). */
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -49,11 +49,20 @@ export function GuidedTour({ onClose }: { onClose: () => void }) {
   }, [step]);
 
   useEffect(() => {
+    if (step?.tab) {
+      window.dispatchEvent(new CustomEvent("ashfield:field-tab",
+                                           { detail: step.tab }));
+    }
     place();
+    // measure again once the switched tab has rendered
+    const raf = requestAnimationFrame(() => place());
     const onResize = () => place();
     window.addEventListener("resize", onResize);
-    return () => window.removeEventListener("resize", onResize);
-  }, [place]);
+    return () => {
+      cancelAnimationFrame(raf);
+      window.removeEventListener("resize", onResize);
+    };
+  }, [place, step]);
 
   // Escape closes; focus the hint so screen readers announce the step.
   useEffect(() => {

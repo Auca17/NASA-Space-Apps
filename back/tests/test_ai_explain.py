@@ -213,6 +213,10 @@ async def test_prompt_privacy(monkeypatch):
 
 @pytest.mark.asyncio
 async def test_endpoint_mode_template_and_ai(monkeypatch):
+    # a developer .env may carry a real key: the template branch needs none
+    monkeypatch.delenv("GEMINI_API_KEY", raising=False)
+    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+    ai._cache.clear()
     from back.app.main import app
     from httpx import ASGITransport, AsyncClient
     async with AsyncClient(transport=ASGITransport(app),
@@ -225,3 +229,40 @@ async def test_endpoint_mode_template_and_ai(monkeypatch):
         body = r.json()
         assert body["mode"] == "ai"
         assert len(body["strategies"]) == 2
+
+
+def test_validate_accepts_text_indicators_and_measure_ids():
+    """Real Gemini answer (2026-11-15) was rejected for citing income /
+    infiltration (string-valued indicators) and a measure factor."""
+    from app.services.ai_explain import _validate
+    rots = {"strategies": [{
+        "id": "soja-centeno", "is_current": False,
+        "indicators": {"income": "medium", "infiltration": "alta",
+                       "bare_soil_days": 35},
+        "benefits": {"bare_soil_days": -164},
+        "measures": [{"id": "no_residue_burning",
+                      "factor": "residue_burning"}]}]}
+    answer = {"strategies": [{
+        "id": "soja-centeno",
+        "text": "Deja el suelo desnudo solo 35 días y mejora la infiltración.",
+        "cites": ["infiltration", "income", "residue_burning",
+                  "no_residue_burning", "bare_soil_days"]}]}
+    assert _validate(answer, rots) is not None
+    bad = {"strategies": [{**answer["strategies"][0],
+                           "cites": ["made_up_indicator"]}]}
+    assert _validate(bad, rots) is None
+
+
+def test_spanish_numbers_do_not_crash_validation():
+    """Gemini writes "3,3" and "1.122,8": parse them, never raise."""
+    from app.services.ai_explain import _numbers_ok
+    allowed = {3.3, 1122.8, 35.0}
+    assert _numbers_ok("Aporta 3,3 t/ha y llueven 1.122,8 mm; 35 días.", allowed)
+    assert not _numbers_ok("Aporta 4,7 t/ha.", allowed)
+    assert _numbers_ok("Unos 1.123 mm por año.", {1123.0})
+
+
+def test_magnitude_of_a_negative_delta_is_allowed():
+    from app.services.ai_explain import _allowed_numbers, _numbers_ok
+    allowed = _allowed_numbers({"benefits": {"bare_soil_days": -102}})
+    assert _numbers_ok("Reduce 102 días sin cultivo.", allowed)
