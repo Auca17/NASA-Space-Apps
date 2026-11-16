@@ -4,8 +4,24 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
+import importlib
+import logging
+import traceback
+
 from .config import MissingEnv, front_origin
-from .routers import alerts, field, geocode, live, parcels, risk
+
+log = logging.getLogger("app")
+# Each router loads on its own: one that fails to import (a native
+# library missing in the serverless runtime) no longer takes down the
+# whole API; /api/health reports which one and why.
+ROUTER_ERRORS: dict[str, str] = {}
+ROUTERS = []
+for _name in ("live", "risk", "field", "parcels", "geocode", "alerts"):
+    try:
+        ROUTERS.append(importlib.import_module(f".routers.{_name}", __package__))
+    except Exception:  # noqa: BLE001 - reported by /api/health
+        ROUTER_ERRORS[_name] = traceback.format_exc(limit=6)
+        log.exception("router %s failed to import", _name)
 
 app = FastAPI(title="NASA Space Apps backend")
 
@@ -25,14 +41,12 @@ async def missing_env_handler(_: Request, exc: MissingEnv):
                  "detail": f"environment variable {exc.variable} is not set"})
 
 
-app.include_router(live.router)
-app.include_router(risk.router)
-app.include_router(field.router)
-app.include_router(parcels.router)
-app.include_router(geocode.router)
-app.include_router(alerts.router)
+for _module in ROUTERS:
+    app.include_router(_module.router)
 
 
 @app.get("/api/health")
 async def health():
+    if ROUTER_ERRORS:
+        return {"ok": False, "router_errors": ROUTER_ERRORS}
     return {"ok": True}

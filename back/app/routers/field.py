@@ -23,9 +23,6 @@ from ..services.field_geometry import (
     area_ha as merged_area_ha, block_samples, cell_weights,
     sample_locations, split_blocks,
     weather_locations)
-from ..services.field_moisture import moisture_zones
-from ..services.crop_map import crop_zones, detect_crop
-from ..services import current_crop as now_crop
 from ..services.risk_validity import risk_dates
 from ..services.data import risk_shard
 from ..services.infiltration import (infiltration_class,
@@ -33,10 +30,41 @@ from ..services.infiltration import (infiltration_class,
 from ..services.et0 import METHOD_LABEL, et0_series
 from ..services.accuracy import accuracy_block
 from ..services.timeline import build_timeline
-from ..services.bare_soil_s2 import (bare_soil_estimate,
-                                    reason_text as s2_reason_text)
 
 log = logging.getLogger("field")
+
+
+# Satellite modules (rasterio, numpy, Pillow) load on first use, not at
+# startup: if a native library fails in the serverless runtime only these
+# features fail, instead of the whole API (FUNCTION_INVOCATION_FAILED).
+async def moisture_zones(geom):
+    from ..services.field_moisture import moisture_zones as run
+    return await run(geom)
+
+
+async def detect_crop(geom):
+    from ..services.crop_map import detect_crop as run
+    return await run(geom)
+
+
+async def crop_zones(geom):
+    from ..services.crop_map import crop_zones as run
+    return await run(geom)
+
+
+async def current_crop_now(geom):
+    from ..services.current_crop import current_crop as run
+    return await run(geom)
+
+
+async def bare_soil_estimate(*args, **kwargs):
+    from ..services.bare_soil_s2 import bare_soil_estimate as run
+    return await run(*args, **kwargs)
+
+
+def s2_reason_text(*args, **kwargs):
+    from ..services.bare_soil_s2 import reason_text as run
+    return run(*args, **kwargs)
 
 router = APIRouter()
 
@@ -1607,7 +1635,7 @@ async def field_current_crop(request: Request):
     geom = parsed[-1]
     if geom is None:
         return {"status": "no_detail", "zones": []}
-    return await now_crop.current_crop(geom)
+    return await current_crop_now(geom)
 
 
 @router.post("/api/field/crop-zones")
