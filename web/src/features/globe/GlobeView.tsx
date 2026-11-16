@@ -53,6 +53,9 @@ export interface GlobeHandle {
   zoomBy(delta: number, bottomPx?: number): void;
   /** Screen pixel (relative to the map) -> [lat, lon]. */
   unproject(x: number, y: number): [number, number];
+  /** [lat, lon] -> screen pixel relative to the map (the map's own
+   * projection, so overlays line up at any zoom). */
+  project?(lat: number, lon: number): [number, number];
   /** Pan off while a vertex is dragged on the open field outline;
    * always call with `true` again when the gesture ends. */
   setPanEnabled(on: boolean): void;
@@ -477,6 +480,10 @@ export function useGlobe(
       unproject(x, y) {
         const p = map.unproject([x, y]);
         return [p.lat, p.lng];
+      },
+      project(lat, lon) {
+        const p = map.project([lon, lat]);
+        return [p.x, p.y];
       },
       setPanEnabled(on) {
         if (on) map.dragPan.enable(); else map.dragPan.disable();

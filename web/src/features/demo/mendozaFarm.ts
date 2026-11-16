@@ -1,9 +1,8 @@
 /** Guided demo farm (task 40): a fictional producer on a real rural
- * location in Valle de Uco, Mendoza — between La Consulta and San
- * Carlos, where satellite imagery shows dense vineyards and orchards
- * along the acequias. ~145 ha with five parcels: a vineyard, an olive
- * grove, garlic, stone fruit and a strip of native monte along the
- * north edge.
+ * location south of Tupungato, Valle de Uco, Mendoza. ~1,150 ha with
+ * nine parcels and seven crops: maize, garlic, alfalfa, vine, stone
+ * fruit, olives and native monte — annual crops the rotation engine
+ * analyses next to the valley's perennials.
  *
  * The producer, names and economics are invented. The cached fallback
  * in mendozaCached.json is a verbatim real POST /api/field/parcels
@@ -21,43 +20,31 @@ export const isDemoHash = (hash: string) => hash === "#demo";
 
 const r = (...pts: LatLon[]): LatLon[] => pts;
 
-/** Field outline: a mostly-rectangular plot with a small jag on the
- * east edge, as these properties actually draw. [lat, lon] ring. */
+/** Field outline: ~1,150 ha square (3.4 km a side) south of Tupungato,
+ * Valle de Uco. Chosen with the Sentinel-2 current-crop detection over
+ * large candidate plots in Mendoza's oases (2026-11-16): it mixes early
+ * maize, winter-spring green and low-cover ground (vineyards, orchards
+ * and olives read as bare in November). [lat, lon] ring. */
 export const MENDOZA_BOUNDARY: Multi = [[r(
-  [-33.7408, -69.1300],
-  [-33.7408, -69.1158],
-  [-33.7424, -69.1150],
-  [-33.7508, -69.1158],
-  [-33.7512, -69.1294],
+  [-33.36973, -69.12829],
+  [-33.36973, -69.09171],
+  [-33.40027, -69.09171],
+  [-33.40027, -69.12829],
 )]];
 
+/** Nine parcels of ~128 ha (3 x 3 grid), seven crops. The crop of each
+ * one is consistent with what Sentinel-2 sees there: maize where early
+ * maize dominates, garlic and alfalfa where the image shows winter-
+ * spring green or pasture, vine, stone fruit and olives where cover is
+ * low, and a block of native monte. */
 export const MENDOZA_PARCELS: ParcelInput[] = [
   {
-    id: "vid",
-    name: "La Vid",
-    crop: "vid",
+    id: "alfalfa",
+    name: "La Alfalfa",
+    crop: "alfalfa",
     geom: [r(
-      [-33.7418, -69.1295], [-33.7418, -69.1236],
-      [-33.7509, -69.1236], [-33.7507, -69.1290],
-      [-33.7450, -69.1292],
-    )],
-  },
-  {
-    id: "olivo",
-    name: "Los Olivos",
-    crop: "olivo",
-    geom: [r(
-      [-33.7418, -69.1236], [-33.7418, -69.1160],
-      [-33.7456, -69.1160], [-33.7456, -69.1236],
-    )],
-  },
-  {
-    id: "frutal",
-    name: "Los Duraznos",
-    crop: "frutal_carozo",
-    geom: [r(
-      [-33.7456, -69.1236], [-33.7456, -69.1160],
-      [-33.7482, -69.1160], [-33.7482, -69.1236],
+      [-33.36983, -69.12819], [-33.36983, -69.11620],
+      [-33.37981, -69.11620], [-33.37981, -69.12819],
     )],
   },
   {
@@ -65,17 +52,71 @@ export const MENDOZA_PARCELS: ParcelInput[] = [
     name: "El Ajal",
     crop: "ajo",
     geom: [r(
-      [-33.7482, -69.1236], [-33.7482, -69.1160],
-      [-33.7507, -69.1160], [-33.7507, -69.1236],
+      [-33.36983, -69.11600], [-33.36983, -69.10400],
+      [-33.37981, -69.10400], [-33.37981, -69.11600],
+    )],
+  },
+  {
+    id: "vid",
+    name: "La Vid",
+    crop: "vid",
+    geom: [r(
+      [-33.36983, -69.10380], [-33.36983, -69.09181],
+      [-33.37981, -69.09181], [-33.37981, -69.10380],
+    )],
+  },
+  {
+    id: "maiz",
+    name: "El Maizal",
+    crop: "maiz",
+    geom: [r(
+      [-33.38001, -69.12819], [-33.38001, -69.11620],
+      [-33.38999, -69.11620], [-33.38999, -69.12819],
     )],
   },
   {
     id: "monte",
-    name: "Banda de monte",
+    name: "El Monte",
     crop: "monte_nativo",
     geom: [r(
-      [-33.7410, -69.1295], [-33.7410, -69.1160],
-      [-33.7418, -69.1160], [-33.7418, -69.1295],
+      [-33.38001, -69.11600], [-33.38001, -69.10400],
+      [-33.38999, -69.10400], [-33.38999, -69.11600],
+    )],
+  },
+  {
+    id: "frutal",
+    name: "Los Duraznos",
+    crop: "frutal_carozo",
+    geom: [r(
+      [-33.38001, -69.10380], [-33.38001, -69.09181],
+      [-33.38999, -69.09181], [-33.38999, -69.10380],
+    )],
+  },
+  {
+    id: "maiz_sur",
+    name: "Maizal del Sur",
+    crop: "maiz",
+    geom: [r(
+      [-33.39019, -69.12819], [-33.39019, -69.11620],
+      [-33.40017, -69.11620], [-33.40017, -69.12819],
+    )],
+  },
+  {
+    id: "olivo",
+    name: "Los Olivos",
+    crop: "olivo",
+    geom: [r(
+      [-33.39019, -69.11600], [-33.39019, -69.10400],
+      [-33.40017, -69.10400], [-33.40017, -69.11600],
+    )],
+  },
+  {
+    id: "ajo_sur",
+    name: "Ajal del Sur",
+    crop: "ajo",
+    geom: [r(
+      [-33.39019, -69.10380], [-33.39019, -69.09181],
+      [-33.40017, -69.09181], [-33.40017, -69.10380],
     )],
   },
 ];
@@ -96,7 +137,8 @@ export const MENDOZA_PROFILE: Profile = {
   hidden: ["flood"],
 };
 
-/** Illustrative economics per parcel (USD). Monte has none. */
+/** Illustrative economics per parcel (USD). Alfalfa (forage) and the
+ * native monte have none. */
 export const MENDOZA_ECON: Economics = {
   currency: "USD",
   parcels: {
@@ -105,6 +147,9 @@ export const MENDOZA_ECON: Economics = {
     frutal: { cost_per_ha: 2600, price_per_t: 450,
               expected_yield_t_ha: 22 },
     ajo: { cost_per_ha: 1800, price_per_t: 900, expected_yield_t_ha: 8 },
+    maiz: { cost_per_ha: 780, price_per_t: 188, expected_yield_t_ha: 10 },
+    maiz_sur: { cost_per_ha: 780, price_per_t: 188, expected_yield_t_ha: 10 },
+    ajo_sur: { cost_per_ha: 1800, price_per_t: 900, expected_yield_t_ha: 8 },
   },
 };
 

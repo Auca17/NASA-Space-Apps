@@ -63,7 +63,11 @@ export function ParcelsMapLayer({ globe, parcels, res, base = [] }: {
 
 
   const [w, h] = size;
-  const proj = w && h ? mercatorProject(cam, w, h) : null;
+  // the map's own projection (exact); the mercator helper is only a
+  // fallback for handles without it (tests)
+  const proj = !w || !h ? null
+    : globe.project ? ([la, lo]: [number, number]) => globe.project!(la, lo)
+    : mercatorProject(cam, w, h);
   const inside = (x: number, y: number) => x >= 0 && y >= 0 && x <= w && y <= h;
 
   return (

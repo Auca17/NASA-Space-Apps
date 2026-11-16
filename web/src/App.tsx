@@ -36,8 +36,6 @@ import {
   isDemoHash, MENDOZA_BOUNDARY, MENDOZA_CACHED, MENDOZA_ECON,
   MENDOZA_NEEDS, MENDOZA_PARCELS, MENDOZA_PROFILE,
 } from "./features/demo/mendozaFarm";
-import { GuidedTour } from "./features/demo/GuidedTour";
-import { tourSeen } from "./features/demo/demoTour";
 import {
   loadFields, saveField, renameField, deleteField, addZone, updateZone,
   addZones, setFieldCrop, markCropSplit,
@@ -182,8 +180,6 @@ export default function App() {
   /** Last parcels analysis: zones + per-parcel badges on the map. */
   const [parcelRes, setParcelRes] = useState<{
     res: ParcelsResponse; parcels: ParcelInput[] } | null>(null);
-  /** Guided demo tour: opens once the demo result is on the screen. */
-  const [demoTour, setDemoTour] = useState(false);
   /** #demo can fire before the map exists: the farm frame is queued
    * here and applied once the globe reports ready. */
   const demoFitPending = useRef(false);
@@ -1221,8 +1217,6 @@ export default function App() {
             <ParcelsMapLayer globe={globe} parcels={parcelRes.parcels}
                              res={parcelRes.res} base={parcelBase} />
           </Suspense>)}
-        {demoTour && parcelRes && (
-          <GuidedTour onClose={() => setDemoTour(false)} />)}
         {mode === "field" && !fieldOpen && !selection &&
           (draw !== "none" || !fieldsView) && (
           <FieldPicker draw={mapUnavailable ? "none" : draw} points={draft.length}
@@ -1259,7 +1253,6 @@ export default function App() {
                       onClose={changePlot} onChangePlot={changePlot}
                       onResult={(res, parcels) => {
                         setParcelRes({ res, parcels });
-                        if (target?.demo && !tourSeen()) setDemoTour(true);
                       }}
                       onEmergency={() => setEmergOpen(true)}
                       moistureSelection={selectedMoisture} onMoistureZones={showMoisture}

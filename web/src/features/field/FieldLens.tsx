@@ -8,7 +8,6 @@ import { useT } from "../../i18n";
 import { Card, Tooltip } from "../../components/ui";
 import { GlossDefs } from "../../components/Glossary";
 import { DiagTile } from "./DiagTile";
-import { Calendar, calendarCrops, type CatalogCrop } from "./Calendar";
 import { Timeline, TimelinePeek } from "./Timeline";
 import { SatelliteAccuracy } from "./SatelliteAccuracy";
 import {
@@ -821,15 +820,6 @@ export function FieldPanel({ target, open, onClose, onChangePlot, onMethods, onR
     return null;
   })();
 
-  // the guided tour moves between the two tabs
-  useEffect(() => {
-    const go = (e: Event) => {
-      const next = (e as CustomEvent<string>).detail;
-      if (next === "recommendations" || next === "details") setTab(next);
-    };
-    window.addEventListener("ashfield:field-tab", go);
-    return () => window.removeEventListener("ashfield:field-tab", go);
-  }, []);
 
   const runRotations = async () => {
     const local = section ? (
@@ -987,6 +977,44 @@ export function FieldPanel({ target, open, onClose, onChangePlot, onMethods, onR
           <p className="muted land-note">{t("land.nutrients")}</p>
         </section>)}
 
+      {pReading && (
+        <p role="status">{t("parcels.analyzing")}</p>)}
+
+      {pres && !pres.ok && (
+        <div className="card">
+          <p role="status">{t(pres.errorKey)}</p>
+          <button type="button" onClick={() => setPRetry((n) => n + 1)}>
+            {t("field.diagnosis.retry")}
+          </button>
+        </div>)}
+
+      {pres?.ok && pres.fixture && !cachedDate && (
+        <p className="notice" role="status">{t("parcels.fixture")}</p>)}
+      {pres?.ok && cachedDate && (
+        <p className="notice" role="status">
+          {t("demo.saved", { date: cachedDate })}</p>)}
+
+      {/* a nearby-services failure alone is a quiet note inside the
+          nearby section, not a big "incomplete" card */}
+      {pres?.ok && pres.res.degraded && !pres.res.nearby.degraded && (
+        <div className="card diag-degraded" role="alert">
+          <p><strong>{t("field.degraded.title")}</strong>{" "}
+            {pres.res.degraded_reason ?? t("field.degraded.unknown")}</p>
+          <button type="button" onClick={() => setPRetry((n) => n + 1)}>
+            {t("field.diagnosis.retry")}
+          </button>
+        </div>)}
+
+      {pres?.ok && (
+        <>
+          {/* alerts stay above the tabs */}
+          <div data-tour="alerts">
+            <ParcelAlerts res={pres.res} parcels={shownParcels} t={t}
+                          onEmergency={onEmergency} />
+          </div>
+        </>
+      )}
+
       {/* the only interactive part of the data view */}
       {diag && (<>
           <Card title={t("scen.title")} className="scen">
@@ -1043,79 +1071,6 @@ export function FieldPanel({ target, open, onClose, onChangePlot, onMethods, onR
           </Card>
       </>)}
 
-      {pReading && (
-        <p role="status">{t("parcels.analyzing")}</p>)}
-
-      {pres && !pres.ok && (
-        <div className="card">
-          <p role="status">{t(pres.errorKey)}</p>
-          <button type="button" onClick={() => setPRetry((n) => n + 1)}>
-            {t("field.diagnosis.retry")}
-          </button>
-        </div>)}
-
-      {pres?.ok && pres.fixture && !cachedDate && (
-        <p className="notice" role="status">{t("parcels.fixture")}</p>)}
-      {pres?.ok && cachedDate && (
-        <p className="notice" role="status">
-          {t("demo.saved", { date: cachedDate })}</p>)}
-
-      {/* a nearby-services failure alone is a quiet note inside the
-          nearby section, not a big "incomplete" card */}
-      {pres?.ok && pres.res.degraded && !pres.res.nearby.degraded && (
-        <div className="card diag-degraded" role="alert">
-          <p><strong>{t("field.degraded.title")}</strong>{" "}
-            {pres.res.degraded_reason ?? t("field.degraded.unknown")}</p>
-          <button type="button" onClick={() => setPRetry((n) => n + 1)}>
-            {t("field.diagnosis.retry")}
-          </button>
-        </div>)}
-
-      {pres?.ok && (
-        <>
-          {/* alerts stay above the tabs */}
-          <div data-tour="alerts">
-            <ParcelAlerts res={pres.res} parcels={shownParcels} t={t}
-                          onEmergency={onEmergency} />
-          </div>
-          <Tabs active={parcelTab} onSelect={(id) =>
-                  setParcelTab(id as typeof parcelTab)}
-                tabs={[
-                  { id: "resumen", label: t("parcels.tab.summary") },
-                  { id: "mas", label: t("parcels.tab.more") },
-                ]} />
-          <div role="tabpanel" id={`panel-${parcelTab}`}
-               aria-labelledby={`tab-${parcelTab}`}>
-          {parcelTab === "resumen" && (
-            <ParcelsResult res={pres.res} parcels={shownParcels}
-                           profile={profile} t={t} fmt={fmt}
-                           onRetry={() => setPRetry((n) => n + 1)} />)}
-          {parcelTab === "mas" && (
-            <>
-            <HiddenHazards res={pres.res} parcels={shownParcels}
-                           profile={profile} t={t} fmt={fmt} />
-            {pres.res.parcels.some((p) => p.timeline) && (
-              <section className="card tl-block"
-                       aria-label={t("field.timeline.title")}>
-                <h4 style={{ marginTop: 0 }}>{t("field.timeline.title")}</h4>
-                {pres.res.parcels.filter((p) => p.timeline).map((p) => (
-                  <Timeline key={`tl-${p.id}`} timeline={p.timeline!}
-                    label={pres.res.parcels.filter((x) => x.timeline)
-                           .length > 1
-                           ? parcelName(shownParcels, p.id) : undefined} />))}
-              </section>)}
-            <SourcesBlock res={pres.res} t={t} />
-            </>
-          )}
-          </div>
-        </>
-      )}
-
-      {pres?.ok && (
-        <AlertSignup parcels={pres.res.parcels.map((p) => ({
-            name: parcelName(shownParcels, p.id),
-            indicators: p.indicators, alerts: p.alerts }))}
-          fieldName={target?.fieldName ?? lot?.name} />)}
 
       {diag && (
         <>
@@ -1180,6 +1135,48 @@ export function FieldPanel({ target, open, onClose, onChangePlot, onMethods, onR
           {view?.measures && view.measures.length > 0 && (
             <MeasuresCard measures={view.measures} cases={cases} t={t} />)}
 
+        </>)}
+      {/* parcel by parcel, after the state of the land and the data */}
+      {pres?.ok && (
+        <>
+          <Tabs active={parcelTab} onSelect={(id) =>
+                  setParcelTab(id as typeof parcelTab)}
+                tabs={[
+                  { id: "resumen", label: t("parcels.tab.summary") },
+                  { id: "mas", label: t("parcels.tab.more") },
+                ]} />
+          <div role="tabpanel" id={`panel-${parcelTab}`}
+               aria-labelledby={`tab-${parcelTab}`}>
+          {parcelTab === "resumen" && (
+            <ParcelsResult res={pres.res} parcels={shownParcels}
+                           profile={profile} t={t} fmt={fmt}
+                           onRetry={() => setPRetry((n) => n + 1)} />)}
+          {parcelTab === "mas" && (
+            <>
+            <HiddenHazards res={pres.res} parcels={shownParcels}
+                           profile={profile} t={t} fmt={fmt} />
+            {pres.res.parcels.some((p) => p.timeline) && (
+              <section className="card tl-block"
+                       aria-label={t("field.timeline.title")}>
+                <h4 style={{ marginTop: 0 }}>{t("field.timeline.title")}</h4>
+                {pres.res.parcels.filter((p) => p.timeline).map((p) => (
+                  <Timeline key={`tl-${p.id}`} timeline={p.timeline!}
+                    label={pres.res.parcels.filter((x) => x.timeline)
+                           .length > 1
+                           ? parcelName(shownParcels, p.id) : undefined} />))}
+              </section>)}
+            <SourcesBlock res={pres.res} t={t} />
+            </>
+          )}
+          </div>
+        </>
+      )}
+      {pres?.ok && (
+        <AlertSignup parcels={pres.res.parcels.map((p) => ({
+            name: parcelName(shownParcels, p.id),
+            indicators: p.indicators, alerts: p.alerts }))}
+          fieldName={target?.fieldName ?? lot?.name} />)}
+      {diag && (<>
           <details className="sec more">
             <summary>{t("field.details")}</summary>
             {groupedCards(view?.cards ?? []).filter((g) =>
@@ -1208,20 +1205,6 @@ export function FieldPanel({ target, open, onClose, onChangePlot, onMethods, onR
             </details>
           </details>
 
-          <details className="sec more">
-            <summary>{t("field.calendarMore")}</summary>
-            <Calendar
-              months={(view ?? diag).calendar.months}
-              rows={(base ?? diag).calendar.rows}
-              crops={calendarCrops({
-                sequence: rots?.strategies.find((s) => s.is_current)
-                  ?.sequence,
-                parcelCrops: effParcels.map((p) => p.crop),
-                catalog: catalog?.crops as CatalogCrop[] | undefined,
-                zone: diag.zone,
-                lang,
-              })} />
-          </details>
         </>
       )}
       </div>
@@ -1313,32 +1296,55 @@ export function ParcelAlerts({ res, parcels, t, onEmergency }: {
   const highFire = parcelsWithHighFire(res);
   const dry = parcelsWithDry(res).filter((p) => !hasHighFireAlert(p));
   const name = (id: string) => parcelName(parcels, id);
+  // one message per alert, naming every parcel it applies to (the same
+  // risk repeated parcel by parcel read as noise)
+  const group = (list: typeof highFire, keep: (a: { kind: string;
+      severity: string }) => boolean) => {
+    const by = new Map<string, string[]>();
+    for (const p of list) {
+      for (const a of p.alerts.filter(keep)) {
+        const ids = by.get(a.text) ?? [];
+        if (!ids.includes(p.id)) ids.push(p.id);
+        by.set(a.text, ids);
+      }
+    }
+    return [...by.entries()].map(([text, ids]) => {
+      const all = ids.length > 1 && ids.length === res.parcels.length;
+      const names = ids.map(name);
+      const who = all ? t("parcels.alert.all")
+        : names.length > 1
+          ? `${names.slice(0, -1).join(", ")} ${t("ui.and")} ${names.at(-1)}`
+          : names[0];
+      const plural = ids.length > 1;
+      return { key: ids.join("|") + text, who,
+               text: plural ? text.replace(/en esta parcela/g, "en estas parcelas")
+                 .replace(/in this parcel/g, "in these parcels") : text };
+    });
+  };
+  const fires = group(highFire, (a) => a.kind === "fire" && a.severity === "high");
+  const drys = group(dry, (a) => a.kind === "dry");
   return (
     <>
-      {highFire.map((p) =>
-        p.alerts.filter((a) => a.kind === "fire" && a.severity === "high")
-          .map((a, i) => (
-            <div key={`${p.id}-${i}`} className="parcel-alert fire"
-                 role="alert">
-              <Icon kind="flame" size={18} />
-              <div>
-                <p><strong>{name(p.id)}:</strong> {a.text}</p>
-                {onEmergency
-                  ? <button type="button" className="chip"
-                            onClick={onEmergency}>
-                      {t("parcels.alert.emergency")}</button>
-                  : <a href="#parcels-emergency">
-                      {t("parcels.alert.emergency")}</a>}
-              </div>
-            </div>)))}
-      {dry.map((p) =>
-        p.alerts.filter((a) => a.kind === "dry").map((a, i) => (
-          <div key={`${p.id}-${i}`} className="parcel-alert dry" role="status">
-            <Icon kind="drop" size={16} />
-            <div>
-              <p><strong>{name(p.id)}:</strong> {a.text}</p>
-            </div>
-          </div>)))}
+      {fires.map((g) => (
+        <div key={g.key} className="parcel-alert fire" role="alert">
+          <Icon kind="flame" size={18} />
+          <div>
+            <p><strong>{g.who}:</strong> {g.text}</p>
+            {onEmergency
+              ? <button type="button" className="chip"
+                        onClick={onEmergency}>
+                  {t("parcels.alert.emergency")}</button>
+              : <a href="#parcels-emergency">
+                  {t("parcels.alert.emergency")}</a>}
+          </div>
+        </div>))}
+      {drys.map((g) => (
+        <div key={g.key} className="parcel-alert dry" role="status">
+          <Icon kind="drop" size={16} />
+          <div>
+            <p><strong>{g.who}:</strong> {g.text}</p>
+          </div>
+        </div>))}
     </>);
 }
 

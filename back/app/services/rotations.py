@@ -598,6 +598,7 @@ _CARD_TITLES = {
     "soil_moisture": "Humedad del suelo",
     "frost": "Período sin heladas",
     "heat": "Días de calor extremo",
+    "temp_mean": "Temperatura media",
     "gdd_year": "Grados-día anuales",
     "crop_water": "Agua que pide el cultivo",
     "vigor_bare_soil": "Cobertura del suelo",

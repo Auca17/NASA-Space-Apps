@@ -4,11 +4,10 @@
  * (steps, navigation, dismissal, persistence) and the cached-fallback
  * path in the result panel. */
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { I18nProvider } from "../../i18n";
-import es from "../../i18n/es.json";
 import {
   pointInRing, ringAreaHa, type LatLon,
 } from "../../domain/selection";
@@ -21,12 +20,9 @@ import {
   isDemoHash, MENDOZA_BOUNDARY, MENDOZA_CACHED, MENDOZA_ECON,
   MENDOZA_NEEDS, MENDOZA_PARCELS, MENDOZA_PROFILE,
 } from "./mendozaFarm";
-import { GuidedTour } from "./GuidedTour";
-import { TOUR_KEY, TOUR_STEPS, tourSeen } from "./demoTour";
 
 const wrap = (el: React.ReactElement) =>
   render(<I18nProvider>{el}</I18nProvider>);
-const t = (k: string) => (es as Record<string, string>)[k] ?? k;
 
 /* ------------------------------------------------------- hash ------ */
 
@@ -157,62 +153,6 @@ describe("Mendoza fixture", () => {
     // the export exposes the capture verbatim
     expect(MENDOZA_CACHED.res).toEqual(cachedFile.response);
     expect(MENDOZA_CACHED.date).toBe(cachedFile.captured_at);
-  });
-});
-
-/* ------------------------------------------------------- tour ------ */
-
-describe("GuidedTour", () => {
-  beforeEach(() => localStorage.removeItem(TOUR_KEY));
-
-  it("defines six anchored steps, rotations first", () => {
-    expect(TOUR_STEPS).toHaveLength(6);
-    expect(TOUR_STEPS[0].key).toBe("demo.tour.rotations");
-    expect(TOUR_STEPS[0].tab).toBe("recommendations");
-    for (const s of TOUR_STEPS) {
-      expect(s.sel).toBeTruthy();
-      expect(t(`${s.key}.title`)).not.toBe(`${s.key}.title`);
-      expect(t(`${s.key}.body`)).not.toBe(`${s.key}.body`);
-    }
-  });
-
-  it("walks forward and back, then marks itself seen", () => {
-    const onClose = vi.fn();
-    wrap(<GuidedTour onClose={onClose} />);
-    const dlg = screen.getByRole("dialog");
-    expect(dlg).toHaveTextContent(t("demo.tour.rotations.title"));
-    expect(screen.getByRole("button", { name: t("demo.tour.back") }))
-      .toBeDisabled();
-    fireEvent.click(screen.getByRole("button",
-      { name: t("demo.tour.next") }));
-    expect(dlg).toHaveTextContent(t("demo.tour.land.title"));
-    fireEvent.click(screen.getByRole("button",
-      { name: t("demo.tour.back") }));
-    expect(dlg).toHaveTextContent(t("demo.tour.rotations.title"));
-    // last step: the primary button finishes the tour
-    for (let k = 0; k < 5; k++) {
-      fireEvent.click(screen.getByRole("button",
-        { name: t("demo.tour.next") }));
-    }
-    fireEvent.click(screen.getByRole("button",
-      { name: t("demo.tour.done") }));
-    expect(onClose).toHaveBeenCalled();
-    expect(localStorage.getItem(TOUR_KEY)).toBe("1");
-  });
-
-  it("closes on Escape and on the close button, once and for good",
-      () => {
-    const onClose = vi.fn();
-    const { unmount } = wrap(<GuidedTour onClose={onClose} />);
-    fireEvent.keyDown(window, { key: "Escape" });
-    expect(onClose).toHaveBeenCalledTimes(1);
-    expect(tourSeen()).toBe(true);
-    unmount();
-    // a second mount still dismisses via the button
-    wrap(<GuidedTour onClose={onClose} />);
-    fireEvent.click(screen.getByRole("button",
-      { name: t("demo.tour.close") }));
-    expect(onClose).toHaveBeenCalledTimes(2);
   });
 });
 

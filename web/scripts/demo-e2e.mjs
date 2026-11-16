@@ -41,8 +41,7 @@ async function run(width, height, tag) {
   await page.waitForSelector(".parcel-res-row", { timeout: 60000 });
   const names = await page.locator(".parcel-res-row .parcel-name")
     .allTextContents();
-  for (const n of ["La Vid", "Los Olivos", "Los Duraznos",
-                   "El Ajal", "Banda de monte"]) {
+  for (const n of ["La Alfalfa", "El Ajal", "La Vid", "El Maizal", "El Monte", "Los Duraznos", "Maizal del Sur", "Los Olivos", "Ajal del Sur"]) {
     ok(names.some((x) => x.includes(n)), `${tag} parcel row "${n}"`);
   }
   const saved = await page.locator(".notice").allTextContents();
