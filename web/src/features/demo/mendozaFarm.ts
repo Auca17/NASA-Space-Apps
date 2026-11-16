@@ -1,9 +1,8 @@
 /** Guided demo farm (task 40): a fictional producer on a real rural
  * location in Valle de Uco, Mendoza — between La Consulta and San
  * Carlos, where satellite imagery shows dense vineyards and orchards
- * along the acequias. ~145 ha with five parcels: a vineyard, an olive
- * grove, garlic, stone fruit and a strip of native monte along the
- * north edge.
+ * along the acequias. ~125 ha with three parcels: a vineyard, an olive
+ * grove and garlic.
  *
  * The producer, names and economics are invented. The cached fallback
  * in mendozaCached.json is a verbatim real POST /api/field/parcels
@@ -24,11 +23,12 @@ const r = (...pts: LatLon[]): LatLon[] => pts;
 /** Field outline: a mostly-rectangular plot with a small jag on the
  * east edge, as these properties actually draw. [lat, lon] ring. */
 export const MENDOZA_BOUNDARY: Multi = [[r(
-  [-33.7408, -69.1300],
-  [-33.7408, -69.1158],
-  [-33.7424, -69.1150],
-  [-33.7508, -69.1158],
+  [-33.7414, -69.1299],
+  [-33.7414, -69.1155],
+  [-33.7512, -69.1155],
+  [-33.7514, -69.1236],
   [-33.7512, -69.1294],
+  [-33.7446, -69.1296],
 )]];
 
 export const MENDOZA_PARCELS: ParcelInput[] = [
@@ -48,16 +48,7 @@ export const MENDOZA_PARCELS: ParcelInput[] = [
     crop: "olivo",
     geom: [r(
       [-33.7418, -69.1236], [-33.7418, -69.1160],
-      [-33.7456, -69.1160], [-33.7456, -69.1236],
-    )],
-  },
-  {
-    id: "frutal",
-    name: "Los Duraznos",
-    crop: "frutal_carozo",
-    geom: [r(
-      [-33.7456, -69.1236], [-33.7456, -69.1160],
-      [-33.7482, -69.1160], [-33.7482, -69.1236],
+      [-33.7462, -69.1160], [-33.7462, -69.1236],
     )],
   },
   {
@@ -65,17 +56,8 @@ export const MENDOZA_PARCELS: ParcelInput[] = [
     name: "El Ajal",
     crop: "ajo",
     geom: [r(
-      [-33.7482, -69.1236], [-33.7482, -69.1160],
-      [-33.7507, -69.1160], [-33.7507, -69.1236],
-    )],
-  },
-  {
-    id: "monte",
-    name: "Banda de monte",
-    crop: "monte_nativo",
-    geom: [r(
-      [-33.7410, -69.1295], [-33.7410, -69.1160],
-      [-33.7418, -69.1160], [-33.7418, -69.1295],
+      [-33.7462, -69.1236], [-33.7462, -69.1160],
+      [-33.7507, -69.1160], [-33.7509, -69.1236],
     )],
   },
 ];
@@ -96,14 +78,12 @@ export const MENDOZA_PROFILE: Profile = {
   hidden: ["flood"],
 };
 
-/** Illustrative economics per parcel (USD). Monte has none. */
+/** Illustrative economics per parcel (USD). */
 export const MENDOZA_ECON: Economics = {
   currency: "USD",
   parcels: {
     vid: { cost_per_ha: 2800, price_per_t: 220, expected_yield_t_ha: 14 },
     olivo: { cost_per_ha: 2400, price_per_t: 380, expected_yield_t_ha: 9 },
-    frutal: { cost_per_ha: 2600, price_per_t: 450,
-              expected_yield_t_ha: 22 },
     ajo: { cost_per_ha: 1800, price_per_t: 900, expected_yield_t_ha: 8 },
   },
 };

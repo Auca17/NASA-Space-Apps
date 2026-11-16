@@ -74,6 +74,8 @@ export type AnalysisTarget = {
     /** Dated cached response, shown only if the live call fails. */
     cached: ParcelsResponse;
     cachedDate: string;
+    /** One-line producer description (falls back to demo.producer). */
+    producer?: string;
   };
   profile?: Profile;
   econ?: Economics;
@@ -827,7 +829,7 @@ export function FieldPanel({ target, open, onClose, onChangePlot, onMethods, onR
           </div>
           {target.demo && (
             <p className="muted demo-note">
-              <strong>{t("demo.producer")}</strong><br />
+              <strong>{target.demo.producer ?? t("demo.producer")}</strong><br />
               {t("demo.disclaimer")}
             </p>)}
           {target.parcel && (
