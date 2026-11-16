@@ -134,7 +134,7 @@ body:has(.app) { background: #0f110e; }
 }
 .app .topbar h1 { font-weight: 650; letter-spacing: -0.01em; }
 .app .topbar-home { border-radius: var(--radius-ctl);
-  color: inherit; transition: background-color 160ms var(--ease-out); }
+  color: inherit; text-decoration: none; transition: background-color 160ms var(--ease-out); }
 .app .topbar-home:hover { background: var(--surface); }
 .app .topbar-name { font-size: 1.05rem; }
 .app .topbar .meth-link, .app .topbar .lang-btn {
@@ -468,3 +468,10 @@ body:has(.app) { background: #0f110e; }
 .rec-group summary:focus-visible { outline: 3px solid var(--fg); outline-offset: 2px; }
 /* the fold already says "Qué sembrar…": hide the repeated heading */
 .rec-group .crop-recs > h3:first-of-type { display: none; }
+
+/* panel header: four buttons fit on one row on desktop; tighter padding
+ * instead of pushing "Cambiar campo" to a second line */
+@media (min-width: 761px) {
+  .app .analysis-actions { flex-wrap: nowrap; gap: 6px; }
+  .app .analysis-actions button { padding: 0 12px; white-space: nowrap; }
+}

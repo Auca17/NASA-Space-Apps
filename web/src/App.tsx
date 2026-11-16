@@ -958,27 +958,16 @@ export default function App() {
     <div className={`app${analysisScreen ? " analysis-screen" : ""}${sidePanel ? " has-side-panel" : ""}`}>
       <header className="topbar">
         <h1>
-          <button type="button" className="topbar-home"
-                  aria-label={t("shell.home")}
-                  onClick={() => {
-                    if (modeRef.current === "field") changePlot();
-                    setMode("welcome");
-                  }}>
+          {/* the brand goes back to the landing page, in the same language */}
+          <a className="topbar-home" href={lang === "en" ? "/" : "/es/"}
+             aria-label={t("shell.home")}>
             <span aria-hidden="true"><WindLogo size={30} title={APP_NAME} /></span>
             <span className="topbar-name">{APP_NAME}</span>
-          </button>
+          </a>
         </h1>
 
 
         <div className="spacer" />
-        <button className="emerg-link" aria-label={t("emerg.nav")}
-                onClick={() => setEmergOpen(true)}>
-          <svg className="emerg-ico" viewBox="0 0 24 24" aria-hidden="true">
-            <path d="M6.6 3.2c.8-.2 1.6.3 1.9 1.1l1 2.6c.2.6.1 1.3-.4 1.7L7.4
-              10a12.6 12.6 0 0 0 6.6 6.6l1.4-1.7c.4-.5 1.1-.6 1.7-.4l2.6
-              1c.8.3 1.3 1.1 1.1 1.9l-.6 2.3c-.2.9-1.1 1.5-2 1.3C10.4 19.7
-              4.3 13.6 3 5.8c-.2-.9.4-1.8 1.3-2l2.3-.6Z"/></svg>
-          <span className="emerg-text">{t("emerg.nav")}</span></button>
         <button className="meth-link"
                 onClick={() => setMethodsOpen(true)}>
           <span className="ml-long">{t("meth.link")}</span>
@@ -1000,8 +989,6 @@ export default function App() {
           <button type="button" className="menu-backdrop" tabIndex={-1}
                   aria-hidden="true" onClick={() => setMenuOpen(false)} />
           <div className="topbar-menu" id="topbar-menu">
-            <button type="button" onClick={() => {
-              setEmergOpen(true); setMenuOpen(false); }}>{t("emerg.nav")}</button>
             <button type="button" onClick={() => {
               setMethodsOpen(true); setMenuOpen(false); }}>{t("meth.link")}</button>
             <button type="button" onClick={() =>

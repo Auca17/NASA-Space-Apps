@@ -186,7 +186,7 @@ document.getElementById("root")!.innerHTML = `
     <section aria-labelledby="s-team">
       <h2 id="s-team">${c.team.heading}</h2>
       <ul class="team">${c.team.members.map((m) =>
-        `<li><strong>${m.name}</strong><span>${m.role}</span></li>`).join("")}
+        `<li><strong>${m.name}</strong>${m.role ? `<span>${m.role}</span>` : ""}</li>`).join("")}
       </ul>
       <h3>${c.team.linksTitle}</h3>
       ${linksList()}
