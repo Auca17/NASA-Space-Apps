@@ -720,3 +720,12 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
 .seqlabel { font-size: .7rem; line-height: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
   padding: 0 4px; color: var(--fg); }
 .seq-swatch.other { background: color-mix(in srgb, var(--muted) 45%, var(--panel)); }
+:root { --cover-crop: #4f9a92; }
+.seqfill.cover, .seq-swatch.cover { background: repeating-linear-gradient(45deg,
+  var(--cover-crop), var(--cover-crop) 4px, color-mix(in srgb, var(--cover-crop) 70%, var(--panel)) 4px,
+  color-mix(in srgb, var(--cover-crop) 70%, var(--panel)) 8px); }
+.seq-legend { flex-direction: column; align-items: flex-start; }
+.seq-legend li { align-items: flex-start; }
+.seq-legend .seq-swatch { margin-top: 3px; flex-shrink: 0; }
+.fallow-steps .seq-swatch { vertical-align: middle; }
+.seq-swatch.fallow { background: var(--bare); }

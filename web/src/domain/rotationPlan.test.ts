@@ -115,3 +115,15 @@ describe("rowRuns", () => {
     expect(text(2)).toEqual(["0-3:own", "4-8:fallow", "9-9:maiz", "10-11:own"]);
   });
 });
+
+describe("coverSpans / withCover", () => {
+  it("paints the cover crop of the fallow plan on the calendar", async () => {
+    const { fallowAdvice, coverSpans, withCover, rowRuns } = await import("./rotationPlan");
+    const seq = [{ crop: "soja", start: "11-01", end: "04-15" }];
+    const plan = rotationPlan(seq, [info("soja", "grain")]);
+    const covers = coverSpans(fallowAdvice(plan, [info("soja", "grain")]));
+    expect(covers.map((c) => [c.crop, c.from, c.to])).toEqual([["centeno", "04-17", "10-11"]]);
+    expect(withCover(rowRuns(seq, 0), covers).map((r) => `${r.from}-${r.to}:${r.who}`))
+      .toEqual(["0-3:own", "4-9:cover:centeno", "10-11:own"]);
+  });
+});

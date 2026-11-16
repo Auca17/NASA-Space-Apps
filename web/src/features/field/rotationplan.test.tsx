@@ -45,8 +45,9 @@ it("explains the month-by-month bar with a legend and the crop names", async () 
   }
   render(<I18nProvider><Bar /></I18nProvider>);
   expect(screen.getByText(/cómo leerlo/i)).toBeInTheDocument();
-  expect(screen.getByText("Este cultivo en el lote")).toBeInTheDocument();
-  expect(screen.getByText("Barbecho (sin cultivo)")).toBeInTheDocument();
+  expect(screen.getByText(/verde: el cultivo de esa fila.*centeno \(abr → sept?\.?\), soja \(nov → abr\)/i)).toBeInTheDocument();
+  expect(screen.getByText(/marrón: barbecho.*1 oct → 31 oct/i)).toBeInTheDocument();
+  expect(screen.getByText(/gris: en esos meses el lote lo ocupa otro cultivo/i)).toBeInTheDocument();
   // the soy row names the crop that fills its other months
   const soy = screen.getByRole("img", { name: /soja: en el lote/i });
   expect(soy).toHaveAccessibleName(/may–sept?\.?: centeno.*oct–oct\.?: barbecho/i);

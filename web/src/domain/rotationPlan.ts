@@ -239,3 +239,36 @@ export function rowRuns(sequence: Step[], i: number): { from: number; to: number
   });
   return runs;
 }
+
+export type CoverSpan = { crop: string; from: string; to: string; months: Set<number> };
+
+/** The cover crops the fallow plan sows, with their calendar months. */
+export function coverSpans(gaps: FallowTip[]): CoverSpan[] {
+  return gaps.flatMap((gap) => {
+    const sow = gap.steps.find((step) => step.key === "coverSow" || step.key === "coverSowVicia");
+    const end = gap.steps.find((step) => step.key === "coverEnd");
+    if (!sow || !end) return [];
+    const a = Number(sow.from.slice(0, 2)) - 1;
+    const b = Number(end.from.slice(0, 2)) - 1;
+    const months = new Set<number>();
+    for (let m = a; ; m = (m + 1) % 12) { months.add(m); if (m === b) break; }
+    return [{ crop: sow.key === "coverSowVicia" ? "vicia" : "centeno", from: sow.from, to: end.from, months }];
+  });
+}
+
+/** Paints the fallow months where the plan sows a cover crop. */
+export function withCover(runs: { from: number; to: number; who: string }[], covers: CoverSpan[]) {
+  const who: string[] = [];
+  runs.forEach((run) => { for (let m = run.from; m <= run.to; m++) who[m] = run.who; });
+  who.forEach((w, m) => {
+    const cover = w === "fallow" ? covers.find((c) => c.months.has(m)) : undefined;
+    if (cover) who[m] = `cover:${cover.crop}`;
+  });
+  const out: { from: number; to: number; who: string }[] = [];
+  who.forEach((w, m) => {
+    const last = out[out.length - 1];
+    if (last && last.who === w) last.to = m;
+    else out.push({ from: m, to: m, who: w });
+  });
+  return out;
+}

@@ -1,7 +1,7 @@
 import { CropRecommendations } from "./CropRecommendations";
 import { DecisionDetail } from "./DecisionDetail";
 import { RotationPlan } from "./RotationPlan";
-import { fallowAdvice, rotationPlan, rowRuns } from "../../domain/rotationPlan";
+import { coverSpans, fallowAdvice, rotationPlan, rowRuns, withCover } from "../../domain/rotationPlan";
 import { moistureGeometry } from "../../domain/moisture";
 import { MoisturePanel } from "./MoisturePanel";
 import type { CurrentCrop, MoistureZone } from "../../api/types";
@@ -134,13 +134,30 @@ export function SeqBar({ s, t, soilPh }: {
   const cleanName = (id?: string) => (id ? names.get(id) ?? id : "")
     .replace(/\s*\([^)]*\)$/, "").toLocaleLowerCase(lang);
   const gaps = fallowAdvice(rotationPlan(s.sequence, s.crops_info ?? [], soilPh), s.crops_info ?? [], soilPh);
+  const covers = coverSpans(gaps);
+  const rows = s.sequence.map((_, i) => withCover(rowRuns(s.sequence, i), covers));
+  const has = (test: (who: string) => boolean) => rows.some((runs) => runs.some((run) => test(run.who)));
+  const own = [...new Map(s.sequence.map((seq) => [seq.crop,
+    `${cleanName(seq.crop)} (${monthOf(seq.start)} → ${monthOf(seq.end)})`])).values()].join(", ");
+  const monthName = (m: number) => monthOf(`${String(m + 1).padStart(2, "0")}-15`);
+  const runClass = (who: string, covered: boolean) => who === "own" ? (covered ? "covered" : "bare")
+    : who === "fallow" ? "fallow" : who.startsWith("cover:") ? "cover" : "other";
+  const runLabel = (who: string) => who === "own" ? "" : who === "fallow" ? t("rot.seq.fallowShort")
+    : who.startsWith("cover:") ? t("rot.seq.coverShort", { crop: cleanName(who.slice(6)) }) : cleanName(who);
+  const stepClass = (key: string) => key === "sow" ? "covered"
+    : key.startsWith("cover") ? "cover" : "fallow";
   return (
     <div className="seqbars">
       <p className="seq-help">{t("rot.seq.help")}</p>
       <ul className="seq-legend">
-        <li><span className="seq-swatch covered" aria-hidden="true" />{t("rot.seq.crop")}</li>
-        <li><span className="seq-swatch other" aria-hidden="true" />{t("rot.seq.other")}</li>
-        <li><span className="seq-swatch empty" aria-hidden="true" />{t("rot.seq.fallow")}</li>
+        <li><span className="seq-swatch covered" aria-hidden="true" />{t("rot.seq.legend.crop", { list: own })}</li>
+        {has((who) => who !== "own" && who !== "fallow" && !who.startsWith("cover:")) &&
+          <li><span className="seq-swatch other" aria-hidden="true" />{t("rot.seq.legend.other")}</li>}
+        {gaps.length > 0 && <li><span className="seq-swatch empty" aria-hidden="true" />{t("rot.seq.legend.fallow", {
+          list: gaps.map((gap) => `${dayOf(gap.start)} → ${dayOf(gap.end)}`).join(", ") })}</li>}
+        {covers.map((cover) => <li key={cover.crop + cover.from}>
+          <span className="seq-swatch cover" aria-hidden="true" />{t("rot.seq.legend.cover", {
+            crop: cleanName(cover.crop), from: dayOf(cover.from), to: dayOf(cover.to) })}</li>)}
         {anyBare && <li><span className="seq-swatch bare" aria-hidden="true" />{t("rot.seq.thin")}</li>}
       </ul>
       {s.sequence.map((seq, i) => {
@@ -152,16 +169,12 @@ export function SeqBar({ s, t, soilPh }: {
             <span className="seqcrop">{name}</span>
             <span className="seqbar" role="img"
                   aria-label={[t("rot.seq.row", { crop: name, span }),
-                    ...rowRuns(s.sequence, i).filter((run) => run.who !== "own").map((run) =>
-                      t(run.who === "fallow" ? "rot.seq.runFallow" : "rot.seq.runOther", {
-                        crop: cleanName(run.who), from: monthOf(`${String(run.from + 1).padStart(2, "0")}-15`),
-                        to: monthOf(`${String(run.to + 1).padStart(2, "0")}-15`) }))].join(". ")}>
-              {rowRuns(s.sequence, i).map((run, j) => {
-                const label = run.who === "own" ? "" : run.who === "fallow" ? t("rot.seq.fallowShort")
-                  : cleanName(run.who);
+                    ...rows[i].filter((run) => run.who !== "own").map((run) =>
+                      `${monthName(run.from)}–${monthName(run.to)}: ${runLabel(run.who)}`)].join(". ")}>
+              {rows[i].map((run, j) => {
+                const label = runLabel(run.who);
                 return <span key={j}
-                      className={`seqfill ${run.who === "own" ? (covered ? "covered" : "bare")
-                        : run.who === "fallow" ? "fallow" : "other"}`}
+                      className={`seqfill ${runClass(run.who, covered)}`}
                       title={label || name}
                       style={{
                         left: `${(run.from / 12) * 100}%`,
@@ -186,6 +199,7 @@ export function SeqBar({ s, t, soilPh }: {
             {gap.after && gap.before && <> {t("rot.fallow.between", { after: cleanName(gap.after), before: cleanName(gap.before) })}</>}
           </p>
           <ol className="fallow-steps">{gap.steps.map((step) => <li key={step.key}>
+            <span className={`seq-swatch ${stepClass(step.key)}`} aria-hidden="true" />{" "}
             <strong>{step.to ? `${dayOf(step.from)} → ${dayOf(step.to)}` : dayOf(step.from)}</strong>{" "}
             {t(`rot.fallow.do.${step.key}`, {
               after: cleanName(step.vars?.after), before: cleanName(step.vars?.before ?? gap.before),
