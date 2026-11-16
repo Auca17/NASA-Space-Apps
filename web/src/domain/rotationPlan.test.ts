@@ -97,3 +97,21 @@ describe("fallowAdvice", () => {
     expect(tips[0].steps.at(-1)).toEqual({ from: "11-01", key: "sow", vars: { before: "soja" } });
   });
 });
+
+describe("rowRuns", () => {
+  const seq = [
+    { crop: "maiz", start: "09-25", end: "03-15" },
+    { crop: "vicia", start: "04-01", end: "10-15" },
+    { crop: "soja", start: "11-01", end: "04-15" },
+  ];
+  it("names what really follows each crop over the years", async () => {
+    const { rowRuns } = await import("./rotationPlan");
+    const text = (i: number) => rowRuns(seq, i).map((r) => `${r.from}-${r.to}:${r.who}`);
+    // maize Sep-Mar, then vetch Apr-Aug
+    expect(text(0)).toEqual(["0-2:own", "3-7:vicia", "8-11:own"]);
+    // vetch Apr-Oct, then soy Nov-Mar
+    expect(text(1)).toEqual(["0-2:soja", "3-9:own", "10-11:soja"]);
+    // soy Nov-Apr, then fallow until maize (sown 25 Sep, so it shows from October)
+    expect(text(2)).toEqual(["0-3:own", "4-8:fallow", "9-9:maiz", "10-11:own"]);
+  });
+});

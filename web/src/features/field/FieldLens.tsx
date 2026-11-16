@@ -1,7 +1,7 @@
 import { CropRecommendations } from "./CropRecommendations";
 import { DecisionDetail } from "./DecisionDetail";
 import { RotationPlan } from "./RotationPlan";
-import { fallowAdvice, rotationPlan } from "../../domain/rotationPlan";
+import { fallowAdvice, rotationPlan, rowRuns } from "../../domain/rotationPlan";
 import { moistureGeometry } from "../../domain/moisture";
 import { MoisturePanel } from "./MoisturePanel";
 import type { CurrentCrop, MoistureZone } from "../../api/types";
@@ -28,7 +28,7 @@ import {
   benefitValue, benefitRows, compareDeltas, groupVariants,
   groupedCards, humanizeGap, indicatorLabelKey, irrigationNeedMm, measureReqPairs,
   orderNote, prioWeights, rankNote,
-  seqSegments, verdictDelta, type Scenario,
+  verdictDelta, type Scenario,
 } from "../../domain/rotations";
 import { plainSummary, referenceText, localizeDiag } from "../../domain/clarity";
 import {
@@ -139,7 +139,8 @@ export function SeqBar({ s, t, soilPh }: {
       <p className="seq-help">{t("rot.seq.help")}</p>
       <ul className="seq-legend">
         <li><span className="seq-swatch covered" aria-hidden="true" />{t("rot.seq.crop")}</li>
-        <li><span className="seq-swatch empty" aria-hidden="true" />{t("rot.seq.empty")}</li>
+        <li><span className="seq-swatch other" aria-hidden="true" />{t("rot.seq.other")}</li>
+        <li><span className="seq-swatch empty" aria-hidden="true" />{t("rot.seq.fallow")}</li>
         {anyBare && <li><span className="seq-swatch bare" aria-hidden="true" />{t("rot.seq.thin")}</li>}
       </ul>
       {s.sequence.map((seq, i) => {
@@ -150,14 +151,23 @@ export function SeqBar({ s, t, soilPh }: {
           <div className="seqrow" key={i}>
             <span className="seqcrop">{name}</span>
             <span className="seqbar" role="img"
-                  aria-label={t("rot.seq.row", { crop: name, span })}>
-              {seqSegments(seq.start, seq.end).map((seg, j) => (
-                <span key={j}
-                      className={`seqfill ${covered ? "covered" : "bare"}`}
+                  aria-label={[t("rot.seq.row", { crop: name, span }),
+                    ...rowRuns(s.sequence, i).filter((run) => run.who !== "own").map((run) =>
+                      t(run.who === "fallow" ? "rot.seq.runFallow" : "rot.seq.runOther", {
+                        crop: cleanName(run.who), from: monthOf(`${String(run.from + 1).padStart(2, "0")}-15`),
+                        to: monthOf(`${String(run.to + 1).padStart(2, "0")}-15`) }))].join(". ")}>
+              {rowRuns(s.sequence, i).map((run, j) => {
+                const label = run.who === "own" ? "" : run.who === "fallow" ? t("rot.seq.fallowShort")
+                  : cleanName(run.who);
+                return <span key={j}
+                      className={`seqfill ${run.who === "own" ? (covered ? "covered" : "bare")
+                        : run.who === "fallow" ? "fallow" : "other"}`}
+                      title={label || name}
                       style={{
-                        left: `${(seg.from / 12) * 100}%`,
-                        width: `${((seg.to - seg.from + 1) / 12) * 100}%`,
-                      }} />))}
+                        left: `${(run.from / 12) * 100}%`,
+                        width: `${((run.to - run.from + 1) / 12) * 100}%`,
+                      }}>{run.to - run.from >= 1 && label && <span className="seqlabel">{label}</span>}</span>;
+              })}
             </span>
             <span className="seqcov">{span}</span>
           </div>);

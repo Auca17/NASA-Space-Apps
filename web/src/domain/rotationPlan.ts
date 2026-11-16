@@ -179,3 +179,63 @@ export function fallowAdvice(plan: Plan, crops: CropInfo[] = [], soilPh?: number
     return { ...gap, steps };
   });
 }
+
+/** Absolute day spans of each step (same placement as rotationPlan)
+ * and the cycle length until the sequence starts again. */
+function placeSteps(sequence: Step[]): { spans: [number, number][]; cycle: number } {
+  const spans: [number, number][] = [];
+  let prevEnd: number | null = null;
+  for (const step of sequence) {
+    const s = doy(step.start);
+    let start = s;
+    if (prevEnd != null) {
+      start = s + 365 * Math.floor((prevEnd + 1) / 365);
+      while (start <= prevEnd) start += 365;
+      if (start - prevEnd > 300) start = prevEnd + 1;
+    }
+    const length = ((doy(step.end) - s) % 365 + 365) % 365 || 364;
+    spans.push([start, start + length]);
+    prevEnd = start + length;
+  }
+  if (!spans.length) return { spans, cycle: 365 };
+  const first = spans[0][0];
+  let restart = doy(sequence[0].start) + 365 * Math.floor((prevEnd! + 1) / 365);
+  while (restart <= prevEnd!) restart += 365;
+  if (restart - prevEnd! > 300) restart = prevEnd! + 1;
+  return { spans, cycle: restart - first };
+}
+
+/** The 12 calendar months of one row of the calendar, starting at that
+ * crop's sowing: its own months, the crop that really occupies the
+ * field in the others (following the rotation over the years) or
+ * fallow. Runs are in calendar order (month 0 = January). */
+export function rowRuns(sequence: Step[], i: number): { from: number; to: number; who: string }[] {
+  const { spans, cycle } = placeSteps(sequence);
+  if (!spans[i]) return [];
+  const first = spans[0][0];
+  const counts: Map<string, number>[] = Array.from({ length: 12 }, () => new Map());
+  for (let d = spans[i][0]; d < spans[i][0] + 365; d++) {
+    const inCycle = first + ((((d - first) % cycle) + cycle) % cycle);
+    let who = "fallow";
+    spans.forEach(([a, b], j) => {
+      if (who !== "fallow") return;
+      if ((inCycle >= a && inCycle <= b) || (inCycle + cycle >= a && inCycle + cycle <= b)) who = j === i ? "own" : sequence[j].crop;
+    });
+    if (who !== "own" && sequence[i].crop === who) who = "own";
+    const month = new Date(BASE + (((d % 365) + 365) % 365) * DAY).getUTCMonth();
+    counts[month].set(who, (counts[month].get(who) ?? 0) + 1);
+  }
+  const who = counts.map((c) => {
+    if (c.get("own")) return "own";
+    let best = "fallow"; let n = 0;
+    c.forEach((v, k) => { if (k !== "fallow" && v >= 8 && v > n) { best = k; n = v; } });
+    return best;
+  });
+  const runs: { from: number; to: number; who: string }[] = [];
+  who.forEach((w, m) => {
+    const last = runs[runs.length - 1];
+    if (last && last.who === w) last.to = m;
+    else runs.push({ from: m, to: m, who: w });
+  });
+  return runs;
+}
